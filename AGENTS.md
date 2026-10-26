@@ -24,20 +24,24 @@ appoint reviewers, authorize agent delegation, or change issue readiness.
 
 ## Agent ownership and capacity
 
-- In a user-authorized agent campaign, each directory has one logical directory
-  orchestrator reporting to its immediate parent directory orchestrator. The root
-  directory orchestrator coordinates the campaign; do not create competing owners.
+- In a user-authorized agent campaign, each immediate-parent directory containing
+  changed files has exactly one logical directory orchestrator. Directory
+  orchestrators are direct children of the lead. Nested filesystem directories
+  add no delegation levels. The lead
+  may also serve as the root directory orchestrator; do not create competing owners.
   One agent may hold several logical directory roles when capacity requires it.
-- Lease each changed file exclusively to one file worker under its immediate
-  directory orchestrator. Record the exact path, owner, base SHA, branch/worktree
-  and handoff receipt. File workers modify only their leased files; directory
-  orchestrators reconcile and integrate completed handoffs. Preserve history and
-  unrelated work. File workers and reviewers must not delegate or spawn agents.
-- Respect the actual four-slot capacity, including the root and every live child
-  orchestrator, worker and reviewer. Inspect live occupancy before spawning; queue
-  work or reuse an available agent when full. Logical directory roles do not add
-  slots or permit hidden parallel agents. Release completed leases and slots before
-  assigning successors, and reserve capacity for independent review.
+- Lease each changed file exclusively to one file worker. File workers and
+  reviewers are direct children of the responsible directory orchestrator. Record
+  the exact path, owner, base SHA, branch/worktree and handoff receipt. File workers
+  modify only their leased files; directory orchestrators reconcile and integrate
+  completed handoffs. Preserve history and unrelated work. File workers and
+  reviewers must not delegate or spawn agents.
+- Reverify the actual available capacity and live occupancy before spawning;
+  four slots is the currently verified limit, not a universal limit. Count the lead
+  and every live directory orchestrator, worker and reviewer. Queue work or reuse
+  an available agent when full. Logical directory roles do not add slots or permit
+  hidden parallel agents. Release completed leases and slots before assigning
+  successors, and reserve capacity for independent review.
 
 ## Security and authorization review
 
