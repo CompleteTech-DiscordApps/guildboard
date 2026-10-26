@@ -153,7 +153,95 @@
         "result": "pass"
       },
       {
-        "details": null,
+        "details": {
+          "correctedDraft": {
+            "acceptedUnchanged": true,
+            "alert": "",
+            "clearsAlert": true,
+            "fields": {
+              "text": "Accessible next action",
+              "x": "123",
+              "y": "160"
+            },
+            "fieldsMatch": true,
+            "focus": "object-x",
+            "focusMatches": true,
+            "formValid": true,
+            "notQueuedOrAccepted": true,
+            "pendingUnchanged": true,
+            "revisionUnchanged": true,
+            "selected": [
+              "note-b"
+            ],
+            "selectionMatches": true,
+            "status": "Local draft changed; not queued or accepted.",
+            "statusUnchanged": true
+          },
+          "initialInvalidDraft": {
+            "acceptedUnchanged": true,
+            "alert": "Enter nonblank text and whole-number positions from 0 to 1000.",
+            "fields": {
+              "text": "Accessible next action",
+              "x": "1001",
+              "y": "160"
+            },
+            "fieldsMatch": true,
+            "focus": "object-x",
+            "focusMatches": true,
+            "formValid": false,
+            "pendingUnchanged": true,
+            "revisionUnchanged": true,
+            "selected": [
+              "note-b"
+            ],
+            "selectionMatches": true,
+            "status": "Local draft changed; not queued or accepted.",
+            "statusUnchanged": true
+          },
+          "returnedInvalidDraft": {
+            "acceptedUnchanged": true,
+            "alert": "Enter nonblank text and whole-number positions from 0 to 1000.",
+            "fields": {
+              "text": "Accessible next action",
+              "x": "1001",
+              "y": "160"
+            },
+            "fieldsMatch": true,
+            "focus": "object-text",
+            "focusMatches": true,
+            "formValid": false,
+            "pendingUnchanged": true,
+            "revisionUnchanged": true,
+            "selected": [
+              "note-b"
+            ],
+            "selectionMatches": true,
+            "status": "Local draft changed; not queued or accepted.",
+            "statusUnchanged": true
+          },
+          "validSelection": {
+            "acceptedUnchanged": true,
+            "alert": "",
+            "clearsUnrelatedStaleAlert": true,
+            "fields": {
+              "text": "Agree on the board goal.",
+              "x": "40",
+              "y": "80"
+            },
+            "fieldsMatch": true,
+            "focus": "object-text",
+            "focusMatches": true,
+            "formValid": true,
+            "pendingUnchanged": true,
+            "revisionUnchanged": true,
+            "selected": [
+              "note-a"
+            ],
+            "selectionMatches": true,
+            "status": "Local draft changed; not queued or accepted.",
+            "statusUnchanged": true
+          }
+        },
         "name": "correcting input clears stale error without claiming acceptance",
         "result": "pass"
       }
@@ -227,8 +315,8 @@
     ]
   },
   "browser_sandbox": "Cached image entrypoint explicitly uses --no-sandbox; not production isolation evidence.",
-  "checks_sha256": "b6277adf3cde5cbf9fb1aa2b59253249d1879e0f170ba394f3aceac53520151c",
-  "container": "guildboard-t7-477699286a00",
+  "checks_sha256": "e19c07abf83791d91cca2a255e964e587ca7262828ba743186e3701e6efb8a18",
+  "container": "guildboard-t7-e6ec60519090",
   "context": "desktop-linux",
   "image": "mcp/playwright@sha256:8771dc4666e7c11440bfc6a0c6b00480e9a15b8891b45f29a52d7d995f8d1492",
   "limits": {
@@ -242,9 +330,9 @@
     "name": "Playwright",
     "version": "1.61.0-alpha-1781023400000"
   },
-  "observed_at_utc": "2026-10-26T00:30:25.033023+00:00",
+  "observed_at_utc": "2026-10-26T01:39:55.988846+00:00",
   "owned_container_absent": true,
-  "prototype_sha256": "ec2537cdfd3298e89667d06461a22cdc19891415b717899dad8ddde8719518a1",
+  "prototype_sha256": "cdca74ee8c2be0f55a49b0c0c1a9eb6f118475a33c0da6b89b385f4a273073aa",
   "result": "pass",
   "screenshot_sha256": "a0095e451e82a6fa0dc015bf54db00266912c0e96db4f3643dbaf2172114618f"
 }
