@@ -22,6 +22,23 @@ appoint reviewers, authorize agent delegation, or change issue readiness.
   changes require an ADR with alternatives, failure behavior and security effects.
   Avoid independently invented, incompatible synchronization or policy systems.
 
+## Agent ownership and capacity
+
+- In a user-authorized agent campaign, each directory has one logical directory
+  orchestrator reporting to its immediate parent directory orchestrator. The root
+  directory orchestrator coordinates the campaign; do not create competing owners.
+  One agent may hold several logical directory roles when capacity requires it.
+- Lease each changed file exclusively to one file worker under its immediate
+  directory orchestrator. Record the exact path, owner, base SHA, branch/worktree
+  and handoff receipt. File workers modify only their leased files; directory
+  orchestrators reconcile and integrate completed handoffs. Preserve history and
+  unrelated work. File workers and reviewers must not delegate or spawn agents.
+- Respect the actual four-slot capacity, including the root and every live child
+  orchestrator, worker and reviewer. Inspect live occupancy before spawning; queue
+  work or reuse an available agent when full. Logical directory roles do not add
+  slots or permit hidden parallel agents. Release completed leases and slots before
+  assigning successors, and reserve capacity for independent review.
+
 ## Security and authorization review
 
 - Treat client user, guild, channel, role, permission and administrator claims as
@@ -108,21 +125,35 @@ appoint reviewers, authorize agent delegation, or change issue readiness.
   clients, real GoDaddy verification and post-merge acceptance. Research, a green
   planning check, a review request or merged documentation proves none of the
   untested runtime claims. Mark unavailable checks as pending or blocked.
-- Before merge, obtain an actual GitHub Copilot code review against the current
-  full PR head SHA, covering the delta and relevant integration. Use the supported
-  Copilot code-review request; a coding-agent assignment is not a code review.
-  Record the actual reviewer, reviewed SHA, reported review effort, findings and
-  disposition with links. Do not relabel a limited or Lite review as Balanced or
-  claim checks Copilot did not perform. A request, quota failure, author self-review,
-  stale review or fabricated clean report is not completed review. No independent
-  model review is required. This policy does not authorize purchases or delegation;
-  if Copilot cannot complete the review, keep the gate pending and report why.
-- Evaluate all inline and summary findings, remediate valid actionable findings,
-  and record evidence for fixes or non-applicable findings. Obtain Copilot review
-  again on the new head after any change. Read back the live PR head, actual
-  current-head review evidence and current checks
-  before merge. Required functional/security expertise, CODEOWNER approvals,
-  native prerequisite gates and passing required CI remain separate requirements.
+- Before merge, seek actual GitHub Copilot code review of the current full PR head
+  SHA first, covering the complete PR delta and relevant integration. Inspect
+  existing pending requests and completed reviews before requesting or re-requesting
+  the actual reviewer `copilot-pull-request-reviewer[bot]` through the supported
+  Copilot code-review flow; a coding-agent assignment or mention is not a review.
+  Use the strongest review effort actually available through that flow. Record
+  the actual reviewer, reviewed SHA, available/reported effort and linked evidence;
+  do not invent model/effort controls, relabel Lite or limited review as Balanced,
+  or claim unperformed checks. Pending, stale or inadequate review does not pass.
+- On confirmed Copilot quota, access or service failure, or an inadequate completed
+  review, record the evidence and reason. A fresh, independent `gpt-6.1-sol`
+  reviewer at `max` reasoning effort may then review the full PR at its current
+  head SHA, including relevant integration. It must have no implementation role,
+  make no writes and perform no delegation. Record reviewer identity, model/effort,
+  full reviewed SHA, scope, findings, checks and limitations in a durable receipt.
+  If that qualified fallback is unavailable or incomplete, keep the technical gate
+  pending. This policy authorizes no purchases or otherwise unassigned delegation.
+- Either a qualified current-head Copilot review or that qualified independent
+  review satisfies the technical review gate. Neither route constitutes a native
+  GitHub approval or replaces required functional/security expertise or CODEOWNER
+  approval. Requests, quota failures, author self-review and fabricated clean
+  reports are not completed reviews.
+- Maintain a findings ledger covering every inline and summary finding from both
+  routes, its disposition, remediation SHA and verification evidence, including
+  reasons for non-applicable findings. Remediate valid actionable findings and
+  obtain qualified review again after any pushed head change, including code fixes;
+  earlier reviews do not cover the new SHA. Read back the live full PR head,
+  matching review evidence, findings dispositions and current checks before merge.
+  Required native approvals, prerequisite gates and passing CI remain separate.
   Never bypass branch protection, use an administrator override, weaken tests or
   relabel blockers to manufacture readiness. Merge only with explicit authority.
 - Link the relevant issue without closing directives until its full Definition
