@@ -48,15 +48,40 @@ Planning changes run `python3 scripts/github-bootstrap/validate.py`.
 Record commands, environment, exact SHA, results and limits. Local/model/mock
 checks do not prove real Discord, GoDaddy, recovery or production acceptance.
 
-Before merge require actual GitHub Copilot code review of the current full PR
-head SHA and relevant integration; use its supported code-review request, not a
-coding-agent assignment. Record linked evidence, the actual reported review
-effort, all inline and summary findings and their disposition. Remediate valid
-actionable findings and re-request Copilot review after any head change. Do not
-relabel Lite or limited reviews, invent unperformed checks, or treat a request,
-quota failure, self-review or stale result as completed review. No independent
-model review is required. Preserve required CI, CODEOWNER/security review and
-native gates; never bypass protections or weaken tests. Unavailable Copilot review
-stays pending with its reason. This file authorizes no purchases or delegation.
+Before merge, seek actual GitHub Copilot code review of the current full PR head
+SHA first, covering the complete PR delta and relevant integration. Inspect
+existing pending requests and completed reviews before requesting or re-requesting
+the actual reviewer `copilot-pull-request-reviewer[bot]` through the supported
+Copilot code-review flow; a coding-agent assignment or mention is not a review.
+Use the strongest review effort actually available through that flow. Record
+the actual reviewer, reviewed SHA, available/reported effort and linked evidence;
+do not invent model/effort controls, relabel Lite or limited review as Balanced,
+or claim unperformed checks. Pending, stale or inadequate review does not pass.
+
+On confirmed Copilot quota, access or service failure, or an inadequate completed
+review, record the evidence and reason. A fresh, independent `gpt-6.1-sol`
+reviewer at `max` reasoning effort may then review the full PR at its current
+head SHA, including relevant integration. It must have no implementation role,
+make no writes and perform no delegation. Record reviewer identity, model/effort,
+full reviewed SHA, scope, findings, checks and limitations in a durable receipt.
+If that qualified fallback is unavailable or incomplete, keep the technical gate
+pending. This policy authorizes no purchases or otherwise unassigned delegation.
+
+Either a qualified current-head Copilot review or that qualified independent
+review satisfies the technical review gate. Neither route constitutes a native
+GitHub approval or replaces required functional/security expertise or CODEOWNER
+approval. Requests, quota failures, author self-review and fabricated clean
+reports are not completed reviews.
+
+Maintain a findings ledger covering every inline and summary finding from both
+routes, its disposition, remediation SHA and verification evidence, including
+reasons for non-applicable findings. Remediate valid actionable findings and
+obtain qualified review again after any pushed head change, including code fixes;
+earlier reviews do not cover the new SHA. Read back the live full PR head,
+matching review evidence, findings dispositions and current checks before merge.
+Required native approvals, prerequisite gates and passing CI remain separate.
+Never bypass branch protection, use an administrator override, weaken tests or
+relabel blockers to manufacture readiness. Merge only with explicit authority.
+
 Reference issues without closing directives until their full Definition of Done;
 never claim deployment or completed capabilities from scaffolds or documents.
