@@ -35,7 +35,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header("Sec-WebSocket-Accept", accept)
             self.end_headers()
             if self.path == "/idle":
-                time.sleep(3)
+                # Outlive the client's five-second deadline so only the proxy
+                # can satisfy the idle-close window. Stop promptly on peer EOF.
+                deadline = time.monotonic() + 6
+                while (remaining := deadline - time.monotonic()) > 0:
+                    self.connection.settimeout(min(0.25, remaining))
+                    try:
+                        if not self.connection.recv(1):
+                            break
+                    except socket.timeout:
+                        pass
             else:
                 self.wfile.write(b"\x81\x05hello")
                 self.wfile.flush()
@@ -61,26 +70,28 @@ def request(path, method="GET", body=None, headers=None):
 
 
 def websocket(path):
-    client = socket.create_connection(("127.0.0.1", 8080), timeout=5)
-    client.settimeout(5)
-    client.sendall((f"GET {path} HTTP/1.1\r\nHost: research.invalid\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n").encode())
-    stream = client.makefile("rb")
-    status = stream.readline()
-    headers = {}
-    while True:
-        line = stream.readline()
-        if line == b"\r\n":
-            break
-        if not line:
-            raise AssertionError("truncated handshake")
-        name, value = line.decode().split(":", 1)
-        headers[name.lower()] = value.strip()
-    assert b"101" in status, status
-    assert headers["sec-websocket-accept"] == "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", headers
-    payload = stream.read(7)
-    stream.close()
-    client.close()
-    return payload
+    with socket.create_connection(("127.0.0.1", 8080), timeout=5) as client:
+        client.settimeout(5)
+        client.sendall((f"GET {path} HTTP/1.1\r\nHost: research.invalid\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n").encode())
+        with client.makefile("rb") as stream:
+            status = stream.readline()
+            headers = {}
+            while True:
+                line = stream.readline()
+                if line == b"\r\n":
+                    break
+                if not line:
+                    raise AssertionError("truncated handshake")
+                name, value = line.decode().split(":", 1)
+                headers[name.lower()] = value.strip()
+            assert b"101" in status, status
+            assert headers["sec-websocket-accept"] == "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", headers
+            try:
+                return stream.read(7)
+            except socket.timeout as error:
+                if path == "/idle":
+                    raise AssertionError("idle-upstream-deadline-exceeded") from error
+                raise
 
 
 def probe():
