@@ -197,3 +197,31 @@ Fresh machine-readable runs are appended under `worker_cleanup_followup_2026_11_
 `t10-review3-planning.log` retain raw results. Historic evidence remains intact.
 These are Linux loopback checks, not GoDaddy, Discord, TLS or production claims.
 Fresh independent review remains required.
+
+
+### Docker uncertain-creation and cleanup-failure follow-up
+
+Review at `bfc8c3166ce2fbb4f48c102b6326573f4a3bc550` identified two Medium
+Docker-path issues: a create timeout could leave a daemon-created container
+outside the cleanup list, and a proxy cleanup error could skip the backend.
+Both were reproduced with a fake Docker command boundary against the old runner.
+No actual Docker daemon behavior is inferred from those fake responses.
+
+The runner now checks for name collisions before creation and records intended
+names before sending create. Cleanup checks each resource independently and
+aggregates failures after attempting every intended resource. Only an explicit
+missing-container response proves absence; unknown inspection errors or malformed
+inspection cannot authorize removal. Label, name and immutable container ID
+must match; removal uses the inspected ID to avoid a reusable-name race and is
+followed by another inspection. A no-op removal fails; a removal timeout can
+succeed only if the resource is independently confirmed absent. A colliding or
+foreign resource is left untouched and reported.
+
+Nineteen focused tests pass, covering create-timeout side effects, collisions,
+unknown/malformed inspections, foreign labels/IDs, no-op/failed removal, failure
+aggregation and continued backend cleanup. The existing actual local Nginx
+baseline and all three controls pass again. Raw `t10-review4-*` logs distinguish
+fake Docker regressions from actual local Nginx runs; machine-readable results
+are appended under `docker_failure_followup_2026_11_13`. Docker access remains
+unavailable on this host, so Docker-mode real execution remains unverified.
+GoDaddy/Discord/TLS and fresh independent review gates remain open.
