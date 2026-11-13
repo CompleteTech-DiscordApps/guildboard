@@ -5,6 +5,8 @@ import hashlib
 import http.client
 import http.server
 import json
+import re
+import urllib.parse
 import socket
 import sys
 import threading
@@ -23,6 +25,18 @@ class ProbeFailure(AssertionError):
         super().__init__(check + (": " + detail if detail else ""))
 
 
+def valid_host(authority):
+    # Host is a URI host plus optional numeric port, not a general URL. Keep
+    # reg-name escapes and bracketed IP literals; do not impose a DNS allowlist.
+    reg_name = r"(?:[A-Za-z0-9._~!$&'()*+,;=-]|%[0-9A-Fa-f]{2})+"
+    if re.fullmatch(r"(?:" + reg_name + r"|\[[^\]]+\])(?::[0-9]*)?", authority) is None:
+        return False
+    try:
+        return urllib.parse.urlsplit("//" + authority).hostname is not None
+    except ValueError:
+        return False
+
+
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -37,7 +51,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             threading.Thread(target=self.server.shutdown, daemon=True).start()
             return
         if self.path in ("/ws", "/idle"):
-            if self.request_version != "HTTP/1.1" or not self.headers.get("Host", "").strip():
+            hosts = self.headers.get_all("Host", [])
+            if (self.request_version != "HTTP/1.1" or len(hosts) != 1
+                    or not valid_host(hosts[0].strip())):
                 self.send_error(400)
                 return
             upgrades = self.headers.get_all("Upgrade", [])
@@ -124,6 +140,11 @@ def websocket(path, timeout=5):
                 raise ProbeFailure("websocket-connection", "missing Connection upgrade token")
             if headers.get("sec-websocket-accept") != "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=":
                 raise ProbeFailure("websocket-accept", "missing/invalid Sec-WebSocket-Accept")
+            # This client requested neither extensions nor subprotocols.
+            if "sec-websocket-extensions" in headers:
+                raise ProbeFailure("websocket-extensions", "unsolicited extensions response")
+            if "sec-websocket-protocol" in headers:
+                raise ProbeFailure("websocket-subprotocol", "unsolicited subprotocol response")
             try:
                 return stream.read(1 if path == "/idle" else 7)
             except TimeoutError as error:

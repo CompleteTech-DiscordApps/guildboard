@@ -16,6 +16,7 @@ import threading
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
+POSIX_LOCAL = os.name == "posix" and hasattr(os, "killpg") and hasattr(signal, "SIGKILL")
 SPEC = importlib.util.spec_from_file_location("t10_probe", ROOT / "scripts/research/t10-nginx-probe.py")
 PROBE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PROBE)
@@ -93,9 +94,9 @@ class UpgradeRequestRegression(unittest.TestCase):
         self.thread.join(timeout=2)
         self.assertFalse(self.thread.is_alive())
 
-    def exchange(self, headers, method="GET", version="HTTP/1.1"):
+    def exchange(self, headers, method="GET", version="HTTP/1.1", path="/ws"):
         with socket.create_connection(self.server.server_address, timeout=2) as client:
-            request = method + " /ws " + version + "\r\n" + "\r\n".join(name + ": " + value for name, value in headers) + "\r\n\r\n"
+            request = method + " " + path + " " + version + "\r\n" + "\r\n".join(name + ": " + value for name, value in headers) + "\r\n\r\n"
             client.sendall(request.encode("latin-1"))
             with client.makefile("rb") as stream:
                 status = int(stream.readline().split()[1])
@@ -117,9 +118,19 @@ class UpgradeRequestRegression(unittest.TestCase):
         self.assertEqual(status, 101)
         self.assertEqual(frame, b"\x81\x05hello")
 
+    def test_valid_authority_names_and_bracketed_ipv6_remain_accepted(self):
+        for authority in ("research.invalid:8080", "[::1]:8080"):
+            headers = [(key, authority if key == "Host" else value) for key, value in self.headers]
+            with self.subTest(authority=authority):
+                status, _, frame = self.exchange(headers)
+                self.assertEqual(status, 101)
+                self.assertEqual(frame, b"\x81\x05hello")
+
     def test_missing_or_malformed_request_headers_never_upgrade_or_send_frame(self):
         invalid = [(name, None) for name in ("Host", "Upgrade", "Connection", "Sec-WebSocket-Version", "Sec-WebSocket-Key")]
-        invalid += [("Upgrade", "h2c"), ("Connection", "notupgrade"), ("Connection", "keep-alive"),
+        invalid += [("Host", "bad host"), ("Host", "user@host"), ("Host", "host/path"),
+                    ("Host", "host?query"), ("Host", "[broken]"), ("Host", "host:word"), ("Host", "host%zz"),
+                    ("Upgrade", "h2c"), ("Connection", "notupgrade"), ("Connection", "keep-alive"),
                     ("Sec-WebSocket-Version", "12"), ("Sec-WebSocket-Version", "13x"),
                     ("Sec-WebSocket-Key", "not-base64!"), ("Sec-WebSocket-Key", "eA=="),
                     ("Sec-WebSocket-Key", "eHh4eHh4eHh4eHh4eHh4eHg="), ("Sec-WebSocket-Key", "ÿ")]
@@ -129,7 +140,7 @@ class UpgradeRequestRegression(unittest.TestCase):
                 status, _, payload = self.exchange(headers)
                 self.assertIn(status, (400, 426))
                 self.assertNotIn(b"\x81\x05hello", payload)
-        for name in ("Upgrade", "Sec-WebSocket-Key", "Sec-WebSocket-Version"):
+        for name in ("Host", "Upgrade", "Sec-WebSocket-Key", "Sec-WebSocket-Version"):
             headers = self.headers + [next(item for item in self.headers if item[0] == name)]
             with self.subTest(duplicate=name):
                 status, _, payload = self.exchange(headers)
@@ -137,13 +148,14 @@ class UpgradeRequestRegression(unittest.TestCase):
                 self.assertNotIn(b"\x81\x05hello", payload)
 
     def test_wrong_method_or_http_version_cannot_upgrade(self):
-        for kwargs in ({"method": "POST"}, {"version": "HTTP/1.0"}):
+        for kwargs in ({"method": "POST"}, {"version": "HTTP/1.0"}, {"path": "/unknown"}):
             with self.subTest(kwargs=kwargs):
                 status, _, payload = self.exchange(self.headers, **kwargs)
                 self.assertNotEqual(status, 101)
                 self.assertNotIn(b"\x81\x05hello", payload)
 
 
+@unittest.skipUnless(POSIX_LOCAL, "POSIX local Nginx runner required")
 class LocalSetupCleanupRegression(unittest.TestCase):
     def test_setup_failures_close_backend_listener_and_thread(self):
         server_factory = http.server.ThreadingHTTPServer
@@ -183,7 +195,7 @@ class LocalSetupCleanupRegression(unittest.TestCase):
 
 
 class HandshakeRegression(unittest.TestCase):
-    def response(self, status="101 Switching Protocols", upgrade="websocket", connection="Upgrade", accept="s3pPLMBiTxaQ9kYGzzhZRbK+xOo="):
+    def response(self, status="101 Switching Protocols", upgrade="websocket", connection="Upgrade", accept="s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", extra_headers=()):
         headers = [f"HTTP/1.1 {status}"]
         if accept is not None:
             headers.append("Sec-WebSocket-Accept: " + accept)
@@ -191,6 +203,7 @@ class HandshakeRegression(unittest.TestCase):
             headers.append("Upgrade: " + upgrade)
         if connection is not None:
             headers.append("Connection: " + connection)
+        headers.extend(name + ": " + value for name, value in extra_headers)
         raw = ("\r\n".join(headers) + "\r\n\r\n").encode() + b"\x81\x05hello"
         client = mock.MagicMock()
         client.__enter__.return_value = client
@@ -244,6 +257,19 @@ class HandshakeRegression(unittest.TestCase):
         with mock.patch.object(FIXTURE.socket, "create_connection", return_value=client):
             with self.assertRaisesRegex(AssertionError, "missing/invalid Upgrade"):
                 FIXTURE.idle_close()
+
+    def test_unsolicited_negotiation_and_duplicate_singleton_responses_are_rejected(self):
+        for name, value in (("Sec-WebSocket-Extensions", "permessage-deflate"),
+                            ("Sec-WebSocket-Protocol", "unrequested"),
+                            ("Sec-WebSocket-Accept", "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="),
+                            ("Upgrade", "websocket")):
+            with self.subTest(header=name), mock.patch.object(FIXTURE.socket, "create_connection", return_value=self.response(extra_headers=[(name, value)])):
+                with self.assertRaises(FIXTURE.ProbeFailure):
+                    FIXTURE.websocket("/ws")
+
+    def test_repeated_connection_headers_combine_tokens(self):
+        with mock.patch.object(FIXTURE.socket, "create_connection", return_value=self.response(connection="keep-alive", extra_headers=[("Connection", "UpGrAdE")])):
+            self.assertEqual(FIXTURE.websocket("/ws"), b"\x81\x05hello")
 
     def test_connection_token_list_and_case_are_accepted(self):
         with mock.patch.object(FIXTURE.socket, "create_connection", return_value=self.response(upgrade="WebSocket", connection="keep-alive, UpGrAdE")):
@@ -421,6 +447,7 @@ class FailureAttributionRegression(unittest.TestCase):
             result = subprocess.run([sys.executable, "-O", "-c", prelude + readiness], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0 if status == 200 else 1)
 
+    @unittest.skipUnless(POSIX_LOCAL, "POSIX local Nginx runner required")
     def test_cli_failure_emits_accumulated_report(self):
         result = subprocess.run([sys.executable, str(ROOT / "scripts/research/t10-nginx-probe.py"),
                                  "--nginx-binary", sys.executable], capture_output=True, text=True)
@@ -444,6 +471,7 @@ class FailureAttributionRegression(unittest.TestCase):
                 FIXTURE.probe()
         self.assertEqual(caught.exception.passed_checks, checks)
 
+    @unittest.skipUnless(POSIX_LOCAL, "POSIX local Nginx runner required")
     def test_wait_failure_still_kills_group_and_reaps(self):
         process = mock.Mock(pid=12345)
         process.wait.side_effect = [RuntimeError("wait failure"), 0]
@@ -516,6 +544,7 @@ class FailureAttributionRegression(unittest.TestCase):
         self.assertEqual(len(caught.exception.report["cleanup"]), 2)
         self.assertEqual(fake.containers, {})
 
+    @unittest.skipUnless(POSIX_LOCAL, "POSIX local Nginx runner required")
     def test_unrelated_local_assertion_cannot_pass_negative_control(self):
         binary = os.environ.get("T10_NGINX_BINARY")
         if not binary:
@@ -540,13 +569,15 @@ class FailureAttributionRegression(unittest.TestCase):
 class ActualNginxControls(unittest.TestCase):
     def run_probe(self, control):
         binary = os.environ.get("T10_NGINX_BINARY")
+        if binary and not POSIX_LOCAL:
+            self.skipTest("explicit local Nginx binary requires POSIX; omit T10_NGINX_BINARY for Docker mode")
         return PROBE.run_local(binary, control) if binary else PROBE.run(control)
 
     def assert_cleanup(self, result):
         cleanup = result["cleanup"]
         self.assertTrue(all(cleanup.values()) if isinstance(cleanup, dict) else all(item["absence_verified"] for item in cleanup))
 
-    @unittest.skipUnless(Path("/proc").is_dir(), "Linux process introspection required")
+    @unittest.skipUnless(POSIX_LOCAL and Path("/proc").is_dir(), "POSIX and Linux process introspection required")
     def test_unexpected_failure_closes_actual_nginx_workers_and_listener(self):
         binary = os.environ.get("T10_NGINX_BINARY")
         if not binary:
@@ -596,6 +627,7 @@ class ActualNginxControls(unittest.TestCase):
                 if running(pid):
                     os.kill(pid, signal.SIGTERM)
 
+    @unittest.skipUnless(POSIX_LOCAL, "POSIX local Nginx runner required")
     def test_idle_connect_timeout_is_not_an_actual_control_success(self):
         binary = os.environ.get("T10_NGINX_BINARY")
         if not binary:

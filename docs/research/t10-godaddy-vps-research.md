@@ -350,3 +350,39 @@ public private-assets and excessive read timeout. Normal and optimized exact-hea
 results, old-fixture actual Nginx reports, raw failures and revision are in campaign
 `receipts/platform-finish.json` and `platform-finish-logs/t10-request-*`. Actual
 Docker, public TLS, Discord and GoDaddy acceptance remain unverified.
+
+
+### Host, response negotiation and platform-test follow-up — 2026-11-13 UTC
+
+Pinned `a5ff3e5` accepted duplicate Host fields and a Host containing a space,
+sending 101 and hello. The fixture now requires one syntactically valid URI
+authority: registered names (including valid escapes) and bracketed IP literals
+with optional numeric ports remain supported. There is no fixed hostname
+allowlist. This follows the Host rejection requirements in
+[RFC 9112 section 3.2](https://www.rfc-editor.org/rfc/rfc9112.html#section-3.2).
+Direct positives cover named authorities and bracketed IPv6; malformed/duplicate
+Host negatives cannot upgrade or emit a frame.
+
+The response oracle previously accepted unsolicited extensions and subprotocols.
+Because its request offers neither, it now rejects either response negotiation
+header before reading a frame, following
+[RFC 6455 section 4.1](https://www.rfc-editor.org/rfc/rfc6455.html#section-4.1).
+Duplicate singleton response fields remain rejected, while repeated Connection
+fields and valid case-insensitive token lists remain accepted. Wrong path/method/
+HTTP version and malformed request keys are covered. Noncanonical base64 pad
+bits are not newly prohibited: no additional requirement was established beyond
+the documented base64 grammar and decoded 16-byte key.
+
+POSIX-only local-process tests now declare their platform prerequisite; the
+local-runner CLI metadata test no longer expects post-setup fields on Windows.
+The portable Windows guard JSON test and simulated Docker tests remain enabled.
+A Windows-capability simulation without killpg/SIGKILL ran 18 selected tests:
+12 portable cases passed and six POSIX cases explicitly skipped. Actual Windows
+and Docker execution remain unverified. The production local runner continues
+to reject Windows before resources exist.
+
+Before-results, independent pinned diagnostic cross-check and exact-head normal/
+optimized validation are in campaign `receipts/t10-protocol-audit.json`,
+`receipts/platform-finish.json` and `platform-finish-logs/t10-edge-*`. The audit
+is diagnostic evidence, not approval. All real-platform acceptance and fresh
+whole-head review gates remain open.
