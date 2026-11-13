@@ -255,6 +255,14 @@ class DockerCleanupRegression(unittest.TestCase):
                 with self.subTest(message=message), self.assertRaises(subprocess.CalledProcessError):
                     PROBE.inspect_container("absent")
 
+    def test_malformed_inspection_never_authorizes_removal(self):
+        for output in ("invalid JSON", "[]", "{}", "[{}, {}]", json.dumps([{"Config": None}])):
+            call = mock.Mock(return_value=SimpleNamespace(stdout=output, stderr=""))
+            with self.subTest(output=output), mock.patch.object(PROBE, "docker", call):
+                with self.assertRaises(PROBE.DockerCleanupError):
+                    PROBE.cleanup_owned_containers(["backend"], "token", {})
+                self.assertFalse(any(args[:2] == ("container", "rm") for args, _ in call.call_args_list))
+
     def test_multiple_cleanup_failures_are_aggregated(self):
         fake = FakeDocker()
         fake.add("backend")
