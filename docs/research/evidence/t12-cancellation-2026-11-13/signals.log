@@ -1,0 +1,12 @@
+test_sigterm_reaps_owned_workers_and_retains_completed_results (t12_tests.SourceCaptureRegression.test_sigterm_reaps_owned_workers_and_retains_completed_results) ... ok
+test_sigint_reaps_owned_workers_and_retains_completed_results (t12_tests.SourceCaptureRegression.test_sigint_reaps_owned_workers_and_retains_completed_results) ... ok
+test_first_signal_during_normal_cleanup_still_returns_nonzero (t12_tests.SourceCaptureRegression.test_first_signal_during_normal_cleanup_still_returns_nonzero) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 2.246s
+
+OK
+{"signal": 15, "owned_children": 7, "reaped": true, "retained_healthy_and_fallback": true, "elapsed_seconds": 0.083}
+{"signal": 2, "owned_children": 7, "reaped": true, "retained_healthy_and_fallback": true, "elapsed_seconds": 0.072}
+{"first_signal_during_normal_cleanup": 15, "exit_code": 143, "owned_child_reaped": true, "completed_result_retained": true}
+{"first_signal_during_normal_cleanup": 2, "exit_code": 130, "owned_child_reaped": true, "completed_result_retained": true}

@@ -425,3 +425,33 @@ body after about 1.23 seconds rather than enforcing the intended 0.8-second limi
 Full-head test results and exact revision are recorded in campaign
 `receipts/platform-finish.json` and `platform-finish-logs`; historical source
 observations are preserved, with no new public-source or platform acceptance claim.
+
+
+### Catchable source-collection cancellation — 2026-11-13 UTC
+
+Code/test revision `b4ba0adcf6d3da878a19510591ff20b23e40ddb0` handles SIGTERM and SIGINT during
+collection. Cancellation stops new fetch children, kills and reaps each active
+owned direct child, preserves already completed healthy/fallback observations,
+and emits structured partial results with nonzero exit status (143/130).
+Cancelled attempts carry `CaptureCancelled` and no content hash. Prior signal
+handlers are restored, including on collection exceptions. Main-thread collection
+installs handlers; background library callers can supply their own cancellation.
+
+The [public evidence receipt](evidence/t12-cancellation-2026-11-13/receipt.json)
+contains exact tested revision, source hashes, reproducible commands and raw logs.
+At the previous head, owned slow-drip HTTP fixtures expose four live workers after
+SIGTERM and no exit within four seconds after SIGINT. After the fix, both signals
+reap seven launched workers and retain a healthy result plus a completed
+403-then-pinned fallback, while queued cancelled sources launch no children.
+A first-signal-during-normal-cleanup regression also proves both signals are
+reported as nonzero after safe cleanup even when every source completed.
+All 36 tests pass normally and with Python optimization; invalid matrix, HTTP
+truncation, fallback and elapsed-deadline regressions remain covered. Fresh
+schedule/matrix outputs equal their historical evidence, with ten external rows
+still not-run. Historical source observations remain unchanged.
+
+Cancellation is polled every 50ms; child cleanup has a one-second budget plus OS
+scheduling overhead. Parent SIGKILL, host loss, uninterruptible OS states, arbitrary
+descendant cleanup and platform acceptance are not established. This follow-up
+requires fresh independent full-head review; native acceptance, CODEOWNER/security/
+consumer review, hosted CI, merge and post-merge gates remain open.

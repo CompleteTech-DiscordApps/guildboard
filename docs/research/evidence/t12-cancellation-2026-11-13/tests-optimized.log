@@ -1,0 +1,45 @@
+test_accessibility_tasks_checks_and_targets_cannot_disappear (__main__.MatrixTests.test_accessibility_tasks_checks_and_targets_cannot_disappear) ... ok
+test_additional_evidence_and_stops_preserve_required_coverage (__main__.MatrixTests.test_additional_evidence_and_stops_preserve_required_coverage) ... ok
+test_all_required_matrix_sections_and_fields_are_present (__main__.MatrixTests.test_all_required_matrix_sections_and_fields_are_present) ... ok
+test_budget_coverage_and_definitions_cannot_disappear (__main__.MatrixTests.test_budget_coverage_and_definitions_cannot_disappear) ... ok
+test_duplicate_profile_and_impossible_percentiles_fail (__main__.MatrixTests.test_duplicate_profile_and_impossible_percentiles_fail) ... ok
+test_every_scenario_preserves_all_required_evidence (__main__.MatrixTests.test_every_scenario_preserves_all_required_evidence) ... ok
+test_external_pass_or_incomplete_coverage_cannot_be_laundered (__main__.MatrixTests.test_external_pass_or_incomplete_coverage_cannot_be_laundered) ... ok
+test_invalid_oversized_and_noninteger_loads_fail (__main__.MatrixTests.test_invalid_oversized_and_noninteger_loads_fail) ... ok
+test_malformed_sections_raise_validation_error (__main__.MatrixTests.test_malformed_sections_raise_validation_error) ... ok
+test_offered_load_arithmetic_and_pending_external_rows (__main__.MatrixTests.test_offered_load_arithmetic_and_pending_external_rows) ... ok
+test_required_evidence_names_and_trace_are_preserved (__main__.MatrixTests.test_required_evidence_names_and_trace_are_preserved) ... ok
+test_stop_conditions_cannot_be_empty_duplicated_or_removed (__main__.MatrixTests.test_stop_conditions_cannot_be_empty_duplicated_or_removed) ... ok
+test_vps_coverage_cannot_be_replaced_by_renamed_client_rows (__main__.MatrixTests.test_vps_coverage_cannot_be_replaced_by_renamed_client_rows) ... ok
+test_workload_keys_and_required_profile_metric_ids_are_fixed (__main__.MatrixTests.test_workload_keys_and_required_profile_metric_ids_are_fixed) ... ok
+test_workload_mix_does_not_hide_missing_arrivals (__main__.MatrixTests.test_workload_mix_does_not_hide_missing_arrivals) ... ok
+test_all_small_schedules_and_recovery_cuts (__main__.SchedulingTests.test_all_small_schedules_and_recovery_cuts) ... ok
+test_bounded_seed_inputs (__main__.SchedulingTests.test_bounded_seed_inputs) ... ok
+test_duplicate_and_restore_keep_historical_receipts (__main__.SchedulingTests.test_duplicate_and_restore_keep_historical_receipts) ... ok
+test_expiry_boundary_uses_injected_server_clock (__main__.SchedulingTests.test_expiry_boundary_uses_injected_server_clock) ... ok
+test_foreign_and_split_controls_are_caught (__main__.SchedulingTests.test_foreign_and_split_controls_are_caught) ... ok
+test_foreign_board_and_tenant_denials_leave_no_effect (__main__.SchedulingTests.test_foreign_board_and_tenant_denials_leave_no_effect) ... ok
+test_read_deny_precedes_retained_receipt (__main__.SchedulingTests.test_read_deny_precedes_retained_receipt) ... ok
+test_replay_output_is_byte_identical (__main__.SchedulingTests.test_replay_output_is_byte_identical) ... ok
+test_restore_changed_digest_conflicts_without_reapplying_content (__main__.SchedulingTests.test_restore_changed_digest_conflicts_without_reapplying_content) ... ok
+test_restore_retained_receipt_precedes_current_write_fence (__main__.SchedulingTests.test_restore_retained_receipt_precedes_current_write_fence) ... ok
+test_restore_unknown_old_lineage_and_unreadable_receipt_are_denied (__main__.SchedulingTests.test_restore_unknown_old_lineage_and_unreadable_receipt_are_denied) ... ok
+test_stale_prepared_authority_control_is_caught (__main__.SchedulingTests.test_stale_prepared_authority_control_is_caught) ... ok
+test_broken_chunk_is_failure_and_other_source_survives (__main__.SourceCaptureRegression.test_broken_chunk_is_failure_and_other_source_survives) ... ok
+test_capture_restores_signal_handlers (__main__.SourceCaptureRegression.test_capture_restores_signal_handlers) ... ok
+test_exhausted_collection_budget_starts_no_worker (__main__.SourceCaptureRegression.test_exhausted_collection_budget_starts_no_worker) ... ok
+test_failed_source_does_not_abort_collection (__main__.SourceCaptureRegression.test_failed_source_does_not_abort_collection) ... ok
+test_first_signal_during_normal_cleanup_still_returns_nonzero (__main__.SourceCaptureRegression.test_first_signal_during_normal_cleanup_still_returns_nonzero) ... ok
+test_sigint_reaps_owned_workers_and_retains_completed_results (__main__.SourceCaptureRegression.test_sigint_reaps_owned_workers_and_retains_completed_results) ... ok
+test_sigterm_reaps_owned_workers_and_retains_completed_results (__main__.SourceCaptureRegression.test_sigterm_reaps_owned_workers_and_retains_completed_results) ... ok
+test_slow_drip_deadline_reaps_worker_and_preserves_healthy_result (__main__.SourceCaptureRegression.test_slow_drip_deadline_reaps_worker_and_preserves_healthy_result) ... ok
+test_truncated_length_is_failure_and_other_source_survives (__main__.SourceCaptureRegression.test_truncated_length_is_failure_and_other_source_survives) ... ok
+
+----------------------------------------------------------------------
+Ran 36 tests in 5.162s
+
+OK
+{"first_signal_during_normal_cleanup": 15, "exit_code": 143, "owned_child_reaped": true, "completed_result_retained": true}
+{"first_signal_during_normal_cleanup": 2, "exit_code": 130, "owned_child_reaped": true, "completed_result_retained": true}
+{"signal": 2, "owned_children": 7, "reaped": true, "retained_healthy_and_fallback": true, "elapsed_seconds": 0.07}
+{"signal": 15, "owned_children": 7, "reaped": true, "retained_healthy_and_fallback": true, "elapsed_seconds": 0.07}

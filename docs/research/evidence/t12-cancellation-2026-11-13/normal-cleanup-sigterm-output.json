@@ -1,0 +1,5 @@
+{
+  "returncode": 143,
+  "stdout": "{\n  \"cancelled_signal\": 15,\n  \"kind\": \"public-document-observations-not-platform-testing\",\n  \"sources\": [\n    {\n      \"attempts\": [\n        {\n          \"bytes\": 2,\n          \"final_url\": \"https://example.invalid/no-request-made\",\n          \"http_status\": 200,\n          \"observed_at_utc\": \"2026-11-13T14:04:04.012612+00:00\",\n          \"sha256\": \"fake-worker-test\",\n          \"status\": \"fetched\",\n          \"url\": \"https://example.invalid/no-request-made\"\n        }\n      ],\n      \"document_version\": \"fake CLI\",\n      \"id\": \"P1\",\n      \"observed_at_utc\": \"2026-11-13T14:04:04.012596+00:00\",\n      \"status\": \"fetched\",\n      \"url\": \"https://example.invalid/no-request-made\"\n    }\n  ]\n}\n",
+  "stderr": ""
+}

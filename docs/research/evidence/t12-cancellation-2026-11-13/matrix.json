@@ -1,0 +1,39 @@
+{
+  "accessibility": "not-run",
+  "external_not_run": 10,
+  "kind": "input-validation-and-arithmetic-only",
+  "load": [
+    {
+      "boards": 1,
+      "connected_clients": 10,
+      "id": "small",
+      "ingress_payload_bytes_per_second": 4096,
+      "measured_throughput": null,
+      "offered_operations_per_second": 4,
+      "offered_operations_total": 1200,
+      "peer_fanout_payload_bytes_per_second": 36864
+    },
+    {
+      "boards": 6,
+      "connected_clients": 120,
+      "id": "baseline",
+      "ingress_payload_bytes_per_second": 98304,
+      "measured_throughput": null,
+      "offered_operations_per_second": 96,
+      "offered_operations_total": 86400,
+      "peer_fanout_payload_bytes_per_second": 1867776
+    },
+    {
+      "boards": 20,
+      "connected_clients": 1000,
+      "id": "stress",
+      "ingress_payload_bytes_per_second": 1638400,
+      "measured_throughput": null,
+      "offered_operations_per_second": 800,
+      "offered_operations_total": 48000,
+      "peer_fanout_payload_bytes_per_second": 80281600
+    }
+  ],
+  "matrix_version": 1,
+  "runtime_or_platform_acceptance": false
+}

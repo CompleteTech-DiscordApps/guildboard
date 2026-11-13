@@ -1,0 +1,105 @@
+{
+  "kind": "owned-loopback-research-collector-cancellation-not-platform-acceptance",
+  "baseline_revision": "8dca9ec1d98ce121ff20e254ccb651c8b56758b3",
+  "base_revision": "c108b552a660e12a3b3998e1e1ad944fbd7a894d",
+  "exact_tested_revision": "b4ba0adcf6d3da878a19510591ff20b23e40ddb0",
+  "source_sha256": {
+    "scripts/research/t12-capture-sources.py": "a0ae1102369bf44d5331eed5d0bfd266cbbb8ade7c8764fc1814798653fde7c4",
+    "tests/research/t12-test-experiments.py": "254e06dc511937e39602144712ef6f294d4c1326424f608c311f6a0b98a5bab0"
+  },
+  "environment": {
+    "python": "3.14.8",
+    "system": "Linux",
+    "kernel": "7.2.15-1-omarchy"
+  },
+  "baseline": {
+    "command": "CAPTURE_REGRESSION_SCRIPT=<git-show-baseline-source> python tests/research/t12-test-experiments.py SourceCaptureRegression.test_sigterm_reaps_owned_workers_and_retains_completed_results SourceCaptureRegression.test_sigint_reaps_owned_workers_and_retains_completed_results -v",
+    "log": "before.log",
+    "result": "SIGTERM: four owned worker PIDs remained alive after parent termination. SIGINT: collector did not finish within four seconds. Both regressions fail; fixture cleanup kills only recorded workers still executing this owned fetch-worker script."
+  },
+  "validation": [
+    {
+      "command": "python tests/research/t12-test-experiments.py -v",
+      "log": "tests-normal.log",
+      "passed": 36,
+      "skipped": 0
+    },
+    {
+      "command": "python -O tests/research/t12-test-experiments.py -v",
+      "log": "tests-optimized.log",
+      "passed": 36,
+      "skipped": 0
+    },
+    {
+      "command": "python docs/research/evidence/t12-cancellation-2026-11-13/signal-probe.py",
+      "log": "signals.log",
+      "raw_output": [
+        "sigterm-output.json",
+        "sigint-output.json",
+        "normal-cleanup-sigterm-output.json",
+        "normal-cleanup-sigint-output.json"
+      ],
+      "passed": 3,
+      "note": "Uses the same exact-head tests, retains literal stdout/stderr and exit status; owned loopback only.",
+      "signal_cases": 4
+    },
+    {
+      "command": "python scripts/research/t12-schedule-experiment.py",
+      "output": "schedule.json",
+      "result": "Semantically equal historical evidence: 140 schedules, 980 recovery boundaries, 1536 seeded actions, five unsafe controls."
+    },
+    {
+      "command": "python scripts/research/t12-validate-matrix.py",
+      "output": "matrix.json",
+      "result": "Semantically equal historical evidence; ten external rows not-run. Existing invalid/proposed-matrix regressions pass in the 36-test suite."
+    },
+    {
+      "command": "python - <<'PY'\nimport sys,runpy\nfrom pathlib import Path\nsys.path.insert(0,str(Path('scripts/github-bootstrap').resolve()))\nimport api\napi.save=lambda path,result: None\nrunpy.run_path('scripts/github-bootstrap/validate.py',run_name='__main__')\nPY",
+      "log": "planning.log",
+      "result": "471 items, 457 native relationships, 600 dependencies, zero errors; api.save disabled to preserve unleased generated audit."
+    }
+  ],
+  "observations": {
+    "signals": [
+      "SIGTERM",
+      "SIGINT"
+    ],
+    "child_poll_seconds": 0.05,
+    "cleanup_timeout_seconds": 1,
+    "max_concurrent_workers": 4,
+    "each_signal_owned_children_reaped": 7,
+    "queued_cancelled_sources_launch_no_children": true,
+    "completed_healthy_and_403_then_pinned_fallback_preserved": true,
+    "handlers_restored_on_success_cancellation_and_exception": true,
+    "structured_partial_result": true,
+    "nonzero_exit": {
+      "SIGTERM": 143,
+      "SIGINT": 130
+    },
+    "historical_source_observations": "unchanged; no public source requests",
+    "first_signal_during_normal_cleanup": "Both signals preserve an all-fetched result, reap the owned fake-CLI child, restore handlers and exit nonzero."
+  },
+  "limits": [
+    "Catchable cancellation during collection only. Parent SIGKILL, host loss, forcibly closed stdout and uninterruptible OS process states have no cleanup guarantee.",
+    "Cleanup is scoped to direct owned disposable Python fetch children; no shared process-group signals or arbitrary descendant-tree claim.",
+    "Background-thread library callers supply a Cancellation object themselves; signal handlers are installed and restored only in the main thread.",
+    "Loopback fixtures and abstract models do not verify actual Discord clients, assistive technology, GoDaddy networking, public TLS/DNS, SQL persistence or backup restore.",
+    "Research/specification acceptance, independent current-head review, CODEOWNER/security/consumer review, hosted CI, merge and applicable post-merge evidence remain external."
+  ],
+  "evidence_sha256": {
+    "README.md": "898fd0495ee5e922fae04204bb5e6e7438d816b203f4d565ff77c45373ade009",
+    "before.log": "ea4e9850ea3ab0a9bd9b5be2865a7d0a41fa933d3263b60f1f2702ec36e0e8d3",
+    "matrix.json": "f5887ab5cdfe7e83e741009cb0a644ebe013002869c31235ad81f9025f1d5c97",
+    "normal-cleanup-sigint-output.json": "53c7d047d4f26883c550f7cb026d1ad3be37eeefa1f301af304b632b1f45d3c9",
+    "normal-cleanup-sigterm-output.json": "e587005b7966cacd73ae1f653e912dd49f8e92fad5cfcb6aefd0c042b7c3a31f",
+    "planning.log": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7",
+    "schedule.json": "1f44696d93e4ad8af3d299ef49e825c591f357ea8a0f6cefdef6b981d7576cc7",
+    "sigint-output.json": "35caf71a75a2a5fdb33b0db8367c511b65cae6e6da856df571863590ad91aa5e",
+    "signal-probe.py": "e3a46afabc26cc89892e505443a7f07f377f8159558ffe00be875d8285cc5b95",
+    "signals.log": "00fca2125edd9cb8953cbe37317bc3f0a4242d05944f9d6e4e5831cc95083fca",
+    "sigterm-output.json": "c258facdf70b0d67de34c34c51fa25af092e94ae46a2030f2a6debf79d32a800",
+    "tests-normal.log": "a40be645a5a1521054b244f191e4767f089b7351b77551c96a59e85e48a2b06f",
+    "tests-optimized.log": "63079eba4feaa0b6a99bac3df2791d40e833abc5923ca65eee8cdf2953f94fce"
+  },
+  "implementation_revision": "dbbd5cc14999d4948b2d6b4dbb11d9dd809c0c95"
+}
