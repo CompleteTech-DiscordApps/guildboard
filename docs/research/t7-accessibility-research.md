@@ -35,8 +35,10 @@ was mutated, executed, copied into this fixture or adopted. T3 retains ownership
 
 ## Current primary sources and evaluated versions
 
-[Source response metadata](t7-source-observations.json) records 14 successful
-official-document GETs, dates, final URLs and SHA-256 hashes. Rolling Discord and
+[Source response metadata](t7-source-observations.json) records 14 historical
+official-document GETs from 2026-10-26, with their original dates, final URLs
+and SHA-256 hashes. Its separate `refreshes` entry records the E1 link check on
+2026-11-13; those responses do not replace or relabel the historical captures. Rolling Discord and
 Excalidraw pages may differ from pinned packages. WCAG 2.2 is pinned to the W3C
 Recommendation dated **2024-12-12**; Understanding/APG pages are explanatory
 guidance, not additional normative requirements. Response hashes do not recreate
@@ -47,7 +49,8 @@ bodies or prove application conformance.
 | D1 [Discord layout](https://docs.discord.com/developers/activities/development-guides/layout) | Focused, PIP and grid modes; orientation and layout updates differ across client generations. No fixed Activity pixel dimensions are promised. |
 | D2 [Discord mobile](https://docs.discord.com/developers/activities/development-guides/mobile) | Web/desktop, iOS and Android platform toggles; mobile safe-area variables, orientation/thermal/device behavior need real testing. |
 | D3 [Discord production readiness](https://docs.discord.com/developers/activities/development-guides/production-readiness) | Older clients can reject newer commands; safe fallback and actual client/build records are needed. |
-| E1 [Excalidraw props](https://plus.excalidraw.com/docs/sdk/excalidraw/api/props) | Public view-mode, keyboard-global/autofocus and change hooks are candidate integration controls. UI read-only does not enforce server permissions. |
+| E1 [Historical Excalidraw props URL](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/) | The 2026-10-26 E1 observation belongs to this original URL and response hash. On 2026-11-13 it redirects to the SDK introduction, which does not document the cited props. |
+| E1-current [Current Excalidraw props](https://plus.excalidraw.com/docs/sdk/excalidraw/api/props) | Separately fetched on 2026-11-13: documents `viewModeEnabled`, `handleKeyboardGlobally`, `autoFocus` and `onChange`. These remain candidate integration controls; UI read-only does not enforce server permissions. Rolling documentation is not proof of 0.18.1 behavior. |
 | E2 [Excalidraw imperative API](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/excalidraw-api) | Scene reads/updates and scrolling expose adapter inputs; scrolling options include animation controls. Verify against 0.18.1 and accepted operations before use. |
 | W1 [WCAG 2.2 Recommendation](https://www.w3.org/TR/2024/REC-WCAG22-20241212/) | Proposed acceptance target: applicable Level A/AA criteria, including keyboard, focus, names/roles, errors and status; no conformance claim here. |
 | W2 [W3C APG modal dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) | Initial focus, contained Tab order, Escape and trigger focus restoration are concrete dialog checks. |

@@ -155,5 +155,42 @@
       "status": "fetched",
       "url": "https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html"
     }
+  ],
+  "refreshes": [
+    {
+      "purpose": "Distinguish the historical E1 response from its present-day redirect and the separately verified current props documentation. Original sources entries are unchanged.",
+      "observations": [
+        {
+          "id": "E1-original-redirect",
+          "url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/",
+          "final_url": "https://plus.excalidraw.com/docs/sdk",
+          "observed_at_utc": "2026-11-13T05:56:55.993134+00:00",
+          "http_status": 200,
+          "bytes": 99217,
+          "sha256": "c4e5a4ba162ce9eac2bd1e55030b5da0abeb6bb89ebfebd8d425d28313b3c9ba",
+          "contains_props": {
+            "viewModeEnabled": false,
+            "handleKeyboardGlobally": false,
+            "autoFocus": false,
+            "onChange": false
+          }
+        },
+        {
+          "id": "E1-current",
+          "url": "https://plus.excalidraw.com/docs/sdk/excalidraw/api/props",
+          "final_url": "https://plus.excalidraw.com/docs/sdk/excalidraw/api/props",
+          "observed_at_utc": "2026-11-13T05:56:56.090782+00:00",
+          "http_status": 200,
+          "bytes": 185245,
+          "sha256": "a3a9990a241ec86df3b8327d0b56c322a5b494aa984cac206efa66cbf7e6699c",
+          "contains_props": {
+            "viewModeEnabled": true,
+            "handleKeyboardGlobally": true,
+            "autoFocus": true,
+            "onChange": true
+          }
+        }
+      ]
+    }
   ]
 }
