@@ -7,6 +7,8 @@ import socket
 import tempfile
 import threading
 import json
+import os
+import signal
 from pathlib import Path
 import platform
 import subprocess
@@ -104,6 +106,30 @@ def run(control=None):
     return report
 
 
+def stop_local_proxy(proxy):
+    """Stop only the session created for this owned Nginx master and its workers."""
+    try:
+        os.killpg(proxy.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    try:
+        proxy.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        # The session ID equals this child's PID (start_new_session=True).
+        # Kill its entire group, never only the master leaving listeners behind.
+        try:
+            os.killpg(proxy.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proxy.wait(timeout=5)
+    # If the master had already exited unexpectedly, orphan workers can still
+    # occupy this owned group even though wait() has returned. Fence them too.
+    try:
+        os.killpg(proxy.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+
 def run_local(nginx_binary, control=None):
     """Owned loopback processes only; no Docker, privilege or system service changes."""
     binary = str(Path(nginx_binary).resolve(strict=True))
@@ -157,7 +183,7 @@ def run_local(nginx_binary, control=None):
             checked = subprocess.run([binary, "-p", temporary + "/", "-c", str(path), "-t"], capture_output=True, text=True, check=True)
             report["nginx_config_check"] = checked.stderr.strip()
             with (root / "stderr.log").open("w+") as errors:
-                proxy = subprocess.Popen([binary, "-p", temporary + "/", "-c", str(path), "-g", "daemon off;"], stdout=subprocess.DEVNULL, stderr=errors)
+                proxy = subprocess.Popen([binary, "-p", temporary + "/", "-c", str(path), "-g", "daemon off;"], stdout=subprocess.DEVNULL, stderr=errors, start_new_session=True)
                 for attempt in range(50):
                     try:
                         if fixture.request("/ready")[0] == 200:
@@ -179,21 +205,20 @@ def run_local(nginx_binary, control=None):
                     report["negative_control"] = {"variant": control, "detected": True, "failure": str(error)}
                 if control and "negative_control" not in report:
                     raise AssertionError("unsafe negative control escaped the probe")
-                proxy.terminate()
-                proxy.wait(timeout=5)
                 errors.seek(0)
                 report["nginx_log"] = errors.read()
     finally:
-        if proxy is not None and proxy.poll() is None:
-            proxy.kill()
-            proxy.wait(timeout=5)
-        if server is not None:
-            server.idle_stop.set()
-            if thread is not None and thread.is_alive():
-                server.shutdown()
-            if thread is not None and thread.ident is not None:
-                thread.join(timeout=5)
-            server.server_close()
+        try:
+            if proxy is not None:
+                stop_local_proxy(proxy)
+        finally:
+            if server is not None:
+                server.idle_stop.set()
+                if thread is not None and thread.is_alive():
+                    server.shutdown()
+                if thread is not None and thread.ident is not None:
+                    thread.join(timeout=5)
+                server.server_close()
         report["cleanup"] = {"owned_nginx_exited": proxy is None or proxy.poll() is not None,
                              "owned_backend_thread_exited": thread is None or not thread.is_alive()}
     return report

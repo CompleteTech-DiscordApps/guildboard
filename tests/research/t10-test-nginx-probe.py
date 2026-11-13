@@ -2,6 +2,7 @@
 import os
 import io
 import subprocess
+import signal
 import importlib.util
 from pathlib import Path
 import unittest
@@ -145,6 +146,56 @@ class ActualNginxControls(unittest.TestCase):
     def assert_cleanup(self, result):
         cleanup = result["cleanup"]
         self.assertTrue(all(cleanup.values()) if isinstance(cleanup, dict) else all(item["absence_verified"] for item in cleanup))
+
+    @unittest.skipUnless(Path("/proc").is_dir(), "Linux process introspection required")
+    def test_unexpected_failure_closes_actual_nginx_workers_and_listener(self):
+        binary = os.environ.get("T10_NGINX_BINARY")
+        if not binary:
+            self.skipTest("explicit local Nginx binary required")
+        original_spec = PROBE.importlib.util.spec_from_file_location
+        original_popen = PROBE.subprocess.Popen
+        owned = {"workers": []}
+        def capture_popen(args, *rest, **kwargs):
+            process = original_popen(args, *rest, **kwargs)
+            if "daemon off;" in args:
+                owned["master"] = process.pid
+            return process
+        def inject_spec(name, path):
+            spec = original_spec(name, path)
+            original_exec = spec.loader.exec_module
+            def load(module):
+                original_exec(module)
+                def fail_after_readiness():
+                    owned["port"] = module.PROXY_PORT
+                    children = Path(f"/proc/{owned['master']}/task/{owned['master']}/children")
+                    owned["workers"] = [int(pid) for pid in children.read_text().split()]
+                    raise AssertionError("injected unexpected probe failure")
+                module.probe = fail_after_readiness
+            spec.loader.exec_module = load
+            return spec
+        def running(pid):
+            try:
+                return Path(f"/proc/{pid}/stat").read_text().split(") ", 1)[1].split()[0] != "Z"
+            except FileNotFoundError:
+                return False
+        try:
+            with mock.patch.object(PROBE.importlib.util, "spec_from_file_location", side_effect=inject_spec), \
+                 mock.patch.object(PROBE.subprocess, "Popen", side_effect=capture_popen):
+                with self.assertRaisesRegex(AssertionError, "injected unexpected probe failure"):
+                    PROBE.run_local(binary)
+            deadline = time.monotonic() + 2
+            while any(running(pid) for pid in owned["workers"]) and time.monotonic() < deadline:
+                time.sleep(0.02)
+            self.assertTrue(owned["workers"], "test must observe actual Nginx worker processes")
+            self.assertFalse(any(running(pid) for pid in owned["workers"]))
+            with self.assertRaises(OSError):
+                with socket.create_connection(("127.0.0.1", owned["port"]), timeout=1):
+                    pass
+        finally:
+            # Bound cleanup even when run against the original leaking runner.
+            for pid in owned["workers"]:
+                if running(pid):
+                    os.kill(pid, signal.SIGTERM)
 
     def test_long_read_timeout_is_detected(self):
         result = self.run_probe("long-read-timeout")
