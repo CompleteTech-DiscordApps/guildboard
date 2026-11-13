@@ -354,3 +354,35 @@ platform rows remain not-run. Raw results: `t12-review2-before.log`,
 `t12-review2-tests.log`, `t12-review2-matrix.json`, and
 `t12-review2-planning.log` in the existing campaign log directory. Fresh full-head
 review is still required; no review thread is resolved by this change.
+
+
+### Complete version-1 matrix validation
+
+Full-head review at `baad70e98f2b892e1bd7c4ad09fa3a6ecf8b03c6` identified that
+empty latency-budget lists and accessibility objects containing only status
+still passed. The validation pass now checks the complete existing research
+matrix rather than only its derived arithmetic: all original top-level sections,
+four workload-mix keys, three load-profile IDs, five latency-metric IDs and their
+metric/condition definitions, resource fields, ten external scenarios and
+accessibility targets, tasks and checks are mandatory. Version-1 object fields
+are closed to unknown keys so ignored fields cannot masquerade as validation.
+This validates the existing research schema; it creates no runtime contract.
+
+Intentional flexibility remains explicit: numeric load/latency inputs retain the
+existing bounded-integer rules; resource fractions/percentages/positive counts
+are typed and range checked but remain candidate inputs, not a fixed SLA.
+Additional distinct nonblank evidence, accessibility tasks/checks and safety
+stops are accepted when all mandatory entries remain. Environment descriptions,
+load rationale and resource notes may be revised as nonblank text. The existing
+WCAG target/critical-task budget/additional design goal and metric definitions
+remain fixed for this version; changing them requires a reviewed schema change.
+
+At source `927ff2618f8a8d66f5449e67b7df56034ee67d7d`, **27** focused tests pass. New regressions remove every
+required top-level/resource/accessibility field and exercise missing, empty,
+malformed, duplicated or renamed budget/profile inputs and missing accessibility
+tasks/checks. Four new methods against the previous code produced 78 assertion
+failures and 14 malformed-input errors, confirming the gaps. Raw results are
+`t12-review3-before.log`, `t12-review3-tests.log`, `t12-review3-matrix.json` and
+`t12-review3-planning.log` in the campaign log directory. Fresh derived matrix
+JSON remains equal to the historical artifact. External verification is still
+not-run; fresh independent review is required.
