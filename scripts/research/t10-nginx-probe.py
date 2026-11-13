@@ -1,5 +1,6 @@
 """Run an owned, cached-image-only Nginx network experiment. Python stdlib only."""
 import argparse
+import contextlib
 import hashlib
 import importlib.util
 import http.server
@@ -61,6 +62,8 @@ def failure_record(error):
     detail, truncated = bounded_diagnostic(str(error))
     record = {"type": type(error).__name__, "detail": detail,
               "passed_checks": getattr(error, "passed_checks", [])}
+    if isinstance(error, ExperimentCancelled):
+        record["signal"] = error.signal_name
     if truncated:
         record["detail_truncated"] = True
     for name in ("stdout", "stderr"):
@@ -88,6 +91,34 @@ def docker(*args, input_text=None):
     if result.returncode:
         raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
     return result
+
+
+class ExperimentCancelled(RuntimeError):
+    def __init__(self, signum):
+        self.signum = signum
+        self.signal_name = signal.Signals(signum).name
+        self.exit_code = 128 + signum
+        super().__init__("cancelled by " + self.signal_name)
+
+
+@contextlib.contextmanager
+def cancellation_signals():
+    """Unwind owned work once; ignore repeat catchable signals during cleanup."""
+    previous = {}
+    cancelled = False
+    def cancel(signum, _frame):
+        nonlocal cancelled
+        if not cancelled:
+            cancelled = True
+            raise ExperimentCancelled(signum)
+    try:
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            previous[signum] = signal.getsignal(signum)
+            signal.signal(signum, cancel)
+        yield
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
 
 
 class DockerCleanupError(RuntimeError):
@@ -367,17 +398,23 @@ def emit_report(report, output_path=None):
     return True
 
 
-if __name__ == "__main__":
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--nginx-binary", type=Path, help="Use an explicit local binary with owned POSIX loopback processes")
     parser.add_argument("--negative-control", choices=[*HANDSHAKE_REJECTIONS, "publish-private-assets", "long-read-timeout"])
-    args = parser.parse_args()
-    try:
-        report = run_local(args.nginx_binary, args.negative_control) if args.nginx_binary else run(args.negative_control)
-    except Exception as error:
-        report = getattr(error, "report", {"failure": failure_record(error)})
-        emit_report(report, args.output)
-        raise SystemExit(1)
-    if not emit_report(report, args.output):
-        raise SystemExit(1)
+    args = parser.parse_args(argv)
+    report = {}
+    with cancellation_signals():
+        try:
+            report = run_local(args.nginx_binary, args.negative_control) if args.nginx_binary else run(args.negative_control)
+            return 0 if emit_report(report, args.output) else 1
+        except Exception as error:
+            report = getattr(error, "report", report)
+            report.setdefault("failure", failure_record(error))
+            emit_report(report, args.output)
+            return error.exit_code if isinstance(error, ExperimentCancelled) else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

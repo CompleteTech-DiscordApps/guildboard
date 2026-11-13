@@ -1,5 +1,7 @@
 """Record public primary-response metadata, not a platform verification result."""
 import argparse
+import contextlib
+import signal
 from datetime import datetime, timezone
 import http.client
 import hashlib
@@ -32,6 +34,34 @@ SOURCES = [
 MAX_BYTES = 4_000_000
 ATTEMPT_SECONDS = 20
 COLLECTION_SECONDS = 90
+
+
+class ExperimentCancelled(RuntimeError):
+    def __init__(self, signum):
+        self.signum = signum
+        self.signal_name = signal.Signals(signum).name
+        self.exit_code = 128 + signum
+        super().__init__("cancelled by " + self.signal_name)
+
+
+@contextlib.contextmanager
+def cancellation_signals():
+    """Unwind owned work once; ignore repeat catchable signals during cleanup."""
+    previous = {}
+    cancelled = False
+    def cancel(signum, _frame):
+        nonlocal cancelled
+        if not cancelled:
+            cancelled = True
+            raise ExperimentCancelled(signum)
+    try:
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            previous[signum] = signal.getsignal(signum)
+            signal.signal(signum, cancel)
+        yield
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
 
 
 class FetchFailure(OSError):
@@ -80,31 +110,56 @@ def fetch_worker(url):
 
 def capture():
     observations = []
+    row = None
     deadline = time.monotonic() + COLLECTION_SECONDS
-    for name, url in SOURCES:
-        row = {"id": name, "url": url, "observed_at": datetime.now(timezone.utc).isoformat()}
-        try:
-            result = fetch(url, min(ATTEMPT_SECONDS, deadline - time.monotonic()))
-            row.update(result)
-            row["status"] = row.pop("http_status")
-        except (OSError, ValueError, subprocess.SubprocessError) as error:
-            row["error"] = str(error)
-        observations.append(row)
+    try:
+        for name, url in SOURCES:
+            row = {"id": name, "url": url, "observed_at": datetime.now(timezone.utc).isoformat()}
+            try:
+                result = fetch(url, min(ATTEMPT_SECONDS, deadline - time.monotonic()))
+                row.update(result)
+                row["status"] = row.pop("http_status")
+            except (OSError, ValueError, subprocess.SubprocessError) as error:
+                row["error"] = str(error)
+            observations.append(row)
+    except ExperimentCancelled as error:
+        if row is not None and (not observations or observations[-1] is not row):
+            row.update(error=str(error), cancelled=True)
+            observations.append(row)
+        error.report = {"kind": "public-response-observation-not-account-or-content-attestation", "sources": observations}
+        raise
     return {"kind": "public-response-observation-not-account-or-content-attestation", "sources": observations}
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", required=True, type=Path)
+    args = parser.parse_args(argv)
+    result = {"kind": "public-response-observation-not-account-or-content-attestation", "sources": []}
+    with cancellation_signals():
+        try:
+            result = capture()
+            try:
+                args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
+            except (OSError, ValueError) as error:
+                print(json.dumps(result, indent=2))
+                print("Cannot write source report: " + str(error), file=sys.stderr)
+                return 1
+            print(json.dumps({"observed": len(result["sources"]), "http_200": sum(row.get("status") == 200 for row in result["sources"]), "failures": [row["id"] for row in result["sources"] if "error" in row]}))
+            return 0
+        except ExperimentCancelled as error:
+            result = getattr(error, "report", result)
+            result["failure"] = {"type": type(error).__name__, "detail": str(error), "signal": error.signal_name}
+            print(json.dumps(result, indent=2))
+            try:
+                args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
+            except (OSError, ValueError) as output_error:
+                print("Cannot write source report: " + str(output_error), file=sys.stderr)
+            return error.exit_code
 
 
 if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--fetch-worker":
         fetch_worker(sys.argv[2])
         sys.exit(0)
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", required=True, type=Path)
-    args = parser.parse_args()
-    result = capture()
-    try:
-        args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
-    except (OSError, ValueError) as error:
-        print(json.dumps(result, indent=2))
-        print("Cannot write source report: " + str(error), file=sys.stderr)
-        sys.exit(1)
-    print(json.dumps({"observed": len(result["sources"]), "http_200": sum(row.get("status") == 200 for row in result["sources"]), "failures": [row["id"] for row in result["sources"] if "error" in row]}))
+    raise SystemExit(main())

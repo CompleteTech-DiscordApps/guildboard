@@ -437,6 +437,176 @@ class DockerCleanupRegression(unittest.TestCase):
         self.assertEqual(sum(call[:2] == ("container", "rm") for call in fake.calls), 2)
 
 
+class CancellationRegression(unittest.TestCase):
+    def test_signal_handlers_restore_and_repeat_signals_do_not_interrupt_cleanup(self):
+        spec = importlib.util.spec_from_file_location("t10_capture_cancel", ROOT / "scripts/research/t10-capture-sources.py")
+        capture = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(capture)
+        for module in (PROBE, capture):
+            previous = {number: signal.getsignal(number) for number in (signal.SIGINT, signal.SIGTERM)}
+            with self.subTest(module=module.__name__), module.cancellation_signals():
+                with self.assertRaises(module.ExperimentCancelled):
+                    signal.getsignal(signal.SIGTERM)(signal.SIGTERM, None)
+                signal.getsignal(signal.SIGINT)(signal.SIGINT, None)
+            self.assertEqual({number: signal.getsignal(number) for number in previous}, previous)
+
+    def test_cancelled_uncertain_docker_create_reconciles_only_owned_resources(self):
+        for target in ("backend", "proxy"):
+            fake = FakeDocker()
+            foreign = fake.add("foreign", token="foreign")
+            def command(*args, **kwargs):
+                result = fake(*args, **kwargs)
+                if args[0] == "create" and args[args.index("--name") + 1].endswith(target):
+                    signal.getsignal(signal.SIGTERM)(signal.SIGTERM, None)
+                if args[:2] == ("container", "rm"):
+                    signal.getsignal(signal.SIGINT)(signal.SIGINT, None)
+                return result
+            with self.subTest(target=target), PROBE.cancellation_signals(), mock.patch.object(PROBE, "docker", side_effect=command):
+                with self.assertRaises(PROBE.ExperimentCancelled) as caught:
+                    PROBE.run()
+            self.assertEqual(fake.containers, {"foreign": foreign})
+            self.assertEqual(caught.exception.report["failure"]["signal"], "SIGTERM")
+            self.assertTrue(all(item["absence_verified"] for item in caught.exception.report["cleanup"]))
+
+    @unittest.skipUnless(POSIX_LOCAL and Path("/proc").is_dir(), "POSIX/Linux process ownership required")
+    def test_cli_signals_after_readiness_cleanup_and_emit_json(self):
+        import tempfile
+        import re
+        binary = os.environ.get("T10_NGINX_BINARY")
+        if not binary:
+            self.skipTest("explicit local Nginx binary required")
+        def process_start(pid):
+            try:
+                parts = Path(f"/proc/{pid}/stat").read_text().split(") ", 1)[1].split()
+                return None if parts[0] == "Z" else parts[19]
+            except FileNotFoundError:
+                return None
+        for number in (signal.SIGTERM, signal.SIGINT):
+            with self.subTest(signal=number), tempfile.TemporaryDirectory(prefix="t10-cli-cancel-") as scratch:
+                process = subprocess.Popen([sys.executable, str(ROOT / "scripts/research/t10-nginx-probe.py"),
+                                            "--nginx-binary", binary, "--negative-control", "long-read-timeout"],
+                                           env=dict(os.environ, TMPDIR=scratch), stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE, text=True)
+                owned, group = {}, None
+                try:
+                    deadline, ready, temporary = time.monotonic() + 6, False, None
+                    while time.monotonic() < deadline:
+                        directories = list(Path(scratch).glob("gb-t10-nginx-*"))
+                        if directories:
+                            temporary = directories[0]
+                            config = temporary / "nginx.conf"
+                            if config.exists():
+                                port = int(re.search(r"listen 127\.0\.0\.1:(\d+);", config.read_text()).group(1))
+                                try:
+                                    with socket.create_connection(("127.0.0.1", port), timeout=.1) as client:
+                                        client.sendall(b"GET /ready HTTP/1.1\r\nHost: research.invalid\r\nConnection: close\r\n\r\n")
+                                        ready = b" 200 " in client.recv(1024).split(b"\r\n", 1)[0]
+                                except OSError:
+                                    pass
+                        if ready:
+                            break
+                        time.sleep(.02)
+                    self.assertTrue(ready, "cancellation must happen after actual owned readiness")
+                    children = Path(f"/proc/{process.pid}/task/{process.pid}/children").read_text().split()
+                    for child in children:
+                        pid = int(child)
+                        if str(temporary).encode() in Path(f"/proc/{pid}/cmdline").read_bytes():
+                            group = pid
+                            owned[pid] = process_start(pid)
+                            workers = Path(f"/proc/{pid}/task/{pid}/children").read_text().split()
+                            owned.update({int(worker): process_start(int(worker)) for worker in workers})
+                    self.assertIsNotNone(group)
+                    process.send_signal(number)
+                    stdout, stderr = process.communicate(timeout=6)
+                    self.assertEqual(process.returncode, 128 + number, stderr)
+                    report = json.loads(stdout)
+                    self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+                    self.assertTrue(all(report["cleanup"].values()))
+                    self.assertFalse(temporary.exists())
+                    deadline = time.monotonic() + 2
+                    while any(process_start(pid) == start for pid, start in owned.items() if start is not None) and time.monotonic() < deadline:
+                        time.sleep(.02)
+                    self.assertFalse(any(process_start(pid) == start for pid, start in owned.items() if start is not None))
+                finally:
+                    if process.poll() is None:
+                        process.kill()
+                        process.communicate(timeout=5)
+                    # Bound the regression on old code; only captured ownership may authorize cleanup.
+                    if group is not None and any(process_start(pid) == start for pid, start in owned.items() if start is not None):
+                        for sig in (signal.SIGTERM, signal.SIGKILL):
+                            try:
+                                os.killpg(group, sig)
+                            except ProcessLookupError:
+                                pass
+
+    @unittest.skipUnless(POSIX_LOCAL and Path("/proc").is_dir(), "POSIX/Linux child ownership required")
+    def test_source_capture_signal_reaps_worker_and_retains_completed_rows(self):
+        for number in (signal.SIGTERM, signal.SIGINT):
+            with self.subTest(signal=number):
+                self._source_capture_signal(number)
+
+    def _source_capture_signal(self, number):
+        import socketserver
+        import tempfile
+        stop, slow_connected = threading.Event(), threading.Event()
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                request = self.request.recv(4096)
+                try:
+                    if b"/slow " in request:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 1000000\r\n\r\n")
+                        slow_connected.set()
+                        while not stop.wait(.02):
+                            self.request.sendall(b"x")
+                    else:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+        worker = None
+        with tempfile.TemporaryDirectory(prefix="t10-capture-cancel-") as scratch, socketserver.ThreadingTCPServer(("127.0.0.1", 0), Handler) as server:
+            thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=.05))
+            thread.start()
+            url = "http://127.0.0.1:" + str(server.server_address[1])
+            output = str(Path(scratch) / "capture.json")
+            program = ("import importlib.util,sys; s=importlib.util.spec_from_file_location('capture',sys.argv[1]); "
+                       "m=importlib.util.module_from_spec(s); s.loader.exec_module(m); "
+                       "m.SOURCES=[('healthy',sys.argv[2]+'/healthy'),('slow',sys.argv[2]+'/slow')]; "
+                       "raise SystemExit(m.main(['--output',sys.argv[3]]))")
+            process = subprocess.Popen([sys.executable, "-c", program, str(ROOT / "scripts/research/t10-capture-sources.py"), url, output], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            try:
+                self.assertTrue(slow_connected.wait(timeout=6), "actual worker must be reading slow response")
+                children = Path(f"/proc/{process.pid}/task/{process.pid}/children").read_text().split()
+                for child in children:
+                    command = Path(f"/proc/{child}/cmdline").read_bytes()
+                    if b"--fetch-worker" in command and url.encode() in command:
+                        worker = int(child)
+                self.assertIsNotNone(worker)
+                process.send_signal(number)
+                stdout, stderr = process.communicate(timeout=6)
+                self.assertEqual(process.returncode, 128 + number, stderr)
+                report = json.loads(stdout)
+                self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+                self.assertEqual(report["sources"][0]["bytes"], 2)
+                self.assertTrue(report["sources"][1]["cancelled"])
+                self.assertEqual(json.loads(Path(output).read_text()), report)
+                self.assertFalse(Path(f"/proc/{worker}").exists(), "owned capture worker must be reaped")
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.communicate(timeout=5)
+                if worker is not None:
+                    try:
+                        command = Path(f"/proc/{worker}/cmdline").read_bytes()
+                        if b"--fetch-worker" in command and url.encode() in command:
+                            os.kill(worker, signal.SIGKILL)
+                    except FileNotFoundError:
+                        pass
+                stop.set()
+                server.shutdown()
+                thread.join(timeout=2)
+        self.assertFalse(thread.is_alive())
+
+
 class FailureAttributionRegression(unittest.TestCase):
     def test_windows_local_runner_fails_before_resources_with_json(self):
         import runpy
