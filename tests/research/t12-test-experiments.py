@@ -256,6 +256,23 @@ class MatrixTests(unittest.TestCase):
                 with self.subTest(field=field, value=value), self.assertRaises(ValueError):
                     matrix.validate(data)
 
+    def test_workload_keys_and_required_profile_metric_ids_are_fixed(self):
+        for key in self.data["workload_mix_percent"]:
+            data = deepcopy(self.data)
+            del data["workload_mix_percent"][key]
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                matrix.validate(data)
+        for section in ("load_profiles", "budget_candidates"):
+            data = deepcopy(self.data)
+            data[section][0]["id"] = "unrelated-scenario"
+            with self.subTest(section=section), self.assertRaises(ValueError):
+                matrix.validate(data)
+        for key in self.data["load_profiles"][0]:
+            data = deepcopy(self.data)
+            del data["load_profiles"][0][key]
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                matrix.validate(data)
+
     def test_malformed_sections_raise_validation_error(self):
         for field, value in (("workload_mix_percent", []), ("load_profiles", [None]),
                              ("external_rows", [None] * 10), ("resource_candidates", []),
