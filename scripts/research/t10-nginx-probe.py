@@ -9,6 +9,7 @@ import threading
 import json
 import os
 import signal
+import sys
 import re
 from pathlib import Path
 import platform
@@ -128,7 +129,7 @@ def run(control=None):
         report["nginx_config_check"] = (check.stdout + check.stderr).strip()
         docker("exec", "-d", proxy, "nginx", "-c", "/tmp/nginx.conf", "-g", "daemon off;")
         # Bounded readiness; successful traffic is required before the acceptance probe.
-        readiness = "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:8080/ready', timeout=1).status == 200"
+        readiness = "import urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8080/ready', timeout=1); raise SystemExit(0 if response.status == 200 else 1)"
         for attempt in range(20):
             try:
                 docker("exec", backend, "python", "-c", readiness)
@@ -191,6 +192,8 @@ def stop_local_proxy(proxy):
 
 def run_local(nginx_binary, control=None):
     """Owned loopback processes only; no Docker, privilege or system service changes."""
+    if os.name != "posix" or platform.system() == "Windows":
+        raise RuntimeError("local Nginx runner requires POSIX process groups; use Docker mode on Windows")
     binary = str(Path(nginx_binary).resolve(strict=True))
     spec = importlib.util.spec_from_file_location("t10_local_fixture", ROOT / "scripts/research/t10-proxy-fixture.py")
     fixture = importlib.util.module_from_spec(spec)
@@ -224,7 +227,8 @@ def run_local(nginx_binary, control=None):
             elif control == "publish-private-assets":
                 config = config.replace("location /private-assets/ { return 404; }", "location /private-assets/ { return 200 'exposed'; }")
             elif control == "long-read-timeout":
-                assert config.count("proxy_read_timeout 2s;") == 1
+                if config.count("proxy_read_timeout 2s;") != 1:
+                    raise ValueError("long-read-timeout control requires exactly one proxy_read_timeout 2s;")
                 config = config.replace("proxy_read_timeout 2s;", "proxy_read_timeout 60s;")
             elif control is not None:
                 raise ValueError("unknown negative control")
@@ -300,22 +304,30 @@ def run_local(nginx_binary, control=None):
     return report
 
 
+def emit_report(report, output_path=None):
+    output = json.dumps(report, indent=2) + "\n"
+    # Keep the complete result recoverable even if the requested file cannot be written.
+    print(output, end="")
+    if output_path:
+        try:
+            output_path.write_text(output, encoding="utf-8", newline="\n")
+        except (OSError, ValueError) as error:
+            print("Cannot write probe report: " + str(error), file=sys.stderr)
+            return False
+    return True
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path)
-    parser.add_argument("--nginx-binary", type=Path, help="Use an explicit local binary with owned loopback processes")
+    parser.add_argument("--nginx-binary", type=Path, help="Use an explicit local binary with owned POSIX loopback processes")
     parser.add_argument("--negative-control", choices=["strip-upgrade", "publish-private-assets", "long-read-timeout"])
     args = parser.parse_args()
     try:
         report = run_local(args.nginx_binary, args.negative_control) if args.nginx_binary else run(args.negative_control)
     except Exception as error:
         report = getattr(error, "report", {"failure": {"type": type(error).__name__, "detail": str(error)}})
-        output = json.dumps(report, indent=2) + "\n"
-        if args.output:
-            args.output.write_text(output, encoding="utf-8", newline="\n")
-        print(output, end="")
+        emit_report(report, args.output)
         raise SystemExit(1)
-    output = json.dumps(report, indent=2) + "\n"
-    if args.output:
-        args.output.write_text(output, encoding="utf-8", newline="\n")
-    print(output, end="")
+    if not emit_report(report, args.output):
+        raise SystemExit(1)

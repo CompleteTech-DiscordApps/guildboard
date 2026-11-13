@@ -295,3 +295,30 @@ frame check passed. The real long-read-timeout control remains required.
 Full-head results and exact SHA are in campaign `receipts/platform-finish.json`
 and `platform-finish-logs/t10-phase-*`; all prior external acceptance limits
 remain unchanged.
+
+
+### Optimized execution and report-output follow-up — 2026-11-13 UTC
+
+Critical handshake, idle-payload/timing, control-configuration and Docker readiness
+checks now use explicit runtime failures. Python optimization cannot remove them.
+Running five focused cases against `0ae7338` with `python -O` produced ten
+assertion failures: invalid handshakes, invalid idle evidence and HTTP503 readiness
+were accepted. The updated full suite also runs under `python -O`, including
+actual local Nginx unsafe controls. No production `assert` statements remain in
+the three T10 scripts, including the Docker readiness command string.
+
+The local-binary runner requires POSIX process groups and now rejects Windows
+with a structured failure before resolving the binary or creating resources.
+The Windows guard is tested by platform simulation; no actual Windows local
+runner verification is claimed. Docker mode retains its separate cached-Linux-
+container requirements and does not use the local POSIX cleanup path. Actual
+Docker execution remains unavailable in this follow-up environment.
+
+If the requested output file cannot be written, the probe now retains the full
+report on stdout and exits nonzero. Source capture similarly emits its complete
+collected rows before reporting output-write failure. A directory passed as the
+output path reproduced `IsADirectoryError` with empty stdout in both old CLIs;
+the new regression verifies retained results and nonzero exit without public
+network access. This does not certify public sources or external platforms.
+Exact final-head normal/optimized test results and raw reproductions are recorded
+in campaign `receipts/platform-finish.json` and `platform-finish-logs`.

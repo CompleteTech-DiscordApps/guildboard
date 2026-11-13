@@ -116,8 +116,10 @@ class LocalSetupCleanupRegression(unittest.TestCase):
 
 
 class HandshakeRegression(unittest.TestCase):
-    def response(self, status="101 Switching Protocols", upgrade="websocket", connection="Upgrade"):
-        headers = [f"HTTP/1.1 {status}", "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo="]
+    def response(self, status="101 Switching Protocols", upgrade="websocket", connection="Upgrade", accept="s3pPLMBiTxaQ9kYGzzhZRbK+xOo="):
+        headers = [f"HTTP/1.1 {status}"]
+        if accept is not None:
+            headers.append("Sec-WebSocket-Accept: " + accept)
         if upgrade is not None:
             headers.append("Upgrade: " + upgrade)
         if connection is not None:
@@ -130,6 +132,7 @@ class HandshakeRegression(unittest.TestCase):
 
     def test_required_upgrade_headers_and_exact_status(self):
         for kwargs in ({"upgrade": None}, {"upgrade": "h2c"}, {"connection": None},
+                       {"accept": None}, {"accept": "wrong-accept"},
                        {"connection": "notupgrade"}, {"status": "200 reason-101"},
                        {"status": "1010 Switching Protocols"}):
             with self.subTest(kwargs=kwargs), mock.patch.object(FIXTURE.socket, "create_connection", return_value=self.response(**kwargs)):
@@ -316,6 +319,41 @@ class DockerCleanupRegression(unittest.TestCase):
 
 
 class FailureAttributionRegression(unittest.TestCase):
+    def test_windows_local_runner_fails_before_resources_with_json(self):
+        import runpy
+        import contextlib
+        output = io.StringIO()
+        with mock.patch.object(sys, "argv", ["probe", "--nginx-binary", "missing-binary"]), \
+             mock.patch.object(PROBE.platform, "system", return_value="Windows"), \
+             mock.patch.object(PROBE.http.server, "ThreadingHTTPServer") as server, \
+             contextlib.redirect_stdout(output):
+            with self.assertRaises(SystemExit) as caught:
+                runpy.run_path(str(ROOT / "scripts/research/t10-nginx-probe.py"), run_name="__main__")
+        self.assertEqual(caught.exception.code, 1)
+        self.assertIn("requires POSIX process groups", json.loads(output.getvalue())["failure"]["detail"])
+        server.assert_not_called()
+
+    def test_report_survives_output_write_failure(self):
+        import tempfile
+        import contextlib
+        report = {"failure": {"detail": "retained failure"}, "cleanup": {"done": True}}
+        output, errors = io.StringIO(), io.StringIO()
+        with tempfile.TemporaryDirectory() as directory, contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+            self.assertFalse(PROBE.emit_report(report, Path(directory)))
+        self.assertEqual(json.loads(output.getvalue()), report)
+        self.assertIn("Cannot write probe report", errors.getvalue())
+
+    def test_docker_readiness_status_check_survives_optimization(self):
+        fake = FakeDocker()
+        with mock.patch.object(PROBE, "docker", side_effect=fake):
+            with self.assertRaises(ValueError):
+                PROBE.run()
+        readiness = next(args[-1] for args in fake.calls if len(args) > 4 and args[-2] == "-c" and "urlopen" in args[-1])
+        for status in (200, 503):
+            prelude = "import urllib.request; from types import SimpleNamespace; urllib.request.urlopen = lambda *a, **k: SimpleNamespace(status=" + str(status) + "); "
+            result = subprocess.run([sys.executable, "-O", "-c", prelude + readiness], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0 if status == 200 else 1)
+
     def test_cli_failure_emits_accumulated_report(self):
         result = subprocess.run([sys.executable, str(ROOT / "scripts/research/t10-nginx-probe.py"),
                                  "--nginx-binary", sys.executable], capture_output=True, text=True)
@@ -627,6 +665,24 @@ class SourceCaptureRegression(unittest.TestCase):
                 server.shutdown()
                 thread.join(timeout=2)
         self.assertFalse(thread.is_alive())
+
+    def test_source_cli_write_failure_preserves_collected_rows(self):
+        import tempfile
+        import contextlib
+        import runpy
+        output, errors = io.StringIO(), io.StringIO()
+        response = SimpleNamespace(stdout=json.dumps({"result": {"http_status": 200, "bytes": 2, "sha256": "test", "final_url": "http://fixture"}}))
+        with tempfile.TemporaryDirectory() as directory, \
+             mock.patch.object(sys, "argv", ["capture", "--output", directory]), \
+             mock.patch.object(subprocess, "run", return_value=response), \
+             contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+            with self.assertRaises(SystemExit) as caught:
+                runpy.run_path(str(ROOT / "scripts/research/t10-capture-sources.py"), run_name="__main__")
+        self.assertEqual(caught.exception.code, 1)
+        rows = json.loads(output.getvalue())["sources"]
+        self.assertEqual(len(rows), len(self.capture_module.SOURCES))
+        self.assertTrue(all(row["status"] == 200 for row in rows))
+        self.assertIn("Cannot write source report", errors.getvalue())
 
     def test_exhausted_collection_budget_starts_no_worker(self):
         with mock.patch.object(self.capture_module.subprocess, "Popen") as popen:

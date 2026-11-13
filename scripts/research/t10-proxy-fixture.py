@@ -91,10 +91,13 @@ def websocket(path, timeout=5):
             parts = status.split()
             if not (len(parts) >= 2 and parts[0] == b"HTTP/1.1" and parts[1] == b"101"):
                 raise ProbeFailure("websocket-status", status.decode(errors="replace").strip())
-            assert headers.get("upgrade", "").lower() == "websocket", "missing/invalid Upgrade response"
+            if headers.get("upgrade", "").lower() != "websocket":
+                raise ProbeFailure("websocket-upgrade", "missing/invalid Upgrade response")
             tokens = {token.strip().lower() for token in headers.get("connection", "").split(",")}
-            assert "upgrade" in tokens, "missing Connection upgrade token"
-            assert headers["sec-websocket-accept"] == "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", headers
+            if "upgrade" not in tokens:
+                raise ProbeFailure("websocket-connection", "missing Connection upgrade token")
+            if headers.get("sec-websocket-accept") != "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=":
+                raise ProbeFailure("websocket-accept", "missing/invalid Sec-WebSocket-Accept")
             try:
                 return stream.read(1 if path == "/idle" else 7)
             except TimeoutError as error:
@@ -110,8 +113,10 @@ def idle_close():
     started = time.monotonic()
     payload = websocket("/idle", timeout=IDLE_CLOSE_DEADLINE)
     elapsed = time.monotonic() - started
-    assert payload == b"", "idle-upstream-closed"
-    assert 1.5 <= elapsed < IDLE_CLOSE_DEADLINE, "idle-close-within-bounded-window"
+    if payload != b"":
+        raise ProbeFailure("idle-upstream-closed")
+    if not 1.5 <= elapsed < IDLE_CLOSE_DEADLINE:
+        raise ProbeFailure("idle-close-within-bounded-window")
     return elapsed
 
 
