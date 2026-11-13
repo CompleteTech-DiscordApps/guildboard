@@ -136,6 +136,45 @@ class HandshakeRegression(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     FIXTURE.websocket("/ws")
 
+    def test_connect_and_handshake_timeouts_cannot_certify_idle_control(self):
+        for phase in ("connect", "send", "status", "headers"):
+            client = self.response()
+            connect = mock.Mock(return_value=client)
+            if phase == "connect":
+                connect.side_effect = TimeoutError("connect deadline")
+            elif phase == "send":
+                client.sendall.side_effect = TimeoutError("send deadline")
+            else:
+                stream = mock.MagicMock()
+                stream.__enter__.return_value = stream
+                stream.readline.side_effect = ([TimeoutError("status deadline")] if phase == "status"
+                                              else [b"HTTP/1.1 101 Switching Protocols\r\n", TimeoutError("header deadline")])
+                client.makefile.return_value = stream
+            with self.subTest(phase=phase), mock.patch.object(FIXTURE.socket, "create_connection", connect):
+                with self.assertRaises(TimeoutError):
+                    FIXTURE.idle_close()
+
+    def test_only_validated_idle_read_timeout_can_certify_control(self):
+        class ReadTimeout(io.BytesIO):
+            def read(self, *args):
+                raise TimeoutError("frame/idle read deadline")
+        for path in ("/ws", "/idle"):
+            client = self.response()
+            client.makefile.return_value = ReadTimeout(client.makefile.return_value.getvalue())
+            with self.subTest(path=path), mock.patch.object(FIXTURE.socket, "create_connection", return_value=client):
+                if path == "/idle":
+                    with self.assertRaises(FIXTURE.ProbeFailure) as caught:
+                        FIXTURE.idle_close()
+                    self.assertEqual(caught.exception.check, "idle-close-deadline")
+                else:
+                    with self.assertRaises(TimeoutError):
+                        FIXTURE.websocket(path)
+        client = self.response(upgrade=None)
+        client.makefile.return_value = ReadTimeout(client.makefile.return_value.getvalue())
+        with mock.patch.object(FIXTURE.socket, "create_connection", return_value=client):
+            with self.assertRaisesRegex(AssertionError, "missing/invalid Upgrade"):
+                FIXTURE.idle_close()
+
     def test_connection_token_list_and_case_are_accepted(self):
         with mock.patch.object(FIXTURE.socket, "create_connection", return_value=self.response(upgrade="WebSocket", connection="keep-alive, UpGrAdE")):
             self.assertEqual(FIXTURE.websocket("/ws"), b"\x81\x05hello")
@@ -451,6 +490,31 @@ class ActualNginxControls(unittest.TestCase):
             for pid in owned["workers"]:
                 if running(pid):
                     os.kill(pid, signal.SIGTERM)
+
+    def test_idle_connect_timeout_is_not_an_actual_control_success(self):
+        binary = os.environ.get("T10_NGINX_BINARY")
+        if not binary:
+            self.skipTest("explicit local Nginx binary required")
+        original = PROBE.importlib.util.spec_from_file_location
+        def inject(name, path):
+            spec = original(name, path)
+            load = spec.loader.exec_module
+            def execute(module):
+                load(module)
+                websocket = module.websocket
+                def fail_idle_connect(path, **kwargs):
+                    if path == "/idle":
+                        raise TimeoutError("injected idle connect timeout")
+                    return websocket(path, **kwargs)
+                module.websocket = fail_idle_connect
+            spec.loader.exec_module = execute
+            return spec
+        with mock.patch.object(PROBE.importlib.util, "spec_from_file_location", side_effect=inject):
+            with self.assertRaisesRegex(TimeoutError, "injected idle connect timeout") as caught:
+                PROBE.run_local(binary, "long-read-timeout")
+        self.assertNotIn("negative_control", caught.exception.report)
+        self.assertTrue(all(caught.exception.report["cleanup"].values()))
+        self.assertIn("actual-101-and-frame", [row["name"] for row in caught.exception.report["failure"]["passed_checks"]])
 
     def test_long_read_timeout_is_detected(self):
         result = self.run_probe("long-read-timeout")

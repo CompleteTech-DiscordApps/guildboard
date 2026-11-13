@@ -275,3 +275,23 @@ and a failing baseline; the baseline regression fails against `0703471`.
 Full-head test results and exact revision are recorded in the campaign
 `receipts/platform-finish.json` and `platform-finish-logs`; actual Docker and all
 previously stated external platform acceptance gates remain unverified.
+
+
+### Idle-timeout phase follow-up — 2026-11-13 UTC
+
+The idle-control failure can now originate only from reading the established
+`/idle` tunnel after exact 101 status, Upgrade/Connection headers and accept-key
+validation. Connection, request-write, status/header and `/ws` frame timeouts
+remain unrelated failures and cannot certify the long-read-timeout control.
+The idle read requests one byte so unexpected partial data is rejected rather
+than mistaken for silence while waiting for a complete frame. The preceding
+`/ws` check still validates the actual hello frame before the idle probe.
+
+Four injected connection/handshake timeout cases each fail the previous
+`140d7c4` behavior. Regression tests also distinguish a validated idle-read
+timeout from a normal-frame timeout or malformed upgrade, and the actual local
+Nginx runner rejects an injected idle connection timeout after its earlier
+frame check passed. The real long-read-timeout control remains required.
+Full-head results and exact SHA are in campaign `receipts/platform-finish.json`
+and `platform-finish-logs/t10-phase-*`; all prior external acceptance limits
+remain unchanged.

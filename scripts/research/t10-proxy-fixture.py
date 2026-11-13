@@ -95,15 +95,20 @@ def websocket(path, timeout=5):
             tokens = {token.strip().lower() for token in headers.get("connection", "").split(",")}
             assert "upgrade" in tokens, "missing Connection upgrade token"
             assert headers["sec-websocket-accept"] == "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", headers
-            return stream.read(7)
+            try:
+                return stream.read(1 if path == "/idle" else 7)
+            except TimeoutError as error:
+                # Only a read AFTER validating the 101 and every upgrade header
+                # proves that the idle tunnel remained open. Connect, request,
+                # status/header, and /ws frame timeouts are unrelated failures.
+                if path == "/idle":
+                    raise ProbeFailure("idle-close-deadline", "client deadline expired before proxy EOF") from error
+                raise
 
 
 def idle_close():
     started = time.monotonic()
-    try:
-        payload = websocket("/idle", timeout=IDLE_CLOSE_DEADLINE)
-    except TimeoutError as error:
-        raise ProbeFailure("idle-close-deadline", "client deadline expired before proxy EOF") from error
+    payload = websocket("/idle", timeout=IDLE_CLOSE_DEADLINE)
     elapsed = time.monotonic() - started
     assert payload == b"", "idle-upstream-closed"
     assert 1.5 <= elapsed < IDLE_CLOSE_DEADLINE, "idle-close-within-bounded-window"
