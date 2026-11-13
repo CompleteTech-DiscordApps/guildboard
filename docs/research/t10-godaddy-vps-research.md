@@ -147,3 +147,29 @@ probe, control and test results are retained in campaign `2026-11-12/logs/platfo
 the handoff receipt records their absolute paths. These remain local HTTP/WS
 results: real DNS/TLS/renewal, mapped Discord clients, GoDaddy firewall/capacity,
 SQL persistence and coordinated restore are still unverified.
+
+
+### Fresh review follow-up: setup cleanup and handshake validity
+
+The full-head review at `947cd670322feddc799dc952e8b2b3988928818d`
+identified two valid Medium findings: `4559111650` (setup errors preceded the
+backend cleanup scope) and `4559111694` (the handshake oracle omitted mandatory
+upgrade headers and matched `101` anywhere in the status line). Three new
+regression methods produced nine assertion failures against the prior code;
+the cleanup test itself shuts down leaked resources when testing that revision.
+
+Remediation `e9b8d18cb9451804b41ca9af998fb4e93026dd0d` covers backend creation,
+temporary-directory setup, Git/version metadata collection and probe execution
+with cleanup. Injected directory/Git/Nginx-version failures now close the backend
+socket and join its thread. The handshake requires exact HTTP/1.1 status 101,
+`Upgrade: websocket` and an `upgrade` token in the case-insensitive Connection
+list, while retaining the accept-hash and frame checks. Deterministic malformed
+responses cover missing/wrong headers and misleading status text; a mixed-case
+Connection token list remains accepted.
+
+All **11** focused tests pass. The actual Nginx 1.28.0 baseline again passes 12
+checks, and the long-timeout, stripped-upgrade and exposed-private-route controls
+are detected with successful owned cleanup. Appended machine-readable evidence
+and raw `t10-review2-*` logs preserve all previous results. Planning validation
+and whitespace checks pass. This remains local HTTP/WS research; real
+GoDaddy/Discord/TLS acceptance and fresh independent review remain open.

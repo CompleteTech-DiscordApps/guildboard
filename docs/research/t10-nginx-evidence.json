@@ -253,5 +253,173 @@
       "sha256": "c6b5c6b086c0df9d3ca3ff5e084c1d0ef909e6038279c71c1c3e985f576ff76a"
     },
     "limitations": "Owned loopback processes, compiled historical Nginx version, synthetic backend. No TLS/Discord/GoDaddy acceptance; Docker access denied. Original evidence preserved."
+  },
+  "review_followup_2026_11_13": {
+    "reviewed_sha": "947cd670322feddc799dc952e8b2b3988928818d",
+    "remediation_sha": "e9b8d18cb9451804b41ca9af998fb4e93026dd0d",
+    "finding_ids": [
+      4559111650,
+      4559111694
+    ],
+    "prior_code_regression_result": "3 added regression methods produce 9 assertion failures; test teardown cleans prior leaked resources",
+    "tests_passed": 11,
+    "tests_skipped": 0,
+    "test_log": "2026-11-12/logs/platform/t10-review2-tests-e9b8d18.log",
+    "runs": [
+      {
+        "observed_at": "2026-11-13T02:52:45.472421+00:00",
+        "tested_sha": "e9b8d18cb9451804b41ca9af998fb4e93026dd0d",
+        "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+        "host_python": "3.14.8",
+        "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+        "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+        "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=/home/complete/Documents/projects/guildboard-execution/2026-11-12/scratch/platform/install --without-http_gzip_module",
+        "control": null,
+        "fixture_hashes": {
+          "scripts/research/t10-nginx-probe.py": "f77e2d77c3562389599c94b1debdc8e3e4b268a6e92cbf54d9c51a4bcb7d241d",
+          "scripts/research/t10-proxy-fixture.py": "fc281ae5e7bf0103bc5077e7bf375d7bb0bcd1f4176ea1291ae4c302f4fe112e",
+          "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+        },
+        "nginx_config_check": "nginx: the configuration file /tmp/gb-t10-nginx-l2xmv5rf/nginx.conf syntax is ok\nnginx: configuration file /tmp/gb-t10-nginx-l2xmv5rf/nginx.conf test is successful",
+        "result": {
+          "checks": [
+            {
+              "name": "path-query-preserved",
+              "passed": true
+            },
+            {
+              "name": "upstream-host-fixed",
+              "passed": true
+            },
+            {
+              "name": "forwarded-ip-overwritten",
+              "passed": true
+            },
+            {
+              "name": "forwarded-proto-overwritten",
+              "passed": true
+            },
+            {
+              "name": "private-assets-not-public",
+              "passed": true
+            },
+            {
+              "name": "oversized-body-rejected",
+              "passed": true
+            },
+            {
+              "name": "missing-websocket-upgrade-rejected",
+              "passed": true
+            },
+            {
+              "name": "actual-101-and-frame",
+              "passed": true
+            },
+            {
+              "name": "idle-upstream-closed",
+              "passed": true
+            },
+            {
+              "name": "idle-close-within-bounded-window",
+              "passed": true
+            },
+            {
+              "name": "fixture-shutdown-ack",
+              "passed": true
+            },
+            {
+              "name": "upstream-unavailable-fails",
+              "passed": true
+            }
+          ],
+          "idle_close_seconds": 2.0025,
+          "scope": "local HTTP/WS real nginx + synthetic stdlib backend; no TLS/Discord/VPS proof"
+        },
+        "nginx_log": "2026/11/12 21:52:45 [error] 768582#0: *6 client intended to send too large body: 2048 bytes, client: 127.0.0.1, server: _, request: \"POST /health HTTP/1.1\", host: \"127.0.0.1:42043\"\n2026/11/12 21:52:48 [error] 768582#0: *15 connect() failed (111: Connection refused) while connecting to upstream, client: 127.0.0.1, server: _, request: \"GET /health HTTP/1.1\", upstream: \"http://127.0.0.1:45515/health\", host: \"127.0.0.1:42043\"\n",
+        "cleanup": {
+          "owned_nginx_exited": true,
+          "owned_backend_thread_exited": true
+        }
+      },
+      {
+        "observed_at": "2026-11-13T02:52:48.186001+00:00",
+        "tested_sha": "e9b8d18cb9451804b41ca9af998fb4e93026dd0d",
+        "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+        "host_python": "3.14.8",
+        "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+        "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+        "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=/home/complete/Documents/projects/guildboard-execution/2026-11-12/scratch/platform/install --without-http_gzip_module",
+        "control": "long-read-timeout",
+        "fixture_hashes": {
+          "scripts/research/t10-nginx-probe.py": "f77e2d77c3562389599c94b1debdc8e3e4b268a6e92cbf54d9c51a4bcb7d241d",
+          "scripts/research/t10-proxy-fixture.py": "fc281ae5e7bf0103bc5077e7bf375d7bb0bcd1f4176ea1291ae4c302f4fe112e",
+          "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+        },
+        "nginx_config_check": "nginx: the configuration file /tmp/gb-t10-nginx-p2vfd690/nginx.conf syntax is ok\nnginx: configuration file /tmp/gb-t10-nginx-p2vfd690/nginx.conf test is successful",
+        "negative_control": {
+          "variant": "long-read-timeout",
+          "detected": true,
+          "failure": "idle-close-within-bounded-window: client deadline expired before proxy EOF"
+        },
+        "nginx_log": "2026/11/12 21:52:48 [error] 770103#0: *6 client intended to send too large body: 2048 bytes, client: 127.0.0.1, server: _, request: \"POST /health HTTP/1.1\", host: \"127.0.0.1:53345\"\n",
+        "cleanup": {
+          "owned_nginx_exited": true,
+          "owned_backend_thread_exited": true
+        }
+      },
+      {
+        "observed_at": "2026-11-13T02:52:53.309253+00:00",
+        "tested_sha": "e9b8d18cb9451804b41ca9af998fb4e93026dd0d",
+        "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+        "host_python": "3.14.8",
+        "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+        "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+        "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=/home/complete/Documents/projects/guildboard-execution/2026-11-12/scratch/platform/install --without-http_gzip_module",
+        "control": "strip-upgrade",
+        "fixture_hashes": {
+          "scripts/research/t10-nginx-probe.py": "f77e2d77c3562389599c94b1debdc8e3e4b268a6e92cbf54d9c51a4bcb7d241d",
+          "scripts/research/t10-proxy-fixture.py": "fc281ae5e7bf0103bc5077e7bf375d7bb0bcd1f4176ea1291ae4c302f4fe112e",
+          "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+        },
+        "nginx_config_check": "nginx: the configuration file /tmp/gb-t10-nginx-piqpqfio/nginx.conf syntax is ok\nnginx: configuration file /tmp/gb-t10-nginx-piqpqfio/nginx.conf test is successful",
+        "negative_control": {
+          "variant": "strip-upgrade",
+          "detected": true,
+          "failure": "b'HTTP/1.1 426 Upgrade Required\\r\\n'"
+        },
+        "nginx_log": "2026/11/12 21:52:53 [error] 771955#0: *6 client intended to send too large body: 2048 bytes, client: 127.0.0.1, server: _, request: \"POST /health HTTP/1.1\", host: \"127.0.0.1:57877\"\n",
+        "cleanup": {
+          "owned_nginx_exited": true,
+          "owned_backend_thread_exited": true
+        }
+      },
+      {
+        "observed_at": "2026-11-13T02:52:53.899841+00:00",
+        "tested_sha": "e9b8d18cb9451804b41ca9af998fb4e93026dd0d",
+        "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+        "host_python": "3.14.8",
+        "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+        "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+        "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=/home/complete/Documents/projects/guildboard-execution/2026-11-12/scratch/platform/install --without-http_gzip_module",
+        "control": "publish-private-assets",
+        "fixture_hashes": {
+          "scripts/research/t10-nginx-probe.py": "f77e2d77c3562389599c94b1debdc8e3e4b268a6e92cbf54d9c51a4bcb7d241d",
+          "scripts/research/t10-proxy-fixture.py": "fc281ae5e7bf0103bc5077e7bf375d7bb0bcd1f4176ea1291ae4c302f4fe112e",
+          "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+        },
+        "nginx_config_check": "nginx: the configuration file /tmp/gb-t10-nginx-rv1vcjcl/nginx.conf syntax is ok\nnginx: configuration file /tmp/gb-t10-nginx-rv1vcjcl/nginx.conf test is successful",
+        "negative_control": {
+          "variant": "publish-private-assets",
+          "detected": true,
+          "failure": "private-assets-not-public"
+        },
+        "nginx_log": "",
+        "cleanup": {
+          "owned_nginx_exited": true,
+          "owned_backend_thread_exited": true
+        }
+      }
+    ],
+    "limitations": "Handshake malformed-response tests are deterministic mocked streams; proxy baseline and 3 existing controls run actual local Nginx. No real GoDaddy/Discord/TLS verification."
   }
 }
