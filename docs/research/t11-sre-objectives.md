@@ -129,7 +129,7 @@ identifies the exact executed fixture independently of the later signed commit.
 | Case | Observed outcome | Interpretation |
 | --- | --- | --- |
 | Virtual steady: 100/s, 60 s, assumed fixed 4 ms single worker, bound 128 | 6,000 offered, 6,000 completed, 0 rejected; virtual p99 4 ms | Arithmetic under assumed service time; no measured server latency. |
-| Virtual burst: 1,000/s, 10 s, same worker/bound | 10,000 offered, 2,627 completed, 7,373 rejected; peak outstanding 128; accepted p99 512 ms | A bound prevents backlog growth but does not satisfy the proposed p99 target. Arrival/service floating-point ties may vary by one admission; accounting/bounds are the invariant. |
+| Virtual burst: 1,000/s, 10 s, same worker/bound | 10,000 offered, 2,627 completed, 7,373 rejected; peak outstanding 128; accepted p99 512 ms | A bound prevents backlog growth but does not satisfy the proposed p99 target. Historical run used floating-point event times; the exact-arithmetic follow-up below removes false tie saturation. |
 | Virtual slow dependency: 100/s, 10 s, assumed 20 ms service | 1,000 offered, 627 completed, 373 rejected; p99 2,560 ms | The same queue bound is too large for interactive latency when the dependency slows. Select limits/deadlines from real service-time distributions, not 128 from this fixture. |
 | Local write+flush+fsync, one per record | 300 synthetic records, 625,390 bytes; p50 1.0356 ms, p95 4.7304 ms, p99 8.9523 ms; 0.486976 s total | One small local filesystem run with cache/storage effects and concurrent host workloads uncontrolled; 616.046 records/s is fixture wall throughput, never SQL/Guildboard capacity. |
 | Copy+hash+sequence verification | Backup 8.5847 ms; restore 8.4812 ms; 300 exact records restored | Same-disk copies of 0.60 MiB synthetic files; no encryption, asset graph, remote transfer, key recovery or SQL restore. No RPO/RTO claim. |
@@ -147,6 +147,25 @@ The local roadmap validator passed with 471 items, 457 expected native
 relationships, 600 expected dependencies and zero errors. This is structural
 manifest validation, not live Project reconciliation or functional acceptance.
 The unrelated generated audit file was restored. Whitespace validation passed.
+
+## Exact queue arithmetic follow-up (2026-11-13 UTC)
+
+Review reproduced a defect in the virtual scheduler: binary floating-point event
+comparisons rejected 721 of 6,000 equal-rate requests at 100/s with 10 ms service
+and one slot, and 1,530 of 10,000 at 1,000/s with 1 ms service. Both must reject
+zero: a completion exactly at the next arrival releases its slot first. The
+current fixture interprets numeric inputs by their decimal spelling and uses
+exact rational arithmetic for arrival, completion and offered-count calculations.
+Only reported latency/time values convert to floats. No epsilon relaxes admission.
+
+Eight tests now pass. Regressions cover those two equal-rate cases, fractional
+rates, decimal offered-count boundaries, and service times just below/above the
+arrival interval. In the one-slot 100/s case, 9.999999999 ms service rejects zero,
+while 10.000000001 ms rejects 50 of 100 requests, preserving genuine overload.
+The original burst and slow-dependency counts above remain 7,373 and 373 rejected
+under exact arithmetic. The original dated JSON remains historical evidence;
+current commands, source SHA and raw results are in the campaign handoff. These
+are virtual scheduling results, not measured Guildboard capacity or latency.
 
 ## Failure, restart and recovery evaluation plan
 
@@ -257,7 +276,7 @@ claim or dependency pin is implied.
 | #356 clause | Reviewable evidence now | Still required |
 | --- | --- | --- |
 | Availability/latency/recovery/capacity objectives from expected use | Explicit synthetic workload, proposed objective table, denominators and clocks | Product/SRE acceptance of demand and targets; no invented usage/SLA. |
-| Measured baseline plan and reproducible experiment | Executable bounded fixture, dated JSON with script hash, five passing tests, real-platform matrix | T10/T12 actual SQL, HTTPS/WSS, Discord desktop/mobile, assets and soak measurements on accepted contracts. |
+| Measured baseline plan and reproducible experiment | Executable bounded fixture, dated JSON with script hash, five original tests plus three exact-arithmetic regressions, real-platform matrix | T10/T12 actual SQL, HTTPS/WSS, Discord desktop/mobile, assets and soak measurements on accepted contracts. |
 | Alternatives, primary URLs, versions/date and uncertainty | Decision comparison and S1-S10 source ledger | Actual current-head GitHub Copilot review plus required SRE/CODEOWNER/consumer review, accepted decision and merge. |
 | Error/abuse and recovery evidence | Local invalid-config, overload accounting, content reorder and corruption rejection, owned child prefix check | Real tenant fairness, slow receivers, revocation, SQL/disk failure, graceful restart, encrypted off-host restore and key recovery. |
 

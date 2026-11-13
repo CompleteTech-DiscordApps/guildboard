@@ -23,9 +23,36 @@ class BaselineTests(unittest.TestCase):
         self.assertLessEqual(result["peak_outstanding"], 128)
         self.assertEqual(result["offered"], result["rejected"] + result["accepted_and_eventually_completed"])
 
+    def test_equal_rate_completion_precedes_next_arrival(self):
+        for rate, seconds, service in ((100, 60, 10), (1000, 10, 1), (2.5, 4, 400),
+                                       (3, 60, 1000 / 3)):
+            with self.subTest(rate=rate):
+                result = baseline.queue_model(rate, seconds, service, 1)
+                self.assertEqual(result["rejected"], 0)
+                self.assertEqual(result["accepted_and_eventually_completed"], int(rate * seconds))
+                self.assertEqual(result["peak_outstanding"], 1)
+                self.assertEqual(result["accepted_virtual_latency_ms"]["p99"], round(service, 6))
+                self.assertEqual(result["last_completion_virtual_seconds"], seconds)
+
+    def test_near_capacity_distinguishes_real_overlap_without_tolerance(self):
+        under = baseline.queue_model(100, 1, 9.999999999, 1)
+        over = baseline.queue_model(100, 1, 10.000000001, 1)
+        self.assertEqual(under["rejected"], 0)
+        # A one-slot queue cannot accept the next arrival even for a tiny real
+        # overlap. Every other request is therefore rejected, not rounded away.
+        self.assertEqual(over["accepted_and_eventually_completed"], 50)
+        self.assertEqual(over["rejected"], 50)
+        self.assertEqual(over["peak_outstanding"], 1)
+
+    def test_decimal_arrival_count_is_not_truncated_by_binary_rounding(self):
+        result = baseline.queue_model(0.7, 90, 1, 1)
+        self.assertEqual(result["offered"], 63)
+        self.assertEqual(result["accepted_and_eventually_completed"], 63)
+
     def test_invalid_and_unbounded_configs_fail(self):
         for args in [(0, 1, 4, 128), (100, 1, -1, 128), (100, 1, 4, 0),
-                     (100, 1, 4, True), (float("nan"), 1, 4, 128), (1000, 1000, 4, 128)]:
+                     (100, 1, 4, True), (True, 1, 4, 128), (100, "1", 4, 128),
+                     (float("nan"), 1, 4, 128), (1000, 1000, 4, 128)]:
             with self.subTest(args=args), self.assertRaises(ValueError):
                 baseline.queue_model(*args)
 

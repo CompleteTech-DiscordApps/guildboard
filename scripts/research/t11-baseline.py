@@ -6,6 +6,7 @@ virtual; file timings are wall clock. Neither is a Guildboard performance claim.
 import argparse
 from collections import deque
 from datetime import datetime, timezone
+from fractions import Fraction
 import hashlib
 import json
 import math
@@ -29,31 +30,40 @@ def percentiles(values):
 
 def queue_model(rate, seconds, service_ms, limit):
     """Single virtual worker; limit includes in-service work; no real sleeping."""
-    if (not all(math.isfinite(x) and x > 0 for x in (rate, seconds, service_ms))
-            or not isinstance(limit, int) or isinstance(limit, bool) or limit < 1
-            or rate * seconds > 100_000):
+    if (not all(type(x) in (int, float) and x > 0
+                and (type(x) is int or math.isfinite(x))
+                for x in (rate, seconds, service_ms))
+            or type(limit) is not int or limit < 1):
+        raise ValueError("invalid or unbounded model configuration")
+    # Interpret numeric inputs by their decimal spelling. Exact event times
+    # ensure a completion at an arrival releases its slot before admission;
+    # binary rounding or an epsilon must not invent/hide queue saturation.
+    exact_rate, exact_seconds, exact_service_ms = (
+        Fraction(str(x)) for x in (rate, seconds, service_ms))
+    offered = exact_rate * exact_seconds
+    if offered > 100_000:
         raise ValueError("invalid or unbounded model configuration")
     completions = deque()
     latencies = []
     rejected = peak = 0
-    count = int(rate * seconds)
+    count = int(offered)
     for i in range(count):
-        arrival = i / rate
+        arrival = i / exact_rate
         while completions and completions[0] <= arrival:
             completions.popleft()
         if len(completions) >= limit:
             rejected += 1
             continue
-        finished = max(arrival, completions[-1] if completions else arrival) + service_ms / 1000
+        finished = max(arrival, completions[-1] if completions else arrival) + exact_service_ms / 1000
         completions.append(finished)
-        latencies.append((finished - arrival) * 1000)
+        latencies.append(float((finished - arrival) * 1000))
         peak = max(peak, len(completions))
     return {"arrival_rate_per_second": rate, "virtual_seconds": seconds,
             "assumed_service_ms": service_ms, "outstanding_limit": limit,
             "offered": count, "accepted_and_eventually_completed": len(latencies),
             "rejected": rejected, "peak_outstanding": peak,
             "accepted_virtual_latency_ms": percentiles(latencies),
-            "last_completion_virtual_seconds": round(completions[-1], 6) if completions else 0}
+            "last_completion_virtual_seconds": round(float(completions[-1]), 6) if completions else 0}
 
 
 def record(index):
