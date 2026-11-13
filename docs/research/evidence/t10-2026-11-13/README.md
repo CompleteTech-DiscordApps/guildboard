@@ -1,7 +1,7 @@
 # T10 validation at eee0ad43
 
 These artifacts record code revision `eee0ad43bcbcc4a262b352eb115d8ac11a04b59d`.
-The publication commit changes documentation/evidence only. Its code,
+Historical publication `34642fb` changes documentation/evidence only. Its code,
 configuration and tests match the SHA-256 manifest in [receipt.json](receipt.json).
 No result is attributed to an untested publication revision.
 
@@ -20,3 +20,9 @@ environment, binary hash and cleanup. Known local paths use placeholders;
 results and hashes are unchanged. Artifact hashes, commands, provenance and
 limits are in the receipt. This is synthetic loopback research, with no actual
 Docker, public TLS, Discord, GoDaddy or production acceptance claim.
+
+## Later cancellation validation
+
+[Code a00c229 cancellation evidence](cancellation-a00c229/README.md) records
+52 normal/optimized tests and new network/cancellation reports. The eee0ad43
+artifacts above remain historical and unchanged.

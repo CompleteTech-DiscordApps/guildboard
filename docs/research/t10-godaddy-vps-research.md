@@ -446,3 +446,43 @@ publication revision. Local build/temp paths use explicit placeholders; original
 and published artifact hashes document that sanitization without changing test
 results, tested SHAs or fixture hashes. All prior platform and approval limits
 remain open.
+
+
+### Catchable cancellation and current public evidence — 2026-11-13 UTC
+
+The old CLI at `34642fb` exited on SIGTERM after owned readiness without
+unwinding Python cleanup: an actual Nginx master and temporary directory
+survived, with no failure JSON. The
+[historical negative control](evidence/t10-2026-11-13/cancellation-a00c229/before-sigterm.json)
+records that result; bounded external cleanup targeted only its captured owned
+process group.
+
+Code `a00c22929c224d9b35975c90c461a34501719192` installs catchable SIGTERM/SIGINT
+handlers before CLI-owned work. First cancellation raises a distinct failure
+that unwinds the existing cleanup and emits nonzero failure JSON. Repeat signals
+are ignored during cleanup/reporting, and prior handlers are restored. Docker
+create cancellation uses the existing intended-name/label/immutable-ID
+reconciliation, preserving foreign resources. Source capture cancellation
+unwinds `subprocess.run`, kills/reaps its active worker and retains completed
+source observations in its failure JSON.
+
+The [new public receipt](evidence/t10-2026-11-13/cancellation-a00c229/receipt.json),
+[normal](evidence/t10-2026-11-13/cancellation-a00c229/suite-normal.log) and
+[optimized](evidence/t10-2026-11-13/cancellation-a00c229/suite-optimized.log) logs
+record 52 passing tests each at that exact code head.
+[Network reports](evidence/t10-2026-11-13/cancellation-a00c229/network.sanitized.json)
+retain the 12-check baseline and six unsafe controls.
+[Four cancellation reports](evidence/t10-2026-11-13/cancellation-a00c229/cancellations.sanitized.json)
+record actual SIGTERM/SIGINT runs for local Nginx and source capture; passed
+regressions check process/worker cleanup, temporary deletion and retained rows.
+The [index](evidence/t10-2026-11-13/cancellation-a00c229/README.md) includes exact
+commands, source hashes and Windows-capability/planning logs. Original 48-test
+evidence remains historical. The later evidence/documentation commit has
+matching code hashes; no suite result is claimed against that untested head.
+
+This covers catchable signals after handler installation. SIGKILL, power loss,
+forced Windows TerminateProcess and termination during forced cleanup are not
+cleanup guarantees. Actual Docker remains unavailable; cancellation around
+create is simulated and unknown ownership still fails closed. No public TLS,
+Discord, GoDaddy, production acceptance or native approval is established.
+Fresh whole-head review remains required.

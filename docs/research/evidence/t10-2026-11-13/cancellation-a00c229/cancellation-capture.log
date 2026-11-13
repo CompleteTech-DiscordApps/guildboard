@@ -1,0 +1,7 @@
+test_cli_signals_after_readiness_cleanup_and_emit_json (cancel_evidence_tests.CancellationRegression.test_cli_signals_after_readiness_cleanup_and_emit_json) ... ok
+test_source_capture_signal_reaps_worker_and_retains_completed_rows (cancel_evidence_tests.CancellationRegression.test_source_capture_signal_reaps_worker_and_retains_completed_rows) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 2.142s
+
+OK
