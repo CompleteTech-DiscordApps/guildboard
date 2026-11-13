@@ -1,8 +1,12 @@
 """Fake Docker safety regressions; no daemon or database is contacted."""
+import contextlib
+import io
 import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -20,9 +24,16 @@ class FakeDocker:
         self.timeout_after_create = timeout_after_create
         self.calls = []
         self.sql_calls = []
+        self.failures = {}
+        self.removal_noop = False
 
     def command(self, *args, **kwargs):
         self.calls.append(args)
+        if self.failures.get(args, 0):
+            self.failures[args] -= 1
+            if kwargs.get("check", True):
+                raise subprocess.CalledProcessError(1, args, stderr="temporary daemon failure")
+            return subprocess.CompletedProcess(args, 1, "", "temporary daemon failure")
         stdout, code = "", 0
         p = self.probe
         if args[:2] == ("image", "inspect"):
@@ -45,7 +56,8 @@ class FakeDocker:
         elif args[0] == "rm":
             del self.containers[args[-1]]
         elif args[:2] == ("volume", "rm"):
-            del self.volumes[args[2]]
+            if not self.removal_noop:
+                del self.volumes[args[2]]
         elif args[0] == "ps":
             stdout = "\n".join(self.containers)
         elif args[:2] == ("volume", "ls"):
@@ -121,6 +133,56 @@ class OwnershipTests(unittest.TestCase):
         self.assertEqual(fake.containers, {p.name: "foreign"})
         self.assertEqual(fake.volumes, {})
         self.assertFalse(any(c[0] == "rm" for c in fake.calls))
+
+    def run_main(self, p):
+        p.start = p.exercise = lambda: None
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'result.json'
+            argv = ['probe', '--engine', 'mysql', '--image', p.image, '--output', str(output)]
+            with patch.object(module, 'Probe', return_value=p), patch.object(sys, 'argv', argv), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                code = module.main()
+            return code, json.loads(output.read_text())
+
+    def test_transient_inspect_failure_fails_main_and_can_retry_safely(self):
+        p, fake = self.make_probe()
+        p.start()
+        fake.failures[("volume", "inspect", p.volume)] = 1
+        code, report = self.run_main(p)
+        self.assertEqual(code, 1)
+        self.assertEqual(report['result'], 'fail')
+        self.assertFalse(report['cleanup']['volume_absent'])
+        self.assertEqual(fake.volumes, {p.volume: p.run_id})
+        # A retry must recheck ownership if the exact name changed meanwhile.
+        fake.volumes[p.volume] = "foreign"
+        with self.assertRaisesRegex(RuntimeError, "ownership"):
+            p.cleanup()
+        self.assertEqual(fake.volumes[p.volume], "foreign")
+        fake.volumes[p.volume] = p.run_id
+        p.cleanup()
+        self.assertEqual(fake.volumes, {})
+        self.assertTrue(p.report['cleanup']['volume_absent'])
+
+    def test_successful_remove_response_cannot_hide_remaining_resource(self):
+        p, fake = self.make_probe()
+        p.start()
+        fake.removal_noop = True
+        code, report = self.run_main(p)
+        self.assertEqual(code, 1)
+        self.assertEqual(report['result'], 'fail')
+        self.assertFalse(report['cleanup']['volume_absent'])
+        self.assertIn(p.volume, fake.volumes)
+
+    def test_inventory_failure_is_unknown_and_never_authorizes_deletion(self):
+        p, fake = self.make_probe()
+        p.start()
+        fake.failures[("volume", "ls", "--format", "{{.Name}}",)] = 2
+        code, report = self.run_main(p)
+        self.assertEqual(code, 1)
+        self.assertEqual(report['result'], 'fail')
+        self.assertIsNone(report['cleanup']['volume_absent'])
+        self.assertIn(p.volume, fake.volumes)
+        self.assertFalse(any(c[:2] == ('volume', 'rm') for c in fake.calls))
 
     def test_cleanup_absent_resources_is_safe(self):
         p, fake = self.make_probe()

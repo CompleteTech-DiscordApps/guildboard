@@ -311,32 +311,42 @@ COMMIT;
 
     def cleanup(self) -> None:
         # Creation can succeed in the daemon even when the client times out.
-        # Inspect exact invocation names regardless of how far start() returned.
+        # A successful exact-name inventory establishes absence; failed inspect
+        # is never interpreted as absence or as permission to delete.
         errors = []
-        for kind, name in (("container", self.name), ("volume", self.volume)):
+        inventories = {
+            "container": ("ps", "--all", "--format", "{{.Names}}"),
+            "volume": ("volume", "ls", "--format", "{{.Name}}"),
+        }
+        resources = (("container", self.name), ("volume", self.volume))
+        for kind, name in resources:
             try:
-                exists = self.command(kind, "inspect", name, check=False)
-                if exists.returncode == 0:
+                names = self.command(*inventories[kind]).stdout.splitlines()
+                if name in names:
                     self.verify_owner(kind, name)
                     if kind == "container":
                         self.command("rm", "--force", name)
                     else:
                         self.command("volume", "rm", name)
             except Exception as error:
-                # Still attempt the other exact resource; never remove anything
-                # whose own ownership check failed.
+                # The other exact resource still gets its own ownership check.
+                # A later cleanup call can retry safely; this call remains failed.
                 errors.append(f"{kind}: {error}")
-        if errors:
-            raise RuntimeError("; ".join(errors))
-        self.report["cleanup"] = {
-            "container_absent": self.name not in self.command(
-                "ps", "--all", "--format", "{{.Names}}"
-            ).stdout.splitlines(),
-            "volume_absent": self.volume not in self.command(
-                "volume", "ls", "--format", "{{.Name}}"
-            ).stdout.splitlines(),
+        absent = {}
+        for kind, name in resources:
+            try:
+                absent[kind + "_absent"] = name not in self.command(
+                    *inventories[kind]).stdout.splitlines()
+                if not absent[kind + "_absent"]:
+                    errors.append(f"{kind}: resource remains after cleanup")
+            except Exception as error:
+                absent[kind + "_absent"] = None
+                errors.append(f"{kind}: absence unverified: {error}")
+        self.report["cleanup"] = absent | {
             "ownership_labels_checked_before_mutation": True,
         }
+        if errors:
+            raise RuntimeError("; ".join(errors))
 
 
 def main() -> int:

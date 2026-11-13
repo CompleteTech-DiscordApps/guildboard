@@ -183,10 +183,12 @@ tests; no VPS board count or latency promise is established here.
 ## Reproducible local experiments and observed results
 
 The 2026-11-12 fixture safety follow-up can be checked without Docker using
-`python tests/research/t5-test-db-probe.py -v`. Six fake-Docker tests cover
+`python tests/research/t5-test-db-probe.py -v`. Nine fake-Docker tests cover
 foreign/unlabeled volume collisions, ownership verification before database
 launch, a create response lost after server-side success, foreign-resource
-preservation and independent exact-resource cleanup. They exercise client
+preservation and independent exact-resource cleanup. Cleanup also fails on
+transient inspection/inventory errors or a resource remaining after removal;
+a safe retry rechecks inventory and ownership. They exercise client
 control flow only; they do not refresh the historical real-engine evidence below.
 
 
