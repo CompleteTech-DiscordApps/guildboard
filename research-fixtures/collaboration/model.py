@@ -59,11 +59,9 @@ class Board:
             return "UNAUTHENTICATED", None
         if ctx.guild != self.guild or cmd.guild != self.guild or cmd.board != self.board or not ctx.readable:
             return "NOT_FOUND", None
-        if cmd.lineage != self.lineage:
-            return "LINEAGE_CHANGED", None
         if (not isinstance(cmd.operation, str) or not 1 <= len(cmd.operation) <= 64
                 or not 1 <= len(cmd.changes) <= 100
-                or type(cmd.base) is not int or not 0 <= cmd.base <= self.revision
+                or type(cmd.base) is not int or cmd.base < 0
                 or type(cmd.policy) is not int or cmd.policy < 1):
             return "INVALID", None
         if any(not isinstance(c, Change) or not isinstance(c.element, str)
@@ -73,11 +71,15 @@ class Board:
             return "INVALID", None
         if len({c.element for c in cmd.changes}) != len(cmd.changes):
             return "INVALID", None
-        identity = (self.guild, self.board, self.lineage, ctx.actor, cmd.operation)
+        identity = (self.guild, self.board, cmd.lineage, ctx.actor, cmd.operation)
         digest = cmd.digest()
         if identity in self.receipts:
             old_digest, revision = self.receipts[identity]
             return ("ACCEPTED", revision) if old_digest == digest else ("IDEMPOTENCY_CONFLICT", None)
+        if cmd.lineage != self.lineage:
+            return "LINEAGE_CHANGED", None
+        if cmd.base > self.revision:
+            return "INVALID", None
         if not ctx.writable:
             return "FORBIDDEN", None
         if cmd.policy != self.policy:
@@ -104,11 +106,11 @@ class Board:
         self.policy += 1
 
     def restore(self):
-        """Toy reset discards receipts; cross-restore retention is not modeled."""
+        """Reset content while retaining scoped receipts for historical retries."""
         self.lineage = "lineage-B"
         self.revision = 0
         self.elements = {key: (0, 0) for key in "ABC"}
-        self.receipts, self.events = {}, []
+        self.events = []
 
 
 class Replica:

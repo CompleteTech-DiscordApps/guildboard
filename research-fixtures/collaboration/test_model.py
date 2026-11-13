@@ -87,13 +87,42 @@ class Experiment(unittest.TestCase):
         self.assertEqual(b.submit(Context(readable=False), c)[0], "NOT_FOUND")
         self.assertEqual(b.revision, 1)
 
-    def test_restore_fences_old_commands(self):
-        # This toy clears receipts on restore; it does not model #481's proposed
-        # retained historical receipts or cross-restore unknown-outcome recovery.
-        b = Board(); b.submit(Context(), command()); b.restore()
+    def test_restore_retains_historical_unknown_outcome_without_reapplying(self):
+        b = Board()
+        b.submit(Context(), command("first", element="B"))
+        c = command("lost-ack", base=1)
+        self.assertEqual(b.submit(Context(), c, "after_commit"), ("UNKNOWN", None))
+        b.restore()
         before = b.observable()
-        self.assertEqual(b.submit(Context(), command())[0], "LINEAGE_CHANGED")
-        self.assertEqual(before, b.observable())
+        # The old base exceeds the restored revision, but an existing receipt
+        # settles history without replaying content or requiring write access.
+        self.assertEqual(b.submit(Context(writable=False), c), ("ACCEPTED", 2))
+        self.assertEqual(b.observable(), before)
+        self.assertEqual(b.elements["A"], (0, 0))
+        self.assertEqual(b.events, [])
+        self.assertEqual(b.submit(Context(), replace(c, changes=(Change("A", 0, 2),)))[0],
+                         "IDEMPOTENCY_CONFLICT")
+        self.assertEqual(b.observable(), before)
+
+    def test_restore_fences_uncommitted_and_foreign_receipt_retries(self):
+        b, c = Board(), command()
+        b.submit(Context(), c, "after_commit")
+        b.restore()
+        before = b.observable()
+        for ctx, cmd, code in [
+            (Context(), command("never-committed"), "LINEAGE_CHANGED"),
+            (Context(actor="actor-B"), c, "LINEAGE_CHANGED"),
+            (Context(session_valid=False), c, "UNAUTHENTICATED"),
+            (Context(readable=False), c, "NOT_FOUND"),
+            (Context(guild="foreign"), c, "NOT_FOUND"),
+            (Context(), replace(c, board="foreign"), "NOT_FOUND"),
+        ]:
+            with self.subTest(code=code, ctx=ctx):
+                self.assertEqual(b.submit(ctx, cmd)[0], code)
+                self.assertEqual(b.observable(), before)
+        # The same operation ID in the new lineage is independent history.
+        self.assertEqual(b.submit(Context(), replace(c, lineage=b.lineage)), ("ACCEPTED", 1))
+        self.assertEqual(len(b.receipts), 2)
 
     def test_delete_tombstone_stale_undo_no_resurrection(self):
         b = Board(); b.submit(Context(), command(value=None))
