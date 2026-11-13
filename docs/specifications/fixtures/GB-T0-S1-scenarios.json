@@ -1,0 +1,401 @@
+{
+  "contract": "GB-T0.S1",
+  "version": "0.1",
+  "status": "proposed-not-executed",
+  "note": "Symbolic IDs and illustrative numeric policy/revision counters describe scenarios, not wire-valid messages. Executable fixture builders must supply valid concrete IDs and encode wire counter fields (such as baseRevision, expectedPolicyGeneration and receipt/event revision) as canonical decimal strings within the unsigned 64-bit range under contract section 4 and accepted child codecs/schemas. Numeric assertion metrics such as operation counts and byte lengths are not revision/policy wire counters and remain numeric as appropriate to their accepted schemas. Outcomes are proposed assertions, not observed results. Each real test must create exact payloads, clock and deterministic scheduling under accepted child schemas.",
+  "scenarios": [
+    {
+      "id": "F01",
+      "invariant": "authorized-write",
+      "owner": "T2/T4/T5",
+      "given": {
+        "actor": "moderator-A",
+        "guild": "guild-A",
+        "board": "board-A",
+        "policy": 7,
+        "baseRevision": 10
+      },
+      "when": "submit valid changed-element command",
+      "expected": {
+        "code": "accepted",
+        "revision": 11,
+        "committedOperations": 1,
+        "receiptCount": 1
+      }
+    },
+    {
+      "id": "F02",
+      "invariant": "tenant-isolation",
+      "owner": "T1/T2/T8/T9",
+      "given": {
+        "actorGuild": "guild-B",
+        "targetGuild": "guild-A"
+      },
+      "when": "request board, receipt or asset from guild-A",
+      "expected": {
+        "code": "NOT_FOUND",
+        "persistedChanges": 0,
+        "foreignDataReturned": false
+      }
+    },
+    {
+      "id": "F03",
+      "invariant": "viewer-cannot-write",
+      "owner": "T2/T3/T9",
+      "given": {
+        "role": "viewer",
+        "uiBypassed": true
+      },
+      "when": "forge content command",
+      "expected": {
+        "code": "FORBIDDEN",
+        "persistedChanges": 0
+      }
+    },
+    {
+      "id": "F04",
+      "invariant": "revocation-linearization",
+      "owner": "T2/T4/T5",
+      "given": {
+        "policy": 7,
+        "pausedWrite": "preflight-only-before-authoritative-transaction-and-fence-acquisition"
+      },
+      "when": "commit revoke to policy8 while writer has acquired no authoritative locks; resume writer, acquire fence and revalidate policy",
+      "expected": {
+        "code": "POLICY_STALE",
+        "contentWritesAfterRevoke": 0
+      }
+    },
+    {
+      "id": "F05",
+      "invariant": "ack-after-commit",
+      "owner": "T4/T5/T12",
+      "given": {
+        "revision": 10
+      },
+      "when": "crash before operation transaction commit",
+      "expected": {
+        "acceptedAck": false,
+        "revisionAfterRecovery": 10,
+        "committedOperations": 0
+      }
+    },
+    {
+      "id": "F06",
+      "invariant": "retry-committed-write",
+      "owner": "T4/T5/T12",
+      "given": {
+        "revision": 10
+      },
+      "when": "commit operation at11; crash before ack; retry same identity/digest with current read access",
+      "expected": {
+        "code": "accepted",
+        "revision": 11,
+        "committedOperations": 1,
+        "receiptCount": 1
+      }
+    },
+    {
+      "id": "F07",
+      "invariant": "idempotency-conflict",
+      "owner": "T4/T5",
+      "given": {
+        "receipt": "operation-A/digest-A"
+      },
+      "when": "reuse operation-A with digest-B",
+      "expected": {
+        "code": "IDEMPOTENCY_CONFLICT",
+        "additionalWrites": 0
+      }
+    },
+    {
+      "id": "F08",
+      "invariant": "atomic-compound",
+      "owner": "T2/T3/T4/T5",
+      "given": {
+        "compoundElements": [
+          "owned-A",
+          "forbidden-B"
+        ]
+      },
+      "when": "attempt two-element compound",
+      "expected": {
+        "code": "FORBIDDEN",
+        "persistedChanges": 0,
+        "committedRevisions": 0
+      }
+    },
+    {
+      "id": "F09",
+      "invariant": "stale-conflict",
+      "owner": "T3/T4",
+      "given": {
+        "expectedElementVersion": 3,
+        "actualElementVersion": 4
+      },
+      "when": "submit same-element edit or undo using version3",
+      "expected": {
+        "code": "CONFLICT",
+        "persistedChanges": 0,
+        "newerEditPreserved": true
+      }
+    },
+    {
+      "id": "F10",
+      "invariant": "snapshot-interruption",
+      "owner": "T4/T5",
+      "given": {
+        "acceptedRevision": 10,
+        "candidateSnapshotRevision": 20
+      },
+      "when": "interrupt snapshot before digest/full-length validation",
+      "expected": {
+        "acceptedRevision": 10,
+        "partialStatePromoted": false,
+        "recoveryRequired": true
+      }
+    },
+    {
+      "id": "F11",
+      "invariant": "restore-fence",
+      "owner": "T2/T4/T5",
+      "given": {
+        "oldLineage": "lineage-A",
+        "newLineage": "lineage-B",
+        "committedReceiptForQueuedEdit": false,
+        "currentReadAccess": true
+      },
+      "when": "send old-lineage queued edit after restore commits",
+      "expected": {
+        "code": "LINEAGE_CHANGED",
+        "newLineageChanged": false
+      }
+    },
+    {
+      "id": "F12",
+      "invariant": "unavailable-prerequisite",
+      "owner": "T1/T2/T8",
+      "given": {
+        "membershipEvidence": "stale",
+        "discordRefresh": "unavailable"
+      },
+      "when": "attempt privileged mutation",
+      "expected": {
+        "code": "DEPENDENCY_UNAVAILABLE",
+        "persistedChanges": 0,
+        "privilegeExtended": false
+      }
+    },
+    {
+      "id": "F13",
+      "invariant": "invalid-configuration",
+      "owner": "T0/T8/T10",
+      "given": {
+        "PORT": "bad",
+        "SESSION_SECRET": "short"
+      },
+      "when": "attempt service startup after parser failure",
+      "expected": {
+        "code": "CONFIG_INVALID",
+        "listenerBound": false,
+        "diagnosticValuesIncluded": false
+      }
+    },
+    {
+      "id": "F14",
+      "invariant": "input-bounds",
+      "owner": "T4/T8/T9",
+      "given": {
+        "decodedMessageBytes": 65537
+      },
+      "when": "send oversized proposed 64KiB command",
+      "expected": {
+        "code": "PAYLOAD_TOO_LARGE",
+        "commandParsed": false,
+        "persistedChanges": 0
+      }
+    },
+    {
+      "id": "F15",
+      "invariant": "partial-asset",
+      "owner": "T5/T8/T9",
+      "given": {
+        "assetState": "quarantine",
+        "metadataFinalized": false
+      },
+      "when": "read or reference incomplete asset",
+      "expected": {
+        "code": "NOT_FOUND",
+        "bytesServed": 0,
+        "contentWrites": 0
+      }
+    },
+    {
+      "id": "F16",
+      "invariant": "lock-held-writer-before-revoke",
+      "owner": "T2/T4/T5",
+      "given": {
+        "policy": 7,
+        "pausedWrite": "inside-authoritative-transaction-holding-policy-and-board-fence-locks",
+        "revision": 10
+      },
+      "when": "queue revocation while writer holds fence; writer commits revision11 and releases locks; revocation then acquires fence and commits policy8",
+      "expected": {
+        "writerCode": "accepted",
+        "writerRevision": 11,
+        "revokePolicy": 8,
+        "writeCommitPrecedesRevokeCommit": true,
+        "contentWritesAfterRevoke": 0
+      }
+    },
+    {
+      "id": "F17",
+      "invariant": "receipt-replay-with-read-only-access",
+      "owner": "T1/T2/T4/T5",
+      "given": {
+        "receipt": "operation-A/digest-A/lineage-A/revision11",
+        "session": "valid",
+        "currentReadAccess": true,
+        "currentWriteAccess": false
+      },
+      "when": "retry identical committed operation-A and digest-A after write permission was revoked, with read access still permitted",
+      "expected": {
+        "code": "accepted",
+        "revision": 11,
+        "returnedPriorReceipt": true,
+        "additionalWrites": 0,
+        "additionalRevisions": 0
+      }
+    },
+    {
+      "id": "F18",
+      "invariant": "lost-ack-receipt-after-restore",
+      "owner": "T2/T4/T5/T7/T12",
+      "given": {
+        "operation": "guild-A/board-A/lineage-A/actor-A/operation-A",
+        "digest": "digest-A",
+        "committedReceipt": "lineage-A/revision11",
+        "ackReceived": false,
+        "restoreCheckpoint": "lineage-A/revision5",
+        "activeLineage": "lineage-B",
+        "activeRevision": 0,
+        "session": "valid",
+        "currentReadAccess": true,
+        "currentWriteAccess": false
+      },
+      "when": "complete document restore from revision5 without rolling back receipt history; retry identical operation identity/digest/preconditions after restore",
+      "expected": {
+        "code": "accepted",
+        "returnedPriorReceipt": true,
+        "receiptLineage": "lineage-A",
+        "receiptRevision": 11,
+        "receiptCountForOriginalIdentity": 1,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0,
+        "activeLineage": "lineage-B",
+        "activeRevision": 0,
+        "restoredContentChanged": false,
+        "historicalCommitSettled": true,
+        "currentStateReconciliationRequired": true,
+        "restoredDocumentSavedFromReceipt": false
+      }
+    },
+    {
+      "id": "F19",
+      "invariant": "never-committed-old-lineage-retry",
+      "owner": "T2/T4/T5/T7/T12",
+      "given": {
+        "operation": "guild-A/board-A/lineage-A/actor-A/operation-B",
+        "commandCommitted": false,
+        "committedReceiptExists": false,
+        "activeLineage": "lineage-B",
+        "session": "valid",
+        "currentReadAccess": true,
+        "currentWriteAccess": true
+      },
+      "when": "retry never-committed lineage-A command after an ordinary document restore with intact receipt history",
+      "expected": {
+        "code": "LINEAGE_CHANGED",
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0,
+        "returnedPriorReceipt": false,
+        "restoredContentChanged": false,
+        "currentStateReconciliationRequired": true,
+        "automaticNewLineageRetry": false
+      }
+    },
+    {
+      "id": "F20",
+      "invariant": "retired-receipt-read-revocation",
+      "owner": "T1/T2/T4/T5/T9/T12",
+      "given": {
+        "operation": "guild-A/board-A/lineage-A/actor-A/operation-A",
+        "committedReceipt": "digest-A/lineage-A/revision11",
+        "activeLineage": "lineage-B",
+        "session": "valid",
+        "currentReadAccess": false,
+        "boardVisible": false
+      },
+      "when": "revoke actor-A's board visibility; retry original operation with either digest-A or digest-B after restore",
+      "expected": {
+        "codeForEitherDigest": "NOT_FOUND",
+        "receiptExposed": false,
+        "digestMatchExposed": false,
+        "lineageExposed": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0,
+        "unknownOutcomeSettledByDenial": false
+      }
+    },
+    {
+      "id": "F21",
+      "invariant": "retired-receipt-digest-conflict-precedence",
+      "owner": "T2/T4/T5/T9/T12",
+      "given": {
+        "operation": "guild-A/board-A/lineage-A/actor-A/operation-A",
+        "committedReceipt": "digest-A/lineage-A/revision11",
+        "retryDigest": "digest-B",
+        "activeLineage": "lineage-B",
+        "session": "valid",
+        "currentReadAccess": true,
+        "currentWriteAccess": false
+      },
+      "when": "reuse the identical retired-lineage operation key with changed semantic payload or preconditions after restore",
+      "expected": {
+        "code": "IDEMPOTENCY_CONFLICT",
+        "returnedPriorReceipt": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0,
+        "restoredContentChanged": false
+      }
+    },
+    {
+      "id": "F22",
+      "invariant": "historical-receipt-cannot-replay-restored-document",
+      "owner": "T3/T4/T5/T7/T8/T12",
+      "given": {
+        "pendingOperation": "guild-A/board-A/lineage-A/actor-A/operation-A",
+        "pendingPayload": "create-element-X",
+        "returnedReceipt": "operation-A/lineage-A/revision11",
+        "validatedCurrentSnapshot": "lineage-B/revision0/without-element-X"
+      },
+      "when": "reconcile lost ACK using the historical receipt, then install the validated current-lineage snapshot and tail",
+      "expected": {
+        "historicalCommitSettled": true,
+        "originalPendingRetryCleared": true,
+        "acceptedClientLineage": "lineage-B",
+        "acceptedClientRevision": 0,
+        "elementXPresent": false,
+        "oldPayloadAppliedToNewLineage": false,
+        "automaticRelabeledCommandSent": false,
+        "additionalServerWrites": 0,
+        "additionalServerRevisions": 0,
+        "saveStatusDerivedFromCurrentAcceptedState": true
+      }
+    }
+  ]
+}
