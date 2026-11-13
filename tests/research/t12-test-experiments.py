@@ -179,6 +179,38 @@ class MatrixTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             matrix.validate(data)
 
+    def test_every_scenario_preserves_all_required_evidence(self):
+        for row in self.data["external_rows"]:
+            for required in row["required_evidence"]:
+                data = deepcopy(self.data)
+                target = next(item for item in data["external_rows"] if item["id"] == row["id"])
+                target["required_evidence"].remove(required)
+                with self.subTest(row=row["id"], required=required), self.assertRaises(ValueError):
+                    matrix.validate(data)
+        data = deepcopy(self.data)
+        data["external_rows"][-1]["required_evidence"] = deepcopy(data["external_rows"][0]["required_evidence"])
+        with self.assertRaises(ValueError):
+            matrix.validate(data)
+
+    def test_stop_conditions_cannot_be_empty_duplicated_or_removed(self):
+        for invalid in (None, "unsafe", [""] * 6, [None] * 6, ["unsafe"] * 6):
+            data = deepcopy(self.data)
+            data["stop_conditions"] = invalid
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                matrix.validate(data)
+        for stop in self.data["stop_conditions"]:
+            data = deepcopy(self.data)
+            data["stop_conditions"].remove(stop)
+            data["stop_conditions"].append("an unrelated condition")
+            with self.subTest(stop=stop), self.assertRaises(ValueError):
+                matrix.validate(data)
+
+    def test_additional_evidence_and_stops_preserve_required_coverage(self):
+        data = deepcopy(self.data)
+        data["external_rows"][-1]["required_evidence"].append("additional-reviewed-evidence")
+        data["stop_conditions"].append("additional reviewed stop")
+        self.assertEqual(matrix.validate(data)["external_not_run"], 10)
+
     def test_external_pass_or_incomplete_coverage_cannot_be_laundered(self):
         for mutation in ("pass", "coverage", "evidence", "accessibility"):
             data = deepcopy(self.data)
