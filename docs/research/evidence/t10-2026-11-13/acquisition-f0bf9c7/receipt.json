@@ -41,7 +41,10 @@
     "reports": [
       "before-acquisition.sanitized.json",
       "before-regressions.log"
-    ]
+    ],
+    "provenance": "before-provenance.json",
+    "verified_rerun": "before-verified.sanitized.json",
+    "checkout_metadata_caveat": "Original embedded tested_sha/fixture_hashes describe checkout f0bf9c7; actual imported old implementations are verified by Git blob/source hashes and explicit import mappings in before-provenance.json."
   },
   "artifacts": {
     "suite-normal.log": {
@@ -82,6 +85,24 @@
     "planning-validation.json": {
       "sha256": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7",
       "original_capture_sha256": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7",
+      "sanitized_local_paths": false
+    },
+    "before-verified.sanitized.json": {
+      "sha256": "c895aa44e2743ae9c3b1fddfacd1964c2761292dc38fce1eb94c45a2794864f4",
+      "original_capture_sha256": "3ff9fbabeff72a904e56a893b8bc306cf87dd075ddce7ea01c1ee56d7b0554d9",
+      "sanitized_local_paths": true
+    },
+    "before-verified.log": {
+      "sha256": "eefcf6f765e73c1e1181dbc02ffc85728d8c0943fb59167b85d6584ebcef7a8f",
+      "original_capture_sha256": "e3271e3de404c4a3afe4d9ed86e0dbe0f86084e84ba79cd2fe3a35104a536272",
+      "sanitized_local_paths": true
+    },
+    "before-provenance.json": {
+      "sha256": "7d1efebcdd6a45c86f7841caf6e9f4104e5dbeb69eaad5d540999a3d7a5159bb",
+      "sanitized_local_paths": false
+    },
+    "reproduce-before.py": {
+      "sha256": "26a336b2888decbe1dd2623a76bbd04a356255ddb530c70b4592dad5f3b80dca",
       "sanitized_local_paths": false
     }
   },

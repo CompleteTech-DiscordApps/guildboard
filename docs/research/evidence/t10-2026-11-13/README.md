@@ -30,3 +30,5 @@ artifacts above remain historical and unchanged.
 [First-signal normal-cleanup follow-up](cleanup-3acb22b/README.md) records 55 normal/optimized tests, eight cleanup signal reports and repeated real-Nginx baseline/six controls at `3acb22b`. Earlier cancellation evidence did not establish first-signal safety during normal cleanup and remains historical.
 
 [Acquisition follow-up](acquisition-f0bf9c7/README.md) adds post-spawn/pre-assignment and other resource-creation signal coverage: 59 normal/optimized tests, 20 signal reports, baseline/six controls at `f0bf9c7`. The earlier normal-cleanup bundle did not establish acquisition safety.
+
+The [acquisition before-run provenance audit](acquisition-f0bf9c7/before-provenance.json) distinguishes checkout metadata from dynamically imported old executable Git blobs and links a reproducible three-failure rerun. Original reports and fixed-head test results remain unchanged.

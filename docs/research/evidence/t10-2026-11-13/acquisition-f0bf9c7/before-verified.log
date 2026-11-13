@@ -1,0 +1,35 @@
+test_first_signal_after_nginx_spawn_before_assignment_reaps_owned_group (acquisition_tests.CancellationRegression.test_first_signal_after_nginx_spawn_before_assignment_reaps_owned_group) ... FAIL
+test_first_signal_after_fetch_spawn_before_assignment_reaps_owned_child (acquisition_tests.CancellationRegression.test_first_signal_after_fetch_spawn_before_assignment_reaps_owned_child) ... FAIL
+test_first_signal_after_local_acquisition_before_registration_closes_resources (acquisition_tests.CancellationRegression.test_first_signal_after_local_acquisition_before_registration_closes_resources) ... FAIL
+
+======================================================================
+FAIL: test_first_signal_after_nginx_spawn_before_assignment_reaps_owned_group (acquisition_tests.CancellationRegression.test_first_signal_after_nginx_spawn_before_assignment_reaps_owned_group)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<WORKTREE>/tests/research/t10-test-nginx-probe.py", line 494, in test_first_signal_after_nginx_spawn_before_assignment_reaps_owned_group
+    self.assertTrue(all(process.poll() is not None for process in processes))
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_first_signal_after_fetch_spawn_before_assignment_reaps_owned_child (acquisition_tests.CancellationRegression.test_first_signal_after_fetch_spawn_before_assignment_reaps_owned_child)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<WORKTREE>/tests/research/t10-test-nginx-probe.py", line 534, in test_first_signal_after_fetch_spawn_before_assignment_reaps_owned_child
+    self.assertTrue(all(process.poll() is not None and process.stdout.closed and process.stderr.closed for process in processes))
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_first_signal_after_local_acquisition_before_registration_closes_resources (acquisition_tests.CancellationRegression.test_first_signal_after_local_acquisition_before_registration_closes_resources)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<WORKTREE>/tests/research/t10-test-nginx-probe.py", line 583, in test_first_signal_after_local_acquisition_before_registration_closes_resources
+    self.assertTrue(all(resource.fileno() == -1 for resource in servers))
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.548s
+
+FAILED (failures=3)

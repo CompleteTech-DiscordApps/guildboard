@@ -16,9 +16,18 @@ directories and truthful cleanup flags. Transient-command spawn/reap is also tes
 [Capture log](signal-capture.log) and [capture command](capture-command.txt) preserve
 how these reports were collected.
 
-[Old-head raw reports](before-acquisition.sanitized.json) and
-[regression failures](before-regressions.log) demonstrate all three acquisition
-methods fail at `9802c81`. Tests rescue only captured owned resources.
+[Original raw reports](before-acquisition.sanitized.json) are preserved unchanged.
+Their embedded `tested_sha` and runner hash describe checkout `f0bf9c7`, because
+old `run_local` reads HEAD/source files through `ROOT`. The implementation was
+dynamically imported from old Git-extracted files. [Provenance audit](before-provenance.json)
+verifies those saved files against exact `9802c81` Git blob IDs/SHA-256 hashes,
+records the `f0bf9c7` test harness and import/monkeypatch mappings, and distinguishes
+checkout metadata from executed code. A [saved reproduction script](reproduce-before.py)
+extracts fresh old Git blobs and records executable module paths/hashes explicitly.
+Its [verified rerun](before-verified.sanitized.json) and [failure log](before-verified.log)
+confirm all three acquisition methods fail on that old implementation, with only
+captured owned resources rescued. The earlier [failure log](before-regressions.log)
+remains historical. The fixed-head 59-test validation remains unchanged.
 
 Acquisition now occurs inside cleanup-covered try blocks with catchable signals
 deferred through handle assignment. Pending signals then unwind into cleanup.
