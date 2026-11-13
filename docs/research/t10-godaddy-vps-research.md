@@ -225,3 +225,26 @@ fake Docker regressions from actual local Nginx runs; machine-readable results
 are appended under `docker_failure_followup_2026_11_13`. Docker access remains
 unavailable on this host, so Docker-mode real execution remains unverified.
 GoDaddy/Discord/TLS and fresh independent review gates remain open.
+
+
+### Failure-path follow-up — 2026-11-13 UTC
+
+Code revision `682b6beedff3e94c2b0a310edafb4ad6207f63dc` corrects the source collector's truncated-response
+handling and the probe's failure reporting. A declared Content-Length must match
+the bounded body; HTTP framing errors become failed source rows, preserving later
+observations. Source hashes already recorded above remain historical observations,
+not newly verified complete content. New tests use owned loopback HTTP fixtures.
+
+Negative controls now require the expected structured failure identity; an unrelated
+assertion containing `426` cannot certify the stripped-upgrade control. Probe errors
+retain accumulated metadata and passed checks, and the CLI emits the failed report
+with a nonzero exit. Cleanup always attempts the owned process-group KILL and reap
+after a failed wait, and attempts backend cleanup independently.
+
+On Linux / Python 3.14.8, 26 focused tests passed, including actual owned Nginx
+1.28.0 controls and worker/listener cleanup. A fresh positive run passed all 12 checks.
+Raw results: campaign `platform-finish-logs/t10-tests-candidate.log` and
+`t10-baseline-682b6be.json`; source regressions fail against `be740d4`
+(`t10-capture-before.log`). Docker uses a simulated command boundary in the new
+regressions; actual Docker, public source refetch, TLS, Discord and GoDaddy
+acceptance remain unverified. Fresh independent full-head review remains required.
