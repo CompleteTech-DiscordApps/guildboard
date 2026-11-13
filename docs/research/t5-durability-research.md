@@ -27,13 +27,19 @@ retained lineages atomically with publication/fencing. A historical receipt does
 not mean its content exists in the restored active board. No receipt expiration,
 compaction or physical purge is authorized by that proposal.
 
-[Draft #484](https://github.com/CompleteTech-DiscordApps/guildboard/pull/484), head
-`0bfdf0e976ffbe3de3cf22b5280b863db15e72fc`, has a toy restore that clears receipts
-and checks lineage first; #481 explicitly identifies this mismatch. This research
-does not adopt that toy behavior or create a second application retry protocol.
+[Draft #484](https://github.com/CompleteTech-DiscordApps/guildboard/pull/484)
+originally used a toy restore that cleared receipts and checked lineage first at
+`0bfdf0e976ffbe3de3cf22b5280b863db15e72fc`; #481 identified that mismatch.
+The 2026-11-12 follow-up at
+[`3379307f5b0e64c9b135307a160558347d7299f0`](https://github.com/CompleteTech-DiscordApps/guildboard/commit/3379307f5b0e64c9b135307a160558347d7299f0)
+now retains retired receipts and performs current identity/read checks before
+historical lookup. Its sequential scalar tests settle a committed lost-ack retry
+without reapplying content into the restored lineage; absent old receipts still
+fence old commands. This aligns the research candidates without proving a real
+application retry protocol, storage retention, or client reconciliation.
 The database fixture only demonstrates that preserving retired receipts is
-feasible; T4/T5/T7/T8/T9/T12 must review and reconcile the shared proposal before
-implementation. Neither draft is accepted architecture.
+feasible; T4/T5/T7/T8/T9/T12 must review the shared proposal before implementation.
+All drafts remain provisional architecture.
 
 ## Primary sources, versions and dated observations
 
