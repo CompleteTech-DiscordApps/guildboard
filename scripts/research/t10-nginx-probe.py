@@ -9,6 +9,7 @@ import threading
 import json
 import os
 import signal
+import re
 from pathlib import Path
 import platform
 import subprocess
@@ -28,11 +29,74 @@ def docker(*args, input_text=None):
     return result
 
 
+class DockerCleanupError(RuntimeError):
+    def __init__(self, failures, report):
+        self.failures = failures
+        self.report = report
+        super().__init__("Owned Docker cleanup failed: " + "; ".join(failures))
+
+
+def inspect_container(reference):
+    """Only an explicit missing-container response establishes absence."""
+    try:
+        output = docker("container", "inspect", reference).stdout
+    except subprocess.CalledProcessError as error:
+        missing = r"(?:Error:|Error response from daemon:) No such (?:object|container): " + re.escape(reference)
+        if error.returncode == 1 and re.fullmatch(missing, (error.stderr or "").strip()):
+            return None
+        raise
+    data = json.loads(output)
+    if not isinstance(data, list) or len(data) != 1 or not isinstance(data[0], dict):
+        raise RuntimeError("Invalid container inspection: " + reference)
+    return data[0]
+
+
+def create_owned_container(intended, name, *args):
+    # A collision is not ours even if the caller reuses a token. Never delete it.
+    if inspect_container(name) is not None:
+        raise RuntimeError("Container name already exists: " + name)
+    # The daemon may create the resource before the CLI times out or disconnects.
+    intended.append(name)
+    docker("create", "--name", name, *args)
+
+
+def cleanup_owned_containers(intended, token, report):
+    cleanup, failures = [], []
+    for name in reversed(intended):
+        try:
+            info = inspect_container(name)
+            if info is None:
+                cleanup.append({"kind": "container", "name": name, "absence_verified": True})
+                continue
+            labels = info.get("Config", {}).get("Labels", {})
+            identifier = info.get("Id")
+            if (not isinstance(labels, dict) or labels.get("guildboard.t10.probe") != token
+                    or info.get("Name") != "/" + name
+                    or not isinstance(identifier, str) or re.fullmatch(r"[0-9a-f]{64}", identifier) is None):
+                raise RuntimeError("Ownership/identity mismatch; refusing cleanup: " + name)
+            removal_error = None
+            try:
+                # Bind removal to the inspected immutable ID, not a reusable name.
+                docker("container", "rm", "--force", identifier)
+            except (subprocess.SubprocessError, OSError) as error:
+                removal_error = error
+            if inspect_container(identifier) is not None:
+                raise RuntimeError("Cleanup absence not verified: " + name) from removal_error
+            cleanup.append({"kind": "container", "name": name, "id": identifier, "absence_verified": True})
+        except Exception as error:
+            # Failure to inspect/remove one resource must not strand the others.
+            failures.append(name + ": " + type(error).__name__ + ": " + str(error))
+    report["cleanup"] = cleanup
+    if failures:
+        report["cleanup_failures"] = failures
+        raise DockerCleanupError(failures, report)
+
+
 def run(control=None):
     token = "gb-t10-" + uuid.uuid4().hex[:12]
     backend, proxy = token + "-backend", token + "-proxy"
     label = "guildboard.t10.probe=" + token
-    created = []
+    intended = []
     report = {"observed_at": datetime.now(timezone.utc).isoformat(), "host": platform.platform(),
               "host_python": platform.python_version(), "images": {"nginx": NGINX, "python": PYTHON},
               "resource_scope": {"network": "network=none backend; nginx shares its owned network namespace", "published_ports": [], "mounts": [],
@@ -41,13 +105,11 @@ def run(control=None):
         docker("image", "inspect", image)  # No pulls or installs; fail if absent.
     try:
         common = ["--pull=never", "--label", label, "--cpus", "0.5", "--memory", "128m", "--pids-limit", "64", "--user", "65534:65534", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m,mode=1777"]
-        docker("create", "--name", backend, "--network", "none", *common, "--entrypoint", "python", PYTHON, "-c", "import time; time.sleep(3600)")
-        created.append(("container", backend))
+        create_owned_container(intended, backend, "--network", "none", *common, "--entrypoint", "python", PYTHON, "-c", "import time; time.sleep(3600)")
         docker("start", backend)
         docker("exec", "-i", backend, "python", "-c", "import sys; from pathlib import Path; Path('/tmp/probe.py').write_text(sys.stdin.read())", input_text=(ROOT / "scripts/research/t10-proxy-fixture.py").read_text())
         docker("exec", "-d", backend, "python", "/tmp/probe.py", "serve")
-        docker("create", "--name", proxy, "--network", "container:" + backend, *common, "--entrypoint", "sleep", NGINX, "3600")
-        created.append(("container", proxy))
+        create_owned_container(intended, proxy, "--network", "container:" + backend, *common, "--entrypoint", "sleep", NGINX, "3600")
         docker("start", proxy)
         config = (ROOT / "docs/research/t10-nginx-probe.conf").read_text()
         if control == "strip-upgrade":
@@ -91,18 +153,7 @@ def run(control=None):
         report["fixture_hashes"] = {str(path.relative_to(ROOT)).replace("\\", "/"): hashlib.sha256(path.read_bytes()).hexdigest()
                                     for path in (ROOT / "docs/research/t10-nginx-probe.conf", ROOT / "scripts/research/t10-proxy-fixture.py")}
     finally:
-        cleanup = []
-        for kind, name in reversed(created):
-            info = json.loads(docker(kind, "inspect", name).stdout)[0]
-            labels = info.get("Config", {}).get("Labels", {}) if kind == "container" else info.get("Labels", {})
-            if labels.get("guildboard.t10.probe") != token:
-                raise RuntimeError("Ownership mismatch; refusing cleanup: " + name)
-            docker(kind, "rm", *(["--force"] if kind == "container" else []), name)
-            absent = subprocess.run(["docker", kind, "inspect", name], capture_output=True, text=True, timeout=10)
-            if absent.returncode == 0 or "No such" not in absent.stderr:
-                raise RuntimeError("Cleanup absence not verified: " + name)
-            cleanup.append({"kind": kind, "name": name, "absence_verified": True})
-        report["cleanup"] = cleanup
+        cleanup_owned_containers(intended, token, report)
     return report
 
 

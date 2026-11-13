@@ -1,6 +1,8 @@
 """Real local proxy negative controls, opt-in Docker prerequisite; no image pulls."""
 import os
 import io
+import json
+from types import SimpleNamespace
 import subprocess
 import signal
 import importlib.util
@@ -136,6 +138,133 @@ class HandshakeRegression(unittest.TestCase):
     def test_connection_token_list_and_case_are_accepted(self):
         with mock.patch.object(FIXTURE.socket, "create_connection", return_value=self.response(upgrade="WebSocket", connection="keep-alive, UpGrAdE")):
             self.assertEqual(FIXTURE.websocket("/ws"), b"\x81\x05hello")
+
+
+class FakeDocker:
+    """Only an in-memory Docker command boundary, never platform evidence."""
+    def __init__(self, create_timeout=None):
+        self.containers = {}
+        self.calls = []
+        self.create_timeout = create_timeout
+        self.inspect_errors = {}
+        self.remove_mode = {}
+
+    def add(self, name, token="token"):
+        info = {"Id": format(len(self.containers) + 1, "064x"), "Name": "/" + name,
+                "Config": {"Labels": {"guildboard.t10.probe": token}}}
+        self.containers[name] = info
+        return info
+
+    def __call__(self, *args, **kwargs):
+        self.calls.append(args)
+        if args[:2] == ("image", "inspect"):
+            return SimpleNamespace(stdout="[]", stderr="")
+        if args[0] == "create":
+            name = args[args.index("--name") + 1]
+            label = args[args.index("--label") + 1].split("=", 1)[1]
+            self.add(name, label)
+            if self.create_timeout and name.endswith(self.create_timeout):
+                raise subprocess.TimeoutExpired(args, 30)
+        if args[:2] == ("container", "inspect"):
+            reference = args[2]
+            if reference in self.inspect_errors:
+                raise self.inspect_errors[reference]
+            info = self.containers.get(reference)
+            if info is None:
+                info = next((value for value in self.containers.values() if value["Id"] == reference), None)
+            if info is None:
+                raise subprocess.CalledProcessError(1, args, stderr="Error: No such container: " + reference)
+            return SimpleNamespace(stdout=json.dumps([info]), stderr="")
+        if args[:2] == ("container", "rm"):
+            reference = args[-1]
+            name = next(name for name, value in self.containers.items() if value["Id"] == reference)
+            mode = self.remove_mode.get(name, self.remove_mode.get(name.rsplit("-", 1)[-1]))
+            if mode in ("fail", "noop"):
+                if mode == "fail":
+                    raise subprocess.CalledProcessError(1, args, stderr="simulated removal failure")
+            else:
+                del self.containers[name]
+                if mode == "timeout-after-delete":
+                    raise subprocess.TimeoutExpired(args, 30)
+        return SimpleNamespace(stdout="", stderr="")
+
+
+class DockerCleanupRegression(unittest.TestCase):
+    def test_create_timeout_after_daemon_creation_is_cleaned(self):
+        for target in ("backend", "proxy"):
+            fake = FakeDocker(create_timeout=target)
+            with self.subTest(target=target), mock.patch.object(PROBE, "docker", side_effect=fake):
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    PROBE.run()
+            self.assertEqual(fake.containers, {})
+
+    def test_runner_cleanup_failure_still_attempts_backend(self):
+        fake = FakeDocker()
+        fake.remove_mode["proxy"] = "fail"
+        with mock.patch.object(PROBE, "docker", side_effect=fake):
+            with self.assertRaises(RuntimeError):
+                PROBE.run()
+        self.assertFalse(any(name.endswith("backend") for name in fake.containers))
+        self.assertTrue(any(name.endswith("proxy") for name in fake.containers))
+
+    def test_failed_cleanup_continues_to_other_owned_container(self):
+        for mode in ("fail", "noop", "unknown-inspect", "foreign-label", "invalid-identity"):
+            fake = FakeDocker()
+            fake.add("backend")
+            proxy = fake.add("proxy")
+            if mode in ("fail", "noop"):
+                fake.remove_mode["proxy"] = mode
+            elif mode == "unknown-inspect":
+                fake.inspect_errors["proxy"] = subprocess.CalledProcessError(1, [], stderr="daemon unavailable")
+            elif mode == "foreign-label":
+                proxy["Config"]["Labels"]["guildboard.t10.probe"] = "other"
+            else:
+                proxy["Id"] = "not-an-immutable-container-id"
+            report = {}
+            with self.subTest(mode=mode), mock.patch.object(PROBE, "docker", side_effect=fake):
+                with self.assertRaises(PROBE.DockerCleanupError) as caught:
+                    PROBE.cleanup_owned_containers(["backend", "proxy"], "token", report)
+            self.assertNotIn("backend", fake.containers)
+            self.assertIn("proxy", fake.containers)
+            self.assertEqual(len(caught.exception.failures), 1)
+            self.assertIs(caught.exception.report, report)
+
+    def test_collision_never_registers_or_removes_preexisting_container(self):
+        fake = FakeDocker()
+        fake.add("backend")
+        intended = []
+        with mock.patch.object(PROBE, "docker", side_effect=fake):
+            with self.assertRaisesRegex(RuntimeError, "already exists"):
+                PROBE.create_owned_container(intended, "backend")
+            PROBE.cleanup_owned_containers(intended, "token", {})
+        self.assertEqual(intended, [])
+        self.assertIn("backend", fake.containers)
+        self.assertFalse(any(call[:2] == ("container", "rm") for call in fake.calls))
+
+    def test_absence_is_strict_and_removal_timeout_is_verified(self):
+        fake = FakeDocker()
+        fake.add("backend")
+        fake.remove_mode["backend"] = "timeout-after-delete"
+        with mock.patch.object(PROBE, "docker", side_effect=fake):
+            report = {}
+            PROBE.cleanup_owned_containers(["backend", "absent"], "token", report)
+            self.assertEqual(len(report["cleanup"]), 2)
+            self.assertEqual(fake.containers, {})
+            for message in ("daemon unavailable", "Error: No such container: unrelated", "No such file or directory"):
+                fake.inspect_errors["absent"] = subprocess.CalledProcessError(1, [], stderr=message)
+                with self.subTest(message=message), self.assertRaises(subprocess.CalledProcessError):
+                    PROBE.inspect_container("absent")
+
+    def test_multiple_cleanup_failures_are_aggregated(self):
+        fake = FakeDocker()
+        fake.add("backend")
+        fake.add("proxy")
+        fake.remove_mode = {"backend": "fail", "proxy": "fail"}
+        with mock.patch.object(PROBE, "docker", side_effect=fake):
+            with self.assertRaises(PROBE.DockerCleanupError) as caught:
+                PROBE.cleanup_owned_containers(["backend", "proxy"], "token", {})
+        self.assertEqual(len(caught.exception.failures), 2)
+        self.assertEqual(sum(call[:2] == ("container", "rm") for call in fake.calls), 2)
 
 
 class ActualNginxControls(unittest.TestCase):
