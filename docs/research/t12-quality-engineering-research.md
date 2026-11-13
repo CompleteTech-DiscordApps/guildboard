@@ -314,3 +314,18 @@ across restore in `docs/research/collaboration-semantics.md`. This agrees with
 T12's historical-receipt model at the described boundary. T4 remains provisional
 pending fresh independent review and external approval; agreement between models
 is not implementation or acceptance evidence.
+
+
+Fresh GitHub review comments `4559078585` and `4559078629` against
+`13572b1cb81d97d1699540984949154e026f2062` identified that counting ten rows did
+not preserve VPS coverage, and evidence length alone accepted empty/duplicate
+names or omission of `trace-hash-date`. Both findings were reproduced against
+the original validator: the two new regression methods produced eight expected
+assertion failures. Code revision `d423949776fab96efa0fa98399213dacfc25657a` requires the exact ten environment
+IDs with their expected client/VPS groups, distinct nonblank evidence names and
+the mandatory dated trace/hash field. All **19** focused tests then passed;
+fresh matrix output still equals the saved synthetic arithmetic. Planning
+validation and diff whitespace checks passed. Raw results are
+`t12-regressions-before.log`, `t12-tests-d423949.log` and
+`t12-planning-d423949.log` in the campaign log directory. These code changes
+require fresh full-head independent review; discussion threads are left open.
