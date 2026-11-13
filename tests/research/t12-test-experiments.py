@@ -1,0 +1,607 @@
+"""Test oracle sensitivity, reproducibility and honest matrix evidence boundaries."""
+import os
+import signal
+import socketserver
+import tempfile
+import time
+import threading
+from unittest import mock
+from copy import deepcopy
+import importlib.util
+import json
+from pathlib import Path
+import subprocess
+import sys
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def module(name):
+    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts/research" / (name + ".py"))
+    loaded = importlib.util.module_from_spec(spec)
+    sys.modules[name] = loaded
+    spec.loader.exec_module(loaded)
+    return loaded
+
+
+schedule = module("t12-schedule-experiment")
+matrix = module("t12-validate-matrix")
+
+
+class SchedulingTests(unittest.TestCase):
+    def test_all_small_schedules_and_recovery_cuts(self):
+        result = schedule.experiment()
+        self.assertEqual(result["schedules"], 140)
+        self.assertEqual(result["recovery_boundaries"], 980)
+        self.assertEqual(sum(result["accepted_event_count_distribution"].values()), 140)
+        self.assertEqual(len(result["unsafe_controls_detected"]), 5)
+        self.assertEqual(result["seeded_steps"], 1536)
+
+    def test_stale_prepared_authority_control_is_caught(self):
+        order = ("a.prepare", "revoke", "a.commit", "a.ack")
+        self.assertEqual(schedule.schedule_trial(order), 0)
+        with self.assertRaisesRegex(schedule.InvariantViolation, "stale authority"):
+            schedule.schedule_trial(order, "prepare-only-authority")
+
+    def test_duplicate_and_restore_keep_historical_receipts(self):
+        result = schedule.special_trials()
+        self.assertEqual(result["accepted_events"], 2)
+        self.assertEqual(result["restored_content"], {})
+        self.assertEqual(result["lost_ack_retry"], "receipt")
+
+    def test_foreign_and_split_controls_are_caught(self):
+        for defect in ("foreign-scope", "split-commit", "base-before-receipt"):
+            with self.subTest(defect=defect), self.assertRaises(schedule.InvariantViolation):
+                schedule.special_trials(defect)
+
+    def test_read_deny_precedes_retained_receipt(self):
+        model = schedule.Model()
+        command = model.prepare("a", "one")
+        model.commit(command)
+        before = model.durable()
+        model.can_read = False
+        self.assertEqual(model.commit(command), ("read-denied", None))
+        model.can_read = True
+        self.assertEqual(model.durable(), before)
+
+    def test_restore_retained_receipt_precedes_current_write_fence(self):
+        model = schedule.Model()
+        command = model.prepare("a", "one")
+        model.commit(command)
+        model.restore()
+        model.revoke()
+        before = model.durable()
+        self.assertEqual(model.commit(command), ("receipt", 1))
+        self.assertEqual(model.content, {})
+        self.assertEqual(model.durable(), before)
+
+    def test_restore_changed_digest_conflicts_without_reapplying_content(self):
+        model = schedule.Model()
+        command = model.prepare("a", "one")
+        model.commit(command)
+        model.restore()
+        before = model.durable()
+        self.assertEqual(model.commit(schedule.replace(command, value="different")), ("digest-conflict", None))
+        self.assertEqual(model.durable(), before)
+
+    def test_restore_unknown_old_lineage_and_unreadable_receipt_are_denied(self):
+        model = schedule.Model()
+        command = model.prepare("a", "one")
+        model.commit(command)
+        model.restore()
+        before = model.durable()
+        self.assertEqual(model.commit(schedule.replace(command, operation="unknown")), ("lineage-denied", None))
+        self.assertEqual(model.durable(), before)
+        model.can_read = False
+        before = model.durable()
+        self.assertEqual(model.commit(command), ("read-denied", None))
+        self.assertEqual(model.durable(), before)
+
+    def test_expiry_boundary_uses_injected_server_clock(self):
+        self.assertEqual(schedule.clock_trial()["first_denied_tick"], 5)
+
+    def test_foreign_board_and_tenant_denials_leave_no_effect(self):
+        for field, value in (("board", "foreign"), ("tenant", "foreign")):
+            model = schedule.Model()
+            command = schedule.replace(model.prepare("a", "one"), **{field: value})
+            before = model.durable()
+            self.assertEqual(model.commit(command)[0], "scope-denied")
+            self.assertEqual(model.durable(), before)
+
+    def test_bounded_seed_inputs(self):
+        for seed, steps in ((-1, 48), (32, 48), (True, 48), (0, 49), (0, 0)):
+            with self.assertRaises(schedule.InvariantViolation):
+                schedule.seeded_trial(seed, steps)
+
+    def test_replay_output_is_byte_identical(self):
+        command = [sys.executable, str(ROOT / "scripts/research/t12-schedule-experiment.py")]
+        first = subprocess.run(command, check=True, capture_output=True, timeout=15)
+        second = subprocess.run(command, check=True, capture_output=True, timeout=15)
+        self.assertEqual(first.stdout, second.stdout)
+        self.assertEqual(first.stderr, b"")
+        self.assertFalse(json.loads(first.stdout)["runtime_or_platform_acceptance"])
+
+
+class MatrixTests(unittest.TestCase):
+    def setUp(self):
+        self.data = json.loads(matrix.DEFAULT.read_text(encoding="utf-8"))
+
+    def test_offered_load_arithmetic_and_pending_external_rows(self):
+        result = matrix.validate(self.data)
+        baseline = next(row for row in result["load"] if row["id"] == "baseline")
+        self.assertEqual(baseline["connected_clients"], 120)
+        self.assertEqual(baseline["offered_operations_per_second"], 96)
+        self.assertEqual(baseline["offered_operations_total"], 86400)
+        self.assertEqual(baseline["peer_fanout_payload_bytes_per_second"], 1867776)
+        self.assertIsNone(baseline["measured_throughput"])
+        self.assertEqual(result["external_not_run"], 10)
+
+    def test_invalid_oversized_and_noninteger_loads_fail(self):
+        for bad in (0, -1, 11, True, 1.1, "3"):
+            data = deepcopy(self.data)
+            data["load_profiles"][0]["guilds"] = bad
+            with self.assertRaises(ValueError):
+                matrix.validate(data)
+
+    def test_duplicate_profile_and_impossible_percentiles_fail(self):
+        data = deepcopy(self.data)
+        data["load_profiles"][1]["id"] = data["load_profiles"][0]["id"]
+        with self.assertRaises(ValueError):
+            matrix.validate(data)
+        self.data["budget_candidates"][0]["p95_ms"] = 9999
+        with self.assertRaises(ValueError):
+            matrix.validate(self.data)
+
+    def test_workload_mix_does_not_hide_missing_arrivals(self):
+        self.data["workload_mix_percent"]["modify"] = 69
+        with self.assertRaisesRegex(ValueError, "sum to 100"):
+            matrix.validate(self.data)
+
+    def test_vps_coverage_cannot_be_replaced_by_renamed_client_rows(self):
+        data = deepcopy(self.data)
+        for index in range(7, 10):
+            data["external_rows"][index] = deepcopy(data["external_rows"][0])
+            data["external_rows"][index]["id"] = "renamed-client-" + str(index)
+        with self.assertRaisesRegex(ValueError, "coverage"):
+            matrix.validate(data)
+        data = deepcopy(self.data)
+        data["external_rows"][-1]["group"] = "client-at"
+        with self.assertRaisesRegex(ValueError, "groups"):
+            matrix.validate(data)
+
+    def test_required_evidence_names_and_trace_are_preserved(self):
+        for evidence in (["", "", "", "", ""],
+                         [" ", "a", "b", "c", "trace-hash-date"],
+                         ["a", "a", "b", "c", "trace-hash-date"],
+                         [1, "a", "b", "c", "trace-hash-date"],
+                         "trace-hash-date",
+                         ["a", "b", "c", "d", "e"]):
+            data = deepcopy(self.data)
+            data["external_rows"][0]["required_evidence"] = evidence
+            with self.subTest(evidence=evidence), self.assertRaises(ValueError):
+                matrix.validate(data)
+        data = deepcopy(self.data)
+        data["external_rows"][0]["required_evidence"].remove("trace-hash-date")
+        with self.assertRaises(ValueError):
+            matrix.validate(data)
+
+    def test_every_scenario_preserves_all_required_evidence(self):
+        for row in self.data["external_rows"]:
+            for required in row["required_evidence"]:
+                data = deepcopy(self.data)
+                target = next(item for item in data["external_rows"] if item["id"] == row["id"])
+                target["required_evidence"].remove(required)
+                with self.subTest(row=row["id"], required=required), self.assertRaises(ValueError):
+                    matrix.validate(data)
+        data = deepcopy(self.data)
+        data["external_rows"][-1]["required_evidence"] = deepcopy(data["external_rows"][0]["required_evidence"])
+        with self.assertRaises(ValueError):
+            matrix.validate(data)
+
+    def test_stop_conditions_cannot_be_empty_duplicated_or_removed(self):
+        for invalid in (None, "unsafe", [""] * 6, [None] * 6, ["unsafe"] * 6):
+            data = deepcopy(self.data)
+            data["stop_conditions"] = invalid
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                matrix.validate(data)
+        for stop in self.data["stop_conditions"]:
+            data = deepcopy(self.data)
+            data["stop_conditions"].remove(stop)
+            data["stop_conditions"].append("an unrelated condition")
+            with self.subTest(stop=stop), self.assertRaises(ValueError):
+                matrix.validate(data)
+
+    def test_additional_evidence_and_stops_preserve_required_coverage(self):
+        data = deepcopy(self.data)
+        data["external_rows"][-1]["required_evidence"].append("additional-reviewed-evidence")
+        data["stop_conditions"].append("additional reviewed stop")
+        self.assertEqual(matrix.validate(data)["external_not_run"], 10)
+
+    def test_all_required_matrix_sections_and_fields_are_present(self):
+        for field in self.data:
+            data = deepcopy(self.data)
+            del data[field]
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                matrix.validate(data)
+        for section in ("resource_candidates", "accessibility_candidate"):
+            for field in self.data[section]:
+                data = deepcopy(self.data)
+                del data[section][field]
+                with self.subTest(section=section, field=field), self.assertRaises(ValueError):
+                    matrix.validate(data)
+
+    def test_budget_coverage_and_definitions_cannot_disappear(self):
+        for value in ([], None, "budgets", {}, [None]):
+            data = deepcopy(self.data)
+            data["budget_candidates"] = value
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                matrix.validate(data)
+        for index, row in enumerate(self.data["budget_candidates"]):
+            for field in row:
+                for value in (None, "", [], {}):
+                    data = deepcopy(self.data)
+                    data["budget_candidates"][index][field] = value
+                    with self.subTest(budget=row["id"], field=field, value=value), self.assertRaises(ValueError):
+                        matrix.validate(data)
+            data = deepcopy(self.data)
+            data["budget_candidates"].pop(index)
+            with self.assertRaises(ValueError):
+                matrix.validate(data)
+
+    def test_accessibility_tasks_checks_and_targets_cannot_disappear(self):
+        for field in ("tasks", "checks"):
+            for required in self.data["accessibility_candidate"][field]:
+                data = deepcopy(self.data)
+                data["accessibility_candidate"][field].remove(required)
+                with self.subTest(field=field, required=required), self.assertRaises(ValueError):
+                    matrix.validate(data)
+        for field in self.data["accessibility_candidate"]:
+            for value in (None, "", [], {}, [""], [None]):
+                data = deepcopy(self.data)
+                data["accessibility_candidate"][field] = value
+                with self.subTest(field=field, value=value), self.assertRaises(ValueError):
+                    matrix.validate(data)
+
+    def test_workload_keys_and_required_profile_metric_ids_are_fixed(self):
+        for key in self.data["workload_mix_percent"]:
+            data = deepcopy(self.data)
+            del data["workload_mix_percent"][key]
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                matrix.validate(data)
+        for section in ("load_profiles", "budget_candidates"):
+            data = deepcopy(self.data)
+            data[section][0]["id"] = "unrelated-scenario"
+            with self.subTest(section=section), self.assertRaises(ValueError):
+                matrix.validate(data)
+        for key in self.data["load_profiles"][0]:
+            data = deepcopy(self.data)
+            del data["load_profiles"][0][key]
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                matrix.validate(data)
+
+    def test_malformed_sections_raise_validation_error(self):
+        for field, value in (("workload_mix_percent", []), ("load_profiles", [None]),
+                             ("external_rows", [None] * 10), ("resource_candidates", []),
+                             ("accessibility_candidate", []), ("fault_corpus_candidate", [])):
+            data = deepcopy(self.data)
+            data[field] = value
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                matrix.validate(data)
+
+    def test_external_pass_or_incomplete_coverage_cannot_be_laundered(self):
+        for mutation in ("pass", "coverage", "evidence", "accessibility"):
+            data = deepcopy(self.data)
+            if mutation == "pass":
+                data["external_rows"][0]["status"] = "passed"
+            elif mutation == "coverage":
+                data["external_rows"].pop()
+            elif mutation == "evidence":
+                data["external_rows"][0]["required_evidence"] = []
+            else:
+                data["accessibility_candidate"]["status"] = "passed"
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                matrix.validate(data)
+
+
+
+class SourceCaptureRegression(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        path = Path(os.environ.get("CAPTURE_REGRESSION_SCRIPT", str(ROOT / "scripts/research/t12-capture-sources.py")))
+        spec = importlib.util.spec_from_file_location("capture_regression", path)
+        cls.capture_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.capture_module)
+
+    def collect(self, responses):
+        import socketserver
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                self.request.recv(4096)
+                self.request.sendall(responses.pop(0))
+        with socketserver.TCPServer(("127.0.0.1", 0), Handler) as server:
+            thread = threading.Thread(target=server.serve_forever)
+            thread.start()
+            url = "http://127.0.0.1:" + str(server.server_address[1])
+            try:
+                return self.invoke(url)
+            finally:
+                server.shutdown()
+                thread.join(timeout=2)
+
+    def test_truncated_length_is_failure_and_other_source_survives(self):
+        result = self.collect([
+            b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\nConnection: close\r\n\r\nshort",
+            b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok"])
+        self.assert_failed_then_success(result)
+
+    def test_broken_chunk_is_failure_and_other_source_survives(self):
+        result = self.collect([
+            b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n5\r\nx",
+            b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok"])
+        self.assert_failed_then_success(result)
+
+    def invoke(self, url):
+        # D1 must exercise fallback after either form of truncated response.
+        original = self.capture_module.fetch
+        with mock.patch.object(self.capture_module, "fetch") as fetch:
+            fetch.side_effect = lambda target, timeout: original(url, timeout)
+            first = self.capture_module.capture(("D1", "https://docs.discord.com/example", "test"))
+        return first["attempts"]
+
+    def assert_failed_then_success(self, result):
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["status"], "fetch-failed")
+        self.assertNotIn("sha256", result[0])
+        self.assertEqual(result[1]["status"], "fetched")
+        self.assertEqual(result[1]["bytes"], 2)
+
+    def test_failed_source_does_not_abort_collection(self):
+        from concurrent.futures import ThreadPoolExecutor
+        with mock.patch.object(self.capture_module, "fetch", side_effect=OSError("injected worker failure")):
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                results = list(pool.map(self.capture_module.capture, [("P1", "http://example.invalid", "test"), ("P2", "http://example.invalid", "test")]))
+        self.assertEqual([row["status"] for row in results], ["fetch-failed", "fetch-failed"])
+
+    def test_slow_drip_deadline_reaps_worker_and_preserves_healthy_result(self):
+        import socketserver
+        import time
+        stop = threading.Event()
+        connected = threading.Event()
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                request = self.request.recv(4096)
+                try:
+                    if b"/slow " in request:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 100000\r\n\r\n")
+                        connected.set()
+                        while not stop.wait(0.02):
+                            self.request.sendall(b"x")
+                    else:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+        processes = []
+        original_popen = subprocess.Popen
+        def popen(*args, **kwargs):
+            process = original_popen(*args, **kwargs)
+            processes.append(process)
+            return process
+        with socketserver.ThreadingTCPServer(("127.0.0.1", 0), Handler) as server:
+            thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05))
+            thread.start()
+            url = "http://127.0.0.1:" + str(server.server_address[1])
+            started = time.monotonic()
+            try:
+                with mock.patch.object(self.capture_module, "ATTEMPT_SECONDS", 0.8), \
+                     mock.patch.object(self.capture_module.subprocess, "Popen", side_effect=popen):
+                    original = self.capture_module.fetch
+                    def routed(target, timeout):
+                        path = "/slow" if target.startswith("https://docs.discord.com/") else "/healthy"
+                        return original(url + path, timeout)
+                    with mock.patch.object(self.capture_module, "fetch", side_effect=routed), mock.patch.object(self.capture_module, "SOURCES", [("D1", "https://docs.discord.com/example", "test"), ("P1", url, "test")]):
+                        result = self.capture_module.capture_all()
+                elapsed = time.monotonic() - started
+                self.assertTrue(connected.is_set(), "test must exercise actual slow HTTP traffic")
+                self.assertLess(elapsed, 3, "healthy output must not await the trickling body")
+                self.assertEqual(result[0]["attempts"][0]["error_type"], "TimeoutError")
+                self.assertEqual(result[0]["attempts"][1]["status"], "fetched")
+                self.assertEqual(result[1]["status"], "fetched")
+                self.assertTrue(processes)
+                self.assertTrue(all(process.poll() is not None for process in processes), "all fetch children must be reaped")
+            finally:
+                stop.set()
+                server.shutdown()
+                thread.join(timeout=2)
+        self.assertFalse(thread.is_alive())
+
+    @unittest.skipUnless(sys.platform == "linux", "owned PID reaping check uses Linux /proc")
+    def test_sigterm_reaps_owned_workers_and_retains_completed_results(self):
+        self.check_cancellation(signal.SIGTERM)
+
+    @unittest.skipUnless(sys.platform == "linux", "owned PID reaping check uses Linux /proc")
+    def test_sigint_reaps_owned_workers_and_retains_completed_results(self):
+        self.check_cancellation(signal.SIGINT)
+
+    def check_cancellation(self, signum):
+        stop = threading.Event()
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                request = self.request.recv(4096)
+                try:
+                    if b"/slow " in request:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 100000\r\n\r\n")
+                        while not stop.wait(0.02):
+                            self.request.sendall(b"x")
+                    elif b"/failed " in request:
+                        self.request.sendall(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n")
+                    else:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+        # Run the real collector entry point with owned loopback URL routing only.
+        driver = r"""
+import importlib.util, json, pathlib, signal, subprocess, sys
+spec = importlib.util.spec_from_file_location("capture", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+url, marker = sys.argv[2], pathlib.Path(sys.argv[3])
+def record(row):
+    with marker.open("a") as output:
+        output.write(json.dumps(row) + "\n")
+popen = subprocess.Popen
+def tracked(*args, **kwargs):
+    process = popen(*args, **kwargs)
+    record({"pid": process.pid, "url": args[0][-1]})
+    return process
+m.subprocess.Popen = tracked
+fetch = m.fetch
+def routed(target, timeout):
+    if target.startswith("https://docs.discord.com/"):
+        target = url + "/failed"
+    elif target.startswith("https://raw.githubusercontent.com/"):
+        target = url + "/healthy"
+    result = fetch(target, timeout)
+    record({"completed": target})
+    return result
+m.fetch = routed
+m.SOURCES = [("P1", url + "/healthy", "owned test"),
+             ("D1", "https://docs.discord.com/example", "owned test")] + [
+             ("S" + str(i), url + "/slow", "owned test") for i in range(8)]
+if hasattr(m, "main"):
+    before = [signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGINT)]
+    status = m.main()
+    record({"handlers_restored": before == [signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGINT)]})
+    sys.exit(status)
+rows = m.capture_all()
+print(json.dumps({"sources": rows}))
+sys.exit(any(row["status"] != "fetched" for row in rows))
+"""
+        with tempfile.TemporaryDirectory() as temporary, socketserver.ThreadingTCPServer(("127.0.0.1", 0), Handler) as server:
+            server_thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05))
+            server_thread.start()
+            marker = Path(temporary) / "children.jsonl"
+            url = "http://127.0.0.1:" + str(server.server_address[1])
+            process = subprocess.Popen([sys.executable, "-c", driver, str(Path(self.capture_module.__file__).resolve()), url, str(marker)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            records = []
+            try:
+                deadline = time.monotonic() + 6
+                while time.monotonic() < deadline:
+                    records = [json.loads(line) for line in marker.read_text().splitlines()] if marker.exists() else []
+                    if sum("completed" in row for row in records) >= 2 and sum(row.get("url", "").endswith("/slow") for row in records) >= 4:
+                        break
+                    time.sleep(0.02)
+                else:
+                    self.fail("loopback workers and completed healthy/fallback sources did not become ready")
+                started = time.monotonic()
+                process.send_signal(signum)
+                stdout, stderr = process.communicate(timeout=4)
+                self.assertLess(time.monotonic() - started, 3)
+                # Check reaping before any fixture cleanup can hide leaked workers.
+                records = [json.loads(line) for line in marker.read_text().splitlines()]
+                pids = [row["pid"] for row in records if "pid" in row]
+                leaked = [pid for pid in pids if Path("/proc", str(pid)).exists()]
+                self.assertEqual(leaked, [], "collector must reap every owned fetch child")
+                self.assertEqual(process.returncode, 128 + signum)
+                self.assertTrue(any(row.get("handlers_restored") for row in records))
+                self.assertEqual(stderr, "")
+                result = json.loads(stdout)
+                self.assertEqual(result["cancelled_signal"], signum)
+                rows = result["sources"]
+                self.assertEqual(len(rows), 10)
+                self.assertEqual([row["status"] for row in rows[:2]], ["fetched", "fetched"])
+                self.assertEqual(rows[1]["attempts"][0]["http_status"], 403)
+                self.assertEqual(rows[1]["attempts"][1]["status"], "fetched")
+                for row in rows[2:]:
+                    self.assertEqual(row["status"], "fetch-failed")
+                    self.assertEqual(row["attempts"][-1]["error_type"], "CaptureCancelled")
+                    self.assertNotIn("sha256", row["attempts"][-1])
+                self.assertEqual(len(pids), 7, "queued cancelled sources must not launch children")
+                print(json.dumps({"signal": signum, "owned_children": len(pids), "reaped": True, "retained_healthy_and_fallback": True, "elapsed_seconds": round(time.monotonic() - started, 3)}))
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.communicate(timeout=3)
+                records = [json.loads(line) for line in marker.read_text().splitlines()] if marker.exists() else records
+                for row in records:
+                    if "pid" in row:
+                        try:
+                            command = Path("/proc", str(row["pid"]), "cmdline").read_bytes()
+                            if b"--fetch-worker" in command and str(Path(self.capture_module.__file__).resolve()).encode() in command:
+                                os.kill(row["pid"], signal.SIGKILL)
+                        except (FileNotFoundError, ProcessLookupError):
+                            pass
+                stop.set()
+                server.shutdown()
+                server_thread.join(timeout=2)
+
+    @unittest.skipUnless(sys.platform == "linux", "raw POSIX signal cleanup probe")
+    def test_first_signal_during_normal_cleanup_still_returns_nonzero(self):
+        driver = r"""
+import importlib.util, json, os, pathlib, signal, subprocess, sys, time
+spec = importlib.util.spec_from_file_location("capture", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+m.SOURCES = [("P1", "https://example.invalid/no-request-made", "fake CLI")]
+popen = subprocess.Popen
+children = []
+def fake_worker(*args, **kwargs):
+    payload = {"result": {"http_status": 200, "final_url": "https://example.invalid/no-request-made", "bytes": 2, "sha256": "fake-worker-test"}}
+    process = popen([sys.executable, "-c", "print(" + repr(json.dumps(payload)) + ")"], **kwargs)
+    children.append(process)
+    communicate = process.communicate
+    completed = False
+    def cleanup_signal(*arguments, **options):
+        nonlocal completed
+        if completed:
+            # First signal arrives inside the normal successful fetch's finally.
+            os.kill(os.getpid(), int(sys.argv[2]))
+            deadline = time.monotonic() + 1
+            while not m._fetch_context.cancellation.event.is_set():
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("main thread did not record cleanup signal")
+                time.sleep(0.001)
+        result = communicate(*arguments, **options)
+        completed = True
+        return result
+    process.communicate = cleanup_signal
+    return process
+m.subprocess.Popen = fake_worker
+before = [signal.getsignal(n) for n in (signal.SIGTERM, signal.SIGINT)]
+status = m.main()
+if not all(p.poll() is not None and not pathlib.Path("/proc", str(p.pid)).exists() for p in children):
+    raise RuntimeError("owned child not reaped during normal cleanup")
+if before != [signal.getsignal(n) for n in (signal.SIGTERM, signal.SIGINT)]:
+    raise RuntimeError("signal handlers not restored")
+sys.exit(status)
+"""
+        for number in (signal.SIGTERM, signal.SIGINT):
+            with self.subTest(signal=number):
+                result = subprocess.run([sys.executable, "-c", driver, str(Path(self.capture_module.__file__).resolve()), str(number)], capture_output=True, text=True, timeout=4)
+                self.assertEqual(result.returncode, 128 + number, result.stderr)
+                self.assertEqual(result.stderr, "")
+                output = json.loads(result.stdout)
+                self.assertEqual(output["cancelled_signal"], number)
+                self.assertEqual(output["sources"][0]["status"], "fetched")
+                print(json.dumps({"first_signal_during_normal_cleanup": number, "exit_code": result.returncode, "owned_child_reaped": True, "completed_result_retained": True}))
+
+    def test_capture_restores_signal_handlers(self):
+        before = {number: signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGINT)}
+        with mock.patch.object(self.capture_module, "SOURCES", []):
+            self.assertEqual(self.capture_module.capture_all(), [])
+        self.assertEqual(before, {number: signal.getsignal(number) for number in before})
+        with mock.patch.object(self.capture_module, "SOURCES", [("malformed",)]):
+            with self.assertRaises(ValueError):
+                self.capture_module.capture_all()
+        self.assertEqual(before, {number: signal.getsignal(number) for number in before})
+
+    def test_exhausted_collection_budget_starts_no_worker(self):
+        with mock.patch.object(self.capture_module.subprocess, "Popen") as popen:
+            with mock.patch.object(self.capture_module, "COLLECTION_SECONDS", 0):
+                rows = self.capture_module.capture_all()
+            self.assertTrue(all(row["status"] == "fetch-failed" for row in rows))
+        popen.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,290 @@
+{
+  "accepted_event_count_distribution": {
+    "0": 52,
+    "1": 68,
+    "2": 20
+  },
+  "atomic_commit_is_assumed": true,
+  "clock_trial": {
+    "clock": "injected-logical-server-ticks-not-wall-time",
+    "first_denied_tick": 5,
+    "last_valid_tick": 4
+  },
+  "experiment_version": 1,
+  "kind": "abstract-serial-schedule-exploration",
+  "recovery_boundaries": 980,
+  "runtime_or_platform_acceptance": false,
+  "schedules": 140,
+  "seeded_steps": 1536,
+  "seeded_traces": [
+    {
+      "crash": 6,
+      "deliver": 5,
+      "duplicate": 8,
+      "new": 10,
+      "restore": 9,
+      "revoke": 10
+    },
+    {
+      "crash": 11,
+      "deliver": 9,
+      "duplicate": 3,
+      "new": 8,
+      "restore": 9,
+      "revoke": 8
+    },
+    {
+      "crash": 8,
+      "deliver": 8,
+      "duplicate": 10,
+      "new": 4,
+      "restore": 10,
+      "revoke": 8
+    },
+    {
+      "crash": 12,
+      "deliver": 7,
+      "duplicate": 5,
+      "new": 3,
+      "restore": 9,
+      "revoke": 12
+    },
+    {
+      "crash": 7,
+      "deliver": 7,
+      "duplicate": 13,
+      "new": 7,
+      "restore": 7,
+      "revoke": 7
+    },
+    {
+      "crash": 4,
+      "deliver": 10,
+      "duplicate": 9,
+      "new": 8,
+      "restore": 6,
+      "revoke": 11
+    },
+    {
+      "crash": 7,
+      "deliver": 8,
+      "duplicate": 9,
+      "new": 5,
+      "restore": 12,
+      "revoke": 7
+    },
+    {
+      "crash": 3,
+      "deliver": 5,
+      "duplicate": 8,
+      "new": 14,
+      "restore": 11,
+      "revoke": 7
+    },
+    {
+      "crash": 7,
+      "deliver": 8,
+      "duplicate": 3,
+      "new": 6,
+      "restore": 9,
+      "revoke": 15
+    },
+    {
+      "crash": 6,
+      "deliver": 11,
+      "duplicate": 2,
+      "new": 12,
+      "restore": 10,
+      "revoke": 7
+    },
+    {
+      "crash": 1,
+      "deliver": 10,
+      "duplicate": 7,
+      "new": 7,
+      "restore": 8,
+      "revoke": 15
+    },
+    {
+      "crash": 10,
+      "deliver": 6,
+      "duplicate": 5,
+      "new": 7,
+      "restore": 9,
+      "revoke": 11
+    },
+    {
+      "crash": 4,
+      "deliver": 7,
+      "duplicate": 6,
+      "new": 13,
+      "restore": 7,
+      "revoke": 11
+    },
+    {
+      "crash": 13,
+      "deliver": 11,
+      "duplicate": 6,
+      "new": 3,
+      "restore": 6,
+      "revoke": 9
+    },
+    {
+      "crash": 7,
+      "deliver": 6,
+      "duplicate": 8,
+      "new": 9,
+      "restore": 10,
+      "revoke": 8
+    },
+    {
+      "crash": 7,
+      "deliver": 5,
+      "duplicate": 12,
+      "new": 9,
+      "restore": 5,
+      "revoke": 10
+    },
+    {
+      "crash": 11,
+      "deliver": 2,
+      "duplicate": 10,
+      "new": 11,
+      "restore": 8,
+      "revoke": 6
+    },
+    {
+      "crash": 6,
+      "deliver": 10,
+      "duplicate": 12,
+      "new": 8,
+      "restore": 4,
+      "revoke": 8
+    },
+    {
+      "crash": 8,
+      "deliver": 10,
+      "duplicate": 7,
+      "new": 5,
+      "restore": 11,
+      "revoke": 7
+    },
+    {
+      "crash": 5,
+      "deliver": 6,
+      "duplicate": 5,
+      "new": 11,
+      "restore": 7,
+      "revoke": 14
+    },
+    {
+      "crash": 8,
+      "deliver": 9,
+      "duplicate": 7,
+      "new": 9,
+      "restore": 7,
+      "revoke": 8
+    },
+    {
+      "crash": 4,
+      "deliver": 9,
+      "duplicate": 4,
+      "new": 8,
+      "restore": 10,
+      "revoke": 13
+    },
+    {
+      "crash": 3,
+      "deliver": 7,
+      "duplicate": 8,
+      "new": 8,
+      "restore": 13,
+      "revoke": 9
+    },
+    {
+      "crash": 6,
+      "deliver": 8,
+      "duplicate": 9,
+      "new": 11,
+      "restore": 9,
+      "revoke": 5
+    },
+    {
+      "crash": 10,
+      "deliver": 11,
+      "duplicate": 11,
+      "new": 6,
+      "restore": 5,
+      "revoke": 5
+    },
+    {
+      "crash": 5,
+      "deliver": 5,
+      "duplicate": 4,
+      "new": 11,
+      "restore": 10,
+      "revoke": 13
+    },
+    {
+      "crash": 9,
+      "deliver": 9,
+      "duplicate": 3,
+      "new": 8,
+      "restore": 12,
+      "revoke": 7
+    },
+    {
+      "crash": 6,
+      "deliver": 7,
+      "duplicate": 14,
+      "new": 7,
+      "restore": 5,
+      "revoke": 9
+    },
+    {
+      "crash": 5,
+      "deliver": 13,
+      "duplicate": 8,
+      "new": 3,
+      "restore": 9,
+      "revoke": 10
+    },
+    {
+      "crash": 7,
+      "deliver": 7,
+      "duplicate": 7,
+      "new": 7,
+      "restore": 9,
+      "revoke": 11
+    },
+    {
+      "crash": 11,
+      "deliver": 5,
+      "duplicate": 14,
+      "new": 6,
+      "restore": 6,
+      "revoke": 6
+    },
+    {
+      "crash": 10,
+      "deliver": 12,
+      "duplicate": 8,
+      "new": 10,
+      "restore": 4,
+      "revoke": 4
+    }
+  ],
+  "special_trials": {
+    "accepted_events": 2,
+    "current_read_required": true,
+    "lost_ack_retry": "receipt",
+    "restored_content": {}
+  },
+  "unsafe_controls_detected": {
+    "ack-before-commit": "acknowledged loss",
+    "base-before-receipt": "lost-ACK retry lost historical receipt",
+    "foreign-scope": "foreign mutation",
+    "prepare-only-authority": "stale authority",
+    "split-commit": "revision/event gap"
+  }
+}
