@@ -1,0 +1,301 @@
+{
+  "tested_revision": "3acb22bc8c5df924e5c2277aa68ff168dde34c2c",
+  "runs": [
+    {
+      "observed_at": "2026-11-13T16:13:36.952960+00:00",
+      "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+      "host_python": "3.14.8",
+      "images": {
+        "nginx": "sha256:62ff2089abf5a9ed33bd232895bef5e22f7bb4b200675cec49a5ebc48e3d4ac8",
+        "python": "sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70"
+      },
+      "resource_scope": {
+        "network": "network=none backend; nginx shares its owned network namespace",
+        "published_ports": [],
+        "mounts": [],
+        "per_container": "0.5 CPU / 128MiB / 64 PIDs / nonroot / read-only / cap-drop ALL"
+      },
+      "nginx_config_check": "",
+      "nginx_version": "",
+      "container_python": "",
+      "result": {
+        "checks": [
+          "synthetic body success"
+        ]
+      },
+      "fixture_hashes": {
+        "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77",
+        "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c"
+      },
+      "cleanup": [
+        {
+          "kind": "container",
+          "name": "gb-t10-edd2ce9f8d33-proxy",
+          "id": "0000000000000000000000000000000000000000000000000000000000000003",
+          "absence_verified": true
+        },
+        {
+          "kind": "container",
+          "name": "gb-t10-edd2ce9f8d33-backend",
+          "id": "0000000000000000000000000000000000000000000000000000000000000002",
+          "absence_verified": true
+        }
+      ],
+      "cancellation": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "passed_checks": [],
+        "signal": "SIGTERM"
+      },
+      "failure": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "passed_checks": [],
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "observed_at": "2026-11-13T16:13:36.958008+00:00",
+      "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+      "host_python": "3.14.8",
+      "images": {
+        "nginx": "sha256:62ff2089abf5a9ed33bd232895bef5e22f7bb4b200675cec49a5ebc48e3d4ac8",
+        "python": "sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70"
+      },
+      "resource_scope": {
+        "network": "network=none backend; nginx shares its owned network namespace",
+        "published_ports": [],
+        "mounts": [],
+        "per_container": "0.5 CPU / 128MiB / 64 PIDs / nonroot / read-only / cap-drop ALL"
+      },
+      "nginx_config_check": "",
+      "nginx_version": "",
+      "container_python": "",
+      "result": {
+        "checks": [
+          "synthetic body success"
+        ]
+      },
+      "fixture_hashes": {
+        "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77",
+        "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c"
+      },
+      "cleanup": [
+        {
+          "kind": "container",
+          "name": "gb-t10-6699da05260c-proxy",
+          "id": "0000000000000000000000000000000000000000000000000000000000000003",
+          "absence_verified": true
+        },
+        {
+          "kind": "container",
+          "name": "gb-t10-6699da05260c-backend",
+          "id": "0000000000000000000000000000000000000000000000000000000000000002",
+          "absence_verified": true
+        }
+      ],
+      "cancellation": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGINT",
+        "passed_checks": [],
+        "signal": "SIGINT"
+      },
+      "failure": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGINT",
+        "passed_checks": [],
+        "signal": "SIGINT"
+      }
+    },
+    {
+      "observed_at": "2026-11-13T16:13:36.963902+00:00",
+      "tested_sha": "3acb22bc8c5df924e5c2277aa68ff168dde34c2c",
+      "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+      "host_python": "3.14.8",
+      "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+      "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+      "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=<NGINX_BUILD_PREFIX> --without-http_gzip_module",
+      "control": null,
+      "fixture_hashes": {
+        "scripts/research/t10-nginx-probe.py": "7f690e2cec8254bf0bca4245cfc2756854b61f2c583550972c02b08c632a141c",
+        "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+        "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+      },
+      "nginx_config_check": "nginx: the configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf syntax is ok\nnginx: configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf test is successful",
+      "result": {
+        "checks": [
+          "synthetic body success; real owned cleanup"
+        ]
+      },
+      "nginx_log": "",
+      "nginx_log_truncated": false,
+      "cleanup": {
+        "owned_nginx_exited": true,
+        "owned_backend_thread_exited": true
+      },
+      "cancellation": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "passed_checks": [],
+        "signal": "SIGTERM"
+      },
+      "failure": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "passed_checks": [],
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "observed_at": "2026-11-13T16:13:37.532060+00:00",
+      "tested_sha": "3acb22bc8c5df924e5c2277aa68ff168dde34c2c",
+      "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+      "host_python": "3.14.8",
+      "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+      "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+      "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=<NGINX_BUILD_PREFIX> --without-http_gzip_module",
+      "control": null,
+      "fixture_hashes": {
+        "scripts/research/t10-nginx-probe.py": "7f690e2cec8254bf0bca4245cfc2756854b61f2c583550972c02b08c632a141c",
+        "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+        "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+      },
+      "nginx_config_check": "nginx: the configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf syntax is ok\nnginx: configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf test is successful",
+      "result": {
+        "checks": [
+          "synthetic body success; real owned cleanup"
+        ]
+      },
+      "nginx_log": "",
+      "nginx_log_truncated": false,
+      "cleanup": {
+        "owned_nginx_exited": true,
+        "owned_backend_thread_exited": true
+      },
+      "cancellation": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGINT",
+        "passed_checks": [],
+        "signal": "SIGINT"
+      },
+      "failure": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGINT",
+        "passed_checks": [],
+        "signal": "SIGINT"
+      }
+    },
+    {
+      "observed_at": "2026-11-13T16:13:38.098822+00:00",
+      "tested_sha": "3acb22bc8c5df924e5c2277aa68ff168dde34c2c",
+      "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+      "host_python": "3.14.8",
+      "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+      "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+      "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=<NGINX_BUILD_PREFIX> --without-http_gzip_module",
+      "control": null,
+      "fixture_hashes": {
+        "scripts/research/t10-nginx-probe.py": "7f690e2cec8254bf0bca4245cfc2756854b61f2c583550972c02b08c632a141c",
+        "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+        "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+      },
+      "nginx_config_check": "nginx: the configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf syntax is ok\nnginx: configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf test is successful",
+      "result": {
+        "checks": [
+          "synthetic body success; real owned cleanup"
+        ]
+      },
+      "nginx_log": "",
+      "nginx_log_truncated": false,
+      "cleanup": {
+        "owned_nginx_exited": true,
+        "owned_backend_thread_exited": true
+      },
+      "cancellation": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "passed_checks": [],
+        "signal": "SIGTERM"
+      },
+      "failure": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "passed_checks": [],
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "observed_at": "2026-11-13T16:13:38.665602+00:00",
+      "tested_sha": "3acb22bc8c5df924e5c2277aa68ff168dde34c2c",
+      "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+      "host_python": "3.14.8",
+      "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+      "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+      "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=<NGINX_BUILD_PREFIX> --without-http_gzip_module",
+      "control": null,
+      "fixture_hashes": {
+        "scripts/research/t10-nginx-probe.py": "7f690e2cec8254bf0bca4245cfc2756854b61f2c583550972c02b08c632a141c",
+        "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+        "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+      },
+      "nginx_config_check": "nginx: the configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf syntax is ok\nnginx: configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf test is successful",
+      "result": {
+        "checks": [
+          "synthetic body success; real owned cleanup"
+        ]
+      },
+      "nginx_log": "",
+      "nginx_log_truncated": false,
+      "cleanup": {
+        "owned_nginx_exited": true,
+        "owned_backend_thread_exited": true
+      },
+      "cancellation": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGINT",
+        "passed_checks": [],
+        "signal": "SIGINT"
+      },
+      "failure": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGINT",
+        "passed_checks": [],
+        "signal": "SIGINT"
+      }
+    },
+    {
+      "kind": "public-response-observation-not-account-or-content-attestation",
+      "sources": [
+        {
+          "id": "synthetic",
+          "url": "unused",
+          "observed_at": "2026-11-13T16:13:39.240765+00:00",
+          "error": "cancelled by SIGTERM",
+          "cancelled": true
+        }
+      ],
+      "failure": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "kind": "public-response-observation-not-account-or-content-attestation",
+      "sources": [
+        {
+          "id": "synthetic",
+          "url": "unused",
+          "observed_at": "2026-11-13T16:13:39.276952+00:00",
+          "error": "cancelled by SIGINT",
+          "cancelled": true
+        }
+      ],
+      "failure": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGINT",
+        "signal": "SIGINT"
+      }
+    }
+  ]
+}

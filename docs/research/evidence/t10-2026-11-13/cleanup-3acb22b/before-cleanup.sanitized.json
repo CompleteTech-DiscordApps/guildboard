@@ -1,0 +1,56 @@
+[
+  {
+    "mode": "Docker boundary",
+    "error_type": "DockerCleanupError",
+    "report": {
+      "cleanup": [
+        {
+          "kind": "container",
+          "name": "backend",
+          "id": "0000000000000000000000000000000000000000000000000000000000000001",
+          "absence_verified": true
+        }
+      ],
+      "cleanup_failures": [
+        "proxy: ExperimentCancelled: cancelled by SIGTERM"
+      ]
+    },
+    "remaining_owned_names": [
+      "proxy"
+    ]
+  },
+  {
+    "mode": "actual local backend cleanup",
+    "error_type": "RuntimeError",
+    "report": {
+      "observed_at": "2026-11-13T14:05:58.159217+00:00",
+      "tested_sha": "a0bca0b0112e663a8e787e4208147467d75d5b50",
+      "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+      "host_python": "3.14.8",
+      "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+      "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+      "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=<NGINX_BUILD_PREFIX> --without-http_gzip_module",
+      "control": null,
+      "fixture_hashes": {
+        "scripts/research/t10-nginx-probe.py": "6d5598c274752fb4437ab9620b99b957ab3e01cef21a6bfe75c6e725441ff4ad",
+        "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+        "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+      },
+      "nginx_config_check": "nginx: the configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf syntax is ok\nnginx: configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf test is successful",
+      "result": {
+        "checks": [],
+        "scope": "synthetic successful body; cleanup-only regression"
+      },
+      "nginx_log": "",
+      "nginx_log_truncated": false,
+      "cleanup": {
+        "owned_nginx_exited": true,
+        "owned_backend_thread_exited": false
+      },
+      "cleanup_failures": [
+        "backend: ExperimentCancelled('cancelled by SIGTERM')"
+      ]
+    },
+    "threads_surviving_before_rescue": 1
+  }
+]

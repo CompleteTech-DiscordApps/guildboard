@@ -486,3 +486,7 @@ cleanup guarantees. Actual Docker remains unavailable; cancellation around
 create is simulated and unknown ownership still fails closed. No public TLS,
 Discord, GoDaddy, production acceptance or native approval is established.
 Fresh whole-head review remains required.
+
+### First signal during normal cleanup (2026-11-13)
+
+The earlier catchable-signal implementation swallowed a first SIGTERM/SIGINT inside normal cleanup, potentially skipping owned Docker removal or backend shutdown. At `3acb22bc8c5df924e5c2277aa68ff168dde34c2c`, cleanup defers that signal until all owned cleanup actions complete, then reports the original signal and exits 143/130. Source collection explicitly kills/reaps/closes its worker under the same deferral. [Revision-specific evidence](evidence/t10-2026-11-13/cleanup-3acb22b/README.md) records 55 normal/optimized tests, eight normal-cleanup signal reports, 12 real local Nginx checks and six unsafe controls. Docker is simulated; local cleanup and source-worker cases use synthetic successful bodies to isolate cleanup, while separate controls use real network probes. Prior evidence is historical. No SIGKILL/host-failure guarantee, real external acceptance or independent-review approval is claimed.

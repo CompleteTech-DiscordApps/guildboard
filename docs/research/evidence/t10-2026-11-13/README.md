@@ -26,3 +26,5 @@ Docker, public TLS, Discord, GoDaddy or production acceptance claim.
 [Code a00c229 cancellation evidence](cancellation-a00c229/README.md) records
 52 normal/optimized tests and new network/cancellation reports. The eee0ad43
 artifacts above remain historical and unchanged.
+
+[First-signal normal-cleanup follow-up](cleanup-3acb22b/README.md) records 55 normal/optimized tests, eight cleanup signal reports and repeated real-Nginx baseline/six controls at `3acb22b`. Earlier cancellation evidence did not establish first-signal safety during normal cleanup and remains historical.
