@@ -425,5 +425,87 @@
       "disposition": "implemented; independent verification pending",
       "evidence": "Named readable handler delegates to tested recordSceneChange; event fields are unchanged and collection stops at 200 before inspecting another event."
     }
+  ],
+  "campaign_verifications": [
+    {
+      "observed_at_utc": "2026-11-13T02:44:55.736493+00:00",
+      "tested_head": "89ed4a121f7624e90431cc212b3ab79333d366da",
+      "main_integrated": "c108b552a660e12a3b3998e1e1ad944fbd7a894d",
+      "environment": {
+        "platform": "Arch Linux x86_64",
+        "node": "26.13.0",
+        "npm": "11.20.0",
+        "chromium": "155.0.8059.84",
+        "playwright": "1.56.1",
+        "browser_executable": "/usr/bin/chromium",
+        "sandbox": true
+      },
+      "unit_tests": {
+        "passed": 14,
+        "failed": 0,
+        "skipped": 0
+      },
+      "audit": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "browser_probe": {
+        "result": "local-fixture-passed",
+        "browser": "155.0.8059.84",
+        "remoteCallbacks": 1,
+        "checks": [
+          "remote ID preserved",
+          "NEVER remote baseline survives local undo",
+          "view-mode Delete with selected content leaves scene unchanged",
+          "view-mode undo with retained local history leaves scene unchanged",
+          "view-mode pointer smoke leaves scene unchanged",
+          "re-enabled undo removes the prepared local-history edit"
+        ],
+        "blockedRequests": [],
+        "limitations": [
+          "Not yet tested in Discord",
+          "No server permission checks",
+          "No touch/stylus or accessibility acceptance",
+          "No concurrent remote overwrite/rollback coverage",
+          "Selection is supplied through the editor API; paste/drop/text/context-menu controls remain untested"
+        ]
+      },
+      "network_probe": {
+        "result": "network-controls-passed",
+        "browser": "155.0.8059.84",
+        "opaqueResources": {
+          "dataText": "canvas-data",
+          "blobText": "canvas-blob",
+          "dataImageLoaded": true,
+          "blobImageLoaded": true
+        },
+        "opaqueIntercepts": [],
+        "otherOriginRejected": true,
+        "otherOriginRequests": 0,
+        "blockedRequests": [
+          "http://127.0.0.1:37515/"
+        ],
+        "checks": [
+          "fixture-origin network request succeeds",
+          "data/blob fetch and images succeed",
+          "data/blob requests do not enter Playwright routing in this scenario",
+          "another loopback origin is blocked before reaching its server"
+        ],
+        "limitations": [
+          "Synthetic Chromium routing controls, not a universal browser-scheme or CSP assessment"
+        ]
+      },
+      "fixture_hash_matches": 13,
+      "build": "pass",
+      "planning_validation": "pass",
+      "limitations": [
+        "Local browser and fixture controls only; no Discord, screen reader, touch/stylus or human acceptance.",
+        "No independent review, CODEOWNER approval, native gate completion, merge or post-merge validation."
+      ]
+    }
   ]
 }

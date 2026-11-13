@@ -114,3 +114,16 @@ conversion is exercised by the browser probe. The full matrix below remains open
 Continue a controlled adapter experiment, **not adoption**, because public interfaces expose candidate hooks without proving moderated consistency. Maintain an Excalidraw fork only if a documented invariant cannot use public interfaces, with upgrade/security/license cost explicitly accepted. A custom canvas trades control for substantial editing/accessibility maintenance. Full-scene last-write-wins synchronization is not an acceptable fallback for server-authoritative permission and revision requirements.
 
 #98 remains open until missing experiments, functional/security/consumer review, merge and post-merge evidence are resolved. #99 must not treat this partial source review or build as an accepted Tier specification. Discord and GoDaddy provisioning remain out of scope for this fixture.
+
+## Campaign recheck, 2026-11-13 UTC
+
+Integrated current main `c108b552a660e12a3b3998e1e1ad944fbd7a894d` at
+`89ed4a121f7624e90431cc212b3ab79333d366da`. On Arch Linux, Node 26.13.0,
+npm 11.20.0 and sandbox-enabled system Chromium 155.0.8059.84, the documented
+scripts-disabled install, 14 unit tests (zero skips), full dependency audit
+(zero vulnerabilities), build, syntax and planning checks passed. All 13 stored
+fixture source hashes match. Six editor checks and four network controls passed;
+raw browser results are appended under `campaign_verifications` in the aggregate
+evidence. This retains the previous dated observations and acceptance gaps.
+The current-main integration changes only inherited workflow content; it does
+not establish Discord/AT/hardware acceptance or complete #98/#99.
