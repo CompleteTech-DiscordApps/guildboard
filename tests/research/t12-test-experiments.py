@@ -1,5 +1,9 @@
 """Test oracle sensitivity, reproducibility and honest matrix evidence boundaries."""
 import os
+import signal
+import socketserver
+import tempfile
+import time
 import threading
 from unittest import mock
 from copy import deepcopy
@@ -410,6 +414,136 @@ class SourceCaptureRegression(unittest.TestCase):
                 server.shutdown()
                 thread.join(timeout=2)
         self.assertFalse(thread.is_alive())
+
+    @unittest.skipUnless(sys.platform == "linux", "owned PID reaping check uses Linux /proc")
+    def test_sigterm_reaps_owned_workers_and_retains_completed_results(self):
+        self.check_cancellation(signal.SIGTERM)
+
+    @unittest.skipUnless(sys.platform == "linux", "owned PID reaping check uses Linux /proc")
+    def test_sigint_reaps_owned_workers_and_retains_completed_results(self):
+        self.check_cancellation(signal.SIGINT)
+
+    def check_cancellation(self, signum):
+        stop = threading.Event()
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                request = self.request.recv(4096)
+                try:
+                    if b"/slow " in request:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 100000\r\n\r\n")
+                        while not stop.wait(0.02):
+                            self.request.sendall(b"x")
+                    elif b"/failed " in request:
+                        self.request.sendall(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n")
+                    else:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+        # Run the real collector entry point with owned loopback URL routing only.
+        driver = r"""
+import importlib.util, json, pathlib, signal, subprocess, sys
+spec = importlib.util.spec_from_file_location("capture", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+url, marker = sys.argv[2], pathlib.Path(sys.argv[3])
+def record(row):
+    with marker.open("a") as output:
+        output.write(json.dumps(row) + "\n")
+popen = subprocess.Popen
+def tracked(*args, **kwargs):
+    process = popen(*args, **kwargs)
+    record({"pid": process.pid, "url": args[0][-1]})
+    return process
+m.subprocess.Popen = tracked
+fetch = m.fetch
+def routed(target, timeout):
+    if target.startswith("https://docs.discord.com/"):
+        target = url + "/failed"
+    elif target.startswith("https://raw.githubusercontent.com/"):
+        target = url + "/healthy"
+    result = fetch(target, timeout)
+    record({"completed": target})
+    return result
+m.fetch = routed
+m.SOURCES = [("P1", url + "/healthy", "owned test"),
+             ("D1", "https://docs.discord.com/example", "owned test")] + [
+             ("S" + str(i), url + "/slow", "owned test") for i in range(8)]
+if hasattr(m, "main"):
+    before = [signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGINT)]
+    status = m.main()
+    record({"handlers_restored": before == [signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGINT)]})
+    sys.exit(status)
+rows = m.capture_all()
+print(json.dumps({"sources": rows}))
+sys.exit(any(row["status"] != "fetched" for row in rows))
+"""
+        with tempfile.TemporaryDirectory() as temporary, socketserver.ThreadingTCPServer(("127.0.0.1", 0), Handler) as server:
+            server_thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05))
+            server_thread.start()
+            marker = Path(temporary) / "children.jsonl"
+            url = "http://127.0.0.1:" + str(server.server_address[1])
+            process = subprocess.Popen([sys.executable, "-c", driver, str(Path(self.capture_module.__file__).resolve()), url, str(marker)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            records = []
+            try:
+                deadline = time.monotonic() + 6
+                while time.monotonic() < deadline:
+                    records = [json.loads(line) for line in marker.read_text().splitlines()] if marker.exists() else []
+                    if sum("completed" in row for row in records) >= 2 and sum(row.get("url", "").endswith("/slow") for row in records) >= 4:
+                        break
+                    time.sleep(0.02)
+                else:
+                    self.fail("loopback workers and completed healthy/fallback sources did not become ready")
+                started = time.monotonic()
+                process.send_signal(signum)
+                stdout, stderr = process.communicate(timeout=4)
+                self.assertLess(time.monotonic() - started, 3)
+                # Check reaping before any fixture cleanup can hide leaked workers.
+                records = [json.loads(line) for line in marker.read_text().splitlines()]
+                pids = [row["pid"] for row in records if "pid" in row]
+                leaked = [pid for pid in pids if Path("/proc", str(pid)).exists()]
+                self.assertEqual(leaked, [], "collector must reap every owned fetch child")
+                self.assertEqual(process.returncode, 128 + signum)
+                self.assertTrue(any(row.get("handlers_restored") for row in records))
+                self.assertEqual(stderr, "")
+                result = json.loads(stdout)
+                self.assertEqual(result["cancelled_signal"], signum)
+                rows = result["sources"]
+                self.assertEqual(len(rows), 10)
+                self.assertEqual([row["status"] for row in rows[:2]], ["fetched", "fetched"])
+                self.assertEqual(rows[1]["attempts"][0]["http_status"], 403)
+                self.assertEqual(rows[1]["attempts"][1]["status"], "fetched")
+                for row in rows[2:]:
+                    self.assertEqual(row["status"], "fetch-failed")
+                    self.assertEqual(row["attempts"][-1]["error_type"], "CaptureCancelled")
+                    self.assertNotIn("sha256", row["attempts"][-1])
+                self.assertEqual(len(pids), 7, "queued cancelled sources must not launch children")
+                print(json.dumps({"signal": signum, "owned_children": len(pids), "reaped": True, "retained_healthy_and_fallback": True, "elapsed_seconds": round(time.monotonic() - started, 3)}))
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.communicate(timeout=3)
+                records = [json.loads(line) for line in marker.read_text().splitlines()] if marker.exists() else records
+                for row in records:
+                    if "pid" in row:
+                        try:
+                            command = Path("/proc", str(row["pid"]), "cmdline").read_bytes()
+                            if b"--fetch-worker" in command and str(Path(self.capture_module.__file__).resolve()).encode() in command:
+                                os.kill(row["pid"], signal.SIGKILL)
+                        except (FileNotFoundError, ProcessLookupError):
+                            pass
+                stop.set()
+                server.shutdown()
+                server_thread.join(timeout=2)
+
+    def test_capture_restores_signal_handlers(self):
+        before = {number: signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGINT)}
+        with mock.patch.object(self.capture_module, "SOURCES", []):
+            self.assertEqual(self.capture_module.capture_all(), [])
+        self.assertEqual(before, {number: signal.getsignal(number) for number in before})
+        with mock.patch.object(self.capture_module, "SOURCES", [("malformed",)]):
+            with self.assertRaises(ValueError):
+                self.capture_module.capture_all()
+        self.assertEqual(before, {number: signal.getsignal(number) for number in before})
 
     def test_exhausted_collection_budget_starts_no_worker(self):
         with mock.patch.object(self.capture_module.subprocess, "Popen") as popen:
