@@ -9,6 +9,8 @@ const CONFIG_KEYS = Object.freeze([
 
 export type ConfigKey = (typeof CONFIG_KEYS)[number];
 
+export { parseDatabaseUrl, parsePort } from "./parsers.js";
+
 export type ConfigFailure = {
   ok: false;
   error: {
