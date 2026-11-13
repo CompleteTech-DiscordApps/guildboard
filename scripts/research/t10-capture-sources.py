@@ -97,10 +97,13 @@ def fetch(url, timeout):
     """A disposable process bounds DNS, redirects and trickling response bodies."""
     if timeout <= 0:
         raise TimeoutError("collection elapsed-time deadline exceeded")
-    process = subprocess.Popen([sys.executable, str(Path(__file__).resolve()),
-                                "--fetch-worker", url], stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE, text=True)
+    process = None
     try:
+        # Record the handle before a pending signal can unwind this try.
+        with owned_cleanup():
+            process = subprocess.Popen([sys.executable, str(Path(__file__).resolve()),
+                                       "--fetch-worker", url], stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE, text=True)
         stdout, stderr = process.communicate(timeout=timeout)
         if process.returncode:
             raise subprocess.CalledProcessError(process.returncode, process.args, stdout, stderr)
@@ -109,15 +112,16 @@ def fetch(url, timeout):
     finally:
         # Protect kill/reap/pipe close even when the first signal arrives here.
         with owned_cleanup():
-            try:
-                if process.poll() is None:
-                    process.kill()
-            finally:
+            if process is not None:
                 try:
-                    process.wait()
+                    if process.poll() is None:
+                        process.kill()
                 finally:
-                    process.stdout.close()
-                    process.stderr.close()
+                    try:
+                        process.wait()
+                    finally:
+                        process.stdout.close()
+                        process.stderr.close()
     envelope = json.loads(stdout)
     if "error" in envelope:
         raise FetchFailure(envelope["error"])

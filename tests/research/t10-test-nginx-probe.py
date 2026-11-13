@@ -438,6 +438,160 @@ class DockerCleanupRegression(unittest.TestCase):
 
 
 class CancellationRegression(unittest.TestCase):
+    def test_first_signal_during_short_command_spawn_reaps_transient_child(self):
+        original = subprocess.Popen
+        for number in (signal.SIGTERM, signal.SIGINT):
+            processes = []
+            def popen(*args, **kwargs):
+                process = original(*args, **kwargs)
+                processes.append(process)
+                os.kill(os.getpid(), number)
+                return process
+            try:
+                with self.subTest(signal=number), PROBE.cancellation_signals(), mock.patch.object(subprocess, "Popen", side_effect=popen):
+                    with self.assertRaises(PROBE.ExperimentCancelled) as caught:
+                        PROBE.run_owned_command([sys.executable, "-c", "import time; time.sleep(.05)"], capture_output=True)
+                self.assertEqual(caught.exception.signum, number)
+                self.assertTrue(processes and all(process.poll() is not None for process in processes))
+            finally:
+                for process in processes:
+                    if process.poll() is None: process.kill()
+                    process.wait()
+                    if process.stdout is not None: process.stdout.close()
+                    if process.stderr is not None: process.stderr.close()
+
+    @unittest.skipUnless(POSIX_LOCAL and Path("/proc").is_dir(), "POSIX/Linux process ownership required")
+    def test_first_signal_after_nginx_spawn_before_assignment_reaps_owned_group(self):
+        import contextlib
+        binary = os.environ.get("T10_NGINX_BINARY")
+        if not binary:
+            self.skipTest("explicit local Nginx binary required")
+        original = subprocess.Popen
+        for number in (signal.SIGTERM, signal.SIGINT):
+            output, processes, workers = io.StringIO(), [], []
+            def popen(*args, **kwargs):
+                process = original(*args, **kwargs)
+                if kwargs.get("start_new_session"):
+                    processes.append(process)
+                    # Let actual Nginx spawn its worker before testing the assignment gap.
+                    deadline = time.monotonic() + 2
+                    while time.monotonic() < deadline:
+                        children = Path(f"/proc/{process.pid}/task/{process.pid}/children")
+                        if children.exists():
+                            workers.extend(int(pid) for pid in children.read_text().split())
+                        if workers:
+                            break
+                        time.sleep(.01)
+                    os.kill(os.getpid(), number)
+                return process
+            try:
+                with self.subTest(signal=number), mock.patch.object(subprocess, "Popen", side_effect=popen), contextlib.redirect_stdout(output):
+                    code = PROBE.main(["--nginx-binary", binary])
+                report = json.loads(output.getvalue())
+                self.assertEqual(code, 128 + number)
+                self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+                self.assertTrue(processes and workers, "must signal after actual owned master/worker creation")
+                self.assertTrue(all(process.poll() is not None for process in processes))
+                self.assertTrue(all(report["cleanup"].values()))
+                deadline = time.monotonic() + 2
+                def live(pid):
+                    try:
+                        return Path(f"/proc/{pid}/stat").read_text().split(") ", 1)[1].split()[0] != "Z"
+                    except FileNotFoundError:
+                        return False
+                while any(live(pid) for pid in workers) and time.monotonic() < deadline:
+                    time.sleep(.02)
+                self.assertFalse(any(live(pid) for pid in workers))
+            finally:
+                for process in processes:
+                    PROBE.stop_local_proxy(process)
+
+    @unittest.skipUnless(POSIX_LOCAL, "POSIX process ownership required")
+    def test_first_signal_after_fetch_spawn_before_assignment_reaps_owned_child(self):
+        import contextlib
+        import tempfile
+        spec = importlib.util.spec_from_file_location("capture_spawn", ROOT / "scripts/research/t10-capture-sources.py")
+        capture = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(capture)
+        original = subprocess.Popen
+        for number in (signal.SIGTERM, signal.SIGINT):
+            output, processes = io.StringIO(), []
+            def popen(*args, **kwargs):
+                process = original([sys.executable, "-c", "import time; time.sleep(30)"], **kwargs)
+                processes.append(process)
+                os.kill(os.getpid(), number)
+                return process
+            try:
+                with self.subTest(signal=number), tempfile.TemporaryDirectory() as scratch, \
+                     mock.patch.object(capture, "SOURCES", [("owned-child", "unused")]), \
+                     mock.patch.object(subprocess, "Popen", side_effect=popen), contextlib.redirect_stdout(output):
+                    code = capture.main(["--output", str(Path(scratch) / "capture.json")])
+                report = json.loads(output.getvalue())
+                self.assertEqual(code, 128 + number)
+                self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+                self.assertTrue(report["sources"][0]["cancelled"])
+                self.assertTrue(processes)
+                self.assertTrue(all(process.poll() is not None and process.stdout.closed and process.stderr.closed for process in processes))
+            finally:
+                for process in processes:
+                    if process.poll() is None:
+                        process.kill()
+                    process.wait()
+                    process.stdout.close()
+                    process.stderr.close()
+
+    @unittest.skipUnless(POSIX_LOCAL, "POSIX local resources required")
+    def test_first_signal_after_local_acquisition_before_registration_closes_resources(self):
+        import contextlib
+        import tempfile
+        binary = os.environ.get("T10_NGINX_BINARY")
+        if not binary:
+            self.skipTest("explicit local Nginx binary required")
+        originals = (http.server.ThreadingHTTPServer, threading.Thread.start, tempfile.TemporaryDirectory, Path.open)
+        for phase in ("server", "thread", "temporary-directory", "stderr-file"):
+            for number in (signal.SIGTERM, signal.SIGINT):
+                output, servers, threads, directories, files = io.StringIO(), [], [], [], []
+                def server(*args, **kwargs):
+                    resource = originals[0](*args, **kwargs); servers.append(resource)
+                    if phase == "server": os.kill(os.getpid(), number)
+                    return resource
+                def start(resource):
+                    result = originals[1](resource); threads.append(resource)
+                    if phase == "thread": os.kill(os.getpid(), number)
+                    return result
+                def temporary(*args, **kwargs):
+                    resource = originals[2](*args, **kwargs); directories.append(resource)
+                    if phase == "temporary-directory": os.kill(os.getpid(), number)
+                    return resource
+                def opened(path, *args, **kwargs):
+                    resource = originals[3](path, *args, **kwargs)
+                    if path.name == "stderr.log" and args and args[0] == "w+b":
+                        files.append(resource)
+                        if phase == "stderr-file": os.kill(os.getpid(), number)
+                    return resource
+                try:
+                    with self.subTest(phase=phase, signal=number), \
+                         mock.patch.object(http.server, "ThreadingHTTPServer", side_effect=server), \
+                         mock.patch.object(threading.Thread, "start", start), \
+                         mock.patch.object(tempfile, "TemporaryDirectory", side_effect=temporary), \
+                         mock.patch.object(Path, "open", opened), contextlib.redirect_stdout(output):
+                        code = PROBE.main(["--nginx-binary", binary])
+                    report = json.loads(output.getvalue())
+                    self.assertEqual(code, 128 + number)
+                    self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+                    self.assertTrue(all(report["cleanup"].values()))
+                    self.assertTrue(all(resource.fileno() == -1 for resource in servers))
+                    self.assertTrue(all(not resource.is_alive() for resource in threads))
+                    self.assertTrue(all(not Path(resource.name).exists() for resource in directories))
+                    self.assertTrue(all(resource.closed for resource in files))
+                finally:
+                    for resource in servers:
+                        if any(thread.is_alive() for thread in threads): resource.shutdown()
+                        resource.server_close()
+                    for resource in threads: resource.join(timeout=2)
+                    for resource in files: resource.close()
+                    for resource in directories: resource.cleanup()
+
     def test_first_signal_during_normal_docker_cleanup_is_deferred(self):
         import contextlib
         for number in (signal.SIGTERM, signal.SIGINT):

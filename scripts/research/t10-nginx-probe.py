@@ -86,8 +86,16 @@ def capture_nginx_log(errors, report):
         report["nginx_log_error"] = failure_record(error)
 
 
+def run_owned_command(args, **kwargs):
+    # These short commands own transient children too. Keep subprocess.run's
+    # spawn/assignment/exit sequence intact, with a bounded cancellation delay.
+    kwargs.setdefault("timeout", 5)
+    with owned_cleanup({}):
+        return subprocess.run(args, **kwargs)
+
+
 def docker(*args, input_text=None):
-    result = subprocess.run(["docker", *args], capture_output=True, text=True, timeout=30, input=input_text)
+    result = run_owned_command(["docker", *args], capture_output=True, text=True, timeout=30, input=input_text)
     if result.returncode:
         raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
     return result
@@ -315,23 +323,28 @@ def run_local(nginx_binary, control=None):
     server = thread = proxy = errors = temporary_directory = None
     report = {}
     try:
-        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), fixture.Handler)
-        server.idle_stop = threading.Event()
+        # Keep acquisition and handle registration in one deferred-signal phase.
+        with owned_cleanup(report):
+            server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), fixture.Handler)
+            server.idle_stop = threading.Event()
         # The shutdown probe closes the listening socket before checking the 502.
         def serve():
             try:
                 server.serve_forever()
             finally:
                 server.server_close()
-        thread = threading.Thread(target=serve)
-        thread.start()
-        temporary_directory = tempfile.TemporaryDirectory(prefix="gb-t10-nginx-")
+        with owned_cleanup(report):
+            thread = threading.Thread(target=serve)
+            thread.start()
+        with owned_cleanup(report):
+            temporary_directory = tempfile.TemporaryDirectory(prefix="gb-t10-nginx-")
         temporary = temporary_directory.name
         root = Path(temporary)
         (root / "logs").mkdir()
-        with socket.socket() as reserve:
-            reserve.bind(("127.0.0.1", 0))
-            proxy_port = reserve.getsockname()[1]
+        with owned_cleanup(report):
+            with socket.socket() as reserve:
+                reserve.bind(("127.0.0.1", 0))
+                proxy_port = reserve.getsockname()[1]
         fixture.PROXY_PORT = proxy_port
         config = (ROOT / "docs/research/t10-nginx-probe.conf").read_text()
         config = config.replace("listen 8080;", f"listen 127.0.0.1:{proxy_port};")
@@ -339,20 +352,23 @@ def run_local(nginx_binary, control=None):
         config = config.replace("/tmp/", temporary + "/")
         config = apply_control(config, control)
         path = root / "nginx.conf"
-        path.write_text(config)
+        with owned_cleanup(report):
+            path.write_text(config)
         report = {"observed_at": datetime.now(timezone.utc).isoformat(),
-                  "tested_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+                  "tested_sha": run_owned_command(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, capture_output=True, check=True).stdout.strip(),
                   "host": platform.platform(), "host_python": platform.python_version(),
                   "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
                   "nginx_binary_sha256": hashlib.sha256(Path(binary).read_bytes()).hexdigest(),
-                  "nginx_version": subprocess.run([binary, "-V"], capture_output=True, text=True, check=True).stderr.strip(),
+                  "nginx_version": run_owned_command([binary, "-V"], capture_output=True, text=True, check=True).stderr.strip(),
                   "control": control,
                   "fixture_hashes": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in
                                      (ROOT / "scripts/research/t10-nginx-probe.py", ROOT / "scripts/research/t10-proxy-fixture.py", ROOT / "docs/research/t10-nginx-probe.conf")}}
-        checked = subprocess.run([binary, "-p", temporary + "/", "-c", str(path), "-t"], capture_output=True, text=True, check=True)
+        checked = run_owned_command([binary, "-p", temporary + "/", "-c", str(path), "-t"], capture_output=True, text=True, check=True)
         report["nginx_config_check"] = checked.stderr.strip()
-        errors = (root / "stderr.log").open("w+b")
-        proxy = subprocess.Popen([binary, "-p", temporary + "/", "-c", str(path), "-g", "daemon off;"], stdout=subprocess.DEVNULL, stderr=errors, start_new_session=True)
+        with owned_cleanup(report):
+            errors = (root / "stderr.log").open("w+b")
+        with owned_cleanup(report):
+            proxy = subprocess.Popen([binary, "-p", temporary + "/", "-c", str(path), "-g", "daemon off;"], stdout=subprocess.DEVNULL, stderr=errors, start_new_session=True)
         for attempt in range(50):
             try:
                 if fixture.request("/ready")[0] == 200:
