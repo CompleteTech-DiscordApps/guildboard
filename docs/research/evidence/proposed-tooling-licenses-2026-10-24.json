@@ -1,0 +1,54 @@
+{
+  "observed_date_utc": "2026-10-24",
+  "scope": "Unmerged PR478/479 tooling artifacts only; not application or distribution clearance",
+  "branch_heads": [
+    "b1bdf8c87c0d4ff9b3ed1ccf0d3ca9cde3c3bfce",
+    "e789f4b585dc380adfd5d017e55ab6a9cbbb9951"
+  ],
+  "method": "Fetched exact lockfile tarball URLs with 20 MB compressed limit, checked lockfile SHA-512, inspected regular license/notice/copyright-named members under 1 MB; no installation, extraction or package code execution. No adversarial archive parser validation claimed.",
+  "packages": [
+    {
+      "name": "@types/node",
+      "version": "24.19.2",
+      "integrity_verified": true,
+      "license_declared": "MIT",
+      "source": "https://registry.npmjs.org/@types/node/-/node-24.19.2.tgz",
+      "notices": [
+        {
+          "path": "node v24.19/LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ]
+    },
+    {
+      "name": "typescript",
+      "version": "5.9.3",
+      "integrity_verified": true,
+      "license_declared": "Apache-2.0",
+      "source": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+      "notices": [
+        {
+          "path": "package/LICENSE.txt",
+          "sha256": "a7d00bfd54525bc694b6e32f64c7ebcf5e6b7ae3657be5cc12767bce74654a47"
+        },
+        {
+          "path": "package/ThirdPartyNoticeText.txt",
+          "sha256": "1af3c68039c57e539422da82a4faada506ce6d0ea6f90e0b699d02dbcdb7a90c"
+        }
+      ]
+    },
+    {
+      "name": "undici-types",
+      "version": "7.24.6",
+      "integrity_verified": true,
+      "license_declared": "MIT",
+      "source": "https://registry.npmjs.org/undici-types/-/undici-types-7.24.6.tgz",
+      "notices": [
+        {
+          "path": "package/LICENSE",
+          "sha256": "a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27"
+        }
+      ]
+    }
+  ]
+}
