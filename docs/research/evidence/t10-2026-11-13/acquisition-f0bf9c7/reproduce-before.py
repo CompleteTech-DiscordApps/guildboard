@@ -21,6 +21,11 @@ out.mkdir(parents=True, exist_ok=True)
 revision = '9802c81b2ef1031798c8155990484eb0f9cf8999'
 harness_revision = 'f0bf9c78cfaccd17e4b8f423039760b661427435'
 sha256 = lambda data: hashlib.sha256(data).hexdigest()
+def require(condition, message):
+    if not condition:
+        raise RuntimeError(message)
+
+
 original_spec, original_io = importlib.util.spec_from_file_location, io.StringIO
 reports, imports = [], []
 
@@ -49,19 +54,19 @@ with tempfile.TemporaryDirectory(prefix='t10-old-implementation-') as directory:
         blob = subprocess.check_output(['git', 'show', revision + ':' + source])
         path = Path(directory) / (key + '.py')
         path.write_bytes(blob)
-        assert path.read_bytes() == blob
+        require(path.read_bytes() == blob, "Extracted implementation differs from Git blob")
         extracts[key] = path
         provenance[key] = {'git_revision': revision, 'git_path': source,
                            'git_blob_oid': subprocess.check_output(['git', 'rev-parse', revision + ':' + source], text=True).strip(),
                            'executed_source_sha256': sha256(blob), 'extracted_path': str(path)}
     harness_path = root / 'tests/research/t10-test-nginx-probe.py'
     harness_blob = subprocess.check_output(['git', 'show', harness_revision + ':tests/research/t10-test-nginx-probe.py'])
-    assert harness_path.read_bytes() == harness_blob, 'Harness differs from exact recorded revision'
+    require(harness_path.read_bytes() == harness_blob, 'Harness differs from exact recorded revision')
     tests = load('acquisition_tests', harness_path)
     tests.PROBE = load('oldprobe', extracts['probe'])
     tests.PROBE.ROOT = root
-    assert tests.PROBE.run_local.__code__.co_filename == str(extracts['probe'])
-    assert tests.PROBE.run_local.__globals__ is tests.PROBE.__dict__
+    require(tests.PROBE.run_local.__code__.co_filename == str(extracts['probe']), 'Loaded probe code filename differs from verified extract')
+    require(tests.PROBE.run_local.__globals__ is tests.PROBE.__dict__, 'Loaded probe globals differ from verified module')
     imports.append({'module': 'tests.PROBE', 'loaded_file': tests.PROBE.__file__,
                     'function_code_file': tests.PROBE.run_local.__code__.co_filename})
     def redirect_spec(name, path, *a, **kw):
@@ -76,6 +81,8 @@ with tempfile.TemporaryDirectory(prefix='t10-old-implementation-') as directory:
     with mock.patch.object(importlib.util, 'spec_from_file_location', side_effect=redirect_spec), mock.patch.object(io, 'StringIO', Capture):
         result = unittest.TextTestRunner(stream=output, verbosity=2).run(unittest.TestSuite(tests.CancellationRegression(n) for n in names))
     (out / 'before-verified.log').write_text(output.getvalue())
+    require(result.testsRun == 3 and len(result.failures) == 3 and not result.errors and not result.skipped, 'Unexpected regression outcome; require three failures and no errors/skips')
+    require(len(reports) == 3, 'Unexpected owner report count; require three reports')
     payload = {'executed_implementation_revision': revision,
                'checkout_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
                'metadata_caveat': 'Owner report tested_sha reads git HEAD in ROOT; fixture_hashes read current ROOT files. Those fields describe the checkout, not dynamically imported implementation. Executed implementation is identified by provenance below.',
@@ -87,6 +94,4 @@ with tempfile.TemporaryDirectory(prefix='t10-old-implementation-') as directory:
                'reports': reports,
                'rescue': 'Only handles captured by the test harness authorize cleanup; each test finally kills/reaps/closes its owned resources.'}
     (out / 'before-verified.json').write_text(json.dumps(payload, indent=2) + '\n')
-    assert result.testsRun == 3 and len(result.failures) == 3 and not result.errors and not result.skipped
-    assert len(reports) == 3
 print('Verified exact old implementation: three expected acquisition failures, resources rescued.')
