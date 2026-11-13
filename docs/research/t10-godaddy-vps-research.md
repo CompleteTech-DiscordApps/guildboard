@@ -422,3 +422,27 @@ evidence, original failure identity and cleanup. Exact final-head normal/optimiz
 results and actual Nginx controls are in campaign `receipts/platform-finish.json`
 and `platform-finish-logs/t10-literal-diagnostic-*`. All external acceptance and
 fresh independent whole-head review gates remain open.
+
+
+### Public revision-specific evidence — 2026-11-13 UTC
+
+The latest code validation is now reviewable in the repository:
+[public receipt and source-hash manifest](evidence/t10-2026-11-13/receipt.json),
+[normal suite log](evidence/t10-2026-11-13/suite-normal.log),
+[optimized suite log](evidence/t10-2026-11-13/suite-optimized.log),
+[baseline report](evidence/t10-2026-11-13/baseline.sanitized.json) and
+[six control reports](evidence/t10-2026-11-13/controls.sanitized.json).
+The [evidence index](evidence/t10-2026-11-13/README.md) links commands, Windows
+capability simulation and planning output. Historical evidence fields remain
+unchanged; `t10-nginx-evidence.json` now also points to this public receipt.
+
+These results belong to exact tested code revision
+`eee0ad43bcbcc4a262b352eb115d8ac11a04b59d`: 48 normal tests, 48 optimized tests,
+12 baseline checks and six detected unsafe controls. The six missing raw control
+reports were captured at that same code revision before publication edits.
+The publication commit changes documentation/evidence only; its code, test and
+configuration hashes match the receipt. No tests are claimed against the later
+publication revision. Local build/temp paths use explicit placeholders; original
+and published artifact hashes document that sanitization without changing test
+results, tested SHAs or fixture hashes. All prior platform and approval limits
+remain open.
