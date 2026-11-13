@@ -9,6 +9,16 @@
   ],
   "scripts": {
     "planning:validate": "python3 scripts/github-bootstrap/validate.py",
-    "planning:audit": "python3 scripts/github-bootstrap/audit.py"
+    "planning:audit": "python3 scripts/github-bootstrap/audit.py",
+    "build:config": "npm run build --workspace @guildboard/config",
+    "test:config": "npm run test --workspace @guildboard/config",
+    "typecheck:config": "npm run typecheck --workspace @guildboard/config"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "5.9.3"
   }
 }

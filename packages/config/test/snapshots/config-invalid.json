@@ -1,0 +1,13 @@
+{
+  "ok": false,
+  "error": {
+    "code": "CONFIG_INVALID",
+    "invalidKeys": [
+      "DATABASE_URL",
+      "DISCORD_CLIENT_ID",
+      "NODE_ENV",
+      "PORT",
+      "SESSION_SECRET"
+    ]
+  }
+}
