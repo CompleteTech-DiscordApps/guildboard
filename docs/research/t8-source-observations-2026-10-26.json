@@ -1,0 +1,127 @@
+{
+  "schema": "t8-primary-observations-v1",
+  "python": "3.14.3",
+  "disclaimer": "Public HTTP response observations only; no platform acceptance.",
+  "sources": [
+    {
+      "id": "D1",
+      "url": "https://docs.discord.com/developers/resources/application.md",
+      "resolved_url": "https://docs.discord.com/developers/resources/application.md",
+      "observed_utc": "2026-10-26T00:41:03.359023+00:00",
+      "status": 200,
+      "content_type": "text/markdown; charset=utf-8",
+      "last_modified": "Mon, 26 Oct 2026 00:41:01 GMT",
+      "etag": null,
+      "response_bytes": 22931,
+      "sha256": "e2dab1959839d18478abae279bffe09eb13c652debe03ce72e390760cbf9b716"
+    },
+    {
+      "id": "D2",
+      "url": "https://docs.discord.com/developers/topics/oauth2.md",
+      "resolved_url": "https://docs.discord.com/developers/topics/oauth2.md",
+      "observed_utc": "2026-10-26T00:41:03.066851+00:00",
+      "status": 200,
+      "content_type": "text/markdown; charset=utf-8",
+      "last_modified": "Mon, 26 Oct 2026 00:41:01 GMT",
+      "etag": null,
+      "response_bytes": 31894,
+      "sha256": "7e0606392429039ccadfc97c13acc6e315fe5ace6b5939a0d172c0c5ee3d33da"
+    },
+    {
+      "id": "D3",
+      "url": "https://docs.discord.com/developers/interactions/application-commands.md",
+      "resolved_url": "https://docs.discord.com/developers/interactions/application-commands.md",
+      "observed_utc": "2026-10-26T00:41:03.152857+00:00",
+      "status": 200,
+      "content_type": "text/markdown; charset=utf-8",
+      "last_modified": "Mon, 26 Oct 2026 00:41:01 GMT",
+      "etag": null,
+      "response_bytes": 80614,
+      "sha256": "f2089b2c0b35e2b4068e5d93aed2747c91a2c58da8712a6d2db4647fd1127eb0"
+    },
+    {
+      "id": "D4",
+      "url": "https://docs.discord.com/developers/interactions/overview.md",
+      "resolved_url": "https://docs.discord.com/developers/interactions/overview.md",
+      "observed_utc": "2026-10-26T00:41:03.235095+00:00",
+      "status": 200,
+      "content_type": "text/markdown; charset=utf-8",
+      "last_modified": "Mon, 26 Oct 2026 00:41:01 GMT",
+      "etag": null,
+      "response_bytes": 12698,
+      "sha256": "7ac96d35db81640ae6a3351ada3eee743c5ef452cf6b44204170bc1ade55301c"
+    },
+    {
+      "id": "D5",
+      "url": "https://docs.discord.com/developers/interactions/receiving-and-responding.md",
+      "resolved_url": "https://docs.discord.com/developers/interactions/receiving-and-responding.md",
+      "observed_utc": "2026-10-26T00:41:03.319441+00:00",
+      "status": 200,
+      "content_type": "text/markdown; charset=utf-8",
+      "last_modified": "Mon, 26 Oct 2026 00:41:01 GMT",
+      "etag": null,
+      "response_bytes": 37440,
+      "sha256": "cf7cc54085f5114e09df7d759327b652a5712d01a739ae3e4d5590ebffa16cd1"
+    },
+    {
+      "id": "D6",
+      "url": "https://docs.discord.com/developers/topics/permissions.md",
+      "resolved_url": "https://docs.discord.com/developers/topics/permissions.md",
+      "observed_utc": "2026-10-26T00:41:03.725339+00:00",
+      "status": 200,
+      "content_type": "text/markdown; charset=utf-8",
+      "last_modified": "Mon, 26 Oct 2026 00:41:01 GMT",
+      "etag": null,
+      "response_bytes": 22468,
+      "sha256": "70275c94327422576120802a050fe09397cb5f9daebcdf9f7ada349622be1ea5"
+    },
+    {
+      "id": "D7",
+      "url": "https://docs.discord.com/developers/resources/guild.md",
+      "resolved_url": "https://docs.discord.com/developers/resources/guild.md",
+      "observed_utc": "2026-10-26T00:41:03.535301+00:00",
+      "status": 200,
+      "content_type": "text/markdown; charset=utf-8",
+      "last_modified": "Mon, 26 Oct 2026 00:41:01 GMT",
+      "etag": null,
+      "response_bytes": 79220,
+      "sha256": "db72a7023de100a6d15e017d0a274eec2b302b12e78c4bed5cc549d62a0da266"
+    },
+    {
+      "id": "D8",
+      "url": "https://docs.discord.com/developers/events/gateway.md",
+      "resolved_url": "https://docs.discord.com/developers/events/gateway.md",
+      "observed_utc": "2026-10-26T00:41:03.568439+00:00",
+      "status": 200,
+      "content_type": "text/markdown; charset=utf-8",
+      "last_modified": "Mon, 26 Oct 2026 00:41:01 GMT",
+      "etag": null,
+      "response_bytes": 54861,
+      "sha256": "26f576ed264a1bf960dd0585af40aeaf09212d9def426352e4376967a562e782"
+    },
+    {
+      "id": "N1",
+      "url": "https://nodejs.org/download/release/v24.18.0/docs/api/crypto.html",
+      "resolved_url": "https://nodejs.org/download/release/v24.18.0/docs/api/crypto.html",
+      "observed_utc": "2026-10-26T00:41:03.743006+00:00",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "last_modified": "Tue, 23 Jun 2026 21:57:23 GMT",
+      "etag": "\"dc7356e614853710bedd946097f311b0\"",
+      "response_bytes": 622841,
+      "sha256": "23716eaadc008c5ec684d2d20043b9606a8cb807ad6eb9dbd50d0c3a7b2bafa7"
+    },
+    {
+      "id": "R1",
+      "url": "https://www.rfc-editor.org/rfc/rfc8032.txt",
+      "resolved_url": "https://www.rfc-editor.org/rfc/rfc8032.txt",
+      "observed_utc": "2026-10-26T00:41:03.759717+00:00",
+      "status": 200,
+      "content_type": "text/plain;charset=utf-8",
+      "last_modified": null,
+      "etag": "W/\"4972dd0b67b7b015b1fba6b10a977751\"",
+      "response_bytes": 103210,
+      "sha256": "ed63657ff389301282b169b0abde9b5dd2c7e4d524fdfa5da6ff3094fc93c4c3"
+    }
+  ]
+}

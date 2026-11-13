@@ -1,0 +1,27 @@
+✔ independent RFC 8032 section 7.1 public known-answer vector and mutation (1.4334ms)
+✔ actual Ed25519 accepts synthetic timestamp plus exact raw UTF-8 body (1.6845ms)
+✔ tamper body, timestamp and signature each deny without effects (1.0559ms)
+✔ parsed and reserialized semantically equal JSON is not the signed body (0.4325ms)
+✔ wrong key and wrong algorithm cannot authenticate (0.5151ms)
+✔ missing, malformed, duplicate-represented and short headers deny (1.0287ms)
+✔ body type, size, malformed JSON and invalid UTF-8 deny (0.6893ms)
+✔ signed stale/future requests deny; synthetic exact window edges accept (0.6694ms)
+✔ wrong application, numeric ID, unknown version and non-object payload deny (0.9542ms)
+✔ signed PING has no board side effects (0.3396ms)
+✔ signed user install, DM, mismatched install owner or missing member deny (0.9039ms)
+✔ authentic foreign guild/channel/member and unknown command deny (0.675ms)
+✔ Discord Administrator/app permission strings do not override application denial (0.3742ms)
+✔ identical retry returns receipt once; signed same-ID different bytes conflicts (0.488ms)
+✔ retired-lineage readable receipt precedes current write and lineage checks (0.5055ms)
+✔ current read denial conceals both prior receipt and digest mismatch (0.5213ms)
+✔ negative control without verification accepts tampered bytes; candidate denies (0.2565ms)
+✔ negative control checking write before receipt loses readable historical result (0.3159ms)
+✔ report is deterministic across fresh ephemeral signing keys (2.448ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 90.3862

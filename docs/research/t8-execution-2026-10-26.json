@@ -1,0 +1,59 @@
+{
+  "schema": "t8-execution-v1",
+  "observed_utc": "2026-10-26T00:44:05.300297+00:00",
+  "base": "c108b552a660e12a3b3998e1e1ad944fbd7a894d",
+  "branch": "orchestrator/t8-bot-research",
+  "os": "Windows-11-10.0.26200-SP0",
+  "python": "3.14.3",
+  "commands": [
+    {
+      "command": "node --test tests/research/t8-test-interaction-experiment.mjs",
+      "exit_code": 0,
+      "tests": 19,
+      "stdout": "t8-tests-2026-10-26.txt"
+    },
+    {
+      "command": "node scripts/research/t8-interaction-experiment.mjs",
+      "exit_code": 0,
+      "byte_identical_consecutive_runs": true,
+      "report": "t8-interaction-report-2026-10-26.json"
+    },
+    {
+      "command": "python scripts/github-bootstrap/validate.py",
+      "exit_code": 0,
+      "result": "pass",
+      "items": 471,
+      "native_relationships_expected": 457,
+      "dependencies_expected": 600,
+      "errors": [],
+      "generated_audit_file_restored": true
+    },
+    {
+      "command": "python scripts/research/t8-capture-sources.py docs/research/t8-source-observations-2026-10-26.json",
+      "exit_code": 0,
+      "sources": 10,
+      "all_http_status_200": true
+    }
+  ],
+  "input_sha256": {
+    "scripts/research/t8-interaction-experiment.mjs": "76b321720e9323a56f48648966d53fa21b0571b3cf77174d2fab094aab75c256",
+    "tests/research/t8-test-interaction-experiment.mjs": "e45734b83ca260160c084a7837921bb2dc7788c77524bdf6da593be3db704d1a",
+    "scripts/research/t8-capture-sources.py": "22d17b8d7061d9b84d6da86b944a32ca4a9d001e7f7ac78dc6679b6c62d5a0c6"
+  },
+  "recognized_configuration_files": [
+    ".env.example"
+  ],
+  "recognized_environment_nonempty": {
+    "DISCORD_CLIENT_ID": false,
+    "DISCORD_CLIENT_SECRET": false,
+    "DISCORD_BOT_TOKEN": false,
+    "GUILDBOARD_DISCORD_CLIENT_ID": false,
+    "GUILDBOARD_DISCORD_CLIENT_SECRET": false
+  },
+  "limitations": [
+    "No registered Discord delivery or command configuration",
+    "No OAuth or API scope/permission validation",
+    "In-memory authority and receipts are hypothetical",
+    "No production runtime imports or database test"
+  ]
+}
