@@ -87,7 +87,9 @@ def main() -> int:
         report['result']='pass'
     except Exception as error:
         failed=True;report.update(result='blocked-or-failed',error_type=type(error).__name__,error=str(error))
-        if isinstance(error,subprocess.CalledProcessError): report['command_stderr']=error.stderr
+        if isinstance(error,subprocess.CalledProcessError):
+            stderr=error.stderr
+            report['command_stderr']=stderr.decode('utf-8',errors='replace') if isinstance(stderr,bytes) else stderr
     finally:
         if process is None:
             report['owned_container_absent']=True
