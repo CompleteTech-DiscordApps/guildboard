@@ -95,7 +95,10 @@ def snapshot(viewer, authority):
 
     Retain bounded per-scope stream fences, never personal navigation. Exhaustion
     fails explicitly without evicting a fence; a fresh validated stream baseline
-    is outside this model. No untrusted packet can add a scope to history.
+    is outside this model. Raise ValueError without changing viewer when the
+    target scope is unseen and MAX_SCOPE_HISTORY distinct scopes are retained.
+    History uses first-seen scope insertion order; refreshing a known scope
+    replaces its entry in place. No untrusted packet can add a scope to history.
     """
     history = {entry.authority.scope: entry for entry in viewer.history}
     history[viewer.authority.scope] = StreamMemory(
