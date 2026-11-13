@@ -87,13 +87,164 @@ REQUIRED_STOP_CONDITIONS = {'acknowledged mutation missing after authorized cras
  'shared workload interference or missing explicit destructive-test authority',
  'sustained generator schedule lag above 1 second or host safety budget exceeded'}
 
+REQUIRED_MATRIX_FIELDS = {'accessibility_candidate',
+ 'budget_candidates',
+ 'contention_candidate',
+ 'external_rows',
+ 'fault_corpus_candidate',
+ 'issue',
+ 'load_basis',
+ 'load_profiles',
+ 'resource_candidates',
+ 'status',
+ 'stop_conditions',
+ 'version',
+ 'workload_mix_percent'}
+REQUIRED_BUDGET_DEFINITIONS = {'cold-launch': {'conditions': 'cold/warm cache separate; <=2MiB initial board serialized data and '
+                               '<=1000 objects synthetic initial corpus',
+                 'metric': 'user launch to authenticated usable accepted board'},
+ 'commit-ack': {'conditions': 'baseline, target same-region RTT <=100ms; rejected/conflicting commands '
+                              'reported separately; lost/timeout samples remain in denominator',
+                'metric': 'same-client monotonic send-to-durable-ACK, all eligible new commands, after '
+                          'warmup'},
+ 'peer-visible': {'conditions': 'baseline; report clock error separately; do not subtract proxy/network '
+                                'time',
+                  'metric': 'source send to accepted peer projection, instrumented shared clock '
+                            'uncertainty'},
+ 'reconnect': {'conditions': 'after 30s offline, <=500 missed operations, drafts preserved; no false '
+                             'ACK',
+               'metric': 'transport restored to converged accepted board'},
+ 'render': {'conditions': 'real desktop/mobile measured separately; background/PIP separate; no '
+                          'screen-reader performance inference',
+            'metric': 'main-thread frame duration while editing/panning synthetic baseline board'}}
+REQUIRED_ACCESSIBILITY_TEXT = {'additional_design_goal': '44x44 CSS pixel outer controls, reduced motion and polite/coalesced live '
+                           'feedback; these are proposed design goals, not WCAG AA numeric '
+                           'requirements. Canvas two-dimensional reflow exceptions require documented '
+                           'review; surrounding UI remains testable.',
+ 'critical_task_budget': 'zero blockers for supported keyboard and AT tasks; no critical/serious '
+                         'automated findings left unexplained; automated scans alone cannot pass',
+ 'normative_target': 'All applicable WCAG 2.2 A and AA criteria, W3C Recommendation 2024-12-12; actual '
+                     'applicability/conformance review pending'}
+REQUIRED_ACCESSIBILITY_LISTS = {'checks': {'dragging-alternative',
+            'focus-visible-not-obscured',
+            'forced-colors-manual-review',
+            'keyboard-no-trap',
+            'name-role-value-and-status-speech',
+            'nontext-contrast-3',
+            'outer-controls-reflow-320-css-px',
+            'reduced-motion-design-goal',
+            'target-size-24-css-px-or-reviewed-exception',
+            'text-contrast-4.5-normal-3-large',
+            'text-resize-200-percent',
+            'text-spacing'},
+ 'tasks': {'create-edit-move-delete-through-semantic-alternative',
+           'launch-auth-enter-board',
+           'locate-select-describe-object',
+           'navigate-pan-zoom-without-drag',
+           'open-close-dialog-and-restore-focus',
+           'preserve-draft-on-revoke-and-reconnect',
+           'read-policy-denial-and-pending-accepted-rejected-feedback'}}
+REQUIRED_FAULTS = {'30 second disconnect and <=500 event tail',
+ '5 percent duplicate delivery with same logical ID',
+ 'commit-before-ACK disconnect',
+ 'one board policy fence while other guild remains active',
+ 'snapshot boundary and retained old-lineage receipt retry'}
+REQUIRED_RESOURCE_FIELDS = {'available_memory_percent_min',
+ 'event_loop_delay_p99_ms_max',
+ 'free_data_disk_percent_min',
+ 'minimum_measured_commands',
+ 'note',
+ 'post_drain_unexplained_rss_growth_percent_max',
+ 'repeat_runs_min',
+ 'steady_cpu_percent_max',
+ 'steady_duration_seconds_min',
+ 'unexplained_application_error_fraction_max'}
+
 def integer(value, lower, upper, label):
     if type(value) is not int or not lower <= value <= upper:
         raise ValueError("invalid bounded integer: " + label)
     return value
 
 
+def mapping(value, fields, label):
+    if not isinstance(value, dict) or set(value) != set(fields):
+        raise ValueError("missing/unknown fields: " + label)
+    return value
+
+
+def text(value, label):
+    if not isinstance(value, str) or not value.strip() or value != value.strip():
+        raise ValueError("missing/invalid text: " + label)
+
+
+def string_list(value, required, label):
+    if not isinstance(value, list):
+        raise ValueError("invalid list: " + label)
+    for item in value:
+        text(item, label)
+    if len(set(value)) != len(value) or not set(required).issubset(value):
+        raise ValueError("missing/duplicate entries: " + label)
+
+
+def identified_rows(rows, ids, fields, label):
+    if not isinstance(rows, list) or len(rows) != len(ids):
+        raise ValueError("missing/duplicate coverage: " + label)
+    found = set()
+    for row in rows:
+        mapping(row, fields, label)
+        text(row["id"], label + " ID")
+        if row["id"] in found:
+            raise ValueError("duplicate ID: " + label)
+        found.add(row["id"])
+    if found != set(ids):
+        raise ValueError("unexpected/missing coverage: " + label)
+
+
+def validate_contract_shape(matrix):
+    """Reject missing sections and malformed values before evaluating arithmetic."""
+    mapping(matrix, REQUIRED_MATRIX_FIELDS, "matrix")
+    if matrix["issue"] != "GB-T12.R1":
+        raise ValueError("unexpected research issue")
+    for field in ("load_basis", "contention_candidate"):
+        text(matrix[field], field)
+    mapping(matrix["workload_mix_percent"], ("modify", "create", "delete", "compound"), "workload mix")
+    string_list(matrix["fault_corpus_candidate"], REQUIRED_FAULTS, "fault corpus")
+    identified_rows(matrix["load_profiles"], ("small", "baseline", "stress"),
+                    ("id", "guilds", "boards_per_guild", "editors_per_board", "viewers_per_board",
+                     "operations_per_editor_second", "operation_payload_bytes", "duration_seconds", "gate_candidate"),
+                    "load profiles")
+    identified_rows(matrix["budget_candidates"], REQUIRED_BUDGET_DEFINITIONS,
+                    ("id", "metric", "conditions", "p95_ms", "p99_ms"), "latency budgets")
+    for budget in matrix["budget_candidates"]:
+        for field, expected in REQUIRED_BUDGET_DEFINITIONS[budget["id"]].items():
+            if budget[field] != expected:
+                raise ValueError("latency budget definition changed: " + budget["id"] + "/" + field)
+    resources = mapping(matrix["resource_candidates"], REQUIRED_RESOURCE_FIELDS, "resource candidates")
+    text(resources["note"], "resource note")
+    for field, value in resources.items():
+        if field == "note":
+            continue
+        if field == "unexplained_application_error_fraction_max":
+            if type(value) not in (int, float) or not 0 <= value <= 1:
+                raise ValueError("invalid resource fraction")
+        elif "percent" in field:
+            integer(value, 1, 100, field)
+        else:
+            if type(value) is not int or value < 1:
+                raise ValueError("invalid positive resource integer: " + field)
+    identified_rows(matrix["external_rows"], EXTERNAL_GROUPS,
+                    ("id", "environment", "group", "status", "required_evidence"), "external matrix")
+    accessibility = mapping(matrix["accessibility_candidate"],
+                            set(REQUIRED_ACCESSIBILITY_TEXT) | {"tasks", "checks", "status"}, "accessibility")
+    for field, expected in REQUIRED_ACCESSIBILITY_TEXT.items():
+        if accessibility[field] != expected:
+            raise ValueError("missing/changed accessibility definition: " + field)
+    for field, required in REQUIRED_ACCESSIBILITY_LISTS.items():
+        string_list(accessibility[field], required, "accessibility " + field)
+
+
 def validate(matrix):
+    validate_contract_shape(matrix)
     if (type(matrix.get("version")) is not int or matrix["version"] != 1
             or matrix.get("status") != "proposed-research-not-release-contract"):
         raise ValueError("unexpected research matrix version/status")

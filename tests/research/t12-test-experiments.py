@@ -211,6 +211,60 @@ class MatrixTests(unittest.TestCase):
         data["stop_conditions"].append("additional reviewed stop")
         self.assertEqual(matrix.validate(data)["external_not_run"], 10)
 
+    def test_all_required_matrix_sections_and_fields_are_present(self):
+        for field in self.data:
+            data = deepcopy(self.data)
+            del data[field]
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                matrix.validate(data)
+        for section in ("resource_candidates", "accessibility_candidate"):
+            for field in self.data[section]:
+                data = deepcopy(self.data)
+                del data[section][field]
+                with self.subTest(section=section, field=field), self.assertRaises(ValueError):
+                    matrix.validate(data)
+
+    def test_budget_coverage_and_definitions_cannot_disappear(self):
+        for value in ([], None, "budgets", {}, [None]):
+            data = deepcopy(self.data)
+            data["budget_candidates"] = value
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                matrix.validate(data)
+        for index, row in enumerate(self.data["budget_candidates"]):
+            for field in row:
+                for value in (None, "", [], {}):
+                    data = deepcopy(self.data)
+                    data["budget_candidates"][index][field] = value
+                    with self.subTest(budget=row["id"], field=field, value=value), self.assertRaises(ValueError):
+                        matrix.validate(data)
+            data = deepcopy(self.data)
+            data["budget_candidates"].pop(index)
+            with self.assertRaises(ValueError):
+                matrix.validate(data)
+
+    def test_accessibility_tasks_checks_and_targets_cannot_disappear(self):
+        for field in ("tasks", "checks"):
+            for required in self.data["accessibility_candidate"][field]:
+                data = deepcopy(self.data)
+                data["accessibility_candidate"][field].remove(required)
+                with self.subTest(field=field, required=required), self.assertRaises(ValueError):
+                    matrix.validate(data)
+        for field in self.data["accessibility_candidate"]:
+            for value in (None, "", [], {}, [""], [None]):
+                data = deepcopy(self.data)
+                data["accessibility_candidate"][field] = value
+                with self.subTest(field=field, value=value), self.assertRaises(ValueError):
+                    matrix.validate(data)
+
+    def test_malformed_sections_raise_validation_error(self):
+        for field, value in (("workload_mix_percent", []), ("load_profiles", [None]),
+                             ("external_rows", [None] * 10), ("resource_candidates", []),
+                             ("accessibility_candidate", []), ("fault_corpus_candidate", [])):
+            data = deepcopy(self.data)
+            data[field] = value
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                matrix.validate(data)
+
     def test_external_pass_or_incomplete_coverage_cannot_be_laundered(self):
         for mutation in ("pass", "coverage", "evidence", "accessibility"):
             data = deepcopy(self.data)
