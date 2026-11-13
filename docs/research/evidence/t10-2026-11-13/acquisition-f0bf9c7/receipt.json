@@ -1,0 +1,104 @@
+{
+  "kind": "acquisition-signal-deferral-validation",
+  "published_at_utc": "2026-11-13T16:34:11.231298+00:00",
+  "tested_revision": "f0bf9c78cfaccd17e4b8f423039760b661427435",
+  "tested_tree": "e1892db2810f1ec73aa8be4e559c2af3e598db58",
+  "source_sha256": {
+    "scripts/research/t10-nginx-probe.py": "c8e505039b7e23f2bb9b42d1295155dd8ce28717ed10c4c09465bbbcf3253008",
+    "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+    "scripts/research/t10-capture-sources.py": "3f0207c3a2b15fa008939413a7a1564a7b92e759e4ae4f3ee605bbe3d4701d28",
+    "tests/research/t10-test-nginx-probe.py": "713f77c9316582618d0aa97476aab6bd7b6423b3979780db89166e007ac1313a",
+    "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+  },
+  "publication_scope": "Later documentation-only publication preserves source hashes; suite results refer only to tested_revision.",
+  "environment": {
+    "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+    "python": "3.14.8",
+    "nginx": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=<NGINX_BUILD_PREFIX> --without-http_gzip_module",
+    "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a"
+  },
+  "validation": {
+    "normal": {
+      "command": "T10_NGINX_BINARY=<OWNED_NGINX_BINARY> python tests/research/t10-test-nginx-probe.py -v",
+      "tests": 59,
+      "skipped": 0,
+      "exit_code": 0
+    },
+    "optimized": {
+      "command": "T10_NGINX_BINARY=<OWNED_NGINX_BINARY> python -O tests/research/t10-test-nginx-probe.py -v",
+      "tests": 59,
+      "skipped": 0,
+      "exit_code": 0
+    },
+    "first_signal_reports": 20,
+    "baseline_checks": 12,
+    "negative_controls": 6,
+    "planning": "471 items, 457 hierarchy edges, 600 dependencies, zero errors; api.save no-op to respect file leases"
+  },
+  "before": {
+    "revision": "9802c81b2ef1031798c8155990484eb0f9cf8999",
+    "finding": "First signal after OS spawn/resource creation but before assignment can orphan child/group or skip resource cleanup. Three acquisition methods fail old code; captured owned resources are rescued.",
+    "reports": [
+      "before-acquisition.sanitized.json",
+      "before-regressions.log"
+    ]
+  },
+  "artifacts": {
+    "suite-normal.log": {
+      "sha256": "6f703aceb2bde742d11b42a279aa70c3b49bad7d5f0252d6d9a54342b1fff3f4",
+      "original_capture_sha256": "6f703aceb2bde742d11b42a279aa70c3b49bad7d5f0252d6d9a54342b1fff3f4",
+      "sanitized_local_paths": false
+    },
+    "suite-optimized.log": {
+      "sha256": "527ef81cd6fe39997581d5bc1aded430b9a507bdcc2e8ea785d35a2e937f4808",
+      "original_capture_sha256": "527ef81cd6fe39997581d5bc1aded430b9a507bdcc2e8ea785d35a2e937f4808",
+      "sanitized_local_paths": false
+    },
+    "signal-capture.log": {
+      "sha256": "5910da12159f241af619c095ff2fd486fef30c114002059ffb40ea1a5aec24c2",
+      "original_capture_sha256": "5910da12159f241af619c095ff2fd486fef30c114002059ffb40ea1a5aec24c2",
+      "sanitized_local_paths": false
+    },
+    "signal-reports.sanitized.json": {
+      "sha256": "2564e3893fb2591fca95c74e2f611f89b86aad50dcb280f48e8f4bf661e2338d",
+      "original_capture_sha256": "1e0dd63bb5047a1ecca094f90277107463495399f2447740c22ad351f8555384",
+      "sanitized_local_paths": true
+    },
+    "network.sanitized.json": {
+      "sha256": "50f0f3625f45a197362c1623b9979ea3e080cb7ba77352f8ccda09b875e32b7e",
+      "original_capture_sha256": "227e5a60a54097db4251fb356531ca1395adda6e3d7669cce821035cbd47114b",
+      "sanitized_local_paths": true
+    },
+    "before-acquisition.sanitized.json": {
+      "sha256": "a3fb01037a7a836c2bc99b72d4b492aac08c049d8da79cd2a833b09851ff5401",
+      "original_capture_sha256": "86129b7044234d156d556be40c3161c0e0956c14d6f941eaeb3d622f1e2e2119",
+      "sanitized_local_paths": true
+    },
+    "before-regressions.log": {
+      "sha256": "b8bb6c3346cbdb0f9b87e0a75293e0e740fb01ff0d733a3cf3871091413a4f72",
+      "original_capture_sha256": "3aa3c733a5750664a53ef5f2b4cb73dbbce30ae51d8f643d54899911c7c633e4",
+      "sanitized_local_paths": true
+    },
+    "planning-validation.json": {
+      "sha256": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7",
+      "original_capture_sha256": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7",
+      "sanitized_local_paths": false
+    }
+  },
+  "limitations": [
+    "First catchable SIGTERM/SIGINT after handlers install, including normal cleanup. No SIGKILL, host failure, power loss or forced termination guarantee.",
+    "Docker command boundary simulated; actual Docker runtime unverified.",
+    "Local cleanup cases use actual Nginx/backend with a synthetic successful probe body to target cleanup precisely. Separate baseline/six controls use actual network probes.",
+    "Fetch cleanup cases use actual disposable children with synthetic successful envelopes; existing suite separately verifies actual HTTP slow-drip cancellation, child reaping and retained completed rows.",
+    "No GoDaddy, Discord, public TLS/DNS, SQL persistence/restore or native acceptance; no approval or independent-review claim.",
+    "Acquisition deferral delays cancellation through handle registration; bounded transient Docker CLI commands can defer up to their 30-second timeout, local git/Nginx checks up to five seconds, plus process scheduling/reaping overhead.",
+    "Spawn/other-resource injection fixtures target the post-create/pre-assignment interval deterministically; arbitrary interpreter/OS failure remains outside guarantees."
+  ],
+  "coverage": [
+    "Real Nginx master and worker spawned before caller assignment; TERM/INT verifies master reaped, workers exited and truthful cleanup flags.",
+    "Real disposable source child spawned before caller assignment; TERM/INT verifies child reaped and both pipes closed.",
+    "Backend constructor, thread start, tempdir construction and stderr open each inject TERM/INT after creation before caller registration.",
+    "Transient bounded commands inject TERM/INT after actual Popen and verify reaping.",
+    "Previous normal-cleanup, active-body cancellation and repeated-signal cases remain passing."
+  ]
+}

@@ -1,0 +1,29 @@
+T10_NGINX_BINARY=<OWNED_NGINX_BINARY> python -O <CAPTURE_SCRIPT>
+
+# Capture script; replace local placeholders before execution.
+from pathlib import Path
+import importlib.util,io,json,unittest,subprocess,os
+from unittest import mock
+root=Path.cwd();logs=Path('<OUTPUT_DIRECTORY>')
+spec=importlib.util.spec_from_file_location('cleanup_tests',root/'tests/research/t10-test-nginx-probe.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+reports=[]
+original=io.StringIO
+class Capture(original):
+ def getvalue(self):
+  value=super().getvalue()
+  try: report=json.loads(value)
+  except (ValueError,TypeError): return value
+  if isinstance(report,dict) and report.get('failure',{}).get('signal') and not getattr(self,'recorded',False):
+   self.recorded=True;reports.append(report)
+  return value
+names=['test_first_signal_after_nginx_spawn_before_assignment_reaps_owned_group','test_first_signal_after_fetch_spawn_before_assignment_reaps_owned_child','test_first_signal_after_local_acquisition_before_registration_closes_resources','test_first_signal_during_short_command_spawn_reaps_transient_child','test_first_signal_during_normal_docker_cleanup_is_deferred','test_first_signal_during_normal_local_cleanup_finishes_all_actions','test_first_signal_during_normal_fetch_worker_cleanup_reaps_and_reports']
+output=original()
+with mock.patch.object(io,'StringIO',Capture):
+ result=unittest.TextTestRunner(stream=output,verbosity=2).run(unittest.TestSuite(m.CancellationRegression(n) for n in names))
+(logs/'t10-cleanup-capture-f0bf9c7.log').write_text(output.getvalue())
+if not result.wasSuccessful() or len(reports)!=20: raise SystemExit(output.getvalue()+str(len(reports)))
+(logs/'t10-cleanup-raw-f0bf9c7.json').write_text(json.dumps({'tested_revision':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'runs':reports},indent=2)+'\n')
+# Independent actual network baseline and six unsafe controls.
+network=[m.PROBE.run_local(os.environ['T10_NGINX_BINARY'],c) for c in (None,*m.PROBE.HANDSHAKE_REJECTIONS,'publish-private-assets','long-read-timeout')]
+(logs/'t10-cleanup-network-f0bf9c7.json').write_text(json.dumps(network,indent=2)+'\n')
+print('captured twenty first-signal cleanup reports and baseline/six controls')
