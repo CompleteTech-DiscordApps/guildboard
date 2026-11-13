@@ -214,7 +214,7 @@ def save_report(path, report):
     try:
         with tempfile.NamedTemporaryFile(
                 mode='w', encoding='utf-8', dir=path.parent,
-                prefix=path.name + '.', suffix='.tmp', delete=False) as stream:
+                prefix='.roadmap-', suffix='.tmp', delete=False) as stream:
             temporary = Path(stream.name)
             stream.write(json.dumps(report, indent=2, ensure_ascii=True) + '\n')
         temporary.replace(path)
@@ -223,12 +223,30 @@ def save_report(path, report):
             temporary.unlink(missing_ok=True)
 
 
+
+def paths_alias(first, second):
+    """Recognize lexical, symlink and hardlink aliases of an input file."""
+    if first.resolve() == second.resolve():
+        return True
+    try:
+        return first.samefile(second)
+    except FileNotFoundError:
+        return False
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--manifest', type=Path, default=ROOT / 'planning/guildboard-backlog.json')
     parser.add_argument('--schema', type=Path, default=ROOT / 'planning/project-schema.json')
     parser.add_argument('--report', type=Path, default=ROOT / 'planning/audit/local-validation.json')
     args = parser.parse_args(argv)
+    try:
+        if any(paths_alias(args.report, source) for source in (args.manifest, args.schema)):
+            raise ValueError('report must not alias the manifest or schema; inputs preserved')
+    except (OSError, ValueError, RuntimeError) as exc:
+        # An unsafe or unverifiable destination must never replace an input.
+        print(json.dumps({'result': 'fail', 'errors': ['report path: ' + str(exc)]}, indent=2))
+        return 1
     try:
         manifest = json.loads(args.manifest.read_text(), object_pairs_hook=unique_object)
         schema = json.loads(args.schema.read_text(), object_pairs_hook=unique_object)

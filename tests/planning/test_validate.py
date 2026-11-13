@@ -243,12 +243,12 @@ class ReportWriteTests(unittest.TestCase):
 
 
 class CliTests(unittest.TestCase):
-    def run_cli(self, manifest_text, schema_text=None):
+    def run_cli(self, manifest_text, schema_text=None, report_name='report.json'):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             manifest = root / 'manifest.json'
             schema = root / 'schema.json'
-            report = root / 'report.json'
+            report = root / report_name
             manifest.write_text(manifest_text)
             schema.write_text(schema_text if schema_text is not None else json.dumps(SCHEMA))
             report.write_text('{"result":"pass","stale":true}')
@@ -264,6 +264,55 @@ class CliTests(unittest.TestCase):
         code, report = self.run_cli(json.dumps(MANIFEST))
         self.assertEqual(code, 0)
         self.assertEqual(report['result'], 'pass')
+
+    def test_cli_report_input_aliases_preserve_manifest_and_schema(self):
+        for source_name in ('manifest.json', 'schema.json'):
+            for alias_kind in ('same_path', 'symlink', 'hardlink'):
+                for manifest_text in (json.dumps(MANIFEST), 'broken JSON'):
+                    with self.subTest(source=source_name, alias=alias_kind,
+                                      valid=manifest_text != 'broken JSON'):
+                        with tempfile.TemporaryDirectory() as directory:
+                            root = Path(directory)
+                            manifest = root / 'manifest.json'
+                            schema = root / 'schema.json'
+                            manifest.write_text(manifest_text)
+                            schema.write_text(json.dumps(SCHEMA))
+                            before = {p: p.read_bytes() for p in (manifest, schema)}
+                            source = root / source_name
+                            report = root / 'alias.json'
+                            if alias_kind == 'same_path':
+                                report = source
+                            elif alias_kind == 'symlink':
+                                report.symlink_to(source)
+                            else:
+                                report.hardlink_to(source)
+                            proc = subprocess.run(
+                                [sys.executable, str(SCRIPTS / 'validate.py'),
+                                 '--manifest', str(manifest), '--schema', str(schema),
+                                 '--report', str(report)], capture_output=True,
+                                text=True, timeout=15)
+                            self.assertEqual(proc.returncode, 1)
+                            self.assertEqual(proc.stderr, '')
+                            result = json.loads(proc.stdout)
+                            self.assertEqual(result['result'], 'fail')
+                            self.assertIn('report must not alias', result['errors'][0])
+                            for path, contents in before.items():
+                                self.assertEqual(path.read_bytes(), contents)
+                            self.assertEqual(report.read_bytes(), before[source])
+                            if alias_kind == 'symlink':
+                                self.assertTrue(report.is_symlink())
+                            else:
+                                self.assertTrue(report.samefile(source))
+
+    def test_cli_long_valid_report_basename_replaces_previous_report(self):
+        # The destination itself fits Linux NAME_MAX; staging must not append
+        # randomness to that basename and exceed the filesystem limit.
+        for source, expected in ((json.dumps(MANIFEST), 'pass'),
+                                 ('broken JSON', 'fail')):
+            with self.subTest(result=expected):
+                code, report = self.run_cli(source, report_name='r' * 251)
+                self.assertEqual(report['result'], expected)
+                self.assertEqual(code, int(expected == 'fail'))
 
     def test_cli_invalid_relationship_replaces_previous_pass(self):
         manifest = copy.deepcopy(MANIFEST)
