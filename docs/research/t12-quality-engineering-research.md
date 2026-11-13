@@ -329,3 +329,28 @@ validation and diff whitespace checks passed. Raw results are
 `t12-regressions-before.log`, `t12-tests-d423949.log` and
 `t12-planning-d423949.log` in the campaign log directory. These code changes
 require fresh full-head independent review; discussion threads are left open.
+
+
+### Full-review follow-up: scenario evidence and safety stops
+
+Independent review of `9fc1400e0a9e1a6f84709633f0ea4c05b6b571fb` found that
+keeping row identity/group alone still allowed the recovery evidence to be
+replaced with client evidence, or `measured-rpo-rto-and-restore-hashes` to be
+removed. The Copilot review summary also identified length-only stop-condition
+validation accepting empty or duplicate strings and unrelated string input.
+Both are valid findings; the review summary is evidence even when the banner
+reports no open inline issues.
+
+Revision `868dc2b12b862ce6326beacb7debd53f557ae9a8` defines required evidence independently for each of the ten
+scenarios and requires every mandatory item while allowing additional distinct
+nonblank requirements. Safety stops must be a list of distinct nonblank strings
+preserving all six original stop conditions. Tests remove each scenario's
+mandatory evidence in turn, replace recovery with client evidence, and exercise
+null/string/empty/duplicate stop lists and removal of each required stop.
+Against the previous validator, two regression methods produce 63 assertion
+failures and one TypeError; all **22** focused tests pass after remediation.
+Synthetic matrix output remains equal to the preserved evidence and all real
+platform rows remain not-run. Raw results: `t12-review2-before.log`,
+`t12-review2-tests.log`, `t12-review2-matrix.json`, and
+`t12-review2-planning.log` in the existing campaign log directory. Fresh full-head
+review is still required; no review thread is resolved by this change.
