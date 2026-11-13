@@ -339,9 +339,9 @@ class SourceCaptureRegression(unittest.TestCase):
 
     def invoke(self, url):
         # D1 must exercise fallback after either form of truncated response.
-        original = self.capture_module.urllib.request.urlopen
-        with mock.patch.object(self.capture_module.urllib.request, "urlopen", wraps=original) as fetch:
-            fetch.side_effect = lambda target, **kwargs: original(url, **kwargs)
+        original = self.capture_module.fetch
+        with mock.patch.object(self.capture_module, "fetch") as fetch:
+            fetch.side_effect = lambda target, timeout: original(url, timeout)
             first = self.capture_module.capture(("D1", "https://docs.discord.com/example", "test"))
         return first["attempts"]
 
@@ -354,10 +354,69 @@ class SourceCaptureRegression(unittest.TestCase):
 
     def test_failed_source_does_not_abort_collection(self):
         from concurrent.futures import ThreadPoolExecutor
-        with mock.patch.object(self.capture_module.urllib.request, "urlopen", side_effect=__import__("http.client").client.IncompleteRead(b"partial")):
+        with mock.patch.object(self.capture_module, "fetch", side_effect=OSError("injected worker failure")):
             with ThreadPoolExecutor(max_workers=2) as pool:
                 results = list(pool.map(self.capture_module.capture, [("P1", "http://example.invalid", "test"), ("P2", "http://example.invalid", "test")]))
         self.assertEqual([row["status"] for row in results], ["fetch-failed", "fetch-failed"])
+
+    def test_slow_drip_deadline_reaps_worker_and_preserves_healthy_result(self):
+        import socketserver
+        import time
+        stop = threading.Event()
+        connected = threading.Event()
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                request = self.request.recv(4096)
+                try:
+                    if b"/slow " in request:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 100000\r\n\r\n")
+                        connected.set()
+                        while not stop.wait(0.02):
+                            self.request.sendall(b"x")
+                    else:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+        processes = []
+        original_popen = subprocess.Popen
+        def popen(*args, **kwargs):
+            process = original_popen(*args, **kwargs)
+            processes.append(process)
+            return process
+        with socketserver.ThreadingTCPServer(("127.0.0.1", 0), Handler) as server:
+            thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05))
+            thread.start()
+            url = "http://127.0.0.1:" + str(server.server_address[1])
+            started = time.monotonic()
+            try:
+                with mock.patch.object(self.capture_module, "ATTEMPT_SECONDS", 0.8), \
+                     mock.patch.object(self.capture_module.subprocess, "Popen", side_effect=popen):
+                    original = self.capture_module.fetch
+                    def routed(target, timeout):
+                        path = "/slow" if target.startswith("https://docs.discord.com/") else "/healthy"
+                        return original(url + path, timeout)
+                    with mock.patch.object(self.capture_module, "fetch", side_effect=routed), mock.patch.object(self.capture_module, "SOURCES", [("D1", "https://docs.discord.com/example", "test"), ("P1", url, "test")]):
+                        result = self.capture_module.capture_all()
+                elapsed = time.monotonic() - started
+                self.assertTrue(connected.is_set(), "test must exercise actual slow HTTP traffic")
+                self.assertLess(elapsed, 3, "healthy output must not await the trickling body")
+                self.assertEqual(result[0]["attempts"][0]["error_type"], "TimeoutError")
+                self.assertEqual(result[0]["attempts"][1]["status"], "fetched")
+                self.assertEqual(result[1]["status"], "fetched")
+                self.assertTrue(processes)
+                self.assertTrue(all(process.poll() is not None for process in processes), "all fetch children must be reaped")
+            finally:
+                stop.set()
+                server.shutdown()
+                thread.join(timeout=2)
+        self.assertFalse(thread.is_alive())
+
+    def test_exhausted_collection_budget_starts_no_worker(self):
+        with mock.patch.object(self.capture_module.subprocess, "Popen") as popen:
+            with mock.patch.object(self.capture_module, "COLLECTION_SECONDS", 0):
+                rows = self.capture_module.capture_all()
+            self.assertTrue(all(row["status"] == "fetch-failed" for row in rows))
+        popen.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -405,3 +405,23 @@ and matrix outputs remain equal to the historical JSON: 140 abstract schedules,
 remain not-run. No public sources were refetched; Discord, assistive technology,
 GoDaddy, SQL persistence and restored-backup acceptance remain unverified.
 Fresh independent full-head review and native specification gates remain required.
+
+
+### Elapsed-time capture follow-up — 2026-11-13 UTC
+
+A socket inactivity timeout does not bound total duration when bytes keep arriving.
+Each public GET now runs in an owned disposable Python subprocess with a
+15-second elapsed-time limit, under a shared 60-second collection budget. The
+parent kills and reaps a timed-out child before starting fallback. DNS, redirects
+and body reading occur inside the bounded worker; normal process startup/cleanup
+adds small scheduling overhead. Expired collection budgets return failed attempt
+rows without launching more children. At most four workers run concurrently.
+
+A loopback source sends bytes every 20ms, below the socket timeout. At the
+0.8-second test deadline it fails, its worker is reaped, the pinned fallback
+route succeeds, and a healthy concurrent source remains present. An expired-budget
+regression proves no child starts. The prior collector accepted a slowly delivered
+body after about 1.23 seconds rather than enforcing the intended 0.8-second limit.
+Full-head test results and exact revision are recorded in campaign
+`receipts/platform-finish.json` and `platform-finish-logs`; historical source
+observations are preserved, with no new public-source or platform acceptance claim.
