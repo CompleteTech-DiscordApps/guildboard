@@ -322,3 +322,31 @@ the new regression verifies retained results and nonzero exit without public
 network access. This does not certify public sources or external platforms.
 Exact final-head normal/optimized test results and raw reproductions are recorded
 in campaign `receipts/platform-finish.json` and `platform-finish-logs`.
+
+
+### Upgrade-request validation follow-up — 2026-11-13 UTC
+
+The synthetic backend now validates the incoming handshake before emitting 101
+or a frame: GET/HTTP1.1 with Host, WebSocket Upgrade, a case-insensitive
+Connection upgrade token, version13, and one valid base64 key decoding to16
+bytes. Missing/malformed or duplicate singleton handshake fields are rejected;
+valid header-name/value case and Connection token lists remain accepted. These
+checks follow the relevant [RFC6455 section4.2.1 server-handshake requirements](https://www.rfc-editor.org/rfc/rfc6455.html#section-4.2.1),
+consulted 2026-11-13. This remains a bounded synthetic fixture, not a complete
+WebSocket implementation or product security boundary.
+
+The prior `3c63842` fixture failed15 malformed-request subcases. In actual local
+Nginx experiments, stripping Connection or version still allowed that old fixture
+to pass all12 checks; those two unsafe controls escaped. New proxy variants strip
+Connection, Sec-WebSocket-Key and Sec-WebSocket-Version in addition to Upgrade.
+All four must now receive their exact expected non101 rejection, so the backend
+cannot manufacture a valid-looking response when proxy forwarding is broken.
+Control transformations are shared by Docker/local modes and require exactly one
+matching configuration setting.
+
+The updated suite covers direct loopback handshake positives/negatives plus
+actual Nginx baseline and six unsafe variants: four stripped handshake headers,
+public private-assets and excessive read timeout. Normal and optimized exact-head
+results, old-fixture actual Nginx reports, raw failures and revision are in campaign
+`receipts/platform-finish.json` and `platform-finish-logs/t10-request-*`. Actual
+Docker, public TLS, Discord and GoDaddy acceptance remain unverified.

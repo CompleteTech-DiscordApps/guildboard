@@ -23,6 +23,33 @@ NGINX = "sha256:62ff2089abf5a9ed33bd232895bef5e22f7bb4b200675cec49a5ebc48e3d4ac8
 PYTHON = "sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70"
 
 
+HANDSHAKE_REJECTIONS = {
+    "strip-upgrade": "HTTP/1.1 426 Upgrade Required",
+    "strip-connection": "HTTP/1.1 400 Bad Request",
+    "strip-key": "HTTP/1.1 400 Bad Request",
+    "strip-version": "HTTP/1.1 426 Upgrade Required",
+}
+
+
+def apply_control(config, control):
+    replacements = {
+        "strip-upgrade": ("proxy_set_header Upgrade $http_upgrade;", "proxy_set_header Upgrade '';"),
+        "strip-connection": ("proxy_set_header Connection $connection_upgrade;", "proxy_set_header Connection '';"),
+        "strip-key": ("proxy_http_version 1.1;", "proxy_http_version 1.1;\n            proxy_set_header Sec-WebSocket-Key '';"),
+        "strip-version": ("proxy_http_version 1.1;", "proxy_http_version 1.1;\n            proxy_set_header Sec-WebSocket-Version '';"),
+        "publish-private-assets": ("location /private-assets/ { return 404; }", "location /private-assets/ { return 200 'exposed'; }"),
+        "long-read-timeout": ("proxy_read_timeout 2s;", "proxy_read_timeout 60s;"),
+    }
+    if control is None:
+        return config
+    if control not in replacements:
+        raise ValueError("unknown negative control")
+    old, new = replacements[control]
+    if config.count(old) != 1:
+        raise ValueError(control + " control requires exactly one " + old)
+    return config.replace(old, new)
+
+
 def docker(*args, input_text=None):
     result = subprocess.run(["docker", *args], capture_output=True, text=True, timeout=30, input=input_text)
     if result.returncode:
@@ -113,17 +140,7 @@ def run(control=None):
         create_owned_container(intended, proxy, "--network", "container:" + backend, *common, "--entrypoint", "sleep", NGINX, "3600")
         docker("start", proxy)
         config = (ROOT / "docs/research/t10-nginx-probe.conf").read_text()
-        if control == "strip-upgrade":
-            config = config.replace("proxy_set_header Upgrade $http_upgrade;", "proxy_set_header Upgrade '';" )
-        elif control == "publish-private-assets":
-            config = config.replace("location /private-assets/ { return 404; }", "location /private-assets/ { return 200 'exposed'; }")
-        elif control == "long-read-timeout":
-            setting = "proxy_read_timeout 2s;"
-            if config.count(setting) != 1:
-                raise ValueError("long-read-timeout control requires exactly one " + setting)
-            config = config.replace(setting, "proxy_read_timeout 60s;")
-        elif control is not None:
-            raise ValueError("unknown negative control")
+        config = apply_control(config, control)
         docker("exec", "-i", proxy, "sh", "-c", "cat > /tmp/nginx.conf", input_text=config)
         check = docker("exec", proxy, "nginx", "-c", "/tmp/nginx.conf", "-t")
         report["nginx_config_check"] = (check.stdout + check.stderr).strip()
@@ -144,7 +161,7 @@ def run(control=None):
         try:
             report["result"] = json.loads(docker("exec", backend, "python", "/tmp/probe.py", "probe").stdout)
         except subprocess.CalledProcessError as error:
-            expected = {"strip-upgrade": "websocket-status", "publish-private-assets": "private-assets-not-public",
+            expected = {**{name: "websocket-status" for name in HANDSHAKE_REJECTIONS}, "publish-private-assets": "private-assets-not-public",
                         "long-read-timeout": "idle-close-deadline"}
             try:
                 failure = json.loads(error.stdout)["failure"]
@@ -153,7 +170,7 @@ def run(control=None):
             if isinstance(failure, dict):
                 report["failure"] = failure
             if (not isinstance(failure, dict) or control not in expected or failure.get("check") != expected[control]
-                    or (control == "strip-upgrade" and failure.get("detail") != "HTTP/1.1 426 Upgrade Required")):
+                    or (control in HANDSHAKE_REJECTIONS and failure.get("detail") != HANDSHAKE_REJECTIONS[control])):
                 raise
             report["negative_control"] = {"variant": control, "detected": True, "failure": failure}
         if control and "negative_control" not in report:
@@ -222,16 +239,7 @@ def run_local(nginx_binary, control=None):
             config = config.replace("listen 8080;", f"listen 127.0.0.1:{proxy_port};")
             config = config.replace("127.0.0.1:8000", f"127.0.0.1:{server.server_port}")
             config = config.replace("/tmp/", temporary + "/")
-            if control == "strip-upgrade":
-                config = config.replace("proxy_set_header Upgrade $http_upgrade;", "proxy_set_header Upgrade '';" )
-            elif control == "publish-private-assets":
-                config = config.replace("location /private-assets/ { return 404; }", "location /private-assets/ { return 200 'exposed'; }")
-            elif control == "long-read-timeout":
-                if config.count("proxy_read_timeout 2s;") != 1:
-                    raise ValueError("long-read-timeout control requires exactly one proxy_read_timeout 2s;")
-                config = config.replace("proxy_read_timeout 2s;", "proxy_read_timeout 60s;")
-            elif control is not None:
-                raise ValueError("unknown negative control")
+            config = apply_control(config, control)
             path = root / "nginx.conf"
             path.write_text(config)
             report = {"observed_at": datetime.now(timezone.utc).isoformat(),
@@ -261,10 +269,10 @@ def run_local(nginx_binary, control=None):
                 try:
                     report["result"] = fixture.probe()
                 except fixture.ProbeFailure as error:
-                    expected = {"strip-upgrade": "websocket-status", "publish-private-assets": "private-assets-not-public",
+                    expected = {**{name: "websocket-status" for name in HANDSHAKE_REJECTIONS}, "publish-private-assets": "private-assets-not-public",
                                 "long-read-timeout": "idle-close-deadline"}
                     if (control not in expected or error.check != expected[control]
-                            or (control == "strip-upgrade" and error.detail != "HTTP/1.1 426 Upgrade Required")):
+                            or (control in HANDSHAKE_REJECTIONS and error.detail != HANDSHAKE_REJECTIONS[control])):
                         raise
                     report["negative_control"] = {"variant": control, "detected": True, "failure": str(error)}
                 if control and "negative_control" not in report:
@@ -321,7 +329,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--nginx-binary", type=Path, help="Use an explicit local binary with owned POSIX loopback processes")
-    parser.add_argument("--negative-control", choices=["strip-upgrade", "publish-private-assets", "long-read-timeout"])
+    parser.add_argument("--negative-control", choices=[*HANDSHAKE_REJECTIONS, "publish-private-assets", "long-read-timeout"])
     args = parser.parse_args()
     try:
         report = run_local(args.nginx_binary, args.negative_control) if args.nginx_binary else run(args.negative_control)

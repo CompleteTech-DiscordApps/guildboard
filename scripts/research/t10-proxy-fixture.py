@@ -1,5 +1,6 @@
 """Synthetic backend/client for the isolated real-Nginx probe; no application code."""
 import base64
+import binascii
 import hashlib
 import http.client
 import http.server
@@ -36,9 +37,34 @@ class Handler(http.server.BaseHTTPRequestHandler):
             threading.Thread(target=self.server.shutdown, daemon=True).start()
             return
         if self.path in ("/ws", "/idle"):
-            key = self.headers.get("Sec-WebSocket-Key", "")
-            if self.headers.get("Upgrade", "").lower() != "websocket" or not key:
+            if self.request_version != "HTTP/1.1" or not self.headers.get("Host", "").strip():
+                self.send_error(400)
+                return
+            upgrades = self.headers.get_all("Upgrade", [])
+            if len(upgrades) != 1 or upgrades[0].strip().lower() != "websocket":
                 self.send_error(426)
+                return
+            tokens = {token.strip().lower() for token in ",".join(self.headers.get_all("Connection", [])).split(",")}
+            if "upgrade" not in tokens:
+                self.send_error(400)
+                return
+            versions = self.headers.get_all("Sec-WebSocket-Version", [])
+            if len(versions) != 1 or versions[0].strip() != "13":
+                self.send_response(426)
+                self.send_header("Sec-WebSocket-Version", "13")
+                self.send_header("Content-Length", "0")
+                self.send_header("Connection", "close")
+                self.end_headers()
+                self.close_connection = True
+                return
+            keys = self.headers.get_all("Sec-WebSocket-Key", [])
+            key = keys[0].strip() if len(keys) == 1 else ""
+            try:
+                decoded = base64.b64decode(key, validate=True)
+            except (binascii.Error, ValueError):
+                decoded = b""
+            if len(decoded) != 16:
+                self.send_error(400)
                 return
             accept = base64.b64encode(hashlib.sha1((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()).digest()).decode()
             self.send_response(101)

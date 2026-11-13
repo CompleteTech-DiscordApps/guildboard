@@ -77,6 +77,73 @@ class FixtureIdleRegression(unittest.TestCase):
                 FIXTURE.idle_close()
 
 
+class UpgradeRequestRegression(unittest.TestCase):
+    def setUp(self):
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), FIXTURE.Handler)
+        self.server.idle_stop = threading.Event()
+        self.thread = threading.Thread(target=self.server.serve_forever)
+        self.thread.start()
+        self.headers = [("Host", "research.invalid"), ("Upgrade", "websocket"), ("Connection", "Upgrade"),
+                        ("Sec-WebSocket-Version", "13"), ("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")]
+
+    def tearDown(self):
+        self.server.idle_stop.set()
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=2)
+        self.assertFalse(self.thread.is_alive())
+
+    def exchange(self, headers, method="GET", version="HTTP/1.1"):
+        with socket.create_connection(self.server.server_address, timeout=2) as client:
+            request = method + " /ws " + version + "\r\n" + "\r\n".join(name + ": " + value for name, value in headers) + "\r\n\r\n"
+            client.sendall(request.encode("latin-1"))
+            with client.makefile("rb") as stream:
+                status = int(stream.readline().split()[1])
+                response_headers = {}
+                while True:
+                    line = stream.readline()
+                    if line == b"\r\n":
+                        break
+                    if not line:
+                        self.fail("truncated fixture response")
+                    name, value = line.decode().split(":", 1)
+                    response_headers[name.lower()] = value.strip()
+                payload = stream.read(7) if status == 101 else stream.read(int(response_headers.get("content-length", 0)))
+                return status, response_headers, payload
+
+    def test_case_and_connection_token_list_are_valid(self):
+        headers = [(name.lower(), "keep-alive, UpGrAdE" if name == "Connection" else "WebSocket" if name == "Upgrade" else value) for name, value in self.headers]
+        status, _, frame = self.exchange(headers)
+        self.assertEqual(status, 101)
+        self.assertEqual(frame, b"\x81\x05hello")
+
+    def test_missing_or_malformed_request_headers_never_upgrade_or_send_frame(self):
+        invalid = [(name, None) for name in ("Host", "Upgrade", "Connection", "Sec-WebSocket-Version", "Sec-WebSocket-Key")]
+        invalid += [("Upgrade", "h2c"), ("Connection", "notupgrade"), ("Connection", "keep-alive"),
+                    ("Sec-WebSocket-Version", "12"), ("Sec-WebSocket-Version", "13x"),
+                    ("Sec-WebSocket-Key", "not-base64!"), ("Sec-WebSocket-Key", "eA=="),
+                    ("Sec-WebSocket-Key", "eHh4eHh4eHh4eHh4eHh4eHg="), ("Sec-WebSocket-Key", "ÿ")]
+        for name, value in invalid:
+            headers = [(key, value if key == name else old) for key, old in self.headers if key != name or value is not None]
+            with self.subTest(header=name, value=value):
+                status, _, payload = self.exchange(headers)
+                self.assertIn(status, (400, 426))
+                self.assertNotIn(b"\x81\x05hello", payload)
+        for name in ("Upgrade", "Sec-WebSocket-Key", "Sec-WebSocket-Version"):
+            headers = self.headers + [next(item for item in self.headers if item[0] == name)]
+            with self.subTest(duplicate=name):
+                status, _, payload = self.exchange(headers)
+                self.assertNotEqual(status, 101)
+                self.assertNotIn(b"\x81\x05hello", payload)
+
+    def test_wrong_method_or_http_version_cannot_upgrade(self):
+        for kwargs in ({"method": "POST"}, {"version": "HTTP/1.0"}):
+            with self.subTest(kwargs=kwargs):
+                status, _, payload = self.exchange(self.headers, **kwargs)
+                self.assertNotEqual(status, 101)
+                self.assertNotIn(b"\x81\x05hello", payload)
+
+
 class LocalSetupCleanupRegression(unittest.TestCase):
     def test_setup_failures_close_backend_listener_and_thread(self):
         server_factory = http.server.ThreadingHTTPServer
@@ -566,6 +633,16 @@ class ActualNginxControls(unittest.TestCase):
         result = self.run_probe("strip-upgrade")
         self.assertTrue(result["negative_control"]["detected"])
         self.assert_cleanup(result)
+
+    def test_dropped_connection_key_and_version_are_detected(self):
+        for control in ("strip-connection", "strip-key", "strip-version"):
+            with self.subTest(control=control):
+                result = self.run_probe(control)
+                self.assertTrue(result["negative_control"]["detected"])
+                failure = result["negative_control"]["failure"]
+                detail = failure["detail"] if isinstance(failure, dict) else failure
+                self.assertIn(PROBE.HANDSHAKE_REJECTIONS[control], detail)
+                self.assert_cleanup(result)
 
     def test_public_private_route_is_detected(self):
         result = self.run_probe("publish-private-assets")
