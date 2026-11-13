@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from math import isfinite
 
 MODES = ('open', 'moderated', 'locked', 'request-to-draw')
+MAX_SCOPE_HISTORY = 8  # finite research budget; never evict a replay fence
 
 
 @dataclass(frozen=True)
@@ -72,6 +73,13 @@ def admitted(state, packet, *, session_valid, read_allowed):
 
 
 @dataclass(frozen=True)
+class StreamMemory:
+    authority: Authority
+    sequence: int
+    presenter_view: tuple | None
+
+
+@dataclass(frozen=True)
 class Viewer:
     authority: Authority
     personal: tuple = (0, 0, 1)
@@ -79,22 +87,32 @@ class Viewer:
     following: bool = False
     sequence: int = -1
     presenter_view: tuple | None = None
+    history: tuple[StreamMemory, ...] = ()
 
 
 def snapshot(viewer, authority):
-    """Trusted current snapshot after reconnect/change; explicit rejoin required.
+    """Trusted current snapshot; explicit Follow required after any switch.
 
-    Different scope resets personal view too; no cross-board viewport carryover.
-    Same-scope older snapshots must not regress the fence.
+    Retain bounded per-scope stream fences, never personal navigation. Exhaustion
+    fails explicitly without evicting a fence; a fresh validated stream baseline
+    is outside this model. No untrusted packet can add a scope to history.
     """
-    if authority.scope != viewer.authority.scope:
-        return Viewer(authority)
-    if authority.revision < viewer.authority.revision:
+    history = {entry.authority.scope: entry for entry in viewer.history}
+    history[viewer.authority.scope] = StreamMemory(
+        viewer.authority, viewer.sequence, viewer.presenter_view)
+    previous = history.get(authority.scope)
+    if previous is not None and authority.revision < previous.authority.revision:
         return viewer
-    same_stream = authority.epoch == viewer.authority.epoch
-    return Viewer(authority, personal=viewer.personal, displayed=viewer.personal,
-                  sequence=viewer.sequence if same_stream else -1,
-                  presenter_view=viewer.presenter_view if same_stream else None)
+    if previous is None and len(history) >= MAX_SCOPE_HISTORY:
+        raise ValueError('scope history budget exhausted; validated fresh stream required')
+    same_stream = previous is not None and authority.epoch == previous.authority.epoch
+    sequence = previous.sequence if same_stream else -1
+    presenter_view = previous.presenter_view if same_stream else None
+    history[authority.scope] = StreamMemory(authority, sequence, presenter_view)
+    personal = viewer.personal if authority.scope == viewer.authority.scope else (0, 0, 1)
+    return Viewer(authority, personal=personal, displayed=personal,
+                  sequence=sequence, presenter_view=presenter_view,
+                  history=tuple(history.values()))
 
 
 def follow(viewer):
@@ -118,9 +136,9 @@ def navigate(viewer, view):
 
 def receive(viewer, packet):
     # Client receives only server-admitted packets, but stale delivery still exists.
-    if (not viewer.following or
-            not admitted(viewer.authority, packet, session_valid=True, read_allowed=True)
+    if (not admitted(viewer.authority, packet, session_valid=True, read_allowed=True)
             or packet.sequence <= viewer.sequence):
         return viewer
-    return replace(viewer, displayed=packet.view, sequence=packet.sequence,
+    return replace(viewer, displayed=packet.view if viewer.following else viewer.displayed,
+                   sequence=packet.sequence,
                    presenter_view=packet.view)

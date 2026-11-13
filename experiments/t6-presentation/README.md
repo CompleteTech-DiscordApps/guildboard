@@ -41,9 +41,11 @@ experiment consumes trusted policy decisions rather than choosing their contract
    the follow/rejoin regression. After seq10, Unfollow or a same-stream reconnect
    restores personal navigation; explicit Follow must restore the cached seq10
    presenter viewport immediately while duplicate seq10 remains rejected. Cache
-   the last accepted presenter view with its watermark, preserve both across a
-   same-stream snapshot, and discard both on a scope or epoch change. New streams
-   show personal navigation until their first accepted packet. Personal navigation
+   the latest admitted presenter view with its watermark even while unfollowed,
+   preserving both across same-stream snapshots. A scope switch resets displayed
+   and personal navigation, while retaining only that scope's stream cache for
+   safe explicit rejoin. An epoch change clears that stream's cache. New streams
+   show personal navigation until their first admitted packet. Personal navigation
    remains separate throughout.
 
 These are recommendations for review, not accepted policy. Sequence-only can be
@@ -94,12 +96,39 @@ cases additionally reject huge integers without float overflow and retain the
 same-stream sequence watermark across reconnect (seq10 then delayed seq1).
 Displayed-viewport regressions cover Unfollow/rejoin, navigation/rejoin and
 same-stream reconnect/rejoin without a newer packet, plus epoch and guild/board
-reset. The three rejoin assertions failed before the remediation and pass after
-it. A new epoch or scope resets the watermark and cached presenter viewport; an
-unchanged stream preserves both. These are
+reset. The three rejoin assertions failed before that remediation and passed
+after it. That historical version reset the watermark and cached presenter
+viewport on a scope change; the follow-up below corrects its round-trip gap. These are
 bounded deterministic schedules, not exhaustive distributed-state verification.
 Calls serialize atomically in memory; there is no claim about transaction locks,
 multi-process behavior, fairness, persistence, liveness, or real network ordering.
+
+## 2026-11-12 follow-up: passive receipt and scope round trips
+
+The current model passes **18 tests**. New regressions first failed against the
+previous candidate `d480b5d99af8acfd4b493fac94e958392f9493d0`: a valid update while
+unfollowed was lost, and A → B → A reopened A's old sequence numbers. `receive`
+now updates the current stream's sequence/cache while unfollowed without changing
+personal or displayed navigation. Explicit first Follow and rejoin use the latest
+admitted view even if the presenter sends nothing afterward. Invalid, stale-epoch,
+foreign-scope and duplicate packets cannot change that cache.
+
+A trusted snapshot switch retains per-scope authority revision, sequence and
+presenter view in an **eight-scope maximum** in-memory history. Returning to A
+resets personal/displayed navigation; explicit Follow restores only A's own
+same-epoch view and watermark. Older authority snapshots for a known scope are
+rejected. A newer epoch resets that scope's stream, and packets from its old
+epoch remain rejected. The history never caches personal navigation or imports
+another scope's view into the active display.
+
+This finite research model never evicts a replay fence: a ninth distinct scope
+raises `ValueError` without changing the caller's immutable Viewer. Recovery
+requires a fresh validated stream baseline, which is deliberately not modeled.
+The limit is an experiment bound, not an accepted UI limit, wire contract, or
+production subscription design. The tests cover first Follow, rejoin after an
+unfollowed update, same-guild/cross-guild round trips, stale authority, new epochs,
+invalid packets and no-state-change history exhaustion. Exact candidate and raw
+validation logs are in the campaign handoff; no real transport or client ran.
 
 ## Primary sources and evaluated versions
 

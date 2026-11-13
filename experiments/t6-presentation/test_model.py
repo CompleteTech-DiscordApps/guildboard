@@ -29,7 +29,9 @@ class PresentationResearch(unittest.TestCase):
     def test_navigation_exits_follow_and_rejoin_restores_latest_personal_view(self):
         v = navigate(receive(self.v, self.p), (33, 44, 3))
         self.assertFalse(v.following)
-        self.assertEqual(receive(v, replace(self.p, sequence=1)), v)
+        cached = receive(v, replace(self.p, sequence=1))
+        self.assertEqual(cached.displayed, v.displayed)
+        self.assertEqual(cached.sequence, 1)
         rejoined = follow(v)
         self.assertEqual(rejoined.displayed, self.p.view)
         self.assertEqual(rejoined.personal, (33, 44, 3))
@@ -158,7 +160,7 @@ class PresentationResearch(unittest.TestCase):
         self.assertEqual(fresh.sequence, 0)
         self.assertEqual(fresh.displayed, current.view)
 
-    def test_scope_change_clears_presenter_view_and_watermark(self):
+    def test_new_scope_starts_empty_and_return_restores_own_stream(self):
         personal = navigate(self.v, (33, 44, 3))
         latest = replace(self.p, sequence=10, view=(10, 10, 2))
         v = receive(follow(personal), latest)
@@ -171,12 +173,69 @@ class PresentationResearch(unittest.TestCase):
                 self.assertEqual(other.displayed, other.personal)
                 self.assertEqual(receive(other, latest), other)
                 returned = follow(snapshot(other, self.a))
-                self.assertEqual(returned.sequence, -1)
-                self.assertEqual(returned.displayed, returned.personal)
+                self.assertEqual(returned.sequence, 10)
+                self.assertEqual(returned.displayed, latest.view)
                 current = replace(self.p, scope=scope)
                 other = receive(other, current)
                 self.assertEqual(other.sequence, 0)
                 self.assertEqual(other.displayed, current.view)
+
+    def test_first_follow_and_rejoin_use_updates_received_while_unfollowed(self):
+        latest = replace(self.p, sequence=11, view=(110, 110, 2))
+        for initial in (Viewer(self.a), receive(self.v, self.p)):
+            with self.subTest(initial=initial):
+                personal = navigate(initial, (3, 4, 1))
+                updated = receive(personal, latest)
+                self.assertEqual(updated.displayed, personal.displayed)
+                self.assertEqual(updated.personal, personal.personal)
+                self.assertFalse(updated.following)
+                self.assertEqual(follow(updated).displayed, latest.view)
+                self.assertEqual(updated.sequence, 11)
+                self.assertEqual(receive(updated, self.p), updated)
+                for bad in (replace(latest, scope=('foreign', 'board')),
+                            replace(latest, epoch=0), replace(latest, sender='mallory')):
+                    self.assertEqual(receive(updated, bad), updated)
+
+    def test_scope_roundtrip_preserves_replay_fence_without_cross_scope_display(self):
+        latest = replace(self.p, sequence=10, view=(10, 10, 2))
+        for scope in [('guild-a', 'board-b'), ('guild-b', 'board-a')]:
+            v = receive(self.v, latest)
+            other = snapshot(v, replace(self.a, scope=scope))
+            self.assertEqual(other.displayed, (0, 0, 1))
+            returned = snapshot(other, self.a)
+            self.assertFalse(returned.following)
+            self.assertEqual(returned.displayed, (0, 0, 1))
+            self.assertEqual(returned.sequence, 10)
+            rejoined = follow(returned)
+            self.assertEqual(rejoined.displayed, latest.view)
+            self.assertEqual(receive(rejoined, replace(self.p, sequence=1)), rejoined)
+            self.assertEqual(receive(rejoined, replace(latest, sequence=11)).sequence, 11)
+
+    def test_scope_history_bound_fails_closed_without_eviction(self):
+        v = receive(self.v, replace(self.p, sequence=10))
+        for i in range(1, 8):
+            v = snapshot(v, replace(self.a, scope=('guild-a', f'board-{i}')))
+        before = v
+        with self.assertRaisesRegex(ValueError, 'scope history'):
+            snapshot(v, replace(self.a, scope=('guild-a', 'overflow')))
+        self.assertEqual(v, before)
+        returned = follow(snapshot(v, self.a))
+        self.assertEqual(returned.sequence, 10)
+        self.assertEqual(receive(returned, self.p), returned)
+
+    def test_returned_scope_rejects_stale_authority_and_resets_new_epoch(self):
+        newer, _ = transition(self.a, self.a.revision, control_allowed=True, presenter='alice')
+        v = receive(follow(Viewer(newer)), replace(self.p, epoch=newer.epoch, sequence=10))
+        other = snapshot(v, replace(self.a, scope=('guild-b', 'board-a')))
+        self.assertEqual(snapshot(other, self.a), other)
+        newest, _ = transition(newer, newer.revision, control_allowed=True, presenter='alice')
+        returned = snapshot(other, newest)
+        self.assertEqual(returned.sequence, -1)
+        self.assertIsNone(returned.presenter_view)
+        self.assertEqual(returned.displayed, returned.personal)
+        self.assertEqual(receive(returned, replace(self.p, epoch=newer.epoch)), returned)
+        updated = receive(returned, replace(self.p, epoch=newest.epoch))
+        self.assertEqual(follow(updated).displayed, self.p.view)
 
     def test_naive_follow_snapshot_overwrites_personal_counterexample(self):
         displayed = receive(self.v, self.p)
