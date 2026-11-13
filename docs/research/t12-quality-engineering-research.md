@@ -386,3 +386,22 @@ failures and 14 malformed-input errors, confirming the gaps. Raw results are
 `t12-review3-planning.log` in the campaign log directory. Fresh derived matrix
 JSON remains equal to the historical artifact. External verification is still
 not-run; fresh independent review is required.
+
+
+### Source-capture follow-up — 2026-11-13 UTC
+
+Code revision `97f53775f08f747d988e9f8c80b49f8a82bf7d11` rejects short bodies against declared Content-Length
+and contains HTTP framing errors per attempt. An incomplete response cannot gain a
+successful content hash. Discord fallback still runs after these failures, and an
+unrecoverable source does not discard the other concurrent source results. Existing
+source observations above remain historical; they were not refetched or rewritten.
+
+On Linux / Python 3.14.8, 30 focused tests passed. Owned loopback HTTP fixtures
+exercise truncated length and broken chunk framing, fallback, and independent source
+failure. All three new cases expose failures against `60830de`; see campaign
+`platform-finish-logs/t12-before.log` and `t12-tests-working.log`. Fresh schedule
+and matrix outputs remain equal to the historical JSON: 140 abstract schedules,
+980 boundaries, 1,536 seeded actions and five detected controls; ten external rows
+remain not-run. No public sources were refetched; Discord, assistive technology,
+GoDaddy, SQL persistence and restored-backup acceptance remain unverified.
+Fresh independent full-head review and native specification gates remain required.
