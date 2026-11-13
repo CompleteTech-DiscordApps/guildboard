@@ -225,3 +225,23 @@ T9 privacy/tenant review and T12/T13 real verification/release gates. #228/#229
 native blockers and required current-head Copilot/independent Sol MAX, actual
 functional/security/consumer/CODEOWNER review, hosted CI, merge and post-merge
 checks remain pending; no architecture adoption or issue closure is implied.
+
+## Campaign harness recheck, 2026-11-13 UTC
+
+At `07f3e25575b9a3a89704a9f7835a846ba3664bce`, the harness now
+persists a blocked report when Docker discovery, cached-image inspection or
+process startup fails, including the error and environment. Three negative
+startup controls passed. Previously those failures escaped before any output
+report was written. No preflight failure is counted as browser coverage.
+
+The exact Docker probe is blocked on this host by Docker socket permission
+denial; no container was started and no Docker permissions were changed.
+Separately, all 23 unchanged browser assertions passed with Playwright 1.56.1,
+Node 26.13.0 and sandbox-enabled system Chromium 155.0.8059.84 on Arch Linux.
+The fallback loaded the standalone fixture with `setContent`; it did not run
+the original Docker/MCP environment. Agent inspection of its screenshot found
+the expected selected object, field focus, cleared error and draft status.
+The original historical evidence and screenshot remain unchanged; separate
+results are appended under `campaign_verifications` in the evidence JSON.
+These local checks do not satisfy the remaining client/AT/hardware/consumer
+review gates or unblock #229.
