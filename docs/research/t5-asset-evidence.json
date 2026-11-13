@@ -1,0 +1,12 @@
+{
+  "copied_asset_hashes_equal": true,
+  "corrupt_asset_rejected": true,
+  "evidence_kind": "real-local-filesystem-fixture-not-durable-backup-system",
+  "limits": "8 files, 1024 total bytes; synthetic local fixture only",
+  "manifest": {
+    "asset-a": "e75c69ac8b168a784ebdd2e63caaf9996c58636ed1f4336e5672df507b3b409a"
+  },
+  "manifest_sha256": "475d00f5dd2dba19d4de30aea6ed9fd8b8ef79cb856d7cf3527d301601d32658",
+  "missing_asset_rejected": true,
+  "result": "pass"
+}

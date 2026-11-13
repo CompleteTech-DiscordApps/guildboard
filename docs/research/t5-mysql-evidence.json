@@ -1,0 +1,83 @@
+{
+  "checks": [
+    {
+      "details": "Uncommitted board/receipt/event/outbox all absent after SIGKILL + restart.",
+      "id": "D01-uncommitted-crash-rollback",
+      "result": "pass"
+    },
+    {
+      "details": "Commit witness observed before process kill; durable bundle survived. No application ACK modeled.",
+      "id": "D02-committed-crash-survival",
+      "result": "pass"
+    },
+    {
+      "details": "Duplicate identity rejected 1062; foreign composite parent rejected 1452; no fixture changes.",
+      "id": "D03-scoped-constraints",
+      "result": "pass"
+    },
+    {
+      "details": {
+        "current_after_writer": "3\t3\t3\t3\tstate-3",
+        "snapshot_after": [
+          "2\t2\t2\t2\tstate-2"
+        ],
+        "snapshot_before": [
+          "2\t2\t2\t2\tstate-2"
+        ]
+      },
+      "id": "D04-consistent-cut-with-concurrent-writer",
+      "result": "pass"
+    },
+    {
+      "details": "Persisted observed cut 2 and hash; one ordered after-state fixture event reconstructs state-3. Not a canvas reducer, automated snapshot publisher or compaction proof.",
+      "id": "D07-checkpoint-plus-ordered-tail",
+      "result": "pass"
+    },
+    {
+      "details": "New lineage/fence, old receipts preserved; stale conditional update affects zero rows. This is fixture SQL, not the application's read-before-receipt decision implementation.",
+      "id": "D05-restore-preserves-retired-receipts",
+      "result": "pass"
+    },
+    {
+      "details": {
+        "canonical_fixture_rows_sha256": "e54193c275806848bdc636e65445871e95fadef4af2f171af7a98f5b278a9138",
+        "dump_utf8_sha256": "7ce9bb2f1c9ca99e73bdab28d719edbee6eda91bee123cc1dcf528feb59ff4d3",
+        "restore_target": "fresh separate schema on the same isolated engine"
+      },
+      "id": "D06-logical-restore-row-equality",
+      "result": "pass"
+    }
+  ],
+  "cleanup": {
+    "container_absent": true,
+    "ownership_labels_checked_before_mutation": true,
+    "volume_absent": true
+  },
+  "docker_context": "desktop-linux",
+  "engine": "mysql",
+  "evidence_kind": "isolated-real-database-fixture-not-product-or-vps",
+  "image_id": "sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242",
+  "limits": {
+    "cpus": 1,
+    "memory_bytes": 805306368,
+    "network": "none",
+    "pids": 256,
+    "published_ports": []
+  },
+  "observed_at_utc": "2026-10-25T23:47:28.534506+00:00",
+  "repo_digests": [
+    "mysql@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242"
+  ],
+  "requested_image": "mysql@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242",
+  "result": "pass",
+  "run_id": "guildboard-t5-15e3647e75dc",
+  "server_version": "8.4.11",
+  "variables": [
+    "innodb_doublewrite\tON",
+    "innodb_flush_log_at_trx_commit\t1",
+    "innodb_flush_method\tO_DIRECT",
+    "log_bin\tON",
+    "sync_binlog\t1",
+    "transaction_isolation\tREPEATABLE-READ"
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "evidence_kind": "document-response-metadata-not-platform-verification",
+  "sources": [
+    {
+      "bytes": 617047,
+      "document_version": "MySQL 8.4 manual",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:46:27.031863+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html",
+      "http_status": 200,
+      "id": "M1",
+      "observed_at_utc": "2026-10-25T23:48:22.251766+00:00",
+      "sha256": "2fcb07895a4491a1c523821d3cae95e37e5d8e0ebac223836d85fde17f9fbc0b",
+      "status": "fetched",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html"
+    },
+    {
+      "bytes": 97219,
+      "document_version": "MySQL 8.4 manual",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:46:27.032354+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html",
+      "http_status": 200,
+      "id": "M2",
+      "observed_at_utc": "2026-10-25T23:48:22.252263+00:00",
+      "sha256": "674de4ffe73de75c3d6fbef343304ca20a8e8ca270906d3df4dd1e8527e68c89",
+      "status": "fetched",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html"
+    },
+    {
+      "bytes": 101062,
+      "document_version": "MySQL 8.4 manual",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:46:27.032673+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-recovery.html",
+      "http_status": 200,
+      "id": "M3",
+      "observed_at_utc": "2026-10-25T23:48:22.252793+00:00",
+      "sha256": "1376faae9c76f298c7701b411fa0f5f638059bf3ced84f1275429e49bd082692",
+      "status": "fetched",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-recovery.html"
+    },
+    {
+      "bytes": 309087,
+      "document_version": "MySQL 8.4 manual",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:46:27.032961+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://dev.mysql.com/doc/refman/8.4/en/mysqldump.html",
+      "http_status": 200,
+      "id": "M4",
+      "observed_at_utc": "2026-10-25T23:48:22.253245+00:00",
+      "sha256": "296d9a4ed56aa0ddba436893e9948364ac6cd222c0c3b39c5f086b89f3a2330a",
+      "status": "fetched",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/mysqldump.html"
+    },
+    {
+      "bytes": 125675,
+      "document_version": "MySQL 8.4 manual",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:46:27.265751+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html",
+      "http_status": 200,
+      "id": "M5",
+      "observed_at_utc": "2026-10-25T23:48:22.679303+00:00",
+      "sha256": "59bcff9f12addcbc76adf28baed367f2df4e04d2bfc051c8a39dd11c019129ac",
+      "status": "fetched",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html"
+    },
+    {
+      "bytes": 55538,
+      "document_version": "MySQL 8.4 manual",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:46:27.266089+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://dev.mysql.com/doc/refman/8.4/en/constraint-foreign-key.html",
+      "http_status": 200,
+      "id": "M6",
+      "observed_at_utc": "2026-10-25T23:48:22.703468+00:00",
+      "sha256": "e98531ff8a3a157f5361a44006cb72d7b6e91aa627eaa157e8963856e2b64b20",
+      "status": "fetched",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/constraint-foreign-key.html"
+    },
+    {
+      "bytes": 142500,
+      "document_version": "rolling MariaDB docs; compare measured 11.4.13",
+      "earlier_attempt": {
+        "error_type": "ValueError",
+        "observed_at_utc": "2026-10-25T23:46:27.268201+00:00",
+        "reason": "full HTML exceeded 4 MiB observation budget; use official Markdown representation",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://mariadb.com/docs/server/server-usage/storage-engines/innodb/innodb-system-variables.md",
+      "http_status": 200,
+      "id": "R1",
+      "observed_at_utc": "2026-10-25T23:48:22.831213+00:00",
+      "sha256": "413187368c5add8c4316275306a4574e3b13a3ad99cd286e66d815bd9d731c5c",
+      "status": "fetched",
+      "url": "https://mariadb.com/docs/server/server-usage/storage-engines/innodb/innodb-system-variables"
+    },
+    {
+      "bytes": 2081805,
+      "document_version": "rolling MariaDB docs",
+      "final_url": "https://mariadb.com/docs/server/reference/sql-statements/transactions/start-transaction",
+      "http_status": 200,
+      "id": "R2",
+      "observed_at_utc": "2026-10-25T23:46:27.295064+00:00",
+      "sha256": "7bd254797438ebf4e28a825959a03d007531002dd2e5f2ea383877165e5a9c61",
+      "status": "fetched",
+      "url": "https://mariadb.com/docs/server/reference/sql-statements/transactions/start-transaction"
+    },
+    {
+      "bytes": 1991495,
+      "document_version": "rolling MariaDB docs",
+      "final_url": "https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/full-backup-and-restore-with-mariadb-backup",
+      "http_status": 200,
+      "id": "R3",
+      "observed_at_utc": "2026-10-25T23:46:27.392364+00:00",
+      "sha256": "4a099c4c2529f99503f5a2f963051448e1e7f6ca835f7829237186c8a5cbe0a5",
+      "status": "fetched",
+      "url": "https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/full-backup-and-restore-with-mariadb-backup"
+    },
+    {
+      "bytes": 3695372,
+      "document_version": "rolling MariaDB docs",
+      "final_url": "https://mariadb.com/docs/server/clients-and-utilities/backup-restore-and-import-clients/mariadb-dump",
+      "http_status": 200,
+      "id": "R4",
+      "observed_at_utc": "2026-10-25T23:46:27.400892+00:00",
+      "sha256": "2bc6f449e270b0f7591f417158be01a3945f73b7f66e0ccf5f565e32e99467c9",
+      "status": "fetched",
+      "url": "https://mariadb.com/docs/server/clients-and-utilities/backup-restore-and-import-clients/mariadb-dump"
+    },
+    {
+      "bytes": 2074236,
+      "document_version": "rolling MariaDB docs",
+      "final_url": "https://mariadb.com/docs/server/reference/data-types/string-data-types/json",
+      "http_status": 200,
+      "id": "R5",
+      "observed_at_utc": "2026-10-25T23:46:27.821084+00:00",
+      "sha256": "afa2e8b30b5acfcb5ed91888612237f45ee583deac6726e94a199a9a423f3410",
+      "status": "fetched",
+      "url": "https://mariadb.com/docs/server/reference/data-types/string-data-types/json"
+    },
+    {
+      "bytes": 15152,
+      "document_version": "Linux man-pages fsync(2), rolling publication",
+      "final_url": "https://man7.org/linux/man-pages/man2/fsync.2.html",
+      "http_status": 200,
+      "id": "L1",
+      "observed_at_utc": "2026-10-25T23:46:27.841401+00:00",
+      "sha256": "f0a986d21500222ecb69580fc7a910f346c6b1ff1005ca515501fb05bb5d91f5",
+      "status": "fetched",
+      "url": "https://man7.org/linux/man-pages/man2/fsync.2.html"
+    }
+  ]
+}
