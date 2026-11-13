@@ -1,0 +1,38 @@
+{
+  "arbitrary_ttl_ticks": 10,
+  "evidence_kind": "hypothetical-policy-model-only",
+  "hard_denial_bypasses": {
+    "candidate": 0,
+    "unsafe_allow_first": 1860
+  },
+  "limitations": [
+    "Trusted booleans/roles and atomic commit are assumptions, not verified inputs.",
+    "No Discord API, SQL, client transport, production policy or elapsed-time guarantee.",
+    "TTL bounds cache age, not age of Discord truth or upstream consistency delay.",
+    "Control outcomes are decisions only; no grant/mapping persistence implemented."
+  ],
+  "matrix_cases": 2048,
+  "model_version": 1,
+  "traces": {
+    "application_revoke_after_prepare_before_commit": {
+      "effects_unchanged": true,
+      "outcome": "policy_stale"
+    },
+    "delayed_refresh_after_known_invalidation": {
+      "generation_fenced_publish": false,
+      "unsafe_unconditional_publish": true
+    },
+    "external_change_unobserved_within_ttl": {
+      "actual_external_member": false,
+      "cached_member": true,
+      "meaning": "Residual acceptance window; no instantaneous external freshness guarantee.",
+      "outcome": "new_write"
+    },
+    "observed_external_removal": {
+      "outcome": "read_denied"
+    },
+    "same_cache_at_expiry": {
+      "outcome": "evidence_stale"
+    }
+  }
+}
