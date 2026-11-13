@@ -1,0 +1,142 @@
+{
+  "observed_at_utc": "2026-10-26T00:42:00.446750+00:00",
+  "evidence_kind": "auditor-robustness-follow-up-not-journey-or-product-verification",
+  "base_commit": "a32a7823780edcab184e7667f7f4554ba83c4bb7",
+  "environment": {
+    "execution": "Linux via existing WSL session",
+    "python": "3.12.3"
+  },
+  "findings": [
+    "486-boolean-schema-tag",
+    "486-symlink-loop-json-error"
+  ],
+  "before_fix": {
+    "focused_tests": 14,
+    "failures": 3,
+    "boolean_schema_cli": {
+      "exit_code": 0,
+      "evidence_valid": true,
+      "product_verified": false
+    },
+    "self_loop_cli": {
+      "exit_code": 1,
+      "stdout": "empty",
+      "stderr": "RuntimeError traceback"
+    },
+    "log_sha256": "1eda30e2de84766eea47b10fe17e09d9dc996925255a4922a619565a556bc928"
+  },
+  "after_fix": {
+    "focused_tests": 14,
+    "passed": 14,
+    "skipped": 0,
+    "acceptance_cases": {
+      "platform": "Linux",
+      "python": "3.12.3",
+      "direct_boolean_errors": [
+        "unsupported manifest schema"
+      ],
+      "cases": {
+        "boolean_schema": {
+          "exit_code": 1,
+          "stdout": {
+            "evidence_valid": false,
+            "step_counts": {},
+            "errors": [
+              "unsupported manifest schema"
+            ],
+            "product_verified": false
+          },
+          "stderr": ""
+        },
+        "self_loop": {
+          "exit_code": 1,
+          "stdout": {
+            "evidence_valid": false,
+            "error": "evidence path cannot be resolved: loop",
+            "product_verified": false
+          },
+          "stderr": ""
+        },
+        "real_version_one": {
+          "exit_code": 0,
+          "stdout": {
+            "evidence_valid": true,
+            "step_counts": {
+              "blocked": 8,
+              "documented": 1,
+              "partial": 3
+            },
+            "errors": [],
+            "product_verified": false
+          },
+          "stderr": ""
+        }
+      }
+    },
+    "existing_test_bodies_unchanged": [
+      "test_duplicate_persona",
+      "test_evidence_drift",
+      "test_evidence_missing",
+      "test_malformed_shapes_fail_closed",
+      "test_missing_persona",
+      "test_no_evidence_or_validation",
+      "test_real_snapshot",
+      "test_symlink_escape",
+      "test_traversal_and_absolute_paths",
+      "test_unknown_state"
+    ],
+    "internal_error_control": "Hashing RuntimeError remains an exception; CLI does not broadly suppress it",
+    "log_sha256": "160ba1a71362d96ccb5b44a0ee2f849adcd16db421636f9b8a78757034d5d1dc"
+  },
+  "implementation_hashes": {
+    "scripts/research/audit_documentation_journeys.py": {
+      "base_sha256": "35be9af69fbcb4df4c655b3dc71ac398c8ea9ba8c4a1feb54b76fe8d5b20bf8c",
+      "follow_up_sha256": "92b51f070cd22384e798ee985d43ee24530314761173756c5d998d86034b86d9"
+    },
+    "tests/research/test_documentation_journeys.py": {
+      "base_sha256": "a7f340a671e577979a95d3bb41a6b7c4156ccda6ffb7e26866ce49247a512ec1",
+      "follow_up_sha256": "d547b6be68adf63c22b2fde46191c7b06e8596ef80560a188b1913f68fa2f620"
+    }
+  },
+  "dated_provenance_preserved": {
+    "unique_sources": 17,
+    "references": 25,
+    "manifest_report_and_t13_unchanged": true,
+    "all_frozen_files_match_base_git_blobs_and_current_bytes": true,
+    "frozen_files_sha256": {
+      "CONTRIBUTING.md": "b55ba5f7827f5745fa85c11a38dd35bfee00a3475024f615aaf5ae7b3c656936",
+      "GOVERNANCE.md": "b65bc2c1a7f0cb0fbd3db3549bdce8f27a2428968b3c077ef9da16d2a98805ac",
+      "README.md": "e307c5077d1dbf450b041e42cbaa5a9c019b272df4c43863eed21e6a539987dd",
+      "SECURITY.md": "2b022bbabd47f6ee0ce92d10861107a4bda555dc6489368eb4ecbc29b4c19f5c",
+      "docs/architecture.md": "9faea8d7358105087ef134359597d075e326f0f8fe52e7e915ff012e0494e68c",
+      "docs/development.md": "4da6ae5bd7af6ca4cd96c9f51b6e1c2c4d8e4056bd623480237196e0a575f3d4",
+      "docs/research/documentation-journeys.json": "8f4d49ff9dcf61a5f3fbec42083fff5aa5764a4eb391bf92fb816c76cf561a68",
+      "docs/research/documentation-journeys.md": "3c4bd40fd485f59a2a7b5a1c6242fcb03fb7e1c8df830ea3b09f1fc91855c73f",
+      "docs/runbooks/README.md": "d76f87f3ff76eb2475a9819d315d4a268a183eaedc9c78cd9e856f68045cefbf",
+      "docs/workstreams/T1.md": "375efecaee75c278df06dd8770e680181a6625010cfeef14186d7a965bfd4a59",
+      "docs/workstreams/T13.md": "6afc1a5984563ced571f5ae3f211428378a9532ad4fa22b55e0ee44a3a072643",
+      "docs/workstreams/T2.md": "47b06ec0975d4009259a27571f361ee046395e3aa402655c73d707fcf792f667",
+      "docs/workstreams/T3.md": "8461b2a2854632dd432d6bd1dcdac2da44d60620795e901666f747c2fff61eda",
+      "docs/workstreams/T5.md": "e945bb8eee1ccd6e53d1e0c369f5ec1a02bde8c6daa3f50b2ef5dd4839ed90cd",
+      "docs/workstreams/T6.md": "92fe9a32afd3091da2151fbe8e82a63f7e8572d5d03219a8181cab8261a238bf",
+      "docs/workstreams/T7.md": "f53c27a020749d07f8b9de7e425aa63b8a6403833089e45458befda19f6a303d",
+      "docs/workstreams/T8.md": "cf42599a5495219d990509b30ec37d3cf413a48b9784bfbdbf3049fe43cc17ce",
+      "infra/godaddy/README.md": "5ca15c3f8873bc1cfd317d362fc159c6feefbc5f7ecd29d8af6ed42f99e3e750",
+      "package.json": "338676ad27c6b6a35dbe79e06263e919fcf7889043f85c7e002911ea88a244e2"
+    },
+    "scope_note": "Integrity checked against the dated snapshot; source observations, manifest and report are not rewritten or redated."
+  },
+  "commands": [
+    "python3.12 -B -m unittest discover -s tests/research -p test_documentation_journeys.py -v",
+    "python3.12 -B scripts/research/audit_documentation_journeys.py",
+    "git diff --check"
+  ],
+  "limitations": [
+    "Actual symlink-loop and escape tests run on Linux Python 3.12.3 without skips",
+    "Windows real-symlink validation unavailable due to reported OS privilege; not rerun or claimed passing",
+    "No WSL VM shutdown, termination or restart",
+    "Auditor consistency is not real-user usability, product, Discord, GoDaddy, release or architecture acceptance",
+    "Independent current-head review and native approval/merge/post-merge gates remain separate"
+  ],
+  "product_verified": false
+}
