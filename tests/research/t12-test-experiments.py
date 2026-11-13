@@ -535,6 +535,56 @@ sys.exit(any(row["status"] != "fetched" for row in rows))
                 server.shutdown()
                 server_thread.join(timeout=2)
 
+    @unittest.skipUnless(sys.platform == "linux", "raw POSIX signal cleanup probe")
+    def test_first_signal_during_normal_cleanup_still_returns_nonzero(self):
+        driver = r"""
+import importlib.util, json, os, pathlib, signal, subprocess, sys, time
+spec = importlib.util.spec_from_file_location("capture", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+m.SOURCES = [("P1", "https://example.invalid/no-request-made", "fake CLI")]
+popen = subprocess.Popen
+children = []
+def fake_worker(*args, **kwargs):
+    payload = {"result": {"http_status": 200, "final_url": "https://example.invalid/no-request-made", "bytes": 2, "sha256": "fake-worker-test"}}
+    process = popen([sys.executable, "-c", "print(" + repr(json.dumps(payload)) + ")"], **kwargs)
+    children.append(process)
+    communicate = process.communicate
+    completed = False
+    def cleanup_signal(*arguments, **options):
+        nonlocal completed
+        if completed:
+            # First signal arrives inside the normal successful fetch's finally.
+            os.kill(os.getpid(), int(sys.argv[2]))
+            deadline = time.monotonic() + 1
+            while not m._fetch_context.cancellation.event.is_set():
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("main thread did not record cleanup signal")
+                time.sleep(0.001)
+        result = communicate(*arguments, **options)
+        completed = True
+        return result
+    process.communicate = cleanup_signal
+    return process
+m.subprocess.Popen = fake_worker
+before = [signal.getsignal(n) for n in (signal.SIGTERM, signal.SIGINT)]
+status = m.main()
+if not all(p.poll() is not None and not pathlib.Path("/proc", str(p.pid)).exists() for p in children):
+    raise RuntimeError("owned child not reaped during normal cleanup")
+if before != [signal.getsignal(n) for n in (signal.SIGTERM, signal.SIGINT)]:
+    raise RuntimeError("signal handlers not restored")
+sys.exit(status)
+"""
+        for number in (signal.SIGTERM, signal.SIGINT):
+            with self.subTest(signal=number):
+                result = subprocess.run([sys.executable, "-c", driver, str(Path(self.capture_module.__file__).resolve()), str(number)], capture_output=True, text=True, timeout=4)
+                self.assertEqual(result.returncode, 128 + number, result.stderr)
+                self.assertEqual(result.stderr, "")
+                output = json.loads(result.stdout)
+                self.assertEqual(output["cancelled_signal"], number)
+                self.assertEqual(output["sources"][0]["status"], "fetched")
+                print(json.dumps({"first_signal_during_normal_cleanup": number, "exit_code": result.returncode, "owned_child_reaped": True, "completed_result_retained": True}))
+
     def test_capture_restores_signal_handlers(self):
         before = {number: signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGINT)}
         with mock.patch.object(self.capture_module, "SOURCES", []):
