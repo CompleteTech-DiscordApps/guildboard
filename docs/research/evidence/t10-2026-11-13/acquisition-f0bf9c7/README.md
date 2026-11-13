@@ -40,3 +40,14 @@ synthetic bodies. Local Nginx spawn uses actual masters/workers. Historical evid
 is preserved. No SIGKILL, host/power failure, forced termination or real external
 platform guarantee is claimed. Native acceptance and fresh independent review
 remain open. See [planning validation](planning-validation.json) and receipt limits.
+
+The reproducer's provenance/outcome checks now raise explicit errors under both
+normal and optimized Python; the previous script's assertions could be removed
+by optimization. [Exact-script validation](reproducer-checks-4cca655.json) at
+`4cca655` records [normal](before-explicit-normal.sanitized.json) and
+[optimized](before-explicit-optimized.sanitized.json) real old-code reruns, each
+with three expected failures and no errors/skips. [Ten rejection checks](reproducer-rejections.json)
+use [this checker](check-reproducer.py) to reject a mismatched harness, missing
+failures, unexpected errors/skips and missing reports in both interpreters. Each
+must fail explicitly without verification output or a success artifact. Earlier
+raw reports remain unchanged; production source and its suite results are unchanged.

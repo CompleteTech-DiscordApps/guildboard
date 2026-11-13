@@ -102,7 +102,39 @@
       "sanitized_local_paths": false
     },
     "reproduce-before.py": {
-      "sha256": "26a336b2888decbe1dd2623a76bbd04a356255ddb530c70b4592dad5f3b80dca",
+      "sha256": "ee812ab00d38978676f06f2de13133910b77c147db3588573d4a147fe2db699e",
+      "sanitized_local_paths": false
+    },
+    "before-explicit-normal.sanitized.json": {
+      "sha256": "5123375797335c71cfa3aac0a2e4bb6a285854a17ee0d0cdd06cf662bf8ad45b",
+      "original_capture_sha256": "3d3d704aa267c8b4915776eb41bc239debb255337e899b0126c4391e90f3bbc1",
+      "sanitized_local_paths": true
+    },
+    "before-explicit-normal.log": {
+      "sha256": "2d02a5ca8c40034eadaa1a2280ded1d308e8d9f4f89bcb7bbe50c40ad86eb1e4",
+      "original_capture_sha256": "d4e94196b00dd44ce1ede7db0409f5f630dd4ba5094b2866df80b37747d34146",
+      "sanitized_local_paths": true
+    },
+    "before-explicit-optimized.sanitized.json": {
+      "sha256": "f76696d48900d08ef4e26e7a873c4b7ed369c3fb424dd77dff9c7807f2729f53",
+      "original_capture_sha256": "a8ebbae7c8df74e4add1a097de70ed921c5cf93a2e50f9f72f6f638b9c8c4b71",
+      "sanitized_local_paths": true
+    },
+    "before-explicit-optimized.log": {
+      "sha256": "5f895317eff2ee8d1da97f43c9b6e74119bad238175953001c982d231ec1072d",
+      "original_capture_sha256": "73afd0ffb212e2d5beae9f40dc2a2e9fa0b963b583fb69890e7f1ac02846d005",
+      "sanitized_local_paths": true
+    },
+    "check-reproducer.py": {
+      "sha256": "49a9dd85627332a9ff23756fa47726a36e7c799ff005508b028bec4602ac25e8",
+      "sanitized_local_paths": false
+    },
+    "reproducer-rejections.json": {
+      "sha256": "bf391df310115c59fb50ba730af025c193b0701fd562754108e652db651670f7",
+      "sanitized_local_paths": false
+    },
+    "reproducer-checks-4cca655.json": {
+      "sha256": "02957250b2f6e03072ca2d81e4aaa934e0aea33cce30577be1811989ee9d49a7",
       "sanitized_local_paths": false
     }
   },
@@ -121,5 +153,6 @@
     "Backend constructor, thread start, tempdir construction and stderr open each inject TERM/INT after creation before caller registration.",
     "Transient bounded commands inject TERM/INT after actual Popen and verify reaping.",
     "Previous normal-cleanup, active-body cancellation and repeated-signal cases remain passing."
-  ]
+  ],
+  "reproducer_validation": "reproducer-checks-4cca655.json"
 }
