@@ -46,7 +46,7 @@ planning, and replace it after pilot measurements and owner approval:
 | Mutations | 5 small operations/writer/second = 100 offered operations/second. Fixture payload content is 2 KiB, not an accepted operation limit. |
 | Broadcast cost | 100 operations/second × 9 peers × 2 KiB = 1.76 MiB/second outbound before envelopes, TLS, retries and assets. No fanout is executed by the local model. |
 | Bursts | 10 seconds at 1,000 operations/second, then return to 100; separately reconnect all 100 sockets over 30 seconds with jitter. These are stress cases, not promised supported rates. |
-| Board open/assets | 2,000 synthetic elements, 2 MiB serialized board plus eight 1 MiB assets (10 MiB total); test empty and maximum accepted boards once T4/T7 define limits. |
+| Board open/assets | 2,000 synthetic elements, 2 MiB serialized board plus eight 1 MiB assets (10 MiB total); test empty and maximum accepted boards once T3/T4/T5 define limits. |
 | Storage | Future restore rehearsal: 10 GiB database plus 20 GiB assets, with a separate growth run. These sizes are test assumptions, not disk inventory. |
 | Duration | Real baseline: 5-minute warmup, 15 minutes at 100 operations/second, 60-minute mixed session, then 8-hour soak at measured normal load. Local virtual baseline covers 60 seconds only. |
 
@@ -66,15 +66,15 @@ with stakeholders; it does not prescribe these Guildboard numbers. [S1]
 | Objective | Proposed initial value | Measurement and acceptance boundary |
 | --- | --- | --- |
 | Availability: board-open journey | >=99.5% good eligible attempts, rolling 30 days | Separate indicator from edits. Eligible means authorized, supported client, within accepted input/workload bounds. Good means a usable current board and required assets within 5 seconds; timeouts/5xx/dependency failures count bad. Establish trusted sampling/aggregation in #357; missing data is unknown, never success. |
-| Availability: edit journey | >=99.5% good eligible submissions, rolling 30 days | Good means the accepted operation is durably acknowledged and observed by a connected peer within 1 second. Count in-profile overload rejections and failed reconnect attempts bad; deduplicate retries by the eventual accepted T3/T5 identity rules. Never discard slow successes from the denominator. |
+| Availability: edit journey | >=99.5% good eligible submissions, rolling 30 days | Good means the accepted operation is durably acknowledged and observed by a connected peer within 1 second. Count in-profile overload rejections and failed reconnect attempts bad; deduplicate retries by the eventual accepted T4/T5 identity rules. Never discard slow successes from the denominator. |
 | Availability: external synthetic | >=99.5% successful scheduled 1-minute probes, rolling 30 days | Separate controlled-tenant board-open/write/read probe through actual HTTPS/WSS; planned maintenance counts. Probe missing/failed is bad for this indicator. 43,200 scheduled samples imply 216 allowed bad samples in exactly 30 days; this is not an outage-minute allowance for the request-based indicators. |
 | Latency: durable acknowledgement | p95 <=100 ms; p99 <=250 ms at 100 operations/second | Measure authorized server ingress to durable receipt using one server monotonic clock; report failed attempts and throughput alongside histogram. No client animation/prediction is a durable acknowledgement. |
 | Latency: peer visibility | p95 <=250 ms; p99 <=500 ms at baseline | Sender round trip via peer echo on the sender's monotonic clock, so no unsynchronized cross-client subtraction. Report network/Discord proxy path and rendering separately. |
 | Latency: board open | p95 <=3 seconds; p99 <=5 seconds for the 10 MiB fixture | Client launch-to-usable-board; cold and warm caches separate, real desktop/mobile and network profiles recorded. Proxy, authentication, assets and rendering included. |
-| Process recovery | Ready <=60 seconds after owned service process failure; zero loss of durably acknowledged operations | Recovery clock begins at fault injection; ends after auth, read, write and peer convergence succeed. Local prefix experiment does not meet this target. T5/T3 must prove retry idempotency and receipt durability. |
+| Process recovery | Ready <=60 seconds after owned service process failure; zero loss of durably acknowledged operations | Recovery clock begins at fault injection; ends after auth, read, write and peer convergence succeed. Local prefix experiment does not meet this target. T5/T4 must prove retry idempotency and receipt durability. |
 | Disaster recovery | RPO <=15 minutes; RTO <=4 hours for the 30 GiB fixture | RPO = incident time minus latest recovered consistent commit time, using a timestamped canary. Also report lost acknowledged operations. RTO begins at incident declaration and includes operator response, fresh VPS access, credentials/keys, download, restore, DNS/TLS and client verification. No achieved RPO/RTO exists yet. |
 | Capacity | Sustain the baseline for 15 minutes and the agreed soak with no in-profile shedding and above latency objectives | Proposed headroom: average CPU <60%, process+DB memory <70% of allocatable RAM, disk <70%, no swap thrash, stable queue/memory trend. Record host CPU/RAM/disk, versions and contention; no VPS size is selected. |
-| Overload containment | Bounded accepted backlog and bounded per-client output; return explicit retryable failure on saturation | A 10-second burst may reject work but cannot silently lose/acknowledge rejected work, cross tenant boundaries, or prevent healthy boards recovering within 30 seconds after baseline resumes. Accepted queue/deadline values await #357/T3 review. |
+| Overload containment | Bounded accepted backlog and bounded per-client output; return explicit retryable failure on saturation | A 10-second burst may reject work but cannot silently lose/acknowledge rejected work, cross tenant boundaries, or prevent healthy boards recovering within 30 seconds after baseline resumes. Accepted queue/deadline values await #357/T4 review. |
 
 Always report the numerator, denominator, histogram count and observation window.
 Zero eligible attempts yields undefined availability, not 100%. Known invalid,
@@ -97,7 +97,7 @@ by this research document.
 | --- | --- | --- |
 | Availability goal | 99% (1% bad attempts), 99.5%, 99.9% (0.1% bad attempts) | Start at proposed 99.5% for pilot evaluation. 99% tolerates substantial interactive disruption; 99.9% needs stronger recovery/operational evidence than a single untested VPS provides. None is a vendor SLA. |
 | User signal | HTTP 200 ratio; process uptime; end-to-end board/edit journeys | Use journeys plus independent synthetic probes. Uptime misses broken auth/SQL/proxy paths; HTTP success alone can hide lost edits. Correlate lower-level health for diagnosis. |
-| Backpressure | Unbounded buffering; bounded admission with deadlines; drop accepted edits | Prefer bounded admission/deadlines, per-tenant fairness and explicit retry outcomes; volatile presence may be coalesced only under T3's accepted distinction. Never discard accepted durable edits to meet latency. [S3] |
+| Backpressure | Unbounded buffering; bounded admission with deadlines; drop accepted edits | Prefer bounded admission/deadlines, per-tenant fairness and explicit retry outcomes; volatile presence may be coalesced only under T4's accepted distinction. Never discard accepted durable edits to meet latency. [S3] |
 | Backup strategy | Nightly logical dump only; base backup plus archived binary logs and matching assets; replicas alone | Evaluate base+logs+consistent assets for the proposed 15-minute RPO. Nightly-only could lose nearly 24 hours; replication can propagate corruption/deletion. Retain a separate encrypted copy outside the VPS failure domain. MySQL PITR requires a base plus incremental recovery. MariaDB physical backups require preparation and compatible tools. [S4, S5] |
 | Recovery topology | One supervised process/VPS; additional replica/VPS; different hosting vendor | Measure one VPS first within mandatory GoDaddy hosting; document single-host failure exposure. Additional GoDaddy capacity requires separate topology/cost evidence and authorization. No alternate hosting adoption here. |
 | Supervision | systemd or Compose | T10 owns this choice. Either must stop admission, drain within a measured deadline, preserve volumes and fence retry/duplicate acknowledgements. The systemd manual documents forced termination after the stop timeout; prove the drain fits whichever supervisor is accepted. [S7] |
@@ -156,7 +156,7 @@ contracts are accepted, not additional implementation in this PR:
 | Fault or abuse case | Required observation and measurable acceptance |
 | --- | --- |
 | SQL unavailable/slow or disk full | No durable success before commit; classify errors without content; bounded queue/connection usage; no accepted-receipt ambiguity. Retry safely after recovery and verify board/receipt hashes with T5. Admission latency must remain bounded by the accepted deadline. |
-| Hot tenant, oversized payload, slow receiver, reconnect storm | Validate size before expensive processing, enforce tenant/client budgets and bounded outbound buffers, preserve healthy-board latency, release slow sockets safely. Reconnect with capped exponential backoff/jitter; never reuse revoked authority or bypass re-auth. T2/T3 own exact policy. |
+| Hot tenant, oversized payload, slow receiver, reconnect storm | Validate size before expensive processing, enforce tenant/client budgets and bounded outbound buffers, preserve healthy-board latency, release slow sockets safely. Reconnect with capped exponential backoff/jitter; never reuse revoked authority or bypass re-auth. T2 owns authorization policy; T4 owns transport/admission bounds, with T3 supplying editor payload constraints. |
 | Graceful deploy/restart | Mark unready, stop new work, drain accepted work within proposed 15 seconds, flush telemetry, notify/disconnect clients; proposed supervisor grace >=20 seconds subject to T10 measurement. Record all pending/committed receipts and reconcile retries after restart. Prove no duplicate acknowledgements or revision gaps. |
 | Abrupt owned application failure | Kill only a disposable owned test process; measure recovery to successful journey <=60 seconds, durable acknowledged loss =0. Reconcile writes committed before disconnect with retries; acceptance needs actual SQL/supervisor/socket evidence. |
 | Nginx idle timeout or Discord proxy disruption | Test WSS upgrade/idle heartbeat, half-open detection, resume authorization and desktop/mobile behavior through registered URL mappings. Nginx documents a default 60-second upstream inactivity timeout; choose/test heartbeat and proxy timeouts together. Discord traffic traverses its Activity proxy; direct localhost tests cannot prove that path. [S8, S9] |
@@ -181,7 +181,7 @@ destination; restore/deletion rights separated. Restrict operator access and
 keep recovery keys separate from the failed VPS. Run nightly integrity checks,
 weekly isolated restore rehearsals and a full VPS-loss/key-recovery exercise
 before release; maintain a verified pre-upgrade recovery point. Proposed
-retention and legal/privacy deletion behavior require T8/T5 review in #357.
+retention and legal/privacy deletion behavior require T9/T5 review in #357.
 
 ## Monitoring, privacy and incident handoff
 
@@ -198,9 +198,9 @@ Proposed structured log allowlist: UTC time, service/version, severity, bounded
 error class, duration and short-lived opaque trace correlation. Do not log
 authorization headers, cookies, OAuth codes, session tokens, raw messages,
 signed asset URLs, board text/drawings or SQL parameters. Default seven-day
-operational log retention and 30-day aggregate metrics are hypotheses for T8
+operational log retention and 30-day aggregate metrics are hypotheses for T9
 privacy review; access audited, credentials separately protected. Security audit
-retention is a separate T8 decision. Negative acceptance must seed recognizable
+retention requires T2 audit semantics and T9 security/privacy review. Negative acceptance must seed recognizable
 synthetic secret/content canaries and confirm no log/export contains them.
 
 For the proposed 99.5% objective, burn rate = bad-attempt fraction / 0.005.
@@ -263,8 +263,11 @@ claim or dependency pin is implied.
 
 Handoff to #357: propose exact observability/redaction/retention contracts,
 alert evaluation fixtures, backup manifests, recovery acceptance and named roles
-using this research after acceptance. T3/T5 own durable operation and replay
-semantics; T1/T8 own client/identity/privacy constraints; T7 owns asset limits;
+using this research after acceptance. T4/T5 own durable operation processing and replay
+semantics; T3 owns canonical editor/schema constraints; T1 owns Discord client and
+identity constraints; T9 owns security/privacy and audit-integrity review;
+T5 owns asset/import storage and limits; T8 integrates the API surface;
+T7 owns accessible shell controls;
 T10 owns GoDaddy sizing, supervisor and routing; T12 owns executable acceptance.
 These are information handoffs, not new native blocker edits.
 
