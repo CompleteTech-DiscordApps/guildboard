@@ -269,3 +269,25 @@ Pipeline owns review requests, review comments and merge decisions; this writing
 lane requests no reviewer and makes no approval. Native CODEOWNER protections and
 #389's research blocker remain intact. No purchase, provisioning, deployment,
 production acceptance, runtime-contract adoption or issue-closing directive.
+
+
+## 2026-11-12 scope reconciliation and local revalidation
+
+T11 SRE owns operational objectives, production metric/log privacy and bounded
+cardinality, alert thresholds, retention, backup policy and incident/runbook
+responsibility. T12 owns the test strategy, candidate acceptance budgets, test
+oracles and evidence matrix; T10 owns deployment/proxy configuration and platform
+measurements. The load/resource candidates above are inputs for joint T11/T12
+review, not adopted alerts or an SLO. T5 supplies durable recovery/receipt
+semantics and T2 the authorization boundary. No T11 deliverable, staffing
+assignment, dependency or operational guarantee is created by this research.
+
+The retained-receipt model continues to follow the provisional #481 contract:
+current read first, existing identity plus digest next, and current lineage/write
+checks only for a new effect. After restore, a retained matching receipt reports
+historical acceptance without changing the restored projection; a changed digest
+conflicts; an unknown retired-lineage operation is denied. Added regression cases
+exercise these outcomes, current read denial, and an intervening write revocation
+while asserting no durable side effects. These are abstract model checks, not SQL
+or a running collaboration service. Consumers must reconcile the final reviewed
+T4/T5/system-contract heads before adoption; this text does not accept a contract.

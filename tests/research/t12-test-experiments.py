@@ -58,6 +58,39 @@ class SchedulingTests(unittest.TestCase):
         model.can_read = True
         self.assertEqual(model.durable(), before)
 
+    def test_restore_retained_receipt_precedes_current_write_fence(self):
+        model = schedule.Model()
+        command = model.prepare("a", "one")
+        model.commit(command)
+        model.restore()
+        model.revoke()
+        before = model.durable()
+        self.assertEqual(model.commit(command), ("receipt", 1))
+        self.assertEqual(model.content, {})
+        self.assertEqual(model.durable(), before)
+
+    def test_restore_changed_digest_conflicts_without_reapplying_content(self):
+        model = schedule.Model()
+        command = model.prepare("a", "one")
+        model.commit(command)
+        model.restore()
+        before = model.durable()
+        self.assertEqual(model.commit(schedule.replace(command, value="different")), ("digest-conflict", None))
+        self.assertEqual(model.durable(), before)
+
+    def test_restore_unknown_old_lineage_and_unreadable_receipt_are_denied(self):
+        model = schedule.Model()
+        command = model.prepare("a", "one")
+        model.commit(command)
+        model.restore()
+        before = model.durable()
+        self.assertEqual(model.commit(schedule.replace(command, operation="unknown")), ("lineage-denied", None))
+        self.assertEqual(model.durable(), before)
+        model.can_read = False
+        before = model.durable()
+        self.assertEqual(model.commit(command), ("read-denied", None))
+        self.assertEqual(model.durable(), before)
+
     def test_expiry_boundary_uses_injected_server_clock(self):
         self.assertEqual(schedule.clock_trial()["first_denied_tick"], 5)
 
