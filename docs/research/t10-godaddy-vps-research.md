@@ -173,3 +173,27 @@ are detected with successful owned cleanup. Appended machine-readable evidence
 and raw `t10-review2-*` logs preserve all previous results. Planning validation
 and whitespace checks pass. This remains local HTTP/WS research; real
 GoDaddy/Discord/TLS acceptance and fresh independent review remain open.
+
+
+### Worker cleanup on unexpected probe failure
+
+Independent review at `82e59a607f39a12d28002a05177b32524f83181b` reproduced
+a P2 defect: killing only the Nginx master after an unexpected assertion left a
+worker serving HTTP 502 on the probe listener. The new actual-Nginx regression
+fails against that head, then explicitly terminates the leaked test worker.
+
+Remediation `23b4af98f5f8209dd25fcc777bbb4f83248f04f5` starts the owned Nginx
+master in its own session/process group. Cleanup sends TERM to that group,
+waits up to five seconds, then uses group-scoped KILL when needed, including
+orphan workers if the master has already exited. Backend cleanup runs even if
+proxy cleanup raises. The group was created by this runner; unrelated groups
+and services are never signalled.
+
+Twelve focused tests pass, including real worker PID inspection and refusal of
+connections to the old listener after injected failure. The positive baseline
+again passes all twelve checks, and all three unsafe Nginx controls are detected.
+Fresh machine-readable runs are appended under `worker_cleanup_followup_2026_11_13`;
+`t10-review3-before.log`, `t10-review3-tests.log`, `t10-review3-runs.json` and
+`t10-review3-planning.log` retain raw results. Historic evidence remains intact.
+These are Linux loopback checks, not GoDaddy, Discord, TLS or production claims.
+Fresh independent review remains required.
