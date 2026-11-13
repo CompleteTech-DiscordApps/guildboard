@@ -119,7 +119,8 @@ class UpgradeRequestRegression(unittest.TestCase):
         self.assertEqual(frame, b"\x81\x05hello")
 
     def test_valid_authority_names_and_bracketed_ipv6_remain_accepted(self):
-        for authority in ("research.invalid:8080", "[::1]:8080"):
+        for authority in ("research.invalid:8080", "[::1]:8080", "[::ffff:192.0.2.1]", "[v1.a:b]",
+                          "[VAF.a-._~!$&'()*+,;=:]", "exa%6dple.invalid", "research.invalid:"):
             headers = [(key, authority if key == "Host" else value) for key, value in self.headers]
             with self.subTest(authority=authority):
                 status, _, frame = self.exchange(headers)
@@ -128,7 +129,10 @@ class UpgradeRequestRegression(unittest.TestCase):
 
     def test_missing_or_malformed_request_headers_never_upgrade_or_send_frame(self):
         invalid = [(name, None) for name in ("Host", "Upgrade", "Connection", "Sec-WebSocket-Version", "Sec-WebSocket-Key")]
-        invalid += [("Host", "bad host"), ("Host", "user@host"), ("Host", "host/path"),
+        invalid += [("Host", "[v1.a b]"), ("Host", "[v1.a%b]"), ("Host", "[v1.[x]"),
+                    ("Host", "[v.abc]"), ("Host", "[vG.a]"), ("Host", "[v1.]"),
+                    ("Host", "[1:2:3]"), ("Host", "[192.0.2.1]"), ("Host", "[::1%25eth0]"),
+                    ("Host", "bad host"), ("Host", "user@host"), ("Host", "host/path"),
                     ("Host", "host?query"), ("Host", "[broken]"), ("Host", "host:word"), ("Host", "host%zz"),
                     ("Upgrade", "h2c"), ("Connection", "notupgrade"), ("Connection", "keep-alive"),
                     ("Sec-WebSocket-Version", "12"), ("Sec-WebSocket-Version", "13x"),
@@ -326,6 +330,28 @@ class FakeDocker:
 
 
 class DockerCleanupRegression(unittest.TestCase):
+    def test_image_preflight_failure_retains_metadata_and_bounded_diagnostics(self):
+        for failing_image in (PROBE.NGINX, PROBE.PYTHON):
+            fake = FakeDocker()
+            marker = "OWNED_IMAGE_INSPECTION_DIAGNOSTIC"
+            def command(*args, **kwargs):
+                if args == ("image", "inspect", failing_image):
+                    raise subprocess.CalledProcessError(1, args, output="owned inspection stdout",
+                                                        stderr="x" * (PROBE.MAX_DIAGNOSTIC_BYTES + 100) + marker)
+                return fake(*args, **kwargs)
+            with self.subTest(image=failing_image), mock.patch.object(PROBE, "docker", side_effect=command):
+                with self.assertRaises(subprocess.CalledProcessError) as caught:
+                    PROBE.run()
+            report = caught.exception.report
+            self.assertEqual(report["images"], {"nginx": PROBE.NGINX, "python": PROBE.PYTHON})
+            self.assertIn("host", report)
+            self.assertIn(marker, report["failure"]["stderr"])
+            self.assertTrue(report["failure"]["stderr_truncated"])
+            self.assertLessEqual(len(report["failure"]["stderr"]), PROBE.MAX_DIAGNOSTIC_BYTES)
+            self.assertEqual(report["failure"]["stdout"], "owned inspection stdout")
+            self.assertEqual(report["cleanup"], [])
+            self.assertFalse(any(call[0] == "create" for call in fake.calls))
+
     def test_create_timeout_after_daemon_creation_is_cleaned(self):
         for target in ("backend", "proxy"):
             fake = FakeDocker(create_timeout=target)
@@ -456,6 +482,37 @@ class FailureAttributionRegression(unittest.TestCase):
         self.assertIn("tested_sha", report)
         self.assertIn("failure", report)
         self.assertTrue(all(report["cleanup"].values()))
+
+    def test_log_read_failure_cannot_replace_original_failure(self):
+        report = {"failure": {"detail": "original experiment failure"}}
+        errors = mock.Mock()
+        errors.seek.side_effect = OSError("owned log read failure")
+        PROBE.capture_nginx_log(errors, report)
+        self.assertEqual(report["failure"], {"detail": "original experiment failure"})
+        self.assertEqual(report["nginx_log_error"]["type"], "OSError")
+
+    @unittest.skipUnless(POSIX_LOCAL, "POSIX owned executable required")
+    def test_startup_failure_preserves_bounded_stderr_before_temp_cleanup(self):
+        import tempfile
+        marker = "UNIQUE_OWNED_NGINX_STARTUP_DIAGNOSTIC"
+        with tempfile.TemporaryDirectory(prefix="t10-owned-diagnostic-") as directory:
+            executable = Path(directory) / "owned-nginx-control"
+            executable.write_text("#!" + sys.executable + "\nimport sys\n"
+                                  "if '-V' in sys.argv or '-t' in sys.argv:\n"
+                                  "    print('owned version/config control', file=sys.stderr)\n"
+                                  "    sys.exit(0)\n"
+                                  "print('x' * " + str(PROBE.MAX_DIAGNOSTIC_BYTES + 100) + ", file=sys.stderr)\n"
+                                  "print('" + marker + "', file=sys.stderr)\n"
+                                  "sys.exit(7)\n")
+            executable.chmod(0o700)
+            with self.assertRaisesRegex(RuntimeError, "owned nginx exited before readiness") as caught:
+                PROBE.run_local(executable)
+        report = caught.exception.report
+        self.assertIn(marker, report["nginx_log"])
+        self.assertTrue(report["nginx_log_truncated"])
+        self.assertLessEqual(len(report["nginx_log"]), PROBE.MAX_DIAGNOSTIC_BYTES)
+        self.assertTrue(all(report["cleanup"].values()))
+        self.assertEqual(report["failure"]["type"], "RuntimeError")
 
     def test_failure_retains_successful_checks(self):
         with mock.patch.object(FIXTURE, "request", return_value=(200, b'{"path":"wrong"}')):
@@ -589,6 +646,7 @@ class ActualNginxControls(unittest.TestCase):
             process = original_popen(args, *rest, **kwargs)
             if "daemon off;" in args:
                 owned["master"] = process.pid
+                owned["stderr_fd"] = kwargs["stderr"].fileno()
             return process
         def inject_spec(name, path):
             spec = original_spec(name, path)
@@ -599,6 +657,7 @@ class ActualNginxControls(unittest.TestCase):
                     owned["port"] = module.PROXY_PORT
                     children = Path(f"/proc/{owned['master']}/task/{owned['master']}/children")
                     owned["workers"] = [int(pid) for pid in children.read_text().split()]
+                    os.write(owned["stderr_fd"], b"OWNED_UNEXPECTED_PROBE_DIAGNOSTIC\n")
                     raise AssertionError("injected unexpected probe failure")
                 module.probe = fail_after_readiness
             spec.loader.exec_module = load
@@ -611,8 +670,9 @@ class ActualNginxControls(unittest.TestCase):
         try:
             with mock.patch.object(PROBE.importlib.util, "spec_from_file_location", side_effect=inject_spec), \
                  mock.patch.object(PROBE.subprocess, "Popen", side_effect=capture_popen):
-                with self.assertRaisesRegex(AssertionError, "injected unexpected probe failure"):
+                with self.assertRaisesRegex(AssertionError, "injected unexpected probe failure") as caught:
                     PROBE.run_local(binary)
+            self.assertIn("OWNED_UNEXPECTED_PROBE_DIAGNOSTIC", caught.exception.report["nginx_log"])
             deadline = time.monotonic() + 2
             while any(running(pid) for pid in owned["workers"]) and time.monotonic() < deadline:
                 time.sleep(0.02)

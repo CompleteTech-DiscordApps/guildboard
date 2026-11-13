@@ -386,3 +386,39 @@ optimized validation are in campaign `receipts/t10-protocol-audit.json`,
 `receipts/platform-finish.json` and `platform-finish-logs/t10-edge-*`. The audit
 is diagnostic evidence, not approval. All real-platform acceptance and fresh
 whole-head review gates remain open.
+
+
+### IP-literal grammar and diagnostic preservation follow-up — 2026-11-13 UTC
+
+The prior `e160e1b` bracket branch relied on URL parsing, which accepted invalid
+IPvFuture literals such as `[v1.a b]`, `[v1.a%b]` and `[v1.[x]` as Host values.
+The fixture now applies the exact IPvFuture character grammar or stdlib IPv6
+validation, as specified by
+[RFC 3986 section 3.2.2](https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.2).
+Tests preserve bracketed IPv6/embedded IPv4, valid IPvFuture (including mixed-case
+version marker and allowed punctuation), registered-name escapes and empty
+optional ports. RFC 3986 zone identifiers remain outside this fixture's literal
+grammar. Malformed literals cannot upgrade or emit the hello frame.
+
+Local experiment cleanup now retains the owned stderr handle and temporary
+directory until process/backend cleanup finishes, reads at most the final 64 KiB
+of available stderr, then closes/deletes the artifacts. The report marks
+truncation. This applies to startup/readiness failures and unexpected probe
+failures as well as successful runs. A diagnostic-read error is recorded without
+replacing the original experiment failure. The captured log comes only from the
+owned synthetic fixture process; this tool does not collect production logs or
+credentials.
+
+Docker image preflight now runs inside the structured-report scope. Either
+missing-image/inspection failure retains host/image metadata, empty owned cleanup
+and bounded stdout/stderr diagnostics without creating a container. These Docker
+failure paths use a simulated command boundary, not actual Docker acceptance.
+
+Independent pinned diagnostics in `receipts/t10-host-final.json` and
+`receipts/t10-evidence-final.json` established the prior failures. New regressions
+use wire handshakes, an owned executable emitting a startup marker then exiting7,
+and an actual local Nginx unexpected-failure marker; they verify bounded retained
+evidence, original failure identity and cleanup. Exact final-head normal/optimized
+results and actual Nginx controls are in campaign `receipts/platform-finish.json`
+and `platform-finish-logs/t10-literal-diagnostic-*`. All external acceptance and
+fresh independent whole-head review gates remain open.

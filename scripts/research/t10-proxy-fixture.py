@@ -6,7 +6,7 @@ import http.client
 import http.server
 import json
 import re
-import urllib.parse
+import ipaddress
 import socket
 import sys
 import threading
@@ -26,15 +26,24 @@ class ProbeFailure(AssertionError):
 
 
 def valid_host(authority):
-    # Host is a URI host plus optional numeric port, not a general URL. Keep
-    # reg-name escapes and bracketed IP literals; do not impose a DNS allowlist.
+    # RFC3986 IP-literal is IPv6 or IPvFuture, not an arbitrary bracketed URL.
+    if authority.startswith("["):
+        match = re.fullmatch(r"\[([^\[\]]+)\](?::[0-9]*)?", authority)
+        if match is None:
+            return False
+        literal = match.group(1)
+        if literal[:1].lower() == "v":
+            return re.fullmatch(r"[vV][0-9A-Fa-f]+\.[A-Za-z0-9._~!$&'()*+,;=:-]+", literal) is not None
+        # Zone identifiers are outside the RFC3986 literal grammar used here.
+        if "%" in literal:
+            return False
+        try:
+            ipaddress.IPv6Address(literal)
+            return True
+        except ipaddress.AddressValueError:
+            return False
     reg_name = r"(?:[A-Za-z0-9._~!$&'()*+,;=-]|%[0-9A-Fa-f]{2})+"
-    if re.fullmatch(r"(?:" + reg_name + r"|\[[^\]]+\])(?::[0-9]*)?", authority) is None:
-        return False
-    try:
-        return urllib.parse.urlsplit("//" + authority).hostname is not None
-    except ValueError:
-        return False
+    return re.fullmatch(reg_name + r"(?::[0-9]*)?", authority) is not None
 
 
 class Handler(http.server.BaseHTTPRequestHandler):

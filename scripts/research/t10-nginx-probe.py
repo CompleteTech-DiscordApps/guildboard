@@ -23,6 +23,8 @@ NGINX = "sha256:62ff2089abf5a9ed33bd232895bef5e22f7bb4b200675cec49a5ebc48e3d4ac8
 PYTHON = "sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70"
 
 
+MAX_DIAGNOSTIC_BYTES = 64 * 1024
+
 HANDSHAKE_REJECTIONS = {
     "strip-upgrade": "HTTP/1.1 426 Upgrade Required",
     "strip-connection": "HTTP/1.1 400 Bad Request",
@@ -48,6 +50,37 @@ def apply_control(config, control):
     if config.count(old) != 1:
         raise ValueError(control + " control requires exactly one " + old)
     return config.replace(old, new)
+
+
+def bounded_diagnostic(value):
+    data = value if isinstance(value, bytes) else str(value).encode("utf-8", errors="replace")
+    return data[-MAX_DIAGNOSTIC_BYTES:].decode("utf-8", errors="replace"), len(data) > MAX_DIAGNOSTIC_BYTES
+
+
+def failure_record(error):
+    detail, truncated = bounded_diagnostic(str(error))
+    record = {"type": type(error).__name__, "detail": detail,
+              "passed_checks": getattr(error, "passed_checks", [])}
+    if truncated:
+        record["detail_truncated"] = True
+    for name in ("stdout", "stderr"):
+        value = getattr(error, name, None)
+        if value is not None:
+            record[name], record[name + "_truncated"] = bounded_diagnostic(value)
+    return record
+
+
+def capture_nginx_log(errors, report):
+    try:
+        errors.flush()
+        errors.seek(0, os.SEEK_END)
+        total = errors.tell()
+        errors.seek(max(0, total - MAX_DIAGNOSTIC_BYTES))
+        report["nginx_log"] = errors.read(MAX_DIAGNOSTIC_BYTES).decode("utf-8", errors="replace")
+        report["nginx_log_truncated"] = total > MAX_DIAGNOSTIC_BYTES
+    except (OSError, ValueError) as error:
+        # Diagnostic failure must not replace the original experiment failure.
+        report["nginx_log_error"] = failure_record(error)
 
 
 def docker(*args, input_text=None):
@@ -129,9 +162,9 @@ def run(control=None):
               "host_python": platform.python_version(), "images": {"nginx": NGINX, "python": PYTHON},
               "resource_scope": {"network": "network=none backend; nginx shares its owned network namespace", "published_ports": [], "mounts": [],
                                  "per_container": "0.5 CPU / 128MiB / 64 PIDs / nonroot / read-only / cap-drop ALL"}}
-    for image in (NGINX, PYTHON):
-        docker("image", "inspect", image)  # No pulls or installs; fail if absent.
     try:
+        for image in (NGINX, PYTHON):
+            docker("image", "inspect", image)  # No pulls or installs; fail if absent.
         common = ["--pull=never", "--label", label, "--cpus", "0.5", "--memory", "128m", "--pids-limit", "64", "--user", "65534:65534", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m,mode=1777"]
         create_owned_container(intended, backend, "--network", "none", *common, "--entrypoint", "python", PYTHON, "-c", "import time; time.sleep(3600)")
         docker("start", backend)
@@ -179,8 +212,7 @@ def run(control=None):
                                     for path in (ROOT / "docs/research/t10-nginx-probe.conf", ROOT / "scripts/research/t10-proxy-fixture.py")}
     except Exception as error:
         error.report = report
-        report.setdefault("failure", {"type": type(error).__name__, "detail": str(error),
-                                      "passed_checks": getattr(error, "passed_checks", [])})
+        report.setdefault("failure", failure_record(error))
         raise
     finally:
         cleanup_owned_containers(intended, token, report)
@@ -215,7 +247,7 @@ def run_local(nginx_binary, control=None):
     spec = importlib.util.spec_from_file_location("t10_local_fixture", ROOT / "scripts/research/t10-proxy-fixture.py")
     fixture = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(fixture)
-    server = thread = proxy = None
+    server = thread = proxy = errors = temporary_directory = None
     report = {}
     try:
         server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), fixture.Handler)
@@ -228,61 +260,59 @@ def run_local(nginx_binary, control=None):
                 server.server_close()
         thread = threading.Thread(target=serve)
         thread.start()
-        with tempfile.TemporaryDirectory(prefix="gb-t10-nginx-") as temporary:
-            root = Path(temporary)
-            (root / "logs").mkdir()
-            with socket.socket() as reserve:
-                reserve.bind(("127.0.0.1", 0))
-                proxy_port = reserve.getsockname()[1]
-            fixture.PROXY_PORT = proxy_port
-            config = (ROOT / "docs/research/t10-nginx-probe.conf").read_text()
-            config = config.replace("listen 8080;", f"listen 127.0.0.1:{proxy_port};")
-            config = config.replace("127.0.0.1:8000", f"127.0.0.1:{server.server_port}")
-            config = config.replace("/tmp/", temporary + "/")
-            config = apply_control(config, control)
-            path = root / "nginx.conf"
-            path.write_text(config)
-            report = {"observed_at": datetime.now(timezone.utc).isoformat(),
-                      "tested_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-                      "host": platform.platform(), "host_python": platform.python_version(),
-                      "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
-                      "nginx_binary_sha256": hashlib.sha256(Path(binary).read_bytes()).hexdigest(),
-                      "nginx_version": subprocess.run([binary, "-V"], capture_output=True, text=True, check=True).stderr.strip(),
-                      "control": control,
-                      "fixture_hashes": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in
-                                         (ROOT / "scripts/research/t10-nginx-probe.py", ROOT / "scripts/research/t10-proxy-fixture.py", ROOT / "docs/research/t10-nginx-probe.conf")}}
-            checked = subprocess.run([binary, "-p", temporary + "/", "-c", str(path), "-t"], capture_output=True, text=True, check=True)
-            report["nginx_config_check"] = checked.stderr.strip()
-            with (root / "stderr.log").open("w+") as errors:
-                proxy = subprocess.Popen([binary, "-p", temporary + "/", "-c", str(path), "-g", "daemon off;"], stdout=subprocess.DEVNULL, stderr=errors, start_new_session=True)
-                for attempt in range(50):
-                    try:
-                        if fixture.request("/ready")[0] == 200:
-                            break
-                    except OSError:
-                        pass
-                    if proxy.poll() is not None:
-                        raise RuntimeError("owned nginx exited before readiness")
-                    time.sleep(0.05)
-                else:
-                    raise RuntimeError("owned nginx readiness deadline")
-                try:
-                    report["result"] = fixture.probe()
-                except fixture.ProbeFailure as error:
-                    expected = {**{name: "websocket-status" for name in HANDSHAKE_REJECTIONS}, "publish-private-assets": "private-assets-not-public",
-                                "long-read-timeout": "idle-close-deadline"}
-                    if (control not in expected or error.check != expected[control]
-                            or (control in HANDSHAKE_REJECTIONS and error.detail != HANDSHAKE_REJECTIONS[control])):
-                        raise
-                    report["negative_control"] = {"variant": control, "detected": True, "failure": str(error)}
-                if control and "negative_control" not in report:
-                    raise AssertionError("unsafe negative control escaped the probe")
-                errors.seek(0)
-                report["nginx_log"] = errors.read()
+        temporary_directory = tempfile.TemporaryDirectory(prefix="gb-t10-nginx-")
+        temporary = temporary_directory.name
+        root = Path(temporary)
+        (root / "logs").mkdir()
+        with socket.socket() as reserve:
+            reserve.bind(("127.0.0.1", 0))
+            proxy_port = reserve.getsockname()[1]
+        fixture.PROXY_PORT = proxy_port
+        config = (ROOT / "docs/research/t10-nginx-probe.conf").read_text()
+        config = config.replace("listen 8080;", f"listen 127.0.0.1:{proxy_port};")
+        config = config.replace("127.0.0.1:8000", f"127.0.0.1:{server.server_port}")
+        config = config.replace("/tmp/", temporary + "/")
+        config = apply_control(config, control)
+        path = root / "nginx.conf"
+        path.write_text(config)
+        report = {"observed_at": datetime.now(timezone.utc).isoformat(),
+                  "tested_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+                  "host": platform.platform(), "host_python": platform.python_version(),
+                  "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+                  "nginx_binary_sha256": hashlib.sha256(Path(binary).read_bytes()).hexdigest(),
+                  "nginx_version": subprocess.run([binary, "-V"], capture_output=True, text=True, check=True).stderr.strip(),
+                  "control": control,
+                  "fixture_hashes": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in
+                                     (ROOT / "scripts/research/t10-nginx-probe.py", ROOT / "scripts/research/t10-proxy-fixture.py", ROOT / "docs/research/t10-nginx-probe.conf")}}
+        checked = subprocess.run([binary, "-p", temporary + "/", "-c", str(path), "-t"], capture_output=True, text=True, check=True)
+        report["nginx_config_check"] = checked.stderr.strip()
+        errors = (root / "stderr.log").open("w+b")
+        proxy = subprocess.Popen([binary, "-p", temporary + "/", "-c", str(path), "-g", "daemon off;"], stdout=subprocess.DEVNULL, stderr=errors, start_new_session=True)
+        for attempt in range(50):
+            try:
+                if fixture.request("/ready")[0] == 200:
+                    break
+            except OSError:
+                pass
+            if proxy.poll() is not None:
+                raise RuntimeError("owned nginx exited before readiness")
+            time.sleep(0.05)
+        else:
+            raise RuntimeError("owned nginx readiness deadline")
+        try:
+            report["result"] = fixture.probe()
+        except fixture.ProbeFailure as error:
+            expected = {**{name: "websocket-status" for name in HANDSHAKE_REJECTIONS}, "publish-private-assets": "private-assets-not-public",
+                        "long-read-timeout": "idle-close-deadline"}
+            if (control not in expected or error.check != expected[control]
+                    or (control in HANDSHAKE_REJECTIONS and error.detail != HANDSHAKE_REJECTIONS[control])):
+                raise
+            report["negative_control"] = {"variant": control, "detected": True, "failure": str(error)}
+        if control and "negative_control" not in report:
+            raise AssertionError("unsafe negative control escaped the probe")
     except Exception as error:
         error.report = report
-        report.setdefault("failure", {"type": type(error).__name__, "detail": str(error),
-                                      "passed_checks": getattr(error, "passed_checks", [])})
+        report.setdefault("failure", failure_record(error))
         raise
     finally:
         failures = []
@@ -302,6 +332,18 @@ def run_local(nginx_binary, control=None):
                     action()
                 except Exception as error:
                     failures.append("backend: " + repr(error))
+        # Preserve final owned stderr after process cleanup, before unlinking it.
+        if errors is not None:
+            capture_nginx_log(errors, report)
+            try:
+                errors.close()
+            except (OSError, ValueError) as error:
+                failures.append("stderr close: " + repr(error))
+        if temporary_directory is not None:
+            try:
+                temporary_directory.cleanup()
+            except (OSError, ValueError) as error:
+                failures.append("temporary directory: " + repr(error))
         report["cleanup"] = {"owned_nginx_exited": proxy is None or proxy.poll() is not None,
                              "owned_backend_thread_exited": thread is None or not thread.is_alive()}
         if failures:
@@ -334,7 +376,7 @@ if __name__ == "__main__":
     try:
         report = run_local(args.nginx_binary, args.negative_control) if args.nginx_binary else run(args.negative_control)
     except Exception as error:
-        report = getattr(error, "report", {"failure": {"type": type(error).__name__, "detail": str(error)}})
+        report = getattr(error, "report", {"failure": failure_record(error)})
         emit_report(report, args.output)
         raise SystemExit(1)
     if not emit_report(report, args.output):
