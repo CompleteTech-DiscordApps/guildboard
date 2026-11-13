@@ -123,6 +123,7 @@ def run_local(nginx_binary, control=None):
     proxy = None
     with tempfile.TemporaryDirectory(prefix="gb-t10-nginx-") as temporary:
         root = Path(temporary)
+        (root / "logs").mkdir()
         with socket.socket() as reserve:
             reserve.bind(("127.0.0.1", 0))
             proxy_port = reserve.getsockname()[1]
