@@ -37,9 +37,9 @@ appoint reviewers, authorize agent delegation, or change issue readiness.
   completed handoffs. Preserve history and unrelated work. File workers and
   reviewers must not delegate or spawn agents.
 - Reverify the actual available capacity and live occupancy before spawning;
-  four slots is the currently verified limit, not a universal limit. Count the lead
-  and every live directory orchestrator, worker and reviewer. Queue work or reuse
-  an available agent when full. Logical directory roles do not add slots or permit
+  use the current session limit rather than a prior campaign's recorded limit.
+  Count the lead and every live directory orchestrator, worker and reviewer. Queue
+  work or reuse an available agent when full. Logical directory roles do not add slots or permit
   hidden parallel agents. Release completed leases and slots before assigning
   successors, and reserve capacity for independent review.
 
