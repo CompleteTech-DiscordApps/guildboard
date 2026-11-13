@@ -4,6 +4,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT = ROOT / "docs/research/t12-validation-matrix.json"
+EXTERNAL_GROUPS = {
+    "discord-win": "client-at", "discord-mac": "client-at",
+    "discord-web-chromium": "client-at", "discord-web-firefox": "client-at",
+    "discord-ios": "client-at", "discord-android": "client-at",
+    "discord-previews": "client-at", "vps-network": "vps",
+    "vps-load": "vps", "vps-recovery": "vps",
+}
 
 
 def integer(value, lower, upper, label):
@@ -54,13 +61,20 @@ def validate(matrix):
         if p95 > p99 or not budget["metric"] or not budget["conditions"]:
             raise ValueError("invalid latency budget/conditions")
     rows = matrix["external_rows"]
-    if len(rows) != 10 or len({row["id"] for row in rows}) != len(rows):
+    if (len(rows) != len(EXTERNAL_GROUPS)
+            or {row["id"] for row in rows} != set(EXTERNAL_GROUPS)):
         raise ValueError("external matrix coverage changed without research review")
     for row in rows:
-        if row["group"] not in {"client-at", "vps"} or row["status"] != "not-run":
-            raise ValueError("research fixture cannot certify external acceptance")
-        if not row["environment"] or len(row["required_evidence"]) < 5:
-            raise ValueError("missing environment/evidence requirements")
+        if row["group"] != EXTERNAL_GROUPS[row["id"]] or row["status"] != "not-run":
+            raise ValueError("research fixture cannot certify external acceptance or change environment groups")
+        evidence = row["required_evidence"]
+        if (not isinstance(row["environment"], str) or not row["environment"].strip()
+                or not isinstance(evidence, list) or len(evidence) < 5
+                or any(not isinstance(item, str) or not item.strip() or item != item.strip()
+                       for item in evidence)
+                or len(set(evidence)) != len(evidence)
+                or "trace-hash-date" not in evidence):
+            raise ValueError("missing or invalid environment/evidence requirements")
     if matrix["accessibility_candidate"]["status"] != "not-run":
         raise ValueError("research fixture cannot certify accessibility")
     if len(matrix["stop_conditions"]) < 6:

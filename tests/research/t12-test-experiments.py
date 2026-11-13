@@ -151,6 +151,34 @@ class MatrixTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "sum to 100"):
             matrix.validate(self.data)
 
+    def test_vps_coverage_cannot_be_replaced_by_renamed_client_rows(self):
+        data = deepcopy(self.data)
+        for index in range(7, 10):
+            data["external_rows"][index] = deepcopy(data["external_rows"][0])
+            data["external_rows"][index]["id"] = "renamed-client-" + str(index)
+        with self.assertRaisesRegex(ValueError, "coverage"):
+            matrix.validate(data)
+        data = deepcopy(self.data)
+        data["external_rows"][-1]["group"] = "client-at"
+        with self.assertRaisesRegex(ValueError, "groups"):
+            matrix.validate(data)
+
+    def test_required_evidence_names_and_trace_are_preserved(self):
+        for evidence in (["", "", "", "", ""],
+                         [" ", "a", "b", "c", "trace-hash-date"],
+                         ["a", "a", "b", "c", "trace-hash-date"],
+                         [1, "a", "b", "c", "trace-hash-date"],
+                         "trace-hash-date",
+                         ["a", "b", "c", "d", "e"]):
+            data = deepcopy(self.data)
+            data["external_rows"][0]["required_evidence"] = evidence
+            with self.subTest(evidence=evidence), self.assertRaises(ValueError):
+                matrix.validate(data)
+        data = deepcopy(self.data)
+        data["external_rows"][0]["required_evidence"].remove("trace-hash-date")
+        with self.assertRaises(ValueError):
+            matrix.validate(data)
+
     def test_external_pass_or_incomplete_coverage_cannot_be_laundered(self):
         for mutation in ("pass", "coverage", "evidence", "accessibility"):
             data = deepcopy(self.data)
