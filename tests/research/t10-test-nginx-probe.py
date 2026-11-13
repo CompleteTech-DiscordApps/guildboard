@@ -1117,10 +1117,11 @@ class SourceCaptureRegression(unittest.TestCase):
         import contextlib
         import runpy
         output, errors = io.StringIO(), io.StringIO()
-        response = SimpleNamespace(stdout=json.dumps({"result": {"http_status": 200, "bytes": 2, "sha256": "test", "final_url": "http://fixture"}}))
+        response = mock.Mock(returncode=0)
+        response.communicate.return_value = (json.dumps({"result": {"http_status": 200, "bytes": 2, "sha256": "test", "final_url": "http://fixture"}}), "")
         with tempfile.TemporaryDirectory() as directory, \
              mock.patch.object(sys, "argv", ["capture", "--output", directory]), \
-             mock.patch.object(subprocess, "run", return_value=response), \
+             mock.patch.object(subprocess, "Popen", return_value=response), \
              contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
             with self.assertRaises(SystemExit) as caught:
                 runpy.run_path(str(ROOT / "scripts/research/t10-capture-sources.py"), run_name="__main__")
