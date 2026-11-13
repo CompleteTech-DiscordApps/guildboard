@@ -3,6 +3,7 @@
 import argparse
 import collections
 import json
+import tempfile
 from pathlib import Path
 
 from api import ROOT
@@ -209,9 +210,17 @@ def unique_object(pairs):
 
 def save_report(path, report):
     """Escape even JSON-valid lone surrogates before writing diagnostic text."""
-    temporary = path.with_suffix(path.suffix + '.tmp')
-    temporary.write_text(json.dumps(report, indent=2, ensure_ascii=True) + '\n', encoding='utf-8')
-    temporary.replace(path)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode='w', encoding='utf-8', dir=path.parent,
+                prefix=path.name + '.', suffix='.tmp', delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(json.dumps(report, indent=2, ensure_ascii=True) + '\n')
+        temporary.replace(path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def main(argv=None):

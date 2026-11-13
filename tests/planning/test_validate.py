@@ -1,12 +1,15 @@
 """Offline regression tests for the roadmap CI validator, not product acceptance."""
 import copy
+import concurrent.futures
 import importlib.util
 import json
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ROOT / 'scripts/github-bootstrap'
@@ -184,6 +187,59 @@ class ValidatorTests(unittest.TestCase):
         for index in range(2, 11):
             self.manifest['items'][index]['parent_id'] = self.manifest['items'][index - 1]['id']
         self.fails_with('hierarchy too deep')
+
+
+class ReportWriteTests(unittest.TestCase):
+    def test_concurrent_writers_publish_their_own_report(self):
+        # Force both writers to finish staging before either publishes. Then
+        # observe each publication, without imposing a general winner policy.
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / 'report.json'
+            staged = threading.Barrier(2)
+            first_published = threading.Event()
+            observed = {}
+            original_replace = Path.replace
+            first = {'result': 'fail', 'errors': ['invalid manifest']}
+            second = {'result': 'pass', 'errors': []}
+
+            def replace(path, destination):
+                staged.wait(timeout=10)
+                if threading.current_thread().name == 'invalid':
+                    try:
+                        result = original_replace(path, destination)
+                        observed['invalid'] = json.loads(report.read_text())
+                        return result
+                    finally:
+                        first_published.set()
+                self.assertTrue(first_published.wait(timeout=10))
+                result = original_replace(path, destination)
+                observed['valid'] = json.loads(report.read_text())
+                return result
+
+            def write(name, value):
+                threading.current_thread().name = name
+                validator.save_report(report, value)
+
+            with mock.patch.object(Path, 'replace', replace):
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                    pending = [pool.submit(write, 'invalid', first),
+                               pool.submit(write, 'valid', second)]
+                    for future in pending:
+                        future.result(timeout=15)
+            self.assertEqual(observed, {'invalid': first, 'valid': second})
+            self.assertEqual(json.loads(report.read_text()), second)
+            self.assertEqual(list(Path(directory).iterdir()), [report])
+
+    def test_failed_publication_cleans_staging_and_preserves_previous_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / 'report.json'
+            previous = '{"result":"pass","previous":true}'
+            report.write_text(previous)
+            with mock.patch.object(Path, 'replace', side_effect=OSError('replace denied')):
+                with self.assertRaisesRegex(OSError, 'replace denied'):
+                    validator.save_report(report, {'result': 'fail'})
+            self.assertEqual(report.read_text(), previous)
+            self.assertEqual(list(Path(directory).iterdir()), [report])
 
 
 class CliTests(unittest.TestCase):
