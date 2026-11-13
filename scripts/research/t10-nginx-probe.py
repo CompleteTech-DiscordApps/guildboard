@@ -101,16 +101,23 @@ class ExperimentCancelled(RuntimeError):
         super().__init__("cancelled by " + self.signal_name)
 
 
+_cancellation_state = None
+
+
 @contextlib.contextmanager
 def cancellation_signals():
-    """Unwind owned work once; ignore repeat catchable signals during cleanup."""
+    """Record the first signal; deliver it outside protected owned cleanup."""
+    global _cancellation_state
     previous = {}
-    cancelled = False
+    previous_state = _cancellation_state
+    state = {"signal": None, "delivered": False, "cleanup_depth": 0}
+    _cancellation_state = state
     def cancel(signum, _frame):
-        nonlocal cancelled
-        if not cancelled:
-            cancelled = True
-            raise ExperimentCancelled(signum)
+        if state["signal"] is None:
+            state["signal"] = signum
+        if not state["delivered"] and not state["cleanup_depth"]:
+            state["delivered"] = True
+            raise ExperimentCancelled(state["signal"])
     try:
         for signum in (signal.SIGINT, signal.SIGTERM):
             previous[signum] = signal.getsignal(signum)
@@ -119,6 +126,32 @@ def cancellation_signals():
     finally:
         for signum, handler in previous.items():
             signal.signal(signum, handler)
+        _cancellation_state = previous_state
+
+
+@contextlib.contextmanager
+def owned_cleanup(report):
+    """Finish every owned cleanup operation before delivering a first signal."""
+    state = _cancellation_state
+    if state is not None:
+        state["cleanup_depth"] += 1
+    try:
+        yield
+    except Exception as error:
+        error.report = report
+        report.setdefault("failure", failure_record(error))
+        raise
+    finally:
+        if state is not None:
+            state["cleanup_depth"] -= 1
+            if not state["cleanup_depth"] and state["signal"] is not None and not state["delivered"]:
+                state["delivered"] = True
+                error = ExperimentCancelled(state["signal"])
+                record = failure_record(error)
+                report["cancellation"] = record
+                report.setdefault("failure", record)
+                error.report = report
+                raise error
 
 
 class DockerCleanupError(RuntimeError):
@@ -153,35 +186,36 @@ def create_owned_container(intended, name, *args):
 
 
 def cleanup_owned_containers(intended, token, report):
-    cleanup, failures = [], []
-    for name in reversed(intended):
-        try:
-            info = inspect_container(name)
-            if info is None:
-                cleanup.append({"kind": "container", "name": name, "absence_verified": True})
-                continue
-            labels = info.get("Config", {}).get("Labels", {})
-            identifier = info.get("Id")
-            if (not isinstance(labels, dict) or labels.get("guildboard.t10.probe") != token
-                    or info.get("Name") != "/" + name
-                    or not isinstance(identifier, str) or re.fullmatch(r"[0-9a-f]{64}", identifier) is None):
-                raise RuntimeError("Ownership/identity mismatch; refusing cleanup: " + name)
-            removal_error = None
+    with owned_cleanup(report):
+        cleanup, failures = [], []
+        for name in reversed(intended):
             try:
-                # Bind removal to the inspected immutable ID, not a reusable name.
-                docker("container", "rm", "--force", identifier)
-            except (subprocess.SubprocessError, OSError) as error:
-                removal_error = error
-            if inspect_container(identifier) is not None:
-                raise RuntimeError("Cleanup absence not verified: " + name) from removal_error
-            cleanup.append({"kind": "container", "name": name, "id": identifier, "absence_verified": True})
-        except Exception as error:
-            # Failure to inspect/remove one resource must not strand the others.
-            failures.append(name + ": " + type(error).__name__ + ": " + str(error))
-    report["cleanup"] = cleanup
-    if failures:
-        report["cleanup_failures"] = failures
-        raise DockerCleanupError(failures, report)
+                info = inspect_container(name)
+                if info is None:
+                    cleanup.append({"kind": "container", "name": name, "absence_verified": True})
+                    continue
+                labels = info.get("Config", {}).get("Labels", {})
+                identifier = info.get("Id")
+                if (not isinstance(labels, dict) or labels.get("guildboard.t10.probe") != token
+                        or info.get("Name") != "/" + name
+                        or not isinstance(identifier, str) or re.fullmatch(r"[0-9a-f]{64}", identifier) is None):
+                    raise RuntimeError("Ownership/identity mismatch; refusing cleanup: " + name)
+                removal_error = None
+                try:
+                    # Bind removal to the inspected immutable ID, not a reusable name.
+                    docker("container", "rm", "--force", identifier)
+                except (subprocess.SubprocessError, OSError) as error:
+                    removal_error = error
+                if inspect_container(identifier) is not None:
+                    raise RuntimeError("Cleanup absence not verified: " + name) from removal_error
+                cleanup.append({"kind": "container", "name": name, "id": identifier, "absence_verified": True})
+            except Exception as error:
+                # Failure to inspect/remove one resource must not strand the others.
+                failures.append(name + ": " + type(error).__name__ + ": " + str(error))
+        report["cleanup"] = cleanup
+        if failures:
+            report["cleanup_failures"] = failures
+            raise DockerCleanupError(failures, report)
 
 
 def run(control=None):
@@ -346,42 +380,43 @@ def run_local(nginx_binary, control=None):
         report.setdefault("failure", failure_record(error))
         raise
     finally:
-        failures = []
-        if proxy is not None:
-            try:
-                stop_local_proxy(proxy)
-            except Exception as error:
-                failures.append("nginx: " + repr(error))
-        if server is not None:
-            server.idle_stop.set()
-            for action in (
-                lambda: server.shutdown() if thread is not None and thread.is_alive() else None,
-                lambda: thread.join(timeout=5) if thread is not None and thread.ident is not None else None,
-                server.server_close,
-            ):
+        with owned_cleanup(report):
+            failures = []
+            if proxy is not None:
                 try:
-                    action()
+                    stop_local_proxy(proxy)
                 except Exception as error:
-                    failures.append("backend: " + repr(error))
-        # Preserve final owned stderr after process cleanup, before unlinking it.
-        if errors is not None:
-            capture_nginx_log(errors, report)
-            try:
-                errors.close()
-            except (OSError, ValueError) as error:
-                failures.append("stderr close: " + repr(error))
-        if temporary_directory is not None:
-            try:
-                temporary_directory.cleanup()
-            except (OSError, ValueError) as error:
-                failures.append("temporary directory: " + repr(error))
-        report["cleanup"] = {"owned_nginx_exited": proxy is None or proxy.poll() is not None,
-                             "owned_backend_thread_exited": thread is None or not thread.is_alive()}
-        if failures:
-            report["cleanup_failures"] = failures
-            error = RuntimeError("Owned local cleanup failed: " + "; ".join(failures))
-            error.report = report
-            raise error
+                    failures.append("nginx: " + repr(error))
+            if server is not None:
+                server.idle_stop.set()
+                for action in (
+                    lambda: server.shutdown() if thread is not None and thread.is_alive() else None,
+                    lambda: thread.join(timeout=5) if thread is not None and thread.ident is not None else None,
+                    server.server_close,
+                ):
+                    try:
+                        action()
+                    except Exception as error:
+                        failures.append("backend: " + repr(error))
+            # Preserve final owned stderr after process cleanup, before unlinking it.
+            if errors is not None:
+                capture_nginx_log(errors, report)
+                try:
+                    errors.close()
+                except (OSError, ValueError) as error:
+                    failures.append("stderr close: " + repr(error))
+            if temporary_directory is not None:
+                try:
+                    temporary_directory.cleanup()
+                except (OSError, ValueError) as error:
+                    failures.append("temporary directory: " + repr(error))
+            report["cleanup"] = {"owned_nginx_exited": proxy is None or proxy.poll() is not None,
+                                 "owned_backend_thread_exited": thread is None or not thread.is_alive()}
+            if failures:
+                report["cleanup_failures"] = failures
+                error = RuntimeError("Owned local cleanup failed: " + "; ".join(failures))
+                error.report = report
+                raise error
     return report
 
 
@@ -412,6 +447,8 @@ def main(argv=None):
         except Exception as error:
             report = getattr(error, "report", report)
             report.setdefault("failure", failure_record(error))
+            if isinstance(error, ExperimentCancelled):
+                report["cancellation"] = failure_record(error)
             emit_report(report, args.output)
             return error.exit_code if isinstance(error, ExperimentCancelled) else 1
 

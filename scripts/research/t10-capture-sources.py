@@ -44,16 +44,22 @@ class ExperimentCancelled(RuntimeError):
         super().__init__("cancelled by " + self.signal_name)
 
 
+_cancellation_state = None
+
+
 @contextlib.contextmanager
 def cancellation_signals():
-    """Unwind owned work once; ignore repeat catchable signals during cleanup."""
-    previous = {}
-    cancelled = False
+    """Deliver the first catchable signal outside owned worker cleanup."""
+    global _cancellation_state
+    previous, previous_state = {}, _cancellation_state
+    state = {"signal": None, "delivered": False, "cleanup_depth": 0}
+    _cancellation_state = state
     def cancel(signum, _frame):
-        nonlocal cancelled
-        if not cancelled:
-            cancelled = True
-            raise ExperimentCancelled(signum)
+        if state["signal"] is None:
+            state["signal"] = signum
+        if not state["delivered"] and not state["cleanup_depth"]:
+            state["delivered"] = True
+            raise ExperimentCancelled(state["signal"])
     try:
         for signum in (signal.SIGINT, signal.SIGTERM):
             previous[signum] = signal.getsignal(signum)
@@ -62,6 +68,22 @@ def cancellation_signals():
     finally:
         for signum, handler in previous.items():
             signal.signal(signum, handler)
+        _cancellation_state = previous_state
+
+
+@contextlib.contextmanager
+def owned_cleanup():
+    state = _cancellation_state
+    if state is not None:
+        state["cleanup_depth"] += 1
+    try:
+        yield
+    finally:
+        if state is not None:
+            state["cleanup_depth"] -= 1
+            if not state["cleanup_depth"] and state["signal"] is not None and not state["delivered"]:
+                state["delivered"] = True
+                raise ExperimentCancelled(state["signal"])
 
 
 class FetchFailure(OSError):
@@ -75,14 +97,28 @@ def fetch(url, timeout):
     """A disposable process bounds DNS, redirects and trickling response bodies."""
     if timeout <= 0:
         raise TimeoutError("collection elapsed-time deadline exceeded")
+    process = subprocess.Popen([sys.executable, str(Path(__file__).resolve()),
+                                "--fetch-worker", url], stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, text=True)
     try:
-        result = subprocess.run([sys.executable, str(Path(__file__).resolve()),
-                                 "--fetch-worker", url], capture_output=True,
-                                text=True, check=True, timeout=timeout)
+        stdout, stderr = process.communicate(timeout=timeout)
+        if process.returncode:
+            raise subprocess.CalledProcessError(process.returncode, process.args, stdout, stderr)
     except subprocess.TimeoutExpired as error:
-        # subprocess.run kills and reaps the child before raising.
         raise TimeoutError("response elapsed-time deadline exceeded") from error
-    envelope = json.loads(result.stdout)
+    finally:
+        # Protect kill/reap/pipe close even when the first signal arrives here.
+        with owned_cleanup():
+            try:
+                if process.poll() is None:
+                    process.kill()
+            finally:
+                try:
+                    process.wait()
+                finally:
+                    process.stdout.close()
+                    process.stderr.close()
+    envelope = json.loads(stdout)
     if "error" in envelope:
         raise FetchFailure(envelope["error"])
     return envelope["result"]

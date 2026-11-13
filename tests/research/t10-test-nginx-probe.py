@@ -438,6 +438,113 @@ class DockerCleanupRegression(unittest.TestCase):
 
 
 class CancellationRegression(unittest.TestCase):
+    def test_first_signal_during_normal_docker_cleanup_is_deferred(self):
+        import contextlib
+        for number in (signal.SIGTERM, signal.SIGINT):
+            fake, output, sent = FakeDocker(), io.StringIO(), []
+            foreign = fake.add("foreign", token="foreign")
+            def command(*args, **kwargs):
+                if args[:2] == ("container", "inspect") and args[2].endswith("proxy") and len(fake.containers) == 3 and not sent:
+                    sent.append(number)
+                    os.kill(os.getpid(), number)
+                    os.kill(os.getpid(), signal.SIGINT if number == signal.SIGTERM else signal.SIGTERM)
+                if args[0] == "exec" and args[-1] == "probe":
+                    return SimpleNamespace(stdout=json.dumps({"checks": ["synthetic body success"]}), stderr="")
+                return fake(*args, **kwargs)
+            with self.subTest(signal=number), mock.patch.object(PROBE, "docker", side_effect=command), contextlib.redirect_stdout(output):
+                code = PROBE.main([])
+            report = json.loads(output.getvalue())
+            self.assertEqual(code, 128 + number)
+            self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+            self.assertEqual(report["cancellation"]["signal"], signal.Signals(number).name)
+            self.assertEqual(fake.containers, {"foreign": foreign})
+            self.assertEqual(len(report["cleanup"]), 2)
+            self.assertTrue(all(item["absence_verified"] for item in report["cleanup"]))
+            self.assertIn("result", report)
+
+    @unittest.skipUnless(POSIX_LOCAL, "POSIX process ownership required")
+    def test_first_signal_during_normal_local_cleanup_finishes_all_actions(self):
+        import contextlib
+        binary = os.environ.get("T10_NGINX_BINARY")
+        if not binary:
+            self.skipTest("explicit local Nginx binary required")
+        original_spec = PROBE.importlib.util.spec_from_file_location
+        original_stop, original_shutdown = PROBE.stop_local_proxy, http.server.ThreadingHTTPServer.shutdown
+        def inject(name, path):
+            spec = original_spec(name, path)
+            load = spec.loader.exec_module
+            def execute(module):
+                load(module)
+                module.probe = lambda: {"checks": ["synthetic body success; real owned cleanup"]}
+            spec.loader.exec_module = execute
+            return spec
+        for phase in ("nginx", "backend"):
+            for number in (signal.SIGTERM, signal.SIGINT):
+                output, servers, processes = io.StringIO(), [], []
+                def stop(proxy):
+                    processes.append(proxy)
+                    if phase == "nginx":
+                        os.kill(os.getpid(), number)
+                    return original_stop(proxy)
+                def shutdown(server):
+                    servers.append(server)
+                    if phase == "backend":
+                        os.kill(os.getpid(), number)
+                    return original_shutdown(server)
+                try:
+                    with self.subTest(phase=phase, signal=number), \
+                         mock.patch.object(PROBE.importlib.util, "spec_from_file_location", side_effect=inject), \
+                         mock.patch.object(PROBE, "stop_local_proxy", side_effect=stop), \
+                         mock.patch.object(http.server.ThreadingHTTPServer, "shutdown", shutdown), contextlib.redirect_stdout(output):
+                        code = PROBE.main(["--nginx-binary", binary])
+                    report = json.loads(output.getvalue())
+                    self.assertEqual(code, 128 + number)
+                    self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+                    self.assertTrue(all(report["cleanup"].values()))
+                    self.assertTrue(all(process.poll() is not None for process in processes))
+                    self.assertTrue(all(server.fileno() == -1 for server in servers))
+                    self.assertIn("result", report)
+                finally:
+                    # Rescue only captured owned resources if old code skips an action.
+                    for server in servers:
+                        original_shutdown(server)
+                        server.server_close()
+                    for process in processes:
+                        original_stop(process)
+
+    def test_first_signal_during_normal_fetch_worker_cleanup_reaps_and_reports(self):
+        import contextlib
+        import tempfile
+        spec = importlib.util.spec_from_file_location("t10_capture_cleanup", ROOT / "scripts/research/t10-capture-sources.py")
+        capture = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(capture)
+        original_popen = subprocess.Popen
+        for number in (signal.SIGTERM, signal.SIGINT):
+            output, processes, sent = io.StringIO(), [], []
+            def popen(*args, **kwargs):
+                # Real disposable child, deterministic successful body; no public fetch.
+                process = original_popen([sys.executable, "-c", "import json; print(json.dumps(dict(result=dict(http_status=200,bytes=2))))"], **kwargs)
+                processes.append(process)
+                original_wait = process.wait
+                def wait(*args, **kwargs):
+                    state = getattr(capture, "_cancellation_state", None)
+                    if state and state["cleanup_depth"] and not sent:
+                        sent.append(number)
+                        os.kill(os.getpid(), number)
+                    return original_wait(*args, **kwargs)
+                process.wait = wait
+                return process
+            with self.subTest(signal=number), tempfile.TemporaryDirectory() as scratch, \
+                 mock.patch.object(capture, "SOURCES", [("synthetic", "unused")]), \
+                 mock.patch.object(capture.subprocess, "Popen", side_effect=popen), contextlib.redirect_stdout(output):
+                code = capture.main(["--output", str(Path(scratch) / "report.json")])
+            report = json.loads(output.getvalue())
+            self.assertTrue(sent, "first signal must occur inside explicit owned cleanup")
+            self.assertEqual(code, 128 + number)
+            self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+            self.assertTrue(report["sources"][0]["cancelled"])
+            self.assertTrue(all(process.poll() is not None and process.stdout.closed and process.stderr.closed for process in processes))
+
     def test_signal_handlers_restore_and_repeat_signals_do_not_interrupt_cleanup(self):
         spec = importlib.util.spec_from_file_location("t10_capture_cancel", ROOT / "scripts/research/t10-capture-sources.py")
         capture = importlib.util.module_from_spec(spec)
