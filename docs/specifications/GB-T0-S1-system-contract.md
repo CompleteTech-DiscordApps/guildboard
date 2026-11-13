@@ -224,14 +224,19 @@ or a digest conflict cannot settle an unknown outcome as accepted or uncommitted
 keep it unresolved/rejected as appropriate without exposing protected history.
 
 Compatibility handoff: the unaccepted T4 experiment in
-[PR #484](https://github.com/CompleteTech-DiscordApps/guildboard/pull/484), head
-`0bfdf0e976ffbe3de3cf22b5280b863db15e72fc`, clears receipts on its toy restore and
-rejects old lineages before lookup. That experiment does not satisfy this
-cross-restore proposal. T4/T5/T7/T8/T9/T12 must reconcile that difference and review
-precedence, retention and client recovery together before adoption. Neither the
-toy's results nor these declarative fixtures prove the proposed behavior. This
-is a proposed clarification, not a second runtime implementation or architecture
-acceptance.
+[PR #484](https://github.com/CompleteTech-DiscordApps/guildboard/pull/484) originally
+cleared receipts and rejected old lineages before lookup at head
+`0bfdf0e976ffbe3de3cf22b5280b863db15e72fc`. Candidate head
+`3379307f5b0e64c9b135307a160558347d7299f0` retains historical scoped receipts and
+checks current identity/read access before receipt/digest lookup and lineage
+rejection. Its dated follow-up evidence records 17 passing finite-model tests,
+including historical lost-ack recovery without replay and old-lineage rejection
+without a receipt. This reconciles the identified toy-model ordering difference;
+it does not implement durable receipt storage or client reconciliation.
+T4/T5/T7/T8/T9/T12 must still review precedence, retention and client recovery
+together before adoption. Neither the toy's results nor these declarative fixtures
+prove the proposed runtime behavior. This remains a proposed clarification, not
+architecture acceptance.
 
 Upload bytes enter bounded quarantine outside the web root, are validated by
 content/decoded size, and become addressable only through an authorized opaque
