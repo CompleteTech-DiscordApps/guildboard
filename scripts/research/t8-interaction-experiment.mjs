@@ -84,7 +84,7 @@ export function provenance(value) {
 export function state() {
   return { read: true, write: true, currentGeneration: 1, expectedGeneration: 1,
     activeLineage: 'current', commandLineage: 'current', effects: 0, audit: 0,
-    receipts: new Map(), transportDigests: new Map() };
+    receipts: new Map(), invocationBindings: new Map() };
 }
 
 export function dispatch(request, publicKey, authority, options = {}) {
@@ -97,11 +97,13 @@ export function dispatch(request, publicKey, authority, options = {}) {
   // Current identity/read gate precedes revealing receipt or digest existence.
   if (!authority.read) return denied('current_read_denied');
   const transportKey = `${value.application_id}/${value.id}`;
-  const previousDigest = authority.transportDigests.get(transportKey);
-  if (previousDigest && previousDigest !== rawDigest) return denied('interaction_id_conflict');
-  // This fixture maps one invocation to one synthetic operation. Production needs
-  // an explicit canonical operation codec and accepted lineage/digest contract.
-  const operationKey = `${value.guild_id}/fixture-board/${authority.commandLineage}/${value.member.user.id}/${value.id}`;
+  const binding = authority.invocationBindings.get(transportKey);
+  if (binding && binding.rawDigest !== rawDigest) return denied('interaction_id_conflict');
+  // Retain the original operation identity across restore and later invocations.
+  // Only a previously unseen invocation uses the current proposed lineage.
+  // Production still needs an accepted canonical operation/digest contract.
+  const operationKey = binding?.operationKey
+    ?? `${value.guild_id}/fixture-board/${authority.commandLineage}/${value.member.user.id}/${value.id}`;
   const receipt = authority.receipts.get(operationKey);
   if (receipt) return { ok: true, result: 'existing_receipt', receipt };
   if (authority.commandLineage !== authority.activeLineage) return denied('lineage_changed');
@@ -112,7 +114,7 @@ export function dispatch(request, publicKey, authority, options = {}) {
   const accepted = { revision: authority.effects + 1, lineage: authority.commandLineage };
   authority.effects += 1;
   authority.audit += 1;
-  authority.transportDigests.set(transportKey, rawDigest);
+  authority.invocationBindings.set(transportKey, Object.freeze({ rawDigest, operationKey }));
   authority.receipts.set(operationKey, accepted);
   return { ok: true, result: 'new_receipt', receipt: accepted };
 }

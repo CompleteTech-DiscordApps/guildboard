@@ -7,11 +7,11 @@ import { FIXTURE, keys, payload, envelope, authenticate, dispatch, state, report
 const pair = keys();
 const signed = (value, timestamp) => envelope(pair.privateKey, value, timestamp);
 function deniedWithoutEffects(request, reason, authority = state(), options = {}) {
-  const before = { effects: authority.effects, audit: authority.audit,
-    receipts: [...authority.receipts], transport: [...authority.transportDigests] };
+  const before = structuredClone({ effects: authority.effects, audit: authority.audit,
+    receipts: [...authority.receipts], bindings: [...authority.invocationBindings] });
   assert.deepEqual(dispatch(request, pair.publicKey, authority, options), { ok: false, reason });
   assert.deepEqual({ effects: authority.effects, audit: authority.audit,
-    receipts: [...authority.receipts], transport: [...authority.transportDigests] }, before);
+    receipts: [...authority.receipts], bindings: [...authority.invocationBindings] }, before);
 }
 
 test('independent RFC 8032 section 7.1 public known-answer vector and mutation', () => {
@@ -137,6 +137,35 @@ test('retired-lineage readable receipt precedes current write and lineage checks
   assert.equal(dispatch(request, pair.publicKey, authority).result, 'existing_receipt');
   deniedWithoutEffects(signed(payload({ id: '600000000000000002' })), 'lineage_changed', authority);
   assert.equal(authority.effects, 1);
+});
+
+test('old invocation stays bound to its receipt after a new-lineage command commits', () => {
+  const authority = state();
+  const oldRequest = signed();
+  const original = dispatch(oldRequest, pair.publicKey, authority);
+  assert.equal(original.result, 'new_receipt');
+  authority.activeLineage = 'restored';
+  authority.commandLineage = 'restored';
+  const fresh = signed(payload({ id: '600000000000000002' }));
+  const restored = dispatch(fresh, pair.publicKey, authority);
+  assert.equal(restored.result, 'new_receipt');
+  assert.equal(restored.receipt.lineage, 'restored');
+  const retry = dispatch(oldRequest, pair.publicKey, authority);
+  assert.equal(retry.result, 'existing_receipt');
+  assert.strictEqual(retry.receipt, original.receipt);
+  assert.equal(retry.receipt.lineage, 'current');
+  assert.equal(authority.effects, 2);
+  assert.equal(authority.audit, 2);
+  assert.equal(authority.receipts.size, 2);
+  assert.equal(authority.invocationBindings.size, 2);
+  authority.write = false;
+  assert.strictEqual(dispatch(oldRequest, pair.publicKey, authority).receipt, original.receipt);
+  deniedWithoutEffects(signed(payload({ locale: 'fr' })), 'interaction_id_conflict', authority);
+  const tampered = { ...oldRequest, raw: Buffer.concat([oldRequest.raw, Buffer.from(' ')]) };
+  deniedWithoutEffects(tampered, 'bad_signature', authority);
+  authority.read = false;
+  deniedWithoutEffects(oldRequest, 'current_read_denied', authority);
+  deniedWithoutEffects(signed(payload({ locale: 'fr' })), 'current_read_denied', authority);
 });
 
 test('current read denial conceals both prior receipt and digest mismatch', () => {

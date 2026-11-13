@@ -224,3 +224,20 @@ local test is substituted for them.
 
 #261 remains natively blocked on #260. No issue closure, native dependency,
 Project field, accepted architecture or production package is changed here.
+
+## Retained invocation binding follow-up (2026-11-13 UTC)
+
+The original 19-test experiment did not advance both mutable lineage fields
+before retrying an old interaction. Review finding 4559104014 exposed a modeled
+second effect: transport digest validation passed, but receipt lookup recomputed
+an operation key using the new lineage. The focused correction retains the
+original operation key with the interaction digest. It preserves authentication,
+current read and digest validation before disclosing the retained receipt.
+
+A twentieth regression commits an old invocation, advances both lineage fields,
+commits a distinct invocation in the new lineage, and only then retries the old
+one. It requires the original receipt and unchanged effect/audit/receipt totals,
+including after write loss; tampering, changed transport bytes and read loss
+still deny without altering any map or counter. The new test fails against the
+prior head and passes after correction. The original dated evidence remains
+historical; this adds no SQL, concurrency, durability or real Discord claim.
