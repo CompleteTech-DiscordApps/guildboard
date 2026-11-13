@@ -1,5 +1,6 @@
 """Real local proxy negative controls, opt-in Docker prerequisite; no image pulls."""
 import os
+import sys
 import io
 import json
 from types import SimpleNamespace
@@ -275,6 +276,74 @@ class DockerCleanupRegression(unittest.TestCase):
         self.assertEqual(sum(call[:2] == ("container", "rm") for call in fake.calls), 2)
 
 
+class FailureAttributionRegression(unittest.TestCase):
+    def test_cli_failure_emits_accumulated_report(self):
+        result = subprocess.run([sys.executable, str(ROOT / "scripts/research/t10-nginx-probe.py"),
+                                 "--nginx-binary", sys.executable], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        report = json.loads(result.stdout)
+        self.assertIn("tested_sha", report)
+        self.assertIn("failure", report)
+        self.assertTrue(all(report["cleanup"].values()))
+
+    def test_failure_retains_successful_checks(self):
+        with mock.patch.object(FIXTURE, "request", return_value=(200, b'{"path":"wrong"}')):
+            with self.assertRaises(AssertionError) as caught:
+                FIXTURE.probe()
+        self.assertEqual(caught.exception.passed_checks, [])
+        checks = [{"name": "first", "passed": True}]
+        def fail_after_check(captured):
+            captured.extend(checks)
+            raise FIXTURE.ProbeFailure("second")
+        with mock.patch.object(FIXTURE, "_probe", side_effect=fail_after_check):
+            with self.assertRaises(FIXTURE.ProbeFailure) as caught:
+                FIXTURE.probe()
+        self.assertEqual(caught.exception.passed_checks, checks)
+
+    def test_wait_failure_still_kills_group_and_reaps(self):
+        process = mock.Mock(pid=12345)
+        process.wait.side_effect = [RuntimeError("wait failure"), 0]
+        with mock.patch.object(PROBE.os, "killpg") as kill:
+            with self.assertRaisesRegex(RuntimeError, "wait failure"):
+                PROBE.stop_local_proxy(process)
+        self.assertEqual(kill.call_args_list, [mock.call(12345, signal.SIGTERM), mock.call(12345, signal.SIGKILL)])
+        self.assertEqual(process.wait.call_count, 2)
+
+    def test_unrelated_docker_stderr_cannot_pass_negative_control(self):
+        fake = FakeDocker()
+        def command(*args, **kwargs):
+            if args[-2:] == ("/tmp/probe.py", "probe"):
+                raise subprocess.CalledProcessError(1, args, output="", stderr="unrelated failure HTTP/1.1 426")
+            return fake(*args, **kwargs)
+        with mock.patch.object(PROBE, "docker", side_effect=command):
+            with self.assertRaises(subprocess.CalledProcessError) as caught:
+                PROBE.run("strip-upgrade")
+        self.assertIn("nginx_config_check", caught.exception.report)
+        self.assertIn("failure", caught.exception.report)
+        self.assertEqual(len(caught.exception.report["cleanup"]), 2)
+        self.assertEqual(fake.containers, {})
+
+    def test_unrelated_local_assertion_cannot_pass_negative_control(self):
+        binary = os.environ.get("T10_NGINX_BINARY")
+        if not binary:
+            self.skipTest("explicit local Nginx binary required")
+        original = PROBE.importlib.util.spec_from_file_location
+        def inject(name, path):
+            spec = original(name, path)
+            load = spec.loader.exec_module
+            def execute(module):
+                load(module)
+                module.probe = mock.Mock(side_effect=AssertionError("unrelated 426 failure"))
+            spec.loader.exec_module = execute
+            return spec
+        with mock.patch.object(PROBE.importlib.util, "spec_from_file_location", side_effect=inject):
+            with self.assertRaisesRegex(AssertionError, "unrelated 426 failure") as caught:
+                PROBE.run_local(binary, "strip-upgrade")
+        self.assertIn("nginx_version", caught.exception.report)
+        self.assertTrue(all(caught.exception.report["cleanup"].values()))
+        self.assertNotIn("negative_control", caught.exception.report)
+
+
 class ActualNginxControls(unittest.TestCase):
     def run_probe(self, control):
         binary = os.environ.get("T10_NGINX_BINARY")
@@ -349,6 +418,53 @@ class ActualNginxControls(unittest.TestCase):
         result = self.run_probe("publish-private-assets")
         self.assertTrue(result["negative_control"]["detected"])
         self.assert_cleanup(result)
+
+
+
+class SourceCaptureRegression(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        path = Path(os.environ.get("CAPTURE_REGRESSION_SCRIPT", str(ROOT / "scripts/research/t10-capture-sources.py")))
+        spec = importlib.util.spec_from_file_location("capture_regression", path)
+        cls.capture_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.capture_module)
+
+    def collect(self, responses):
+        import socketserver
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                self.request.recv(4096)
+                self.request.sendall(responses.pop(0))
+        with socketserver.TCPServer(("127.0.0.1", 0), Handler) as server:
+            thread = threading.Thread(target=server.serve_forever)
+            thread.start()
+            url = "http://127.0.0.1:" + str(server.server_address[1])
+            try:
+                return self.invoke(url)
+            finally:
+                server.shutdown()
+                thread.join(timeout=2)
+
+    def test_truncated_length_is_failure_and_other_source_survives(self):
+        result = self.collect([
+            b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\nConnection: close\r\n\r\nshort",
+            b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok"])
+        self.assert_failed_then_success(result)
+
+    def test_broken_chunk_is_failure_and_other_source_survives(self):
+        result = self.collect([
+            b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n5\r\nx",
+            b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok"])
+        self.assert_failed_then_success(result)
+
+    def invoke(self, url):
+        with mock.patch.object(self.capture_module, "SOURCES", [("first", url), ("second", url)]):
+            return self.capture_module.capture()["sources"]
+
+    def assert_failed_then_success(self, result):
+        self.assertIn("error", result[0])
+        self.assertNotIn("sha256", result[0])
+        self.assertEqual(result[1]["bytes"], 2)
 
 
 if __name__ == "__main__":

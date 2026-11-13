@@ -1,6 +1,7 @@
 """Record public primary-response metadata, not a platform verification result."""
 import argparse
 from datetime import datetime, timezone
+import http.client
 import hashlib
 import json
 from pathlib import Path
@@ -35,8 +36,11 @@ def capture():
                 data = response.read(4_000_001)
                 if len(data) > 4_000_000:
                     raise ValueError("public response exceeds budget")
+                declared = response.headers.get("Content-Length")
+                if declared is not None and len(data) != int(declared):
+                    raise ValueError("incomplete response body")
                 row.update(status=response.status, final_url=response.url, bytes=len(data), sha256=hashlib.sha256(data).hexdigest())
-        except (urllib.error.URLError, ValueError, TimeoutError) as error:
+        except (OSError, http.client.HTTPException, ValueError) as error:
             row["error"] = str(error)
         observations.append(row)
     return {"kind": "public-response-observation-not-account-or-content-attestation", "sources": observations}

@@ -143,15 +143,25 @@ def run(control=None):
         try:
             report["result"] = json.loads(docker("exec", backend, "python", "/tmp/probe.py", "probe").stdout)
         except subprocess.CalledProcessError as error:
-            expected = {"strip-upgrade": "HTTP/1.1 426", "publish-private-assets": "private-assets-not-public",
-                        "long-read-timeout": "idle-close-within-bounded-window: client deadline expired before proxy EOF"}
-            if control not in expected or expected[control] not in error.stderr:
+            expected = {"strip-upgrade": "websocket-status", "publish-private-assets": "private-assets-not-public",
+                        "long-read-timeout": "idle-close-deadline"}
+            try:
+                failure = json.loads(error.stdout)["failure"]
+            except (ValueError, KeyError, TypeError):
+                raise error
+            if (not isinstance(failure, dict) or control not in expected or failure.get("check") != expected[control]
+                    or (control == "strip-upgrade" and failure.get("detail") != "HTTP/1.1 426 Upgrade Required")):
                 raise
-            report["negative_control"] = {"variant": control, "detected": True, "failure": error.stderr.strip()}
+            report["negative_control"] = {"variant": control, "detected": True, "failure": failure}
         if control and "negative_control" not in report:
             raise AssertionError("unsafe negative control escaped the probe")
         report["fixture_hashes"] = {str(path.relative_to(ROOT)).replace("\\", "/"): hashlib.sha256(path.read_bytes()).hexdigest()
                                     for path in (ROOT / "docs/research/t10-nginx-probe.conf", ROOT / "scripts/research/t10-proxy-fixture.py")}
+    except Exception as error:
+        error.report = report
+        report["failure"] = {"type": type(error).__name__, "detail": str(error),
+                             "passed_checks": getattr(error, "passed_checks", [])}
+        raise
     finally:
         cleanup_owned_containers(intended, token, report)
     return report
@@ -160,25 +170,21 @@ def run(control=None):
 def stop_local_proxy(proxy):
     """Stop only the session created for this owned Nginx master and its workers."""
     try:
-        os.killpg(proxy.pid, signal.SIGTERM)
-    except ProcessLookupError:
-        pass
-    try:
-        proxy.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        # The session ID equals this child's PID (start_new_session=True).
-        # Kill its entire group, never only the master leaving listeners behind.
+        try:
+            os.killpg(proxy.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            proxy.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+    finally:
+        # Failed/interrupted waits and an exited master cannot skip worker cleanup.
         try:
             os.killpg(proxy.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
         proxy.wait(timeout=5)
-    # If the master had already exited unexpectedly, orphan workers can still
-    # occupy this owned group even though wait() has returned. Fence them too.
-    try:
-        os.killpg(proxy.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
 
 
 def run_local(nginx_binary, control=None):
@@ -248,30 +254,47 @@ def run_local(nginx_binary, control=None):
                     raise RuntimeError("owned nginx readiness deadline")
                 try:
                     report["result"] = fixture.probe()
-                except AssertionError as error:
-                    expected = {"strip-upgrade": "426", "publish-private-assets": "private-assets-not-public",
-                                "long-read-timeout": "client deadline expired before proxy EOF"}
-                    if control not in expected or expected[control] not in str(error):
+                except fixture.ProbeFailure as error:
+                    expected = {"strip-upgrade": "websocket-status", "publish-private-assets": "private-assets-not-public",
+                                "long-read-timeout": "idle-close-deadline"}
+                    if (control not in expected or error.check != expected[control]
+                            or (control == "strip-upgrade" and error.detail != "HTTP/1.1 426 Upgrade Required")):
                         raise
                     report["negative_control"] = {"variant": control, "detected": True, "failure": str(error)}
                 if control and "negative_control" not in report:
                     raise AssertionError("unsafe negative control escaped the probe")
                 errors.seek(0)
                 report["nginx_log"] = errors.read()
+    except Exception as error:
+        error.report = report
+        report["failure"] = {"type": type(error).__name__, "detail": str(error),
+                             "passed_checks": getattr(error, "passed_checks", [])}
+        raise
     finally:
-        try:
-            if proxy is not None:
+        failures = []
+        if proxy is not None:
+            try:
                 stop_local_proxy(proxy)
-        finally:
-            if server is not None:
-                server.idle_stop.set()
-                if thread is not None and thread.is_alive():
-                    server.shutdown()
-                if thread is not None and thread.ident is not None:
-                    thread.join(timeout=5)
-                server.server_close()
+            except Exception as error:
+                failures.append("nginx: " + repr(error))
+        if server is not None:
+            server.idle_stop.set()
+            for action in (
+                lambda: server.shutdown() if thread is not None and thread.is_alive() else None,
+                lambda: thread.join(timeout=5) if thread is not None and thread.ident is not None else None,
+                server.server_close,
+            ):
+                try:
+                    action()
+                except Exception as error:
+                    failures.append("backend: " + repr(error))
         report["cleanup"] = {"owned_nginx_exited": proxy is None or proxy.poll() is not None,
                              "owned_backend_thread_exited": thread is None or not thread.is_alive()}
+        if failures:
+            report["cleanup_failures"] = failures
+            error = RuntimeError("Owned local cleanup failed: " + "; ".join(failures))
+            error.report = report
+            raise error
     return report
 
 
@@ -283,8 +306,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     try:
         report = run_local(args.nginx_binary, args.negative_control) if args.nginx_binary else run(args.negative_control)
-    except subprocess.CalledProcessError as error:
-        raise SystemExit("Owned probe failed: " + (error.stderr or str(error)))
+    except Exception as error:
+        report = getattr(error, "report", {"failure": {"type": type(error).__name__, "detail": str(error)}})
+        output = json.dumps(report, indent=2) + "\n"
+        if args.output:
+            args.output.write_text(output, encoding="utf-8", newline="\n")
+        print(output, end="")
+        raise SystemExit(1)
     output = json.dumps(report, indent=2) + "\n"
     if args.output:
         args.output.write_text(output, encoding="utf-8", newline="\n")

@@ -15,6 +15,13 @@ IDLE_CLOSE_DEADLINE = 4.5
 IDLE_BACKEND_HOLD_SECONDS = 10
 
 
+class ProbeFailure(AssertionError):
+    def __init__(self, check, detail=""):
+        self.check = check
+        self.detail = detail
+        super().__init__(check + (": " + detail if detail else ""))
+
+
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -82,7 +89,8 @@ def websocket(path, timeout=5):
                 key = name.lower()
                 headers[key] = headers.get(key, "") + ("," if key in headers else "") + value.strip()
             parts = status.split()
-            assert len(parts) >= 2 and parts[0] == b"HTTP/1.1" and parts[1] == b"101", status
+            if not (len(parts) >= 2 and parts[0] == b"HTTP/1.1" and parts[1] == b"101"):
+                raise ProbeFailure("websocket-status", status.decode(errors="replace").strip())
             assert headers.get("upgrade", "").lower() == "websocket", "missing/invalid Upgrade response"
             tokens = {token.strip().lower() for token in headers.get("connection", "").split(",")}
             assert "upgrade" in tokens, "missing Connection upgrade token"
@@ -95,18 +103,17 @@ def idle_close():
     try:
         payload = websocket("/idle", timeout=IDLE_CLOSE_DEADLINE)
     except TimeoutError as error:
-        raise AssertionError("idle-close-within-bounded-window: client deadline expired before proxy EOF") from error
+        raise ProbeFailure("idle-close-deadline", "client deadline expired before proxy EOF") from error
     elapsed = time.monotonic() - started
     assert payload == b"", "idle-upstream-closed"
     assert 1.5 <= elapsed < IDLE_CLOSE_DEADLINE, "idle-close-within-bounded-window"
     return elapsed
 
 
-def probe():
-    checks = []
+def _probe(checks):
     def check(name, condition):
         if not condition:
-            raise AssertionError(name)
+            raise ProbeFailure(name)
         checks.append({"name": name, "passed": True})
     status, raw = request("/health?x=1", headers={"X-Forwarded-For": "spoof", "X-Forwarded-Proto": "https", "Host": "attacker.invalid"})
     data = json.loads(raw)
@@ -127,6 +134,15 @@ def probe():
     return {"checks": checks, "idle_close_seconds": round(elapsed, 4), "scope": "local HTTP/WS real nginx + synthetic stdlib backend; no TLS/Discord/VPS proof"}
 
 
+def probe():
+    checks = []
+    try:
+        return _probe(checks)
+    except Exception as error:
+        error.passed_checks = checks
+        raise
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "serve":
         server = http.server.ThreadingHTTPServer(("0.0.0.0", 8000), Handler)
@@ -139,4 +155,8 @@ if __name__ == "__main__":
         # Keep the owned container available for the client after backend failure.
         threading.Event().wait()
     elif sys.argv[1] == "probe":
-        print(json.dumps(probe(), indent=2))
+        try:
+            print(json.dumps(probe(), indent=2))
+        except ProbeFailure as error:
+            print(json.dumps({"failure": {"check": error.check, "detail": error.detail, "passed_checks": error.passed_checks}}))
+            sys.exit(1)
