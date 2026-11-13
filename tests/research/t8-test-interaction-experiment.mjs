@@ -14,8 +14,8 @@ function deniedWithoutEffects(request, reason, authority = state(), options = {}
     receipts: [...authority.receipts], bindings: [...authority.invocationBindings] }, before);
 }
 
-// Valid readable admission may retain anti-replay intent even when no command
-// commits. Authentication/provenance/read denials use the stricter helper above.
+// Valid authenticated/provenance admission may retain opaque intent even when
+// read/write is denied. Invalid auth/provenance uses the stricter helper above.
 function admittedWithoutCommandEffects(request, reason, authority = state()) {
   const before = structuredClone({ effects: authority.effects, audit: authority.audit,
     receipts: [...authority.receipts] });
@@ -236,6 +236,33 @@ test('same-lineage retry after a transient write denial uses its original bindin
   assert.equal(authority.audit, 1);
   assert.equal(authority.receipts.size, 1);
   assert.equal(dispatch(request, pair.publicKey, authority).result, 'existing_receipt');
+});
+
+test('read-denied first invocation retains opaque intent across restore', () => {
+  const authority = state();
+  authority.read = false;
+  const original = signed();
+  const changed = signed(payload({ locale: 'fr' }));
+  assert.deepEqual(dispatch(original, pair.publicKey, authority),
+    { ok: false, reason: 'current_read_denied' });
+  assert.deepEqual(dispatch(changed, pair.publicKey, authority),
+    { ok: false, reason: 'current_read_denied' });
+  assert.equal(authority.effects, 0);
+  assert.equal(authority.audit, 0);
+  assert.equal(authority.receipts.size, 0);
+  authority.activeLineage = authority.commandLineage = 'restored';
+  authority.read = true;
+  const fresh = signed(payload({ id: '600000000000000002' }));
+  assert.equal(dispatch(fresh, pair.publicKey, authority).result, 'new_receipt');
+  deniedWithoutEffects(original, 'lineage_changed', authority);
+  deniedWithoutEffects(changed, 'interaction_id_conflict', authority);
+  assert.equal(authority.effects, 1);
+  assert.equal(authority.audit, 1);
+  assert.equal(authority.receipts.size, 1);
+  assert.equal(authority.invocationBindings.size, 2);
+  authority.read = false;
+  deniedWithoutEffects(original, 'current_read_denied', authority);
+  deniedWithoutEffects(changed, 'current_read_denied', authority);
 });
 
 test('current read denial conceals both prior receipt and digest mismatch', () => {

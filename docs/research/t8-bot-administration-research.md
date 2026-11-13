@@ -265,3 +265,28 @@ new-lineage command before the old retry, changed-byte rejection, protected
 read denial, and a positive same-lineage retry after transient write loss. This
 is hypothetical in-memory admission bookkeeping, not an accepted Discord
 command schema, persistent replay store, eviction policy or production contract.
+
+## Read-denied admission follow-up (2026-11-13 UTC)
+
+Current-head review at `12f0ab76d901d3f4b2d4b1ff4ceb09d77a7e909f`
+exposed the same rebase gap before the read gate: an authentic, provenance-valid
+invocation first denied read was not retained and could later acquire a restored
+lineage. A regression reproduces the extra effect at that head before the fix.
+
+Opaque admission now occurs after signature/envelope/provenance validation and
+before current-read eligibility. The frozen original context is retained even
+when read is denied. A read-denied response remains identical whether the raw
+digest matches or conflicts; receipt lookup and digest-conflict disclosure still
+require current read. No command effect, audit or receipt is created on denial.
+Authentication or provenance failure still changes no map or counter.
+
+This explicitly supersedes the preceding follow-up's claim that every
+current-read denial leaves the binding map unchanged. The binding is private
+anti-replay metadata, not evidence of authorization or success; denied product
+effects remain prohibited. The new regression tries exact and changed bytes
+while read is denied, commits a different command after restore, and then checks
+old-lineage rejection and digest conflict once read returns. It also repeats
+both requests without read to check that no digest information is disclosed.
+The model assumes trusted original lineage/generation at admission and retains
+metadata only in unbounded memory; durable admission, capacity/retention policy
+and real Discord provenance remain unimplemented specification/verification work.

@@ -94,14 +94,11 @@ export function dispatch(request, publicKey, authority, options = {}) {
   const scope = provenance(value);
   if (scope === 'ping') return { ok: true, result: 'pong' };
   if (scope !== 'guild_command') return denied(scope);
-  // Current identity/read gate precedes revealing receipt or digest existence.
-  if (!authority.read) return denied('current_read_denied');
   const transportKey = `${value.application_id}/${value.id}`;
   let binding = authority.invocationBindings.get(transportKey);
-  if (binding && binding.rawDigest !== rawDigest) return denied('interaction_id_conflict');
-  // Capture intent at first authenticated, provenance-valid, readable admission,
-  // including a later write denial. This is anti-replay metadata, not a receipt
-  // or product effect. Never derive a retry's lineage/fence from mutable state.
+  // Capture opaque intent at first authenticated, provenance-valid admission,
+  // even when current read/write is denied. This anti-replay metadata grants no
+  // access and creates no receipt or product effect. Never rebase a seen intent.
   // Production still needs accepted durable admission and operation contracts.
   if (!binding) {
     binding = Object.freeze({ rawDigest, lineage: authority.commandLineage,
@@ -109,6 +106,9 @@ export function dispatch(request, publicKey, authority, options = {}) {
       operationKey: `${value.guild_id}/fixture-board/${authority.commandLineage}/${value.member.user.id}/${value.id}` });
     authority.invocationBindings.set(transportKey, binding);
   }
+  // Read eligibility gates all receipt/digest disclosure, not opaque admission.
+  if (!authority.read) return denied('current_read_denied');
+  if (binding.rawDigest !== rawDigest) return denied('interaction_id_conflict');
   const receipt = authority.receipts.get(binding.operationKey);
   if (receipt) return { ok: true, result: 'existing_receipt', receipt };
   if (binding.lineage !== authority.activeLineage) return denied('lineage_changed');
