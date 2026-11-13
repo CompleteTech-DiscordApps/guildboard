@@ -63,7 +63,12 @@ Persist SQL data and assets on explicit owned durable paths/volumes, with separa
 
 Release procedure candidate: protected CI builds a versioned artifact; operator verifies host fingerprint and target identity; serialize deploys; capture validated recovery point; use backward-compatible expand/migrate/contract steps; start candidate privately; verify readiness and read/write/authorization smoke tests; switch traffic; drain sockets with bounded reconnect/resync; retain previous artifact and migration journal. Rollback means a compatible prior application version plus health verification. Destructive schema changes require their own tested recovery plan; do not claim arbitrary automatic down-migration. Application crash recovery must be validated against SQL receipts/outbox and assets, not just `restart: unless-stopped`. No deployment workflow, firewall rule, service unit, DNS record or portal entry changed.
 
-## Reproducible local experiment and results
+## Historical 2026-10-26 local experiment and results
+
+The original idle-timeout result below was invalidated by review: the old backend
+could close independently and mask a missing proxy timeout. Keep it as historical
+evidence only. The corrected Linux rerun in the follow-up below supersedes that
+idle claim; original non-idle observations retain their original environment scope.
 
 Run from the repository root with Python 3.14.3 and Docker Desktop's existing Linux backend:
 
@@ -95,3 +100,50 @@ These tests prove local HTTP/WS proxy behavior with a synthetic backend only. No
 Repo-local inspection found `.env.example` only among root `.env*` files. It is marked planning-only and contains blank credential fields; no live provisioning configuration is established. Other worktrees and machine/account credentials were not searched. T1 [PR #491](https://github.com/CompleteTech-DiscordApps/guildboard/pull/491) at `8a56a58b0a57cd9e467b90f8a2bb043e63a67547` is provisional research and explicitly lacks registered-app/client inputs; its local URL helper checks cannot supply missing Discord acceptance.
 
 Required next inputs are an authorized GoDaddy account/region/instance target, approved hostname/DNS/TLS owner, exact allowed OS/tier, tested access/recovery path, registered Discord app/client matrix, selected SQL contract and private off-host backup target. Obtain them through the existing owner before real-environment work. Required current-head actual GitHub Copilot review, finding disposition, hosted CI, CODEOWNER/security/consumer review and branch protections remain independent gates; quota rejection is a blocker, not a review. No issue, native dependency, Project item or release gate was closed by this research.
+
+
+## Corrected local Nginx rerun (2026-11-13 UTC / 2026-11-12 Eastern)
+
+The Docker CLI exists on this Linux host but daemon access is denied, and
+noninteractive sudo is unavailable. No permissions, groups or services were
+changed. Instead the official Nginx **1.28.0** source archive from
+`https://nginx.org/download/nginx-1.28.0.tar.gz` was built in campaign scratch
+with existing GCC 16.2.1, PCRE2 and make. Archive SHA-256 is
+`c6b5c6b086c0df9d3ca3ff5e084c1d0ef909e6038279c71c1c3e985f576ff76a`.
+This historical version is an experiment choice, not a current recommended
+production release. No package installation, public listener, TLS, shared
+service change or GoDaddy access occurred.
+
+The runner now accepts `--nginx-binary /absolute/path/to/nginx` and uses owned
+foreground Nginx plus a synthetic Python backend on ephemeral loopback ports.
+Temporary paths and processes are removed after each run. Existing Docker mode
+and cached image requirements remain unchanged. In local mode the exact
+configuration is altered only for loopback ports and owned temporary paths,
+plus the explicit negative control, if selected.
+
+On Linux 7.2.15-1-omarchy x86_64, Python **3.14.8**, code head
+`7979aeec1f4e5970e20e42db62b827f9989f2ac6`, the corrected backend stays silent
+for up to **10 seconds**, beyond the client's **4.5-second** deadline. The
+configured two-second timeout passes; changing it to 60 seconds must fail at
+the client deadline, proving that backend EOF cannot satisfy this test. Full
+results and hashes are appended under `corrected_local_validation` in
+[t10-nginx-evidence.json](t10-nginx-evidence.json); historical fields remain intact.
+
+Reproduction with an explicitly provided built binary:
+
+```sh
+python3 scripts/research/t10-nginx-probe.py --nginx-binary /absolute/path/to/nginx
+python3 scripts/research/t10-nginx-probe.py --nginx-binary /absolute/path/to/nginx --negative-control long-read-timeout
+T10_NGINX_BINARY=/absolute/path/to/nginx python3 tests/research/t10-test-nginx-probe.py
+python3 scripts/github-bootstrap/validate.py
+```
+
+The corrected positive probe passed all **12** checks and all **three** actual
+Nginx negative controls were detected: 60-second timeout, stripped Upgrade,
+and exposed private route. The focused suite passed **8** tests, including five
+stdlib idle-oracle regressions. Planning validation passed 471 items / 457
+native relationships / 600 dependencies / zero errors. Raw build/configure,
+probe, control and test results are retained in campaign `2026-11-12/logs/platform`;
+the handoff receipt records their absolute paths. These remain local HTTP/WS
+results: real DNS/TLS/renewal, mapped Discord clients, GoDaddy firewall/capacity,
+SQL persistence and coordinated restore are still unverified.
