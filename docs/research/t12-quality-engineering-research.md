@@ -291,3 +291,26 @@ exercise these outcomes, current read denial, and an intervening write revocatio
 while asserting no durable side effects. These are abstract model checks, not SQL
 or a running collaboration service. Consumers must reconcile the final reviewed
 T4/T5/system-contract heads before adoption; this text does not accept a contract.
+
+
+Revalidation on 2026-11-12, code/test head
+`6c9286f` (full SHA in the campaign receipt), Linux 7.2.15-1-omarchy x86_64 / Python 3.14.8:
+`python3 tests/research/t12-test-experiments.py -v` passed **17 tests**.
+Fresh `t12-schedule-experiment.py` and `t12-validate-matrix.py` JSON equals the
+existing saved evidence semantically: 140 schedules, 980 recovery boundaries,
+1,536 seeded actions, five unsafe controls, three load profiles and ten not-run
+external rows. The historical JSON is preserved. Planning validation passed
+471 items / 457 native relationships / 600 dependencies / zero errors.
+Raw stdout/stderr is retained in campaign `2026-11-12/logs/platform/` under
+`t12-tests-6c9286f.log`, `t12-schedule.json`, `t12-matrix.json` and
+`t12-planning.log`; the handoff receipt records exact paths and full heads.
+No source freshness, actual Discord, assistive technology, SQL or GoDaddy result
+is added by this offline revalidation.
+
+
+The coordinated T4 candidate [#484](https://github.com/CompleteTech-DiscordApps/guildboard/pull/484)
+at `3379307f5b0e64c9b135307a160558347d7299f0` now documents retained receipts
+across restore in `docs/research/collaboration-semantics.md`. This agrees with
+T12's historical-receipt model at the described boundary. T4 remains provisional
+pending fresh independent review and external approval; agreement between models
+is not implementation or acceptance evidence.
