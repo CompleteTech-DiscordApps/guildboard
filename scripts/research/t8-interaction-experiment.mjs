@@ -97,25 +97,29 @@ export function dispatch(request, publicKey, authority, options = {}) {
   // Current identity/read gate precedes revealing receipt or digest existence.
   if (!authority.read) return denied('current_read_denied');
   const transportKey = `${value.application_id}/${value.id}`;
-  const binding = authority.invocationBindings.get(transportKey);
+  let binding = authority.invocationBindings.get(transportKey);
   if (binding && binding.rawDigest !== rawDigest) return denied('interaction_id_conflict');
-  // Retain the original operation identity across restore and later invocations.
-  // Only a previously unseen invocation uses the current proposed lineage.
-  // Production still needs an accepted canonical operation/digest contract.
-  const operationKey = binding?.operationKey
-    ?? `${value.guild_id}/fixture-board/${authority.commandLineage}/${value.member.user.id}/${value.id}`;
-  const receipt = authority.receipts.get(operationKey);
+  // Capture intent at first authenticated, provenance-valid, readable admission,
+  // including a later write denial. This is anti-replay metadata, not a receipt
+  // or product effect. Never derive a retry's lineage/fence from mutable state.
+  // Production still needs accepted durable admission and operation contracts.
+  if (!binding) {
+    binding = Object.freeze({ rawDigest, lineage: authority.commandLineage,
+      expectedGeneration: authority.expectedGeneration,
+      operationKey: `${value.guild_id}/fixture-board/${authority.commandLineage}/${value.member.user.id}/${value.id}` });
+    authority.invocationBindings.set(transportKey, binding);
+  }
+  const receipt = authority.receipts.get(binding.operationKey);
   if (receipt) return { ok: true, result: 'existing_receipt', receipt };
-  if (authority.commandLineage !== authority.activeLineage) return denied('lineage_changed');
+  if (binding.lineage !== authority.activeLineage) return denied('lineage_changed');
   if (!authority.write) return denied('current_write_denied');
-  if (authority.expectedGeneration !== authority.currentGeneration) return denied('policy_stale');
+  if (binding.expectedGeneration !== authority.currentGeneration) return denied('policy_stale');
   // Only a hypothetical synchronous critical section. This is NOT a DB transaction
   // or multi-worker fence, and these receipts are NOT durable.
-  const accepted = { revision: authority.effects + 1, lineage: authority.commandLineage };
+  const accepted = { revision: authority.effects + 1, lineage: binding.lineage };
   authority.effects += 1;
   authority.audit += 1;
-  authority.invocationBindings.set(transportKey, Object.freeze({ rawDigest, operationKey }));
-  authority.receipts.set(operationKey, accepted);
+  authority.receipts.set(binding.operationKey, accepted);
   return { ok: true, result: 'new_receipt', receipt: accepted };
 }
 

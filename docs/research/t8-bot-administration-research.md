@@ -241,3 +241,27 @@ including after write loss; tampering, changed transport bytes and read loss
 still deny without altering any map or counter. The new test fails against the
 prior head and passes after correction. The original dated evidence remains
 historical; this adds no SQL, concurrency, durability or real Discord claim.
+
+## Denied invocation context follow-up (2026-11-13 UTC)
+
+Independent review of `b267a81c2f7649d73c33f5c3385e686b4a57283d` found
+that successful-invocation bindings did not cover a previously observed but
+uncommitted command. Retrying after a write/generation/lineage denial could
+silently acquire the restored lineage, and changed bytes under that denied
+interaction ID could be accepted. The new negative regressions reproduce both
+paths before the correction.
+
+The fixture now records frozen lineage, expected generation, operation identity
+and raw digest at the first authenticated, provenance-valid, current-readable
+admission. This is separate anti-replay metadata: no command effect, audit or
+receipt is created by a denial. Failed signature/provenance/current-read checks
+still leave every map and counter unchanged. Retries cannot replace this binding;
+current-read checks still precede digest or receipt disclosure, existing readable
+receipts still precede new-write checks, and uncommitted old-lineage intent must
+fail after restore. The original expected generation also remains fenced.
+
+The expanded suite checks all three initial denials, acceptance of a distinct
+new-lineage command before the old retry, changed-byte rejection, protected
+read denial, and a positive same-lineage retry after transient write loss. This
+is hypothetical in-memory admission bookkeeping, not an accepted Discord
+command schema, persistent replay store, eviction policy or production contract.

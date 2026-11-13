@@ -14,6 +14,20 @@ function deniedWithoutEffects(request, reason, authority = state(), options = {}
     receipts: [...authority.receipts], bindings: [...authority.invocationBindings] }, before);
 }
 
+// Valid readable admission may retain anti-replay intent even when no command
+// commits. Authentication/provenance/read denials use the stricter helper above.
+function admittedWithoutCommandEffects(request, reason, authority = state()) {
+  const before = structuredClone({ effects: authority.effects, audit: authority.audit,
+    receipts: [...authority.receipts] });
+  const priorBindings = authority.invocationBindings.size;
+  assert.deepEqual(dispatch(request, pair.publicKey, authority), { ok: false, reason });
+  assert.deepEqual({ effects: authority.effects, audit: authority.audit,
+    receipts: [...authority.receipts] }, before);
+  assert.equal(authority.invocationBindings.size, priorBindings + 1);
+  assert.ok(Object.isFrozen([...authority.invocationBindings.values()].at(-1)));
+  deniedWithoutEffects(request, reason, authority);
+}
+
 test('independent RFC 8032 section 7.1 public known-answer vector and mutation', () => {
   // Published PUBLIC test vector only; no private test vector or app credential.
   const publicBytes = Buffer.from('d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a', 'hex');
@@ -114,8 +128,8 @@ test('authentic foreign guild/channel/member and unknown command deny', () => {
 test('Discord Administrator/app permission strings do not override application denial', () => {
   const request = signed(payload({ member: { user: { id: FIXTURE.actor }, permissions: '8' },
     app_permissions: '8' }));
-  deniedWithoutEffects(request, 'current_write_denied', { ...state(), write: false });
-  deniedWithoutEffects(request, 'policy_stale', { ...state(), currentGeneration: 2 });
+  admittedWithoutCommandEffects(request, 'current_write_denied', { ...state(), write: false });
+  admittedWithoutCommandEffects(request, 'policy_stale', { ...state(), currentGeneration: 2 });
 });
 
 test('identical retry returns receipt once; signed same-ID different bytes conflicts', () => {
@@ -135,7 +149,7 @@ test('retired-lineage readable receipt precedes current write and lineage checks
   authority.activeLineage = 'restored';
   authority.write = false;
   assert.equal(dispatch(request, pair.publicKey, authority).result, 'existing_receipt');
-  deniedWithoutEffects(signed(payload({ id: '600000000000000002' })), 'lineage_changed', authority);
+  admittedWithoutCommandEffects(signed(payload({ id: '600000000000000002' })), 'lineage_changed', authority);
   assert.equal(authority.effects, 1);
 });
 
@@ -166,6 +180,62 @@ test('old invocation stays bound to its receipt after a new-lineage command comm
   authority.read = false;
   deniedWithoutEffects(oldRequest, 'current_read_denied', authority);
   deniedWithoutEffects(signed(payload({ locale: 'fr' })), 'current_read_denied', authority);
+});
+
+test('denied first invocations cannot rebase onto a restored lineage', () => {
+  for (const reason of ['current_write_denied', 'policy_stale', 'lineage_changed']) {
+    const authority = state();
+    if (reason === 'current_write_denied') authority.write = false;
+    if (reason === 'policy_stale') authority.expectedGeneration = 0;
+    if (reason === 'lineage_changed') authority.activeLineage = 'restored';
+    const oldRequest = signed();
+    admittedWithoutCommandEffects(oldRequest, reason, authority);
+    assert.equal(authority.effects, 0);
+    assert.equal(authority.audit, 0);
+    assert.equal(authority.receipts.size, 0);
+    authority.write = true;
+    authority.expectedGeneration = authority.currentGeneration;
+    authority.activeLineage = authority.commandLineage = 'restored';
+    const fresh = signed(payload({ id: '600000000000000002' }));
+    assert.equal(dispatch(fresh, pair.publicKey, authority).result, 'new_receipt');
+    deniedWithoutEffects(oldRequest, 'lineage_changed', authority);
+    deniedWithoutEffects(signed(payload({ locale: 'fr' })), 'interaction_id_conflict', authority);
+    assert.equal(authority.effects, 1);
+    assert.equal(authority.audit, 1);
+    assert.equal(authority.receipts.size, 1);
+    assert.equal(authority.invocationBindings.size, 2);
+    authority.read = false;
+    deniedWithoutEffects(oldRequest, 'current_read_denied', authority);
+    deniedWithoutEffects(signed(payload({ locale: 'fr' })), 'current_read_denied', authority);
+  }
+});
+
+test('denied invocation retains digest and original policy fence within one lineage', () => {
+  const authority = state();
+  authority.expectedGeneration = 0;
+  const request = signed();
+  admittedWithoutCommandEffects(request, 'policy_stale', authority);
+  authority.expectedGeneration = authority.currentGeneration;
+  deniedWithoutEffects(request, 'policy_stale', authority);
+  deniedWithoutEffects(signed(payload({ locale: 'fr' })), 'interaction_id_conflict', authority);
+  assert.equal(authority.effects, 0);
+  assert.equal(authority.audit, 0);
+  assert.equal(authority.receipts.size, 0);
+});
+
+test('same-lineage retry after a transient write denial uses its original binding', () => {
+  const authority = state();
+  authority.write = false;
+  const request = signed();
+  admittedWithoutCommandEffects(request, 'current_write_denied', authority);
+  const originalBinding = [...authority.invocationBindings.values()][0];
+  authority.write = true;
+  assert.equal(dispatch(request, pair.publicKey, authority).result, 'new_receipt');
+  assert.strictEqual([...authority.invocationBindings.values()][0], originalBinding);
+  assert.equal(authority.effects, 1);
+  assert.equal(authority.audit, 1);
+  assert.equal(authority.receipts.size, 1);
+  assert.equal(dispatch(request, pair.publicKey, authority).result, 'existing_receipt');
 });
 
 test('current read denial conceals both prior receipt and digest mismatch', () => {
