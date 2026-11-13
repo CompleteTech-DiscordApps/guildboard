@@ -79,8 +79,13 @@ def websocket(path, timeout=5):
                 if not line:
                     raise AssertionError("truncated handshake")
                 name, value = line.decode().split(":", 1)
-                headers[name.lower()] = value.strip()
-            assert b"101" in status, status
+                key = name.lower()
+                headers[key] = headers.get(key, "") + ("," if key in headers else "") + value.strip()
+            parts = status.split()
+            assert len(parts) >= 2 and parts[0] == b"HTTP/1.1" and parts[1] == b"101", status
+            assert headers.get("upgrade", "").lower() == "websocket", "missing/invalid Upgrade response"
+            tokens = {token.strip().lower() for token in headers.get("connection", "").split(",")}
+            assert "upgrade" in tokens, "missing Connection upgrade token"
             assert headers["sec-websocket-accept"] == "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", headers
             return stream.read(7)
 

@@ -1,5 +1,7 @@
 """Real local proxy negative controls, opt-in Docker prerequisite; no image pulls."""
 import os
+import io
+import subprocess
 import importlib.util
 from pathlib import Path
 import unittest
@@ -69,6 +71,70 @@ class FixtureIdleRegression(unittest.TestCase):
         with mock.patch.object(FIXTURE, "websocket", return_value=b"unexpected"):
             with self.assertRaisesRegex(AssertionError, "idle-upstream-closed"):
                 FIXTURE.idle_close()
+
+
+class LocalSetupCleanupRegression(unittest.TestCase):
+    def test_setup_failures_close_backend_listener_and_thread(self):
+        server_factory = http.server.ThreadingHTTPServer
+        thread_factory = threading.Thread
+        for failing in ("temporary-directory", "git-metadata", "nginx-version"):
+            servers, threads = [], []
+            def make_server(*args, **kwargs):
+                server = server_factory(*args, **kwargs)
+                servers.append(server)
+                return server
+            def make_thread(*args, **kwargs):
+                thread = thread_factory(*args, **kwargs)
+                threads.append(thread)
+                return thread
+            error = RuntimeError("injected setup failure")
+            with self.subTest(failing=failing):
+                try:
+                    with mock.patch.object(PROBE.http.server, "ThreadingHTTPServer", side_effect=make_server), \
+                         mock.patch.object(PROBE.threading, "Thread", side_effect=make_thread), \
+                         mock.patch.object(PROBE.subprocess, "check_output", side_effect=error if failing == "git-metadata" else None, return_value="test-sha"), \
+                         mock.patch.object(PROBE.subprocess, "run", side_effect=error), \
+                         mock.patch.object(PROBE.tempfile, "TemporaryDirectory", side_effect=error if failing == "temporary-directory" else PROBE.tempfile.TemporaryDirectory):
+                        with self.assertRaisesRegex(RuntimeError, "injected setup failure"):
+                            PROBE.run_local(__file__)
+                    self.assertTrue(servers)
+                    self.assertEqual(servers[0].socket.fileno(), -1)
+                    self.assertTrue(all(not thread.is_alive() for thread in threads))
+                finally:
+                    # Keep the regression itself bounded when exercising old code.
+                    for server in servers:
+                        server.idle_stop.set()
+                        if any(thread.is_alive() for thread in threads):
+                            server.shutdown()
+                        server.server_close()
+                    for thread in threads:
+                        thread.join(timeout=2)
+
+
+class HandshakeRegression(unittest.TestCase):
+    def response(self, status="101 Switching Protocols", upgrade="websocket", connection="Upgrade"):
+        headers = [f"HTTP/1.1 {status}", "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo="]
+        if upgrade is not None:
+            headers.append("Upgrade: " + upgrade)
+        if connection is not None:
+            headers.append("Connection: " + connection)
+        raw = ("\r\n".join(headers) + "\r\n\r\n").encode() + b"\x81\x05hello"
+        client = mock.MagicMock()
+        client.__enter__.return_value = client
+        client.makefile.return_value = io.BytesIO(raw)
+        return client
+
+    def test_required_upgrade_headers_and_exact_status(self):
+        for kwargs in ({"upgrade": None}, {"upgrade": "h2c"}, {"connection": None},
+                       {"connection": "notupgrade"}, {"status": "200 reason-101"},
+                       {"status": "1010 Switching Protocols"}):
+            with self.subTest(kwargs=kwargs), mock.patch.object(FIXTURE.socket, "create_connection", return_value=self.response(**kwargs)):
+                with self.assertRaises(AssertionError):
+                    FIXTURE.websocket("/ws")
+
+    def test_connection_token_list_and_case_are_accepted(self):
+        with mock.patch.object(FIXTURE.socket, "create_connection", return_value=self.response(upgrade="WebSocket", connection="keep-alive, UpGrAdE")):
+            self.assertEqual(FIXTURE.websocket("/ws"), b"\x81\x05hello")
 
 
 class ActualNginxControls(unittest.TestCase):
