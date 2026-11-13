@@ -157,6 +157,9 @@ if __name__ == "__main__":
     elif sys.argv[1] == "probe":
         try:
             print(json.dumps(probe(), indent=2))
-        except ProbeFailure as error:
-            print(json.dumps({"failure": {"check": error.check, "detail": error.detail, "passed_checks": error.passed_checks}}))
+        except Exception as error:
+            print(json.dumps({"failure": {"check": getattr(error, "check", "unexpected-probe-failure"),
+                                          "detail": getattr(error, "detail", str(error)),
+                                          "type": type(error).__name__,
+                                          "passed_checks": getattr(error, "passed_checks", [])}}))
             sys.exit(1)

@@ -149,6 +149,8 @@ def run(control=None):
                 failure = json.loads(error.stdout)["failure"]
             except (ValueError, KeyError, TypeError):
                 raise error
+            if isinstance(failure, dict):
+                report["failure"] = failure
             if (not isinstance(failure, dict) or control not in expected or failure.get("check") != expected[control]
                     or (control == "strip-upgrade" and failure.get("detail") != "HTTP/1.1 426 Upgrade Required")):
                 raise
@@ -159,8 +161,8 @@ def run(control=None):
                                     for path in (ROOT / "docs/research/t10-nginx-probe.conf", ROOT / "scripts/research/t10-proxy-fixture.py")}
     except Exception as error:
         error.report = report
-        report["failure"] = {"type": type(error).__name__, "detail": str(error),
-                             "passed_checks": getattr(error, "passed_checks", [])}
+        report.setdefault("failure", {"type": type(error).__name__, "detail": str(error),
+                                      "passed_checks": getattr(error, "passed_checks", [])})
         raise
     finally:
         cleanup_owned_containers(intended, token, report)
@@ -267,8 +269,8 @@ def run_local(nginx_binary, control=None):
                 report["nginx_log"] = errors.read()
     except Exception as error:
         error.report = report
-        report["failure"] = {"type": type(error).__name__, "detail": str(error),
-                             "passed_checks": getattr(error, "passed_checks", [])}
+        report.setdefault("failure", {"type": type(error).__name__, "detail": str(error),
+                                      "passed_checks": getattr(error, "passed_checks", [])})
         raise
     finally:
         failures = []

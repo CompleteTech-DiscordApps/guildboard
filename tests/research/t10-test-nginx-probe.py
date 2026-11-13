@@ -309,6 +309,55 @@ class FailureAttributionRegression(unittest.TestCase):
         self.assertEqual(kill.call_args_list, [mock.call(12345, signal.SIGTERM), mock.call(12345, signal.SIGKILL)])
         self.assertEqual(process.wait.call_count, 2)
 
+    def test_docker_timeout_failure_detail_is_asserted(self):
+        fake = FakeDocker()
+        failure = {"check": "idle-close-deadline", "detail": "client deadline expired before proxy EOF", "passed_checks": []}
+        def command(*args, **kwargs):
+            if args[-2:] == ("/tmp/probe.py", "probe"):
+                raise subprocess.CalledProcessError(1, args, output=json.dumps({"failure": failure}))
+            return fake(*args, **kwargs)
+        with mock.patch.object(PROBE, "docker", side_effect=command):
+            result = PROBE.run("long-read-timeout")
+        with mock.patch.object(ActualNginxControls, "run_probe", return_value=result):
+            ActualNginxControls("test_long_read_timeout_is_detected").test_long_read_timeout_is_detected()
+
+    def test_docker_baseline_retains_structured_failed_check(self):
+        fake = FakeDocker()
+        failure = {"check": "private-assets-not-public", "detail": "", "passed_checks": [{"name": "path-query-preserved", "passed": True}]}
+        def command(*args, **kwargs):
+            if args[-2:] == ("/tmp/probe.py", "probe"):
+                raise subprocess.CalledProcessError(1, args, output=json.dumps({"failure": failure}))
+            return fake(*args, **kwargs)
+        with mock.patch.object(PROBE, "docker", side_effect=command):
+            with self.assertRaises(subprocess.CalledProcessError) as caught:
+                PROBE.run()
+        self.assertEqual(caught.exception.report["failure"], failure)
+        self.assertEqual(len(caught.exception.report["cleanup"]), 2)
+
+    def test_fixture_cli_retains_generic_failure_and_prior_checks(self):
+        import runpy
+        import contextlib
+        import http.client
+        first = mock.Mock()
+        first.getresponse.return_value.status = 200
+        first.getresponse.return_value.read.return_value = b'{"path":"/health?x=1","host":"research.invalid","forwarded_for":"127.0.0.1","proto":"http"}'
+        second = mock.Mock()
+        second.getresponse.return_value.status = 404
+        second.getresponse.return_value.read.return_value = b""
+        third = mock.Mock()
+        third.request.side_effect = OSError("injected generic failure")
+        output = io.StringIO()
+        with mock.patch.object(sys, "argv", ["fixture", "probe"]), \
+             mock.patch.object(http.client, "HTTPConnection", side_effect=[first, second, third]), \
+             contextlib.redirect_stdout(output):
+            with self.assertRaises(SystemExit) as caught:
+                runpy.run_path(str(ROOT / "scripts/research/t10-proxy-fixture.py"), run_name="__main__")
+        self.assertEqual(caught.exception.code, 1)
+        failure = json.loads(output.getvalue())["failure"]
+        self.assertEqual(failure["check"], "unexpected-probe-failure")
+        self.assertEqual(failure["type"], "OSError")
+        self.assertEqual(len(failure["passed_checks"]), 5)
+
     def test_unrelated_docker_stderr_cannot_pass_negative_control(self):
         fake = FakeDocker()
         def command(*args, **kwargs):
@@ -406,7 +455,9 @@ class ActualNginxControls(unittest.TestCase):
     def test_long_read_timeout_is_detected(self):
         result = self.run_probe("long-read-timeout")
         self.assertTrue(result["negative_control"]["detected"])
-        self.assertIn("client deadline expired before proxy EOF", result["negative_control"]["failure"])
+        failure = result["negative_control"]["failure"]
+        detail = failure["detail"] if isinstance(failure, dict) else failure
+        self.assertIn("client deadline expired before proxy EOF", detail)
         self.assert_cleanup(result)
 
     def test_upgrade_removal_is_detected(self):
@@ -465,6 +516,60 @@ class SourceCaptureRegression(unittest.TestCase):
         self.assertIn("error", result[0])
         self.assertNotIn("sha256", result[0])
         self.assertEqual(result[1]["bytes"], 2)
+
+    def test_slow_drip_deadline_reaps_worker_and_preserves_healthy_result(self):
+        import socketserver
+        import time
+        stop = threading.Event()
+        connected = threading.Event()
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                request = self.request.recv(4096)
+                try:
+                    if b"/slow " in request:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 100000\r\n\r\n")
+                        connected.set()
+                        while not stop.wait(0.02):
+                            self.request.sendall(b"x")
+                    else:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+        processes = []
+        original_popen = subprocess.Popen
+        def popen(*args, **kwargs):
+            process = original_popen(*args, **kwargs)
+            processes.append(process)
+            return process
+        with socketserver.ThreadingTCPServer(("127.0.0.1", 0), Handler) as server:
+            thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05))
+            thread.start()
+            url = "http://127.0.0.1:" + str(server.server_address[1])
+            started = time.monotonic()
+            try:
+                with mock.patch.object(self.capture_module, "ATTEMPT_SECONDS", 0.8), \
+                     mock.patch.object(self.capture_module.subprocess, "Popen", side_effect=popen):
+                    with mock.patch.object(self.capture_module, "SOURCES", [("slow", url + "/slow"), ("healthy", url + "/healthy")]):
+                        result = self.capture_module.capture()["sources"]
+                elapsed = time.monotonic() - started
+                self.assertTrue(connected.is_set(), "test must exercise actual slow HTTP traffic")
+                self.assertLess(elapsed, 3, "healthy output must not await the trickling body")
+                self.assertIn("deadline exceeded", result[0]["error"])
+                self.assertEqual(result[1]["bytes"], 2)
+                self.assertTrue(processes)
+                self.assertTrue(all(process.poll() is not None for process in processes), "all fetch children must be reaped")
+            finally:
+                stop.set()
+                server.shutdown()
+                thread.join(timeout=2)
+        self.assertFalse(thread.is_alive())
+
+    def test_exhausted_collection_budget_starts_no_worker(self):
+        with mock.patch.object(self.capture_module.subprocess, "Popen") as popen:
+            with mock.patch.object(self.capture_module, "COLLECTION_SECONDS", 0):
+                rows = self.capture_module.capture()["sources"]
+            self.assertTrue(all("deadline exceeded" in row["error"] for row in rows))
+        popen.assert_not_called()
 
 
 if __name__ == "__main__":

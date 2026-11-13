@@ -248,3 +248,30 @@ Raw results: campaign `platform-finish-logs/t10-tests-candidate.log` and
 (`t10-capture-before.log`). Docker uses a simulated command boundary in the new
 regressions; actual Docker, public source refetch, TLS, Discord and GoDaddy
 acceptance remain unverified. Fresh independent full-head review remains required.
+
+
+### Elapsed-time and Docker evidence follow-up — 2026-11-13 UTC
+
+A socket inactivity timeout does not bound a response that keeps sending bytes.
+The collector now runs each public GET in an owned disposable Python subprocess,
+with a 20-second elapsed-time limit per attempt and a shared 90-second collection
+budget. The parent kills and reaps a timed-out child before continuing; no
+uncancellable request thread survives. The time budget includes DNS, redirects
+and body reading; normal process startup/cleanup adds small scheduling overhead.
+Expired collection budgets produce failed rows without starting another worker.
+
+A real loopback slow-drip fixture reaches the 0.8-second test deadline, preserves
+the next healthy result, and verifies every child has exited. The prior collector
+accepted the slowly delivered body after about 1.24 seconds instead. Local HTTP
+fixtures, including incomplete bodies and broken chunk framing, remain synthetic
+source-capture tests; public source content was not refetched.
+
+Docker baseline failures now preserve the parsed failed check, detail and prior
+passed checks. The fixture serializes generic assertion/IO failures too, with
+`unexpected-probe-failure` identity that cannot certify a negative control. The
+timeout assertion accepts Docker's structured detail and local mode's string.
+Regression tests cover both formats, a generic IO failure after five successes,
+and a failing baseline; the baseline regression fails against `0703471`.
+Full-head test results and exact revision are recorded in the campaign
+`receipts/platform-finish.json` and `platform-finish-logs`; actual Docker and all
+previously stated external platform acceptance gates remain unverified.

@@ -4,6 +4,9 @@ from datetime import datetime, timezone
 import http.client
 import hashlib
 import json
+import subprocess
+import sys
+import time
 from pathlib import Path
 import urllib.request
 import urllib.error
@@ -26,27 +29,74 @@ SOURCES = [
 ]
 
 
+MAX_BYTES = 4_000_000
+ATTEMPT_SECONDS = 20
+COLLECTION_SECONDS = 90
+
+
+class FetchFailure(OSError):
+    def __init__(self, error):
+        super().__init__(error["detail"])
+        self.error_type = error["type"]
+        self.http_status = error.get("http_status")
+
+
+def fetch(url, timeout):
+    """A disposable process bounds DNS, redirects and trickling response bodies."""
+    if timeout <= 0:
+        raise TimeoutError("collection elapsed-time deadline exceeded")
+    try:
+        result = subprocess.run([sys.executable, str(Path(__file__).resolve()),
+                                 "--fetch-worker", url], capture_output=True,
+                                text=True, check=True, timeout=timeout)
+    except subprocess.TimeoutExpired as error:
+        # subprocess.run kills and reaps the child before raising.
+        raise TimeoutError("response elapsed-time deadline exceeded") from error
+    envelope = json.loads(result.stdout)
+    if "error" in envelope:
+        raise FetchFailure(envelope["error"])
+    return envelope["result"]
+
+
+def fetch_worker(url):
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Guildboard-T10-Research/1.0"}), timeout=20) as response:
+            payload = response.read(MAX_BYTES + 1)
+            if len(payload) > MAX_BYTES:
+                raise ValueError("response budget exceeded")
+            declared = response.headers.get("Content-Length")
+            if declared is not None and len(payload) != int(declared):
+                raise ValueError("incomplete response body")
+            result = {"http_status": response.status, "final_url": response.url,
+                      "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
+        envelope = {"result": result}
+    except (OSError, http.client.HTTPException, ValueError) as error:
+        detail = {"type": type(error).__name__, "detail": str(error)}
+        if isinstance(error, urllib.error.HTTPError):
+            detail["http_status"] = error.code
+        envelope = {"error": detail}
+    print(json.dumps(envelope))
+
+
 def capture():
     observations = []
+    deadline = time.monotonic() + COLLECTION_SECONDS
     for name, url in SOURCES:
         row = {"id": name, "url": url, "observed_at": datetime.now(timezone.utc).isoformat()}
         try:
-            request = urllib.request.Request(url, headers={"User-Agent": "Guildboard-T10-Research/1.0"})
-            with urllib.request.urlopen(request, timeout=20) as response:
-                data = response.read(4_000_001)
-                if len(data) > 4_000_000:
-                    raise ValueError("public response exceeds budget")
-                declared = response.headers.get("Content-Length")
-                if declared is not None and len(data) != int(declared):
-                    raise ValueError("incomplete response body")
-                row.update(status=response.status, final_url=response.url, bytes=len(data), sha256=hashlib.sha256(data).hexdigest())
-        except (OSError, http.client.HTTPException, ValueError) as error:
+            result = fetch(url, min(ATTEMPT_SECONDS, deadline - time.monotonic()))
+            row.update(result)
+            row["status"] = row.pop("http_status")
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
             row["error"] = str(error)
         observations.append(row)
     return {"kind": "public-response-observation-not-account-or-content-attestation", "sources": observations}
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "--fetch-worker":
+        fetch_worker(sys.argv[2])
+        sys.exit(0)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
