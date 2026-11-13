@@ -89,7 +89,6 @@ class Probe:
         self.name, self.volume = self.run_id + "-db", self.run_id + "-data"
         self.label = "tech.complete.guildboard.t5.run"
         self.cli = "mysql" if engine == "mysql" else "mariadb"
-        self.created_container = self.created_volume = False
         self.report = {
             "evidence_kind": "isolated-real-database-fixture-not-product-or-vps",
             "observed_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -110,7 +109,7 @@ class Probe:
     def verify_owner(self, kind: str, name: str) -> None:
         inspected = json.loads(self.command(kind, "inspect", name).stdout)[0]
         labels = inspected["Config"]["Labels"] if kind == "container" else inspected["Labels"]
-        if labels.get(self.label) != self.run_id:
+        if (labels or {}).get(self.label) != self.run_id:
             raise RuntimeError("refusing mutation of resource without invocation ownership")
 
     def sql(self, sql: str, database: str = "t5_research", check: bool = True) -> str:
@@ -146,10 +145,10 @@ class Probe:
         self.report["image_id"] = info["Id"]
         self.report["repo_digests"] = info["RepoDigests"]
         self.command("volume", "create", "--label", self.label + "=" + self.run_id, self.volume)
-        self.created_volume = True
+        # Docker returns success for an existing named volume without relabeling it.
+        # Never mount it until ownership has been observed on the actual resource.
+        self.verify_owner("volume", self.volume)
         env = "MYSQL_ALLOW_EMPTY_PASSWORD=yes" if self.engine == "mysql" else "MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=1"
-        # A failed run can still leave a created container, so inspect in cleanup.
-        self.created_container = True
         self.command(
             "run", "--detach", "--pull=never", "--name", self.name,
             "--label", self.label + "=" + self.run_id, "--network=none",
@@ -311,14 +310,24 @@ COMMIT;
                      "restore_target": "fresh separate schema on the same isolated engine"})
 
     def cleanup(self) -> None:
-        if self.created_container:
-            exists = self.command("container", "inspect", self.name, check=False)
-            if exists.returncode == 0:
-                self.verify_owner("container", self.name)
-                self.command("rm", "--force", self.name)
-        if self.created_volume:
-            self.verify_owner("volume", self.volume)
-            self.command("volume", "rm", self.volume)
+        # Creation can succeed in the daemon even when the client times out.
+        # Inspect exact invocation names regardless of how far start() returned.
+        errors = []
+        for kind, name in (("container", self.name), ("volume", self.volume)):
+            try:
+                exists = self.command(kind, "inspect", name, check=False)
+                if exists.returncode == 0:
+                    self.verify_owner(kind, name)
+                    if kind == "container":
+                        self.command("rm", "--force", name)
+                    else:
+                        self.command("volume", "rm", name)
+            except Exception as error:
+                # Still attempt the other exact resource; never remove anything
+                # whose own ownership check failed.
+                errors.append(f"{kind}: {error}")
+        if errors:
+            raise RuntimeError("; ".join(errors))
         self.report["cleanup"] = {
             "container_absent": self.name not in self.command(
                 "ps", "--all", "--format", "{{.Names}}"

@@ -182,6 +182,14 @@ tests; no VPS board count or latency promise is established here.
 
 ## Reproducible local experiments and observed results
 
+The 2026-11-12 fixture safety follow-up can be checked without Docker using
+`python tests/research/t5-test-db-probe.py -v`. Six fake-Docker tests cover
+foreign/unlabeled volume collisions, ownership verification before database
+launch, a create response lost after server-side success, foreign-resource
+preservation and independent exact-resource cleanup. They exercise client
+control flow only; they do not refresh the historical real-engine evidence below.
+
+
 The [database probe](../../scripts/research/t5-db-probe.py) ran actual engines via
 Docker Desktop 4.93.0 / Engine 29.8.1, linux/amd64, context desktop-linux, from
 Windows PowerShell/Python 3.14.3. No image pull, port, host mount or shared network.
