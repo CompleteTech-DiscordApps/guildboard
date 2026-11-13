@@ -10,6 +10,7 @@ import threading
 import time
 
 # Keep the upstream silent and open beyond the client acceptance deadline.
+PROXY_PORT = 8080
 IDLE_CLOSE_DEADLINE = 4.5
 IDLE_BACKEND_HOLD_SECONDS = 10
 
@@ -55,7 +56,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 def request(path, method="GET", body=None, headers=None):
-    client = http.client.HTTPConnection("127.0.0.1", 8080, timeout=5)
+    client = http.client.HTTPConnection("127.0.0.1", PROXY_PORT, timeout=5)
     try:
         client.request(method, path, body=body, headers=headers or {})
         response = client.getresponse()
@@ -65,7 +66,7 @@ def request(path, method="GET", body=None, headers=None):
 
 
 def websocket(path, timeout=5):
-    with socket.create_connection(("127.0.0.1", 8080), timeout=timeout) as client:
+    with socket.create_connection(("127.0.0.1", PROXY_PORT), timeout=timeout) as client:
         client.settimeout(timeout)
         client.sendall((f"GET {path} HTTP/1.1\r\nHost: research.invalid\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n").encode())
         with client.makefile("rb") as stream:

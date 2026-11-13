@@ -1,4 +1,5 @@
 """Real local proxy negative controls, opt-in Docker prerequisite; no image pulls."""
+import os
 import importlib.util
 from pathlib import Path
 import unittest
@@ -71,21 +72,29 @@ class FixtureIdleRegression(unittest.TestCase):
 
 
 class ActualNginxControls(unittest.TestCase):
+    def run_probe(self, control):
+        binary = os.environ.get("T10_NGINX_BINARY")
+        return PROBE.run_local(binary, control) if binary else PROBE.run(control)
+
+    def assert_cleanup(self, result):
+        cleanup = result["cleanup"]
+        self.assertTrue(all(cleanup.values()) if isinstance(cleanup, dict) else all(item["absence_verified"] for item in cleanup))
+
     def test_long_read_timeout_is_detected(self):
-        result = PROBE.run("long-read-timeout")
+        result = self.run_probe("long-read-timeout")
         self.assertTrue(result["negative_control"]["detected"])
         self.assertIn("client deadline expired before proxy EOF", result["negative_control"]["failure"])
-        self.assertTrue(all(item["absence_verified"] for item in result["cleanup"]))
+        self.assert_cleanup(result)
 
     def test_upgrade_removal_is_detected(self):
-        result = PROBE.run("strip-upgrade")
+        result = self.run_probe("strip-upgrade")
         self.assertTrue(result["negative_control"]["detected"])
-        self.assertTrue(all(item["absence_verified"] for item in result["cleanup"]))
+        self.assert_cleanup(result)
 
     def test_public_private_route_is_detected(self):
-        result = PROBE.run("publish-private-assets")
+        result = self.run_probe("publish-private-assets")
         self.assertTrue(result["negative_control"]["detected"])
-        self.assertTrue(all(item["absence_verified"] for item in result["cleanup"]))
+        self.assert_cleanup(result)
 
 
 if __name__ == "__main__":
