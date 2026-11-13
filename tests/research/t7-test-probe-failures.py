@@ -3,6 +3,8 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -96,6 +98,51 @@ class FailureReports(unittest.TestCase):
 
     def test_copy_failure_non_utf8_stderr(self):
         self.assertEqual(self.run_failure('copy', b'copy failed: \xff')['command_stderr'], 'copy failed: \ufffd')
+
+
+class CliStartupReports(unittest.TestCase):
+    def run_cli_failure(self, mode):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            script = root / 'scripts/research/t7-browser-probe.py'
+            script.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'scripts/research/t7-browser-probe.py', script)
+            for relative in ['docs/research/t7-outline-prototype.html', 'tests/research/t7-browser-checks.js']:
+                if mode == 'missing-html' and relative.endswith('.html'):
+                    continue
+                if mode == 'missing-checks' and relative.endswith('.js'):
+                    continue
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text('standalone test fixture')
+            env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+            if mode == 'missing-git':
+                env['PATH'] = str(root / 'empty-bin')
+            output = root / 'output/evidence.json'
+            result = subprocess.run([sys.executable, str(script), '--output', str(output)],
+                                    cwd=root, env=env, capture_output=True, text=True, timeout=15)
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertTrue(output.exists(), result.stderr)
+            report = json.loads(output.read_text())
+        self.assertEqual(report['result'], 'blocked-or-failed')
+        self.assertTrue(report['owned_container_absent'])
+        self.assertNotIn('browser_result', report)
+        self.assertNotIn('tested_head', report)
+        self.assertLessEqual(len(report['error']), 4000)
+        self.assertEqual(report['stage'], 'read-fixtures' if mode in ('missing-html', 'missing-checks') else 'git-discovery')
+        return report
+
+    def test_cli_without_git_executable(self):
+        self.assertEqual(self.run_cli_failure('missing-git')['error_type'], 'FileNotFoundError')
+
+    def test_cli_outside_git_repository(self):
+        self.assertEqual(self.run_cli_failure('missing-repository')['error_type'], 'CalledProcessError')
+
+    def test_cli_missing_html_fixture(self):
+        self.assertEqual(self.run_cli_failure('missing-html')['error_type'], 'FileNotFoundError')
+
+    def test_cli_missing_browser_checks(self):
+        self.assertEqual(self.run_cli_failure('missing-checks')['error_type'], 'FileNotFoundError')
 
 
 if __name__ == '__main__':
