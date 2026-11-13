@@ -5,6 +5,7 @@ or evidence of running the documented product. Failures are retained and exit 1.
 """
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+import http.client
 import hashlib
 import json
 import sys
@@ -45,10 +46,13 @@ def capture(source):
                 payload = response.read(MAX_BYTES + 1)
                 if len(payload) > MAX_BYTES:
                     raise ValueError("response budget exceeded")
+                declared = response.headers.get("Content-Length")
+                if declared is not None and len(payload) != int(declared):
+                    raise ValueError("incomplete response body")
                 attempt.update(status="fetched", http_status=response.status,
                                final_url=response.url, bytes=len(payload),
                                sha256=hashlib.sha256(payload).hexdigest())
-        except (OSError, ValueError) as error:
+        except (OSError, http.client.HTTPException, ValueError) as error:
             attempt.update(status="fetch-failed", error_type=type(error).__name__)
             if isinstance(error, urllib.error.HTTPError):
                 attempt["http_status"] = error.code

@@ -1,4 +1,7 @@
 """Test oracle sensitivity, reproducibility and honest matrix evidence boundaries."""
+import os
+import threading
+from unittest import mock
 from copy import deepcopy
 import importlib.util
 import json
@@ -295,6 +298,66 @@ class MatrixTests(unittest.TestCase):
                 data["accessibility_candidate"]["status"] = "passed"
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 matrix.validate(data)
+
+
+
+class SourceCaptureRegression(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        path = Path(os.environ.get("CAPTURE_REGRESSION_SCRIPT", str(ROOT / "scripts/research/t12-capture-sources.py")))
+        spec = importlib.util.spec_from_file_location("capture_regression", path)
+        cls.capture_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.capture_module)
+
+    def collect(self, responses):
+        import socketserver
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                self.request.recv(4096)
+                self.request.sendall(responses.pop(0))
+        with socketserver.TCPServer(("127.0.0.1", 0), Handler) as server:
+            thread = threading.Thread(target=server.serve_forever)
+            thread.start()
+            url = "http://127.0.0.1:" + str(server.server_address[1])
+            try:
+                return self.invoke(url)
+            finally:
+                server.shutdown()
+                thread.join(timeout=2)
+
+    def test_truncated_length_is_failure_and_other_source_survives(self):
+        result = self.collect([
+            b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\nConnection: close\r\n\r\nshort",
+            b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok"])
+        self.assert_failed_then_success(result)
+
+    def test_broken_chunk_is_failure_and_other_source_survives(self):
+        result = self.collect([
+            b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n5\r\nx",
+            b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok"])
+        self.assert_failed_then_success(result)
+
+    def invoke(self, url):
+        # D1 must exercise fallback after either form of truncated response.
+        original = self.capture_module.urllib.request.urlopen
+        with mock.patch.object(self.capture_module.urllib.request, "urlopen", wraps=original) as fetch:
+            fetch.side_effect = lambda target, **kwargs: original(url, **kwargs)
+            first = self.capture_module.capture(("D1", "https://docs.discord.com/example", "test"))
+        return first["attempts"]
+
+    def assert_failed_then_success(self, result):
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["status"], "fetch-failed")
+        self.assertNotIn("sha256", result[0])
+        self.assertEqual(result[1]["status"], "fetched")
+        self.assertEqual(result[1]["bytes"], 2)
+
+    def test_failed_source_does_not_abort_collection(self):
+        from concurrent.futures import ThreadPoolExecutor
+        with mock.patch.object(self.capture_module.urllib.request, "urlopen", side_effect=__import__("http.client").client.IncompleteRead(b"partial")):
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                results = list(pool.map(self.capture_module.capture, [("P1", "http://example.invalid", "test"), ("P2", "http://example.invalid", "test")]))
+        self.assertEqual([row["status"] for row in results], ["fetch-failed", "fetch-failed"])
 
 
 if __name__ == "__main__":
