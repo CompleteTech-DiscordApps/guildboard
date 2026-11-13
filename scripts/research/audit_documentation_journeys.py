@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate a research evidence snapshot; never certifies the product journeys."""
 import argparse
+import errno
 import hashlib
 import json
 from pathlib import Path
@@ -54,11 +55,21 @@ def audit(root, manifest):
                     errors.append('invalid evidence record')
                     continue
                 relative = Path(item['path'])
+                if relative.is_absolute() or '..' in relative.parts:
+                    errors.append('evidence path escapes repository')
+                    continue
                 try:
-                    resolved = (root / relative).resolve()
+                    resolved = (root / relative).resolve(strict=True)
+                except FileNotFoundError:
+                    errors.append(f'missing evidence: {relative}')
+                    continue
+                except OSError as exc:
+                    if exc.errno == errno.ELOOP:
+                        raise ValueError(f'evidence path cannot be resolved: {relative}') from exc
+                    raise
                 except RuntimeError as exc:
                     raise ValueError(f'evidence path cannot be resolved: {relative}') from exc
-                if relative.is_absolute() or '..' in relative.parts or not resolved.is_relative_to(root):
+                if not resolved.is_relative_to(root):
                     errors.append('evidence path escapes repository')
                     continue
                 if not resolved.is_file():
