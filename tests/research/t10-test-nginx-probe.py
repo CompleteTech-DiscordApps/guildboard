@@ -1499,7 +1499,7 @@ class SourceCaptureRegression(unittest.TestCase):
 @unittest.skipUnless(POSIX_LOCAL and Path("/proc").is_dir(), "POSIX/Linux source publication and worker ownership")
 class SourceReportPublicationRegression(unittest.TestCase):
     def source_case(self, number=signal.SIGTERM, optimized=False, unbuffered=False,
-                    destination_kind="file", stdout_mode="draining", full_stderr=False, handoff=False):
+                    destination_kind="file", stdout_mode="draining", full_stderr=False, handoff=False, long_metadata=True):
         import socketserver
         import tempfile
         stop, slow_connected = threading.Event(), threading.Event()
@@ -1543,7 +1543,7 @@ class SourceReportPublicationRegression(unittest.TestCase):
             program = ("import importlib.util,sys,os; "
                        "s=importlib.util.spec_from_file_location('capture',sys.argv[1]); "
                        "m=importlib.util.module_from_spec(s);s.loader.exec_module(m); "
-                       "m.SOURCES=[('healthy',sys.argv[2]+'/'+'x'*10000)]" +
+                       "m.SOURCES=[('healthy',sys.argv[2]+" + ("'/'+'x'*10000" if long_metadata else "'/healthy'") + ")]" +
                        ("+[('slow',sys.argv[2]+'/slow')]; " if number is not None and not handoff else "; "))
             if full_stderr:
                 program += "os.write(2,b'z'*4096); "
@@ -1557,7 +1557,7 @@ class SourceReportPublicationRegression(unittest.TestCase):
                        "-c", program, str(ROOT / "scripts/research/t10-capture-sources.py"), url, str(destination)]
             try:
                 process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                           pipesize=4096, env={**os.environ, "TMPDIR": str(temporary), "PYTHONDONTWRITEBYTECODE": "1"})
+                                           pipesize=4096, env={**os.environ, "TMPDIR": str(temporary), "PYTHONDONTWRITEBYTECODE": "1", "PYTHONUNBUFFERED": "1" if unbuffered else ""})
                 if number is not None and not handoff:
                     self.assertTrue(slow_connected.wait(8), "actual slow worker must be fetching after healthy row")
                     for pid in Path(f"/proc/{process.pid}/task/{process.pid}/children").read_text().split():
@@ -1640,6 +1640,12 @@ class SourceReportPublicationRegression(unittest.TestCase):
                     for mode in ("draining", "closed", "undrained"):
                         with self.subTest(optimized=optimized, unbuffered=unbuffered, signal=number, stdout=mode):
                             self.source_case(number, optimized, unbuffered, stdout_mode=mode)
+
+    def test_small_buffered_source_report_closed_stdout_avoids_exit120(self):
+        for optimized in (False, True):
+            for number in (signal.SIGTERM, signal.SIGINT):
+                with self.subTest(optimized=optimized, signal=number):
+                    self.source_case(number, optimized, stdout_mode="closed", long_metadata=False)
 
     def test_source_cancellation_does_not_wait_for_full_stderr(self):
         self.source_case(stdout_mode="undrained", full_stderr=True)
