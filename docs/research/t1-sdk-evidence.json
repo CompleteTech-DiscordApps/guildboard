@@ -1,0 +1,58 @@
+{
+  "archive_integrity": "sha512-FNoe5PbSkoKEbqPubaBmq6tlEMOftMjR3gu55YrdrrKmBfKKM4i9P/Z+Zxl0RZdJcKviBwVcTyYMMPM/aGex/w==",
+  "archive_sha256": "9fea2ebe36dfd1126ad072ba343128db4143043c5b6a1f9bc212a0e3a7198470",
+  "authorize_input_declaration": {
+    "client_id": "string",
+    "code_challenge?": "string",
+    "code_challenge_method?": "'S256'",
+    "prompt?": "'none'",
+    "response_type?": "'code'",
+    "scope": "OAuthScopes[]",
+    "state?": "string"
+  },
+  "authorize_response_declaration": {
+    "code": "string"
+  },
+  "candidate_scope_literals_present": [
+    "identify",
+    "guilds",
+    "guilds.members.read"
+  ],
+  "declaration_limit": "Static text observations, not TypeScript compile or OAuth behavior.",
+  "evidence_kind": "pinned-artifact-and-local-url-utility-only",
+  "node_version": "v24.18.0",
+  "nullable_sdk_context": [
+    "guildId",
+    "channelId",
+    "mobileAppVersion"
+  ],
+  "observed_at_utc": "2026-10-26T00:03:34.495385+00:00",
+  "package": "@discord/embedded-app-sdk",
+  "result": "pass",
+  "selected_sha256": {
+    "package/output/Discord.d.ts": "0cc67443bcae18a4b5e2e217d9006e2a02e546f6d7dde9e1c273e803acd6c977",
+    "package/output/commands/authorize.d.ts": "3df336bc5a9a1c4dafb0fde09923e8b4c6e5a612174781390e58ea8809ec466d",
+    "package/output/commands/getChannelPermissions.d.ts": "10e71cad75b930e0b8f59bc3b179cd9e857975c8904b2cfd03ce64d28376edff",
+    "package/output/interface.d.ts": "aada214a46cbe98648f70ecec5d04be195b49a5b6916614b04cd3b4852b15ad7",
+    "package/output/schema/types.d.ts": "b59a4877395e09d8d5d4c0dedcb412e89f254fc64180c1045bfbe7e490127acc",
+    "package/output/utils/patchUrlMappings.d.ts": "e1874a41250bcdcf75fdd6a340a0c91381d328c175bfec6ed1050bdfee3e1f08",
+    "package/output/utils/url.mjs": "0865df06e3742aa4cf7092f95c7a1519c09ddd45126f8af9bf6afaaa3aee7038",
+    "package/package.json": "83d5e93797323e338e6e1e7b919443c22f4ae4fb62b18c39cda6a0a26b1fadf2"
+  },
+  "url_helper_tests": {
+    "count": 8,
+    "exit_code": 0,
+    "names": [
+      "maps configured HTTPS target and preserves query and fragment",
+      "preserves WSS protocol while rewriting a configured target",
+      "unrelated target remains unchanged rather than being denied by helper",
+      "resolves explicit relative URL against supplied proxy origin",
+      "substitutes configured target parameter into prefix",
+      "incomplete parameter mapping throws rather than yielding a usable route",
+      "malformed input URL is rejected by URL parsing",
+      "malformed configured target is rejected by URL parsing"
+    ],
+    "tap_output": "TAP version 13\n# Subtest: maps configured HTTPS target and preserves query and fragment\nok 1 - maps configured HTTPS target and preserves query and fragment\n  ---\n  duration_ms: 0.667\n  type: 'test'\n  ...\n# Subtest: preserves WSS protocol while rewriting a configured target\nok 2 - preserves WSS protocol while rewriting a configured target\n  ---\n  duration_ms: 0.5645\n  type: 'test'\n  ...\n# Subtest: unrelated target remains unchanged rather than being denied by helper\nok 3 - unrelated target remains unchanged rather than being denied by helper\n  ---\n  duration_ms: 0.1029\n  type: 'test'\n  ...\n# Subtest: resolves explicit relative URL against supplied proxy origin\nok 4 - resolves explicit relative URL against supplied proxy origin\n  ---\n  duration_ms: 0.0952\n  type: 'test'\n  ...\n# Subtest: substitutes configured target parameter into prefix\nok 5 - substitutes configured target parameter into prefix\n  ---\n  duration_ms: 0.1777\n  type: 'test'\n  ...\n# Subtest: incomplete parameter mapping throws rather than yielding a usable route\nok 6 - incomplete parameter mapping throws rather than yielding a usable route\n  ---\n  duration_ms: 0.2861\n  type: 'test'\n  ...\n# Subtest: malformed input URL is rejected by URL parsing\nok 7 - malformed input URL is rejected by URL parsing\n  ---\n  duration_ms: 0.0958\n  type: 'test'\n  ...\n# Subtest: malformed configured target is rejected by URL parsing\nok 8 - malformed configured target is rejected by URL parsing\n  ---\n  duration_ms: 0.0964\n  type: 'test'\n  ...\n1..8\n# tests 8\n# suites 0\n# pass 8\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 72.2252\n"
+  },
+  "version": "2.5.0"
+}

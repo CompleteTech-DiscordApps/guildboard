@@ -1,0 +1,233 @@
+{
+  "evidence_kind": "public-document-observations-not-client-verification",
+  "npm_latest_observation": {
+    "integrity": "sha512-FNoe5PbSkoKEbqPubaBmq6tlEMOftMjR3gu55YrdrrKmBfKKM4i9P/Z+Zxl0RZdJcKviBwVcTyYMMPM/aGex/w==",
+    "name": "@discord/embedded-app-sdk",
+    "note": "Registry observation; no signature/provenance attestation verification claimed.",
+    "observed_at_utc": "2026-10-25T23:58:57.340929+00:00",
+    "tarball": "https://registry.npmjs.org/@discord/embedded-app-sdk/-/embedded-app-sdk-2.5.0.tgz",
+    "url": "https://registry.npmjs.org/@discord%2fembedded-app-sdk/latest",
+    "version": "2.5.0"
+  },
+  "sources": [
+    {
+      "bytes": 394511,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.627022+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/activities/how-activities-work",
+      "http_status": 200,
+      "id": "D1",
+      "observed_at_utc": "2026-10-25T23:59:07.000420+00:00",
+      "sha256": "07faf9a33de91101e929a8f90b4bbde89faf301f5154dac84b7ee10f1927b92c",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/activities/how-activities-work"
+    },
+    {
+      "bytes": 388785,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.627371+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/activities/development-guides/networking",
+      "http_status": 200,
+      "id": "D2",
+      "observed_at_utc": "2026-10-25T23:59:07.001024+00:00",
+      "sha256": "0899d004cf1545309fc6b7876d2b7d44fa716f9dd0ca4bb103dcfd014377b7f0",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/activities/development-guides/networking"
+    },
+    {
+      "bytes": 446479,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.627716+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/activities/development-guides/local-development",
+      "http_status": 200,
+      "id": "D3",
+      "observed_at_utc": "2026-10-25T23:59:07.001386+00:00",
+      "sha256": "ad5305db057ac0f59aac7a33807207a458385634e6a46f54274c5e4a3a2b4425",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/activities/development-guides/local-development"
+    },
+    {
+      "bytes": 400410,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.628055+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/activities/development-guides/mobile",
+      "http_status": 200,
+      "id": "D4",
+      "observed_at_utc": "2026-10-25T23:59:07.001701+00:00",
+      "sha256": "cbcbb668c7a0b4eec2e030db568085f1b0347602bd5fb0fee7ecc6783ab91766",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/activities/development-guides/mobile"
+    },
+    {
+      "bytes": 365552,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.792106+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/activities/development-guides/production-readiness",
+      "http_status": 200,
+      "id": "D5",
+      "observed_at_utc": "2026-10-25T23:59:07.286789+00:00",
+      "sha256": "10df5678deb4964c4bb46d9b93502bd590827b600e14f6464f4ac0f26778214a",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/activities/development-guides/production-readiness"
+    },
+    {
+      "bytes": 1368763,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.797343+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/developer-tools/embedded-app-sdk",
+      "http_status": 200,
+      "id": "D6",
+      "observed_at_utc": "2026-10-25T23:59:07.300207+00:00",
+      "sha256": "24ba8cfe829e66c02167b5a7b26bc7a317132e0674105c7c567d36ad897396a4",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/developer-tools/embedded-app-sdk"
+    },
+    {
+      "bytes": 750916,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.801357+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/topics/oauth2",
+      "http_status": 200,
+      "id": "D7",
+      "observed_at_utc": "2026-10-25T23:59:07.301213+00:00",
+      "sha256": "050e5341cf6fcd358e88c49fae0259cd0b3e3b00f28bad4574c069913924aa6d",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/topics/oauth2"
+    },
+    {
+      "bytes": 561089,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.802916+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/resources/user",
+      "http_status": 200,
+      "id": "D8",
+      "observed_at_utc": "2026-10-25T23:59:07.307856+00:00",
+      "sha256": "dfcbf1133c5e8f8c690bfc3a9b53239853187ea775d5372da8dfe03271ec9484",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/resources/user"
+    },
+    {
+      "bytes": 1239753,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.859380+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/resources/guild",
+      "http_status": 200,
+      "id": "D9",
+      "observed_at_utc": "2026-10-25T23:59:07.507094+00:00",
+      "sha256": "a965347baf07db577221675cdaee711cf8ebecedf7ef75a6d7f8b27f467a11ca",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/resources/guild"
+    },
+    {
+      "bytes": 847687,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.864262+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/resources/channel",
+      "http_status": 200,
+      "id": "D10",
+      "observed_at_utc": "2026-10-25T23:59:07.544220+00:00",
+      "sha256": "1fb5cc8628e62a4e6a01bf3e57560bdaaa427a093136be85ce4793fd83a87c81",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/resources/channel"
+    },
+    {
+      "bytes": 583854,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.865177+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/topics/permissions",
+      "http_status": 200,
+      "id": "D11",
+      "observed_at_utc": "2026-10-25T23:59:07.554679+00:00",
+      "sha256": "8aa0272538b78ec761a60728d8c3855d9ee7e89ebae198fefe25ea84b3536480",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/topics/permissions"
+    },
+    {
+      "bytes": 793497,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.868634+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/events/gateway",
+      "http_status": 200,
+      "id": "D12",
+      "observed_at_utc": "2026-10-25T23:59:07.578592+00:00",
+      "sha256": "48efd9e82f3981edb866def970e2acdbb73411965b7b2de62f3be5c50aba4c8f",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/events/gateway"
+    },
+    {
+      "bytes": 408912,
+      "document_version": "rolling official Discord documentation",
+      "earlier_attempt": {
+        "error_type": "HTTPError",
+        "observed_at_utc": "2026-10-25T23:58:56.922810+00:00",
+        "status": "fetch-failed"
+      },
+      "final_url": "https://docs.discord.com/developers/topics/rate-limits",
+      "http_status": 200,
+      "id": "D13",
+      "observed_at_utc": "2026-10-25T23:59:07.794922+00:00",
+      "sha256": "be7014c6979c06a61208524958a95f0e214bcc99c7b0aa3ea17bdd75d942ac30",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/topics/rate-limits"
+    },
+    {
+      "bytes": 261599,
+      "document_version": "RFC9700/BCP240 January2025",
+      "final_url": "https://www.rfc-editor.org/rfc/rfc9700.html",
+      "http_status": 200,
+      "id": "O1",
+      "observed_at_utc": "2026-10-25T23:58:56.926374+00:00",
+      "sha256": "c00e2234fcd79581bc29669c60d693afaa42f67d9205bddee848f757ae975419",
+      "status": "fetched",
+      "url": "https://www.rfc-editor.org/rfc/rfc9700.html"
+    }
+  ]
+}
