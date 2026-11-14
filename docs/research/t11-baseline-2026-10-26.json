@@ -1,0 +1,82 @@
+{
+  "experiment": "GB-T11.R1-local-fixture-v1",
+  "timestamp_utc": "2026-10-26T00:54:04.219591+00:00",
+  "python": "3.14.3",
+  "os": "Windows",
+  "os_release": "11",
+  "machine": "AMD64",
+  "script_sha256": "97b4011b379508a65c891e41d047ec5b2f5d63c795f71ab0eb29e053ce5ba124",
+  "source_base_commit": "c108b552a660e12a3b3998e1e1ad944fbd7a894d",
+  "scope": "virtual queue plus local synthetic files; no application/SQL/network/VPS",
+  "queues": {
+    "steady": {
+      "arrival_rate_per_second": 100,
+      "virtual_seconds": 60,
+      "assumed_service_ms": 4,
+      "outstanding_limit": 128,
+      "offered": 6000,
+      "accepted_and_eventually_completed": 6000,
+      "rejected": 0,
+      "peak_outstanding": 1,
+      "accepted_virtual_latency_ms": {
+        "p50": 4.0,
+        "p95": 4.0,
+        "p99": 4.0
+      },
+      "last_completion_virtual_seconds": 59.994
+    },
+    "burst": {
+      "arrival_rate_per_second": 1000,
+      "virtual_seconds": 10,
+      "assumed_service_ms": 4,
+      "outstanding_limit": 128,
+      "offered": 10000,
+      "accepted_and_eventually_completed": 2627,
+      "rejected": 7373,
+      "peak_outstanding": 128,
+      "accepted_virtual_latency_ms": {
+        "p50": 512.0,
+        "p95": 512.0,
+        "p99": 512.0
+      },
+      "last_completion_virtual_seconds": 10.508
+    },
+    "slow_dependency": {
+      "arrival_rate_per_second": 100,
+      "virtual_seconds": 10,
+      "assumed_service_ms": 20,
+      "outstanding_limit": 128,
+      "offered": 1000,
+      "accepted_and_eventually_completed": 627,
+      "rejected": 373,
+      "peak_outstanding": 128,
+      "accepted_virtual_latency_ms": {
+        "p50": 2550.0,
+        "p95": 2560.0,
+        "p99": 2560.0
+      },
+      "last_completion_virtual_seconds": 12.54
+    }
+  },
+  "files": {
+    "records": 300,
+    "synthetic_content_bytes_per_record": 2048,
+    "journal_bytes": 625390,
+    "journal_sha256": "7c403f7fb324c70a8d54cf9305b96cfd48ff7047f8559c2fd63db0eeff7982ce",
+    "write_flush_fsync_ms": {
+      "p50": 1.0356,
+      "p95": 4.7304,
+      "p99": 8.9523
+    },
+    "write_total_wall_seconds": 0.486976,
+    "observed_records_per_wall_second": 616.046,
+    "copy_and_verify_backup_ms": 8.5847,
+    "copy_and_verify_restore_ms": 8.4812,
+    "restored_records": 300,
+    "truncated_copy_rejected": true,
+    "abrupt_owned_child_exit_code": 23,
+    "abrupt_child_prefix_verified_records": 32,
+    "child_start_exit_and_prefix_verify_wall_ms": 93.7136
+  },
+  "parent_cpu_seconds": 0.03125
+}
