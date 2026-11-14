@@ -1878,5 +1878,77 @@ class CriticalEntryRegression(unittest.TestCase):
                     json.loads(output.getvalue())
 
 
+@unittest.skipUnless(os.name == "posix", "requires POSIX signals")
+class StartupSignalRegression(unittest.TestCase):
+    def test_installed_handler_setup_handoff_and_teardown(self):
+        import ast
+        import tempfile
+        program = r"""
+import importlib.util, os, signal, sys
+path, phase, target, number, destination = sys.argv[1:]
+spec = importlib.util.spec_from_file_location('candidate', path)
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+if hasattr(m, 'emit_report'):
+    m.run = lambda *a, **kw: {'result': 'complete'}
+else:
+    m.capture = lambda: {'kind': 'fixture', 'sources': []}
+triggered = False
+previous = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
+original_signal = signal.signal
+def install(sig, handler):
+    global triggered
+    result = original_signal(sig, handler)
+    if phase == 'install' and not triggered and sig == int(number):
+        triggered = True
+        os.kill(os.getpid(), int(number))
+    return result
+signal.signal = install
+def trace(frame, event, arg):
+    global triggered
+    code = m.main.__code__ if phase == 'handoff' else m.cancellation_signals.__wrapped__.__code__
+    if not triggered and frame.f_code is code and event == 'line' and frame.f_lineno == int(target):
+        triggered = True
+        os.kill(os.getpid(), int(number))
+    return trace
+sys.settrace(trace)
+code = m.main(['--output', destination])
+sys.settrace(None)
+if not triggered:
+    raise RuntimeError('signal boundary was not reached')
+if any(signal.getsignal(sig) != handler for sig, handler in previous.items()):
+    raise RuntimeError('signal handlers were not restored')
+raise SystemExit(code)
+"""
+        for filename in ("t10-nginx-probe.py", "t10-capture-sources.py"):
+            path = ROOT / "scripts/research" / filename
+            tree = ast.parse(path.read_text())
+            main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "main")
+            manager = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "cancellation_signals")
+            guard = next(n for n in manager.body if isinstance(n, ast.Try))
+            targets = {"install": -1,
+                       "handoff": next(n for n in main.body if isinstance(n, ast.With)).body[0].lineno,
+                       "installed": next(n for n in guard.body if isinstance(n, ast.Expr) and isinstance(n.value, ast.Yield)).lineno,
+                       "teardown": guard.finalbody[0].lineno}
+            for phase, target in targets.items():
+                for optimized in (False, True):
+                    for number in (signal.SIGTERM, signal.SIGINT):
+                        with self.subTest(script=filename, phase=phase, optimized=optimized, signal=number), tempfile.TemporaryDirectory() as directory:
+                            destination = Path(directory) / "report.json"
+                            command = [sys.executable, *(["-O"] if optimized else []), "-B", "-c", program,
+                                       str(path), phase, str(target), str(number), str(destination)]
+                            result = subprocess.run(command, capture_output=True, text=True, timeout=8)
+                            self.assertEqual(result.returncode, 128 + number, result.stderr)
+                            self.assertNotIn("Traceback", result.stderr)
+                            report = json.loads(destination.read_text())
+                            json.loads(result.stdout)
+                            if phase != "teardown":
+                                self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+                                if filename == "t10-capture-sources.py":
+                                    self.assertEqual(report["sources"], [])
+                            else:
+                                self.assertNotIn("failure", report)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

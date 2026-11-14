@@ -65,17 +65,19 @@ def cancellation_signals():
     """Deliver the first catchable signal outside owned worker cleanup."""
     global _cancellation_state
     previous, previous_state = {}, _cancellation_state
-    state = {"signal": None, "delivered": False, "cleanup_depth": 0, "publication_depth": 0, "publication_started": False}
+    state = {"signal": None, "delivered": False, "cleanup_depth": 0, "publication_depth": 0, "publication_started": False, "startup": True}
     _cancellation_state = state
     def cancel(signum, _frame):
         if state["signal"] is None:
             state["signal"] = signum
-        # Do not asynchronously unwind owned-resource lifecycles or an emitter
-        # before its staging guard is active. Their safe checkpoints deliver it.
+        # Defer during handler setup, the startup handoff, owned-resource
+        # lifecycles and pre-staging. Safe checkpoints deliver cancellation.
         frame = _frame if _frame is not None else sys._getframe(1)
         protected = False
         while frame is not None:
-            if frame.f_globals is globals() and (frame.f_code.co_name in ('fetch', 'capture', 'owned_cleanup')
+            if frame.f_globals is globals() and (frame.f_code.co_name == "cancellation_signals"
+                    or (frame.f_code.co_name == "main" and state["startup"])
+                    or frame.f_code.co_name in ('fetch', 'capture', 'owned_cleanup')
                     or (frame.f_code.co_name in ("emit_report", "emit_source_report")
                         and not state["publication_started"])):
                 protected = True
@@ -269,6 +271,10 @@ def main(argv=None):
     with cancellation_signals() as state:
         try:
             try:
+                state["startup"] = False
+                if state["signal"] is not None and not state["delivered"]:
+                    state["delivered"] = True
+                    raise ExperimentCancelled(state["signal"])
                 result = capture()
                 if state["signal"] is not None and not state["delivered"]:
                     state["delivered"] = True
