@@ -502,3 +502,38 @@ The old-code evidence reproducer now enforces provenance/outcome checks with exp
 ### Measure tunnel idleness after validated upgrade (2026-11-14 UTC)
 
 The previous idle elapsed measurement began before connection/handshake, so a delayed two-second 101 response followed by immediate EOF could falsely satisfy the 1.5–4.5-second idle window. Code `6950c3e253ead359d621102ebf068e03b5f3fef7` starts the idle clock only after validating the full upgrade, and separately enforces a total connect/handshake deadline, including slow-drip headers. [Revision-specific evidence](evidence/t10-2026-11-13/idle-6950c3e/README.md) records 62 normal and 62 optimized tests, the exact old-code false acceptance/fixed rejection, a valid two-second post-upgrade idle case, and 12 actual local Nginx checks plus six detected controls. The two phases have separate budgets; total exchange time may include both. Historical raw evidence is preserved; these loopback results provide no GoDaddy/TLS/Discord or production acceptance, and fresh whole-candidate technical review/native approval remain required.
+
+### Failure-report publication cancellation (2026-11-14)
+
+Review finding `T10-REPORT-CANCEL-1` identified a remaining publication boundary:
+at `aae49862`, a first SIGTERM/SIGINT while the ordinary-failure handler printed
+large JSON escaped that handler, truncated stdout, skipped `--output`, and
+returned 1. Four actual CLI reproductions under normal/optimized Python retain
+this failure in the [new publication evidence](evidence/t10-recovery-publication-2026-11-14/README.md).
+
+At code/test revision `b1ea6c99456d19b0560b63880e8b519bc0eb1f90`, a complete
+local JSON snapshot precedes stdout. POSIX stdout uses a two-second nonblocking
+publication deadline; failure or interruption preserves a complete snapshot
+and never appends another JSON object after partial bytes. The first recorded
+signal determines exit 143/130, including signals during serialization/staging;
+a late publication signal may be represented by exit status rather than a
+cancellation field in the already frozen snapshot. Ordinary failure remains
+nonzero. `--output` accepts regular files and fails fast for FIFOs/devices,
+including symlinks to them. Notices are nonblocking best effort on POSIX.
+
+Use `--output` for a known recovery location. Without it, failed/interrupted
+publication intentionally retains a private `guildboard-t10-report-*.json`
+file in Python's temporary directory; a best-effort stderr notice names it.
+If stderr is full/closed, that notice may be lost. Completed stdout removes
+the automatic copy. Caller retention/removal of the deliberate report artifact
+is distinct from cleanup of all owned processes/listeners/runtime directories.
+Filesystem/kernel stalls, non-POSIX/custom-stream backpressure, SIGKILL and
+power loss are outside the bounded descriptor guarantee; no fsync or durable
+backup claim is made.
+
+Both 70-test suites pass without skips, including eight new publication methods;
+separate real local Nginx baseline and all six unsafe controls still pass or
+are detected. These are new recovered-server observations, not recovery of
+missing private laptop evidence. Older committed bundles remain historical and
+unchanged. Actual GoDaddy HTTPS/WSS, Discord, deployment/recovery, independent
+native approval and fresh complete-candidate review remain open.

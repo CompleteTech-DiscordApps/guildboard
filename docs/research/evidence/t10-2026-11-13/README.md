@@ -36,3 +36,10 @@ The [acquisition before-run provenance audit](acquisition-f0bf9c7/before-provena
 [Reproducer validation under optimization](acquisition-f0bf9c7/reproducer-checks-4cca655.json) replaces removable provenance/outcome assertions with explicit checks. Real old-code reruns pass their expected-failure checks under normal/-O, and ten malformed-input/outcome cases are explicitly rejected. Production code/results are unchanged.
 
 [Post-upgrade idle timing](idle-6950c3e/README.md) records 62 normal/optimized tests and real Nginx baseline/six controls at `6950c3e`. A delayed two-second handshake plus immediate EOF reproduces the old false acceptance and is rejected after separating handshake and postvalidated idle clocks.
+
+[2026-11-14 publication follow-up](../t10-recovery-publication-2026-11-14/README.md)
+adds complete-snapshot, bounded-stdout and first-signal publication coverage at
+`b1ea6c9`: 70 normal/optimized tests, old/fixed actual CLI observations and
+repeated real Nginx baseline/six controls. The earlier bundles did not establish
+first-signal safety during ordinary-failure report publication and remain
+unchanged historical evidence.

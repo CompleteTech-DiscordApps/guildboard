@@ -1,0 +1,34 @@
+[
+  {
+    "name": "wrong-before",
+    "optimized": false,
+    "exit_code": 1,
+    "success_artifact_exists": false,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 156, in <module>\n    main()\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 119, in main\n    check(git(before, \"rev-parse\", \"HEAD\").decode().strip() == BEFORE, \"before worktree is not exact old revision\")\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 31, in check\n    raise RuntimeError(message)\nRuntimeError: before worktree is not exact old revision\n"
+  },
+  {
+    "name": "wrong-tested-source",
+    "optimized": false,
+    "exit_code": 1,
+    "success_artifact_exists": false,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 156, in <module>\n    main()\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 124, in main\n    check(expected == actual, \"current source does not match tested revision: \" + path)\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 31, in check\n    raise RuntimeError(message)\nRuntimeError: current source does not match tested revision: scripts/research/t10-nginx-probe.py\n"
+  },
+  {
+    "name": "wrong-before",
+    "optimized": true,
+    "exit_code": 1,
+    "success_artifact_exists": false,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 156, in <module>\n    main()\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 119, in main\n    check(git(before, \"rev-parse\", \"HEAD\").decode().strip() == BEFORE, \"before worktree is not exact old revision\")\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 31, in check\n    raise RuntimeError(message)\nRuntimeError: before worktree is not exact old revision\n"
+  },
+  {
+    "name": "wrong-tested-source",
+    "optimized": true,
+    "exit_code": 1,
+    "success_artifact_exists": false,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 156, in <module>\n    main()\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 124, in main\n    check(expected == actual, \"current source does not match tested revision: \" + path)\n  File \"<RECOVERY>/worktrees/pr-497-publication/docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py\", line 31, in check\n    raise RuntimeError(message)\nRuntimeError: current source does not match tested revision: scripts/research/t10-nginx-probe.py\n"
+  }
+]
