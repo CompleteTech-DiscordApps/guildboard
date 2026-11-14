@@ -1,0 +1,25 @@
+test_first_signal_during_normal_docker_cleanup_is_deferred (tests.CancellationRegression.test_first_signal_during_normal_docker_cleanup_is_deferred) ... FAIL
+test_first_signal_during_normal_local_cleanup_finishes_all_actions (tests.CancellationRegression.test_first_signal_during_normal_local_cleanup_finishes_all_actions) ... FAIL
+
+======================================================================
+FAIL: test_first_signal_during_normal_docker_cleanup_is_deferred (tests.CancellationRegression.test_first_signal_during_normal_docker_cleanup_is_deferred)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<WORKTREE>/tests/research/t10-test-nginx-probe.py", line 457, in test_first_signal_during_normal_docker_cleanup_is_deferred
+    self.assertEqual(code, 128 + number)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 143
+
+======================================================================
+FAIL: test_first_signal_during_normal_local_cleanup_finishes_all_actions (tests.CancellationRegression.test_first_signal_during_normal_local_cleanup_finishes_all_actions)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<WORKTREE>/tests/research/t10-test-nginx-probe.py", line 501, in test_first_signal_during_normal_local_cleanup_finishes_all_actions
+    self.assertEqual(code, 128 + number)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 143
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.576s
+
+FAILED (failures=2)

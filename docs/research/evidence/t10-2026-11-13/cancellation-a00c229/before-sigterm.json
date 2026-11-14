@@ -1,0 +1,11 @@
+{
+  "head": "34642fb0686d7553245b0a2ca7e1b8dd85436e13",
+  "readiness_observed": true,
+  "exit_code": -15,
+  "stdout": "",
+  "stderr": "",
+  "temporary_directory_survived": true,
+  "nginx_masters_still_running": [
+    3995304
+  ]
+}

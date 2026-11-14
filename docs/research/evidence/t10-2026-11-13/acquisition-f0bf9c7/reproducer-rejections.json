@@ -1,0 +1,76 @@
+{
+  "checks": [
+    {
+      "optimized": false,
+      "case": "harness",
+      "returncode": 1,
+      "expected_error": "Harness differs from exact recorded revision",
+      "explicit_rejection": true
+    },
+    {
+      "optimized": false,
+      "case": "no-failures",
+      "returncode": 1,
+      "expected_error": "Unexpected regression outcome",
+      "explicit_rejection": true
+    },
+    {
+      "optimized": false,
+      "case": "errors",
+      "returncode": 1,
+      "expected_error": "Unexpected regression outcome",
+      "explicit_rejection": true
+    },
+    {
+      "optimized": false,
+      "case": "skips",
+      "returncode": 1,
+      "expected_error": "Unexpected regression outcome",
+      "explicit_rejection": true
+    },
+    {
+      "optimized": false,
+      "case": "missing-reports",
+      "returncode": 1,
+      "expected_error": "Unexpected owner report count",
+      "explicit_rejection": true
+    },
+    {
+      "optimized": true,
+      "case": "harness",
+      "returncode": 1,
+      "expected_error": "Harness differs from exact recorded revision",
+      "explicit_rejection": true
+    },
+    {
+      "optimized": true,
+      "case": "no-failures",
+      "returncode": 1,
+      "expected_error": "Unexpected regression outcome",
+      "explicit_rejection": true
+    },
+    {
+      "optimized": true,
+      "case": "errors",
+      "returncode": 1,
+      "expected_error": "Unexpected regression outcome",
+      "explicit_rejection": true
+    },
+    {
+      "optimized": true,
+      "case": "skips",
+      "returncode": 1,
+      "expected_error": "Unexpected regression outcome",
+      "explicit_rejection": true
+    },
+    {
+      "optimized": true,
+      "case": "missing-reports",
+      "returncode": 1,
+      "expected_error": "Unexpected owner report count",
+      "explicit_rejection": true
+    }
+  ],
+  "passed": 10,
+  "result": "All malformed harness/outcome cases rejected without verification output or success artifact"
+}

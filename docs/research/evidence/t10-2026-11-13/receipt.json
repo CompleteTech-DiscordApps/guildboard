@@ -1,0 +1,209 @@
+{
+  "kind": "public-revision-specific-local-research-validation",
+  "published_at_utc": "2026-11-13T13:27:48.163840+00:00",
+  "tested_revision": "eee0ad43bcbcc4a262b352eb115d8ac11a04b59d",
+  "tested_tree": "6e69d6948e5a154af908cf3535bb333d61131b28",
+  "publication_scope": "Documentation/evidence only. Tests and reports belong to tested_revision, not the later publication commit. Source/configuration/test hashes matched tested_revision at packaging.",
+  "source_sha256": {
+    "scripts/research/t10-nginx-probe.py": "7e6b33f1dd1f8885ef7adfab0157d489ec9b92e69e3a9811f1fe62fb317d04f2",
+    "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+    "scripts/research/t10-capture-sources.py": "2b05d2a3a92fd275e8de7dcc145dba232783f3789a87964d781765f2f010f90d",
+    "tests/research/t10-test-nginx-probe.py": "03ffa40816b5ab57e3920f5f24be4f2c1765ef497eeeeac0c72e8e6919a195c4",
+    "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+  },
+  "environment": {
+    "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+    "python": "3.14.8",
+    "nginx_version": "nginx version: nginx/1.28.0",
+    "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+    "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance"
+  },
+  "commands": [
+    {
+      "argv": [
+        "python",
+        "tests/research/t10-test-nginx-probe.py"
+      ],
+      "environment": {
+        "T10_NGINX_BINARY": "<OWNED_NGINX_BINARY>"
+      },
+      "raw_log": "suite-normal.log",
+      "exit_code": 0,
+      "result": {
+        "tests": 48,
+        "skipped": 0,
+        "failures": 0,
+        "errors": 0
+      }
+    },
+    {
+      "argv": [
+        "python",
+        "-O",
+        "tests/research/t10-test-nginx-probe.py"
+      ],
+      "environment": {
+        "T10_NGINX_BINARY": "<OWNED_NGINX_BINARY>"
+      },
+      "raw_log": "suite-optimized.log",
+      "exit_code": 0,
+      "result": {
+        "tests": 48,
+        "skipped": 0,
+        "failures": 0,
+        "errors": 0
+      }
+    },
+    {
+      "argv": [
+        "python",
+        "-O",
+        "scripts/research/t10-nginx-probe.py",
+        "--nginx-binary",
+        "<OWNED_NGINX_BINARY>",
+        "--output",
+        "<OUTPUT_JSON>"
+      ],
+      "raw_report": "baseline.sanitized.json",
+      "exit_code": 0,
+      "result": {
+        "checks": 12,
+        "all_passed": true,
+        "cleanup": {
+          "owned_nginx_exited": true,
+          "owned_backend_thread_exited": true
+        }
+      }
+    },
+    {
+      "invocation": "python -O -; sanitized stdin in capture-controls-command.txt",
+      "raw_report": "controls.sanitized.json",
+      "exit_code": 0,
+      "result": {
+        "controls": [
+          {
+            "variant": "strip-upgrade",
+            "detected": true,
+            "failure": "websocket-status: HTTP/1.1 426 Upgrade Required",
+            "cleanup": {
+              "owned_nginx_exited": true,
+              "owned_backend_thread_exited": true
+            }
+          },
+          {
+            "variant": "strip-connection",
+            "detected": true,
+            "failure": "websocket-status: HTTP/1.1 400 Bad Request",
+            "cleanup": {
+              "owned_nginx_exited": true,
+              "owned_backend_thread_exited": true
+            }
+          },
+          {
+            "variant": "strip-key",
+            "detected": true,
+            "failure": "websocket-status: HTTP/1.1 400 Bad Request",
+            "cleanup": {
+              "owned_nginx_exited": true,
+              "owned_backend_thread_exited": true
+            }
+          },
+          {
+            "variant": "strip-version",
+            "detected": true,
+            "failure": "websocket-status: HTTP/1.1 426 Upgrade Required",
+            "cleanup": {
+              "owned_nginx_exited": true,
+              "owned_backend_thread_exited": true
+            }
+          },
+          {
+            "variant": "publish-private-assets",
+            "detected": true,
+            "failure": "private-assets-not-public",
+            "cleanup": {
+              "owned_nginx_exited": true,
+              "owned_backend_thread_exited": true
+            }
+          },
+          {
+            "variant": "long-read-timeout",
+            "detected": true,
+            "failure": "idle-close-deadline: client deadline expired before proxy EOF",
+            "cleanup": {
+              "owned_nginx_exited": true,
+              "owned_backend_thread_exited": true
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "provenance": {
+    "suite_logs": "Retained exact completed normal/optimized logs at tested_revision; not rerun for documentation publication.",
+    "baseline": "Retained baseline at tested_revision, with only stated local-path substitutions.",
+    "control_reports": "Captured six missing raw reports at the same tested_revision before documentation edits. Each carries observed_at, tested_sha, fixture hashes, environment and cleanup.",
+    "windows_capability": "Recorded simulation: 21 selected tests, 14 portable passes, 7 POSIX skips; not actual Windows execution.",
+    "planning": "Existing validator result at tested_revision: 471 items, 457 relationships, 600 dependencies, zero errors."
+  },
+  "sanitization": {
+    "rule": "Only known owned build/temp/binary/output paths replaced in reports and invocation. Suite logs byte-identical. No result, timestamp, fixture hash, revision or failure identity changed.",
+    "placeholders": [
+      "<OWNED_BUILD_PREFIX>",
+      "<OWNED_TEMP>",
+      "<OWNED_NGINX_BINARY>",
+      "<OUTPUT_JSON>"
+    ],
+    "original_capture_hashes": "SHA-256 identifies original private captures without publishing private directory paths."
+  },
+  "artifacts": {
+    "suite-normal.log": {
+      "sha256": "d9bf4cf51057634db4fe4ff2a5b4485662ebdd120f6ec5cd4f8ceb8349fd6f05",
+      "bytes": 7149,
+      "original_capture_sha256": "d9bf4cf51057634db4fe4ff2a5b4485662ebdd120f6ec5cd4f8ceb8349fd6f05",
+      "sanitized_local_paths": false
+    },
+    "suite-optimized.log": {
+      "sha256": "1f8d871e0089c1a648034e060e806a6b215953d9acae50b35290aae603977461",
+      "bytes": 7149,
+      "original_capture_sha256": "1f8d871e0089c1a648034e060e806a6b215953d9acae50b35290aae603977461",
+      "sanitized_local_paths": false
+    },
+    "suite-windows-capability.log": {
+      "sha256": "f4d9399ccb72a896641f70bd21838576c215ea6e46fa96f850c754bde7e5b65d",
+      "bytes": 4045,
+      "original_capture_sha256": "f4d9399ccb72a896641f70bd21838576c215ea6e46fa96f850c754bde7e5b65d",
+      "sanitized_local_paths": false
+    },
+    "planning-validation.json": {
+      "sha256": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7",
+      "bytes": 743,
+      "original_capture_sha256": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7",
+      "sanitized_local_paths": false
+    },
+    "baseline.sanitized.json": {
+      "sha256": "14e981f45bbb7a52355d9b9a2cd5917eed34e738b70cff8ed9b0d21be5aa9c63",
+      "bytes": 2844,
+      "original_capture_sha256": "e15a4fba0bbacbb2444a310164bc3f09e90b5c0193804b9689fc22c44076576d",
+      "sanitized_local_paths": true
+    },
+    "controls.sanitized.json": {
+      "sha256": "d79a9954950d8901123eec3e8298a31a207f7b5e3df280760780f251791777c7",
+      "bytes": 9584,
+      "original_capture_sha256": "2d44847962bad1deb26c247e82677a5f4e5a94fd4c1e2d0679fb867fad5d8c5d",
+      "sanitized_local_paths": true
+    },
+    "capture-controls-command.txt": {
+      "sha256": "5ba15ebd3dd39b1804fc5aad4f2f895c310e434c7aa7eb80eb2d045cdb1e37af",
+      "bytes": 809,
+      "sanitized_local_paths": true
+    }
+  },
+  "limits": [
+    "Owned loopback HTTP/WS with Nginx 1.28.0 and synthetic stdlib backend; no public TLS/DNS/Discord/GoDaddy or production acceptance.",
+    "Docker failure tests use a simulated command boundary; actual Docker was unavailable.",
+    "Windows capability simulation only; local POSIX runner unsupported on Windows.",
+    "No SQL persistence, backup restore, capacity or security certification.",
+    "Research/specification, CODEOWNER/security/consumer approval and fresh whole-head review gates remain open."
+  ]
+}

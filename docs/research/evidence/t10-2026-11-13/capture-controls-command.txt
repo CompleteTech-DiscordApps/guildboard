@@ -1,0 +1,12 @@
+# Sanitized invocation used for the six control captures.
+python -O - <<'PY'
+from pathlib import Path
+import importlib.util,json
+p=Path('scripts/research/t10-nginx-probe.py');s=importlib.util.spec_from_file_location('public_t10_controls',p);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
+binary='<OWNED_NGINX_BINARY>'
+controls=(*m.HANDSHAKE_REJECTIONS,'publish-private-assets','long-read-timeout')
+reports=[m.run_local(binary,control) for control in controls]
+if not all(r['tested_sha']=='eee0ad43bcbcc4a262b352eb115d8ac11a04b59d' and r['negative_control']['detected'] and all(r['cleanup'].values()) for r in reports):raise SystemExit('invalid capture')
+Path('<OUTPUT_JSON>').write_text(json.dumps(reports,indent=2)+'\n')
+print('captured',len(reports),'controls at',reports[0]['tested_sha'])
+PY

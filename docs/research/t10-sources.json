@@ -1,0 +1,116 @@
+{
+  "kind": "public-response-observation-not-account-or-content-attestation",
+  "sources": [
+    {
+      "id": "godaddy-vps",
+      "url": "https://www.godaddy.com/hosting/vps-hosting",
+      "observed_at": "2026-10-26T00:53:20.297828+00:00",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "id": "godaddy-ssh",
+      "url": "https://www.godaddy.com/en-uk/help/connect-to-my-server-with-ssh-secure-shell-4943",
+      "observed_at": "2026-10-26T00:53:20.522110+00:00",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "id": "godaddy-admin",
+      "url": "https://www.godaddy.com/en/help/enable-root-or-admin-access-to-my-vps-hosting-24737?inapp=true",
+      "observed_at": "2026-10-26T00:53:20.704701+00:00",
+      "status": 200,
+      "final_url": "https://www.godaddy.com/en/help/enable-root-or-admin-access-to-my-vps-hosting-24737?inapp=true",
+      "bytes": 236480,
+      "sha256": "2015cdd63bfcab2fd306e706abc1b338473601661ba3be6c95be04f8c02902e7"
+    },
+    {
+      "id": "godaddy-unsupported-os",
+      "url": "https://www.godaddy.com/en-ph/help/unsupported-operating-systems-for-vps-hosting-41852",
+      "observed_at": "2026-10-26T00:53:21.445896+00:00",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "id": "godaddy-ports",
+      "url": "https://www.godaddy.com/en-ph/help/common-server-ports-19608",
+      "observed_at": "2026-10-26T00:53:21.632872+00:00",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "id": "godaddy-recovery",
+      "url": "https://www.godaddy.com/en/help/use-the-recovery-console-for-vps-hosting-32064",
+      "observed_at": "2026-10-26T00:53:21.816788+00:00",
+      "status": 200,
+      "final_url": "https://www.godaddy.com/en/help/use-the-recovery-console-for-vps-hosting-32064",
+      "bytes": 236944,
+      "sha256": "fb9074251317ec924fbee14a033129eab6a2feaab7f63c5bec9965558d7de045"
+    },
+    {
+      "id": "nginx-websocket",
+      "url": "https://nginx.org/en/docs/http/websocket.html",
+      "observed_at": "2026-10-26T00:53:22.483228+00:00",
+      "status": 200,
+      "final_url": "https://nginx.org/en/docs/http/websocket.html",
+      "bytes": 4767,
+      "sha256": "09750cebc18551f280f74096feda7873d90fd167d78db01dcc2cc0498e0b857d"
+    },
+    {
+      "id": "nginx-proxy",
+      "url": "https://nginx.org/en/docs/http/ngx_http_proxy_module.html",
+      "observed_at": "2026-10-26T00:53:22.567930+00:00",
+      "status": 200,
+      "final_url": "https://nginx.org/en/docs/http/ngx_http_proxy_module.html",
+      "bytes": 131664,
+      "sha256": "f97dfe678c0776283c1c17db6bc56491f6ec20e925db26f75a059852b8e239b8"
+    },
+    {
+      "id": "discord-networking",
+      "url": "https://docs.discord.com/developers/activities/development-guides/networking",
+      "observed_at": "2026-10-26T00:53:22.683381+00:00",
+      "status": 200,
+      "final_url": "https://docs.discord.com/developers/activities/development-guides/networking",
+      "bytes": 388785,
+      "sha256": "3fd0d582bce71074239a37c2d00f9236bbcba55b0e349648b0476b1f78fdd0b4"
+    },
+    {
+      "id": "discord-mappings",
+      "url": "https://docs.discord.com/developers/activities/development-guides/local-development",
+      "observed_at": "2026-10-26T00:53:22.943987+00:00",
+      "status": 200,
+      "final_url": "https://docs.discord.com/developers/activities/development-guides/local-development",
+      "bytes": 446479,
+      "sha256": "b195b303fba5204c357055295c8856b7ff6d79bb80461d028c2c8761893dca7f"
+    },
+    {
+      "id": "docker-firewall",
+      "url": "https://docs.docker.com/engine/network/packet-filtering-firewalls/",
+      "observed_at": "2026-10-26T00:53:23.222763+00:00",
+      "status": 200,
+      "final_url": "https://docs.docker.com/engine/network/packet-filtering-firewalls/",
+      "bytes": 524111,
+      "sha256": "93ec4bd96544775f1385ca3a8aab21565bb064d9d55cebc74296f9e9d0091bc7"
+    },
+    {
+      "id": "docker-ubuntu",
+      "url": "https://docs.docker.com/engine/install/ubuntu/",
+      "observed_at": "2026-10-26T00:53:23.384935+00:00",
+      "status": 200,
+      "final_url": "https://docs.docker.com/engine/install/ubuntu/",
+      "bytes": 584514,
+      "sha256": "a80bd11c4df1f590ec372ebc1caa92ac6e2676c110dfa4b30db2a8b21a5230de"
+    },
+    {
+      "id": "node-releases",
+      "url": "https://nodejs.org/en/about/previous-releases",
+      "observed_at": "2026-10-26T00:53:23.539454+00:00",
+      "status": 200,
+      "final_url": "https://nodejs.org/en/about/previous-releases",
+      "bytes": 294760,
+      "sha256": "a80897056b2c560c949be0e2c82d258e0101cbf28d2f319d0c7755cc5ba2e6df"
+    },
+    {
+      "id": "mysql-backup",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/backup-policy.html",
+      "observed_at": "2026-10-26T00:53:23.665824+00:00",
+      "error": "HTTP Error 403: Forbidden"
+    }
+  ]
+}

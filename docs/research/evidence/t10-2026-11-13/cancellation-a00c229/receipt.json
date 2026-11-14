@@ -1,0 +1,190 @@
+{
+  "kind": "catchable-cancellation-revision-validation",
+  "published_at_utc": "2026-11-13T13:52:44.097011+00:00",
+  "tested_revision": "a00c22929c224d9b35975c90c461a34501719192",
+  "tested_tree": "1d913db3a5a1cf2a8784bbcc9f243106a4f01448",
+  "publication_scope": "Code-only commit tested first; later documentation/evidence publication has identical listed source/configuration/test hashes. No suite result is attributed to the later publication head.",
+  "source_sha256": {
+    "scripts/research/t10-nginx-probe.py": "6d5598c274752fb4437ab9620b99b957ab3e01cef21a6bfe75c6e725441ff4ad",
+    "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+    "scripts/research/t10-capture-sources.py": "91eca066fe62a25c046f49ecc825854001549df225e4c461954ff102a5820fa0",
+    "tests/research/t10-test-nginx-probe.py": "38dc25e63557086fbcf55ab35dc53bd0ece492fbca3f5e2e8d1f4a6ec3db6db4",
+    "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+  },
+  "environment": {
+    "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+    "python": "3.14.8",
+    "nginx_version": "nginx version: nginx/1.28.0",
+    "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+    "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance"
+  },
+  "commands": [
+    {
+      "argv": [
+        "python",
+        "tests/research/t10-test-nginx-probe.py"
+      ],
+      "environment": {
+        "T10_NGINX_BINARY": "<OWNED_NGINX_BINARY>"
+      },
+      "log": "suite-normal.log",
+      "exit_code": 0,
+      "tests": 52,
+      "skipped": 0
+    },
+    {
+      "argv": [
+        "python",
+        "-O",
+        "tests/research/t10-test-nginx-probe.py"
+      ],
+      "environment": {
+        "T10_NGINX_BINARY": "<OWNED_NGINX_BINARY>"
+      },
+      "log": "suite-optimized.log",
+      "exit_code": 0,
+      "tests": 52,
+      "skipped": 0
+    },
+    {
+      "invocation": "python -O stdin; baseline and all six controls via run_local",
+      "command_record": "capture-commands.txt",
+      "report": "network.sanitized.json",
+      "exit_code": 0,
+      "baseline_checks": 12,
+      "negative_controls": 6
+    },
+    {
+      "invocation": "python -O stdin; two actual cancellation regression methods with completed communicate-result capture",
+      "command_record": "capture-cancellations-command.txt",
+      "log": "cancellation-capture.log",
+      "report": "cancellations.sanitized.json",
+      "exit_code": 0,
+      "owner_signal_runs": 4
+    }
+  ],
+  "cancellation_results": [
+    {
+      "entrypoint": "actual local Nginx CLI",
+      "signal": "SIGTERM",
+      "exit_code": 143,
+      "cleanup": {
+        "owned_nginx_exited": true,
+        "owned_backend_thread_exited": true
+      },
+      "postconditions_checked_by_passing_regression": "owned Nginx master/workers stopped and temp removed"
+    },
+    {
+      "entrypoint": "actual local Nginx CLI",
+      "signal": "SIGINT",
+      "exit_code": 130,
+      "cleanup": {
+        "owned_nginx_exited": true,
+        "owned_backend_thread_exited": true
+      },
+      "postconditions_checked_by_passing_regression": "owned Nginx master/workers stopped and temp removed"
+    },
+    {
+      "entrypoint": "source-capture main with owned loopback SOURCES",
+      "signal": "SIGTERM",
+      "exit_code": 143,
+      "cleanup": null,
+      "postconditions_checked_by_passing_regression": "active fetch worker reaped, completed healthy row retained and cancellation JSON also written to requested file"
+    },
+    {
+      "entrypoint": "source-capture main with owned loopback SOURCES",
+      "signal": "SIGINT",
+      "exit_code": 130,
+      "cleanup": null,
+      "postconditions_checked_by_passing_regression": "active fetch worker reaped, completed healthy row retained and cancellation JSON also written to requested file"
+    }
+  ],
+  "coverage": [
+    "SIGTERM and SIGINT after actual owned Nginx readiness produce nonzero failure JSON and cleanup.",
+    "SIGTERM and SIGINT during actual source HTTP worker retain completed rows and reap that child.",
+    "Fake Docker create cancellation reconciles intended name/label/immutable ID; foreign resource survives.",
+    "Repeat catchable signals do not interrupt cleanup, and original signal handlers are restored."
+  ],
+  "before_control": {
+    "report": "before-sigterm.json",
+    "tested_revision": "34642fb0686d7553245b0a2ca7e1b8dd85436e13",
+    "observed": "SIGTERM after readiness exited -15 with empty output, surviving owned master and temporary directory.",
+    "external_cleanup": "Captured owned group received bounded TERM/KILL cleanup; scratch was removed."
+  },
+  "windows_capability": {
+    "log": "suite-windows-capability.log",
+    "tests": 25,
+    "portable_passed": 16,
+    "posix_skipped": 9,
+    "actual_windows_execution": false
+  },
+  "sanitization": "Only known local build/temp paths are replaced in JSON reports; command paths use placeholders. Normal/optimized logs are byte-identical. Original and published hashes record integrity. No source hash, result, signal, tested SHA or failure identity changed.",
+  "artifacts": {
+    "suite-normal.log": {
+      "sha256": "4ce2e759b25becc1ac860c6995b6aff26c43e1271c8761c14799cef1645d1d39",
+      "bytes": 7845,
+      "original_capture_sha256": "4ce2e759b25becc1ac860c6995b6aff26c43e1271c8761c14799cef1645d1d39",
+      "sanitized_local_paths": false
+    },
+    "suite-optimized.log": {
+      "sha256": "b94b895cf75c156c28ec4da6b7478d47a7d09fa360dc6fc0e7ef21691b2baaaf",
+      "bytes": 7845,
+      "original_capture_sha256": "b94b895cf75c156c28ec4da6b7478d47a7d09fa360dc6fc0e7ef21691b2baaaf",
+      "sanitized_local_paths": false
+    },
+    "suite-windows-capability.log": {
+      "sha256": "e3f2ca59bc5ade6dc3b4ec71c78c248a2c491a1a27b16a705283ae0baf1075bf",
+      "bytes": 4728,
+      "original_capture_sha256": "e3f2ca59bc5ade6dc3b4ec71c78c248a2c491a1a27b16a705283ae0baf1075bf",
+      "sanitized_local_paths": false
+    },
+    "planning-validation.json": {
+      "sha256": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7",
+      "bytes": 743,
+      "original_capture_sha256": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7",
+      "sanitized_local_paths": false
+    },
+    "cancellation-capture.log": {
+      "sha256": "f18b865c16137978732463dd2f5192761ac0336407cf05774bc1fc0ce5a7d02f",
+      "bytes": 450,
+      "original_capture_sha256": "f18b865c16137978732463dd2f5192761ac0336407cf05774bc1fc0ce5a7d02f",
+      "sanitized_local_paths": false
+    },
+    "before-sigterm.json": {
+      "sha256": "4420e1656dbf19154157a0b8fb1b3c3e3747704b73c5157ce28dcd0b6bcda1e1",
+      "bytes": 231,
+      "original_capture_sha256": "4420e1656dbf19154157a0b8fb1b3c3e3747704b73c5157ce28dcd0b6bcda1e1",
+      "sanitized_local_paths": false
+    },
+    "network.sanitized.json": {
+      "sha256": "fd4a969322f06f0867c218cda367dda5a13a0faa6c7b7006efe2dba47d37b002",
+      "bytes": 12581,
+      "original_capture_sha256": "1c3b15c406533f467ac368e2e23837701effcacfb2e34e86255ac165abd06189",
+      "sanitized_local_paths": true
+    },
+    "cancellations.sanitized.json": {
+      "sha256": "a6653100a2527aec611bf24e986e07dc24d8ffa7b676ce44b024d31baefd8e39",
+      "bytes": 5740,
+      "original_capture_sha256": "2ed06a0a12ff91417edda417c47313490eadd0bc444ff463d8500f5b30c40cde",
+      "sanitized_local_paths": true
+    },
+    "capture-commands.txt": {
+      "sha256": "058e024cac8cfa4447f4e52450186b67a315e08f07ec42c8bf3825a16047b9ce",
+      "bytes": 1467,
+      "sanitized_local_paths": true
+    },
+    "capture-cancellations-command.txt": {
+      "sha256": "6fae269a2a0220bce4a8355e2eacbcbd33eecf4ea03720b34b5e57ce0c18ed4c",
+      "bytes": 2326,
+      "sanitized_local_paths": true
+    }
+  },
+  "limits": [
+    "Catchable SIGTERM/SIGINT after CLI handlers install; no SIGKILL, power-loss or OS-forced termination cleanup guarantee.",
+    "Owned POSIX local Nginx and stdlib loopback fixtures only; no public TLS, Discord, GoDaddy or production acceptance.",
+    "Actual Docker unavailable. Cancellation around create is simulated; reconciliation refuses foreign/unknown ownership and reports cleanup failure rather than deleting unverified resources.",
+    "Source worker cleanup relies on subprocess.run exception unwind killing/reaping its owned child, verified by Linux process introspection.",
+    "Windows capability simulation only; Windows forced TerminateProcess is outside catchable POSIX signal guarantees.",
+    "No approval, merge, native specification acceptance, persistence/restore, capacity or security certification. Fresh whole-head review required."
+  ]
+}

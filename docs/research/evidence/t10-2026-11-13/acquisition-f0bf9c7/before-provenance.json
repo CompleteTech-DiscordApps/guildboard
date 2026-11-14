@@ -1,0 +1,66 @@
+{
+  "kind": "old-implementation-provenance-audit",
+  "audited_at_utc": "2026-11-13T16:43:06.021501+00:00",
+  "original_raw_report": "before-acquisition.sanitized.json",
+  "original_raw_report_sha256": "a3fb01037a7a836c2bc99b72d4b492aac08c049d8da79cd2a833b09851ff5401",
+  "original_capture_checkout_revision": "f0bf9c78cfaccd17e4b8f423039760b661427435",
+  "original_capture_executed_implementation_revision": "9802c81b2ef1031798c8155990484eb0f9cf8999",
+  "explanation": "Original capture dynamically imported Git-extracted old probe as tests.PROBE and redirected capture_spawn imports to the old collector. Old run_local reports git HEAD and hashes by reading ROOT, which was explicitly pointed at the new checkout for shared fixtures. These embedded fields identify that checkout, not the imported executable. The original outer tested_revision label was ambiguous; use executed_implementation_revision plus exact hashes below.",
+  "saved_original_extract_audit": {
+    "probe": {
+      "git_revision": "9802c81b2ef1031798c8155990484eb0f9cf8999",
+      "git_path": "scripts/research/t10-nginx-probe.py",
+      "git_blob_oid": "8afbcf0c6e4dee621ddc3dd36f225ae7af821798",
+      "sha256": "7f690e2cec8254bf0bca4245cfc2756854b61f2c583550972c02b08c632a141c",
+      "saved_original_extract_identical_to_git_blob": true
+    },
+    "capture": {
+      "git_revision": "9802c81b2ef1031798c8155990484eb0f9cf8999",
+      "git_path": "scripts/research/t10-capture-sources.py",
+      "git_blob_oid": "a3209543a797c2e01fc79ae7946f337a04602b90",
+      "sha256": "0a95cff1e9b3ff470d44f9bce3eed7a99dc84ae893f673394f39c36e5a74aa2b",
+      "saved_original_extract_identical_to_git_blob": true
+    }
+  },
+  "harness": {
+    "revision": "f0bf9c78cfaccd17e4b8f423039760b661427435",
+    "git_path": "tests/research/t10-test-nginx-probe.py",
+    "sha256": "713f77c9316582618d0aa97476aab6bd7b6423b3979780db89166e007ac1313a"
+  },
+  "original_monkeypatch_mapping": [
+    "tests.PROBE replaced by oldprobe loaded from verified old Git blob; ROOT points to checkout for unchanged shared fixtures.",
+    "spec_from_file_location maps only capture_spawn to verified old capture Git blob.",
+    "Popen wrappers in exact new test harness create real children then signal before returning the handle; captured resources are rescued in finally.",
+    "Other local-resource wrappers signal after creation before assignment; StringIO wrapper records owner reports without modifying them."
+  ],
+  "verified_rerun": {
+    "command": "python docs/research/evidence/t10-2026-11-13/acquisition-f0bf9c7/reproduce-before.py --nginx-binary <OWNED_NGINX_BINARY> --output-directory <OUTPUT_DIRECTORY>",
+    "report": "before-verified.sanitized.json",
+    "log": "before-verified.log",
+    "outcome": {
+      "tests": 3,
+      "failures": 3,
+      "errors": 0,
+      "skips": 0
+    },
+    "checkout_revision": "0bb4d6dfdfdc10cd8055e4ed04873b8c9523a8e6",
+    "executed_modules": {
+      "probe": {
+        "git_revision": "9802c81b2ef1031798c8155990484eb0f9cf8999",
+        "git_path": "scripts/research/t10-nginx-probe.py",
+        "git_blob_oid": "8afbcf0c6e4dee621ddc3dd36f225ae7af821798",
+        "executed_source_sha256": "7f690e2cec8254bf0bca4245cfc2756854b61f2c583550972c02b08c632a141c",
+        "extracted_path": "/var<OLD_IMPLEMENTATION_DIRECTORY>/probe.py"
+      },
+      "capture": {
+        "git_revision": "9802c81b2ef1031798c8155990484eb0f9cf8999",
+        "git_path": "scripts/research/t10-capture-sources.py",
+        "git_blob_oid": "a3209543a797c2e01fc79ae7946f337a04602b90",
+        "executed_source_sha256": "0a95cff1e9b3ff470d44f9bce3eed7a99dc84ae893f673394f39c36e5a74aa2b",
+        "extracted_path": "/var<OLD_IMPLEMENTATION_DIRECTORY>/capture.py"
+      }
+    }
+  },
+  "original_claim_disposition": "Confirmed by byte-identical saved extracts and a deterministic rerun from fresh exact old Git blobs. No retraction of the old-code failure is needed. Original report bytes preserved; embedded checkout metadata is explicitly disambiguated.",
+  "fixed_head_validation": "receipt.json tested_revision/source_sha256 identify f0bf9c7 and its unchanged 59 normal/optimized tests; this provenance-only follow-up does not claim a new full suite run."
+}

@@ -1,0 +1,12 @@
+test_first_signal_after_nginx_spawn_before_assignment_reaps_owned_group (cleanup_tests.CancellationRegression.test_first_signal_after_nginx_spawn_before_assignment_reaps_owned_group) ... ok
+test_first_signal_after_fetch_spawn_before_assignment_reaps_owned_child (cleanup_tests.CancellationRegression.test_first_signal_after_fetch_spawn_before_assignment_reaps_owned_child) ... ok
+test_first_signal_after_local_acquisition_before_registration_closes_resources (cleanup_tests.CancellationRegression.test_first_signal_after_local_acquisition_before_registration_closes_resources) ... ok
+test_first_signal_during_short_command_spawn_reaps_transient_child (cleanup_tests.CancellationRegression.test_first_signal_during_short_command_spawn_reaps_transient_child) ... ok
+test_first_signal_during_normal_docker_cleanup_is_deferred (cleanup_tests.CancellationRegression.test_first_signal_during_normal_docker_cleanup_is_deferred) ... ok
+test_first_signal_during_normal_local_cleanup_finishes_all_actions (cleanup_tests.CancellationRegression.test_first_signal_during_normal_local_cleanup_finishes_all_actions) ... ok
+test_first_signal_during_normal_fetch_worker_cleanup_reaps_and_reports (cleanup_tests.CancellationRegression.test_first_signal_during_normal_fetch_worker_cleanup_reaps_and_reports) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 6.656s
+
+OK

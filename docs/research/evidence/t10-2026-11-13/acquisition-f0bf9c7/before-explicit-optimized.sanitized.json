@@ -1,0 +1,131 @@
+{
+  "executed_implementation_revision": "9802c81b2ef1031798c8155990484eb0f9cf8999",
+  "checkout_revision": "4cca6552f0348c86d78b63cb7759416a3638a32b",
+  "metadata_caveat": "Owner report tested_sha reads git HEAD in ROOT; fixture_hashes read current ROOT files. Those fields describe the checkout, not dynamically imported implementation. Executed implementation is identified by provenance below.",
+  "executed_modules": {
+    "probe": {
+      "git_revision": "9802c81b2ef1031798c8155990484eb0f9cf8999",
+      "git_path": "scripts/research/t10-nginx-probe.py",
+      "git_blob_oid": "8afbcf0c6e4dee621ddc3dd36f225ae7af821798",
+      "executed_source_sha256": "7f690e2cec8254bf0bca4245cfc2756854b61f2c583550972c02b08c632a141c",
+      "extracted_path": "<OLD_IMPLEMENTATION_DIRECTORY>/probe.py"
+    },
+    "capture": {
+      "git_revision": "9802c81b2ef1031798c8155990484eb0f9cf8999",
+      "git_path": "scripts/research/t10-capture-sources.py",
+      "git_blob_oid": "a3209543a797c2e01fc79ae7946f337a04602b90",
+      "executed_source_sha256": "0a95cff1e9b3ff470d44f9bce3eed7a99dc84ae893f673394f39c36e5a74aa2b",
+      "extracted_path": "<OLD_IMPLEMENTATION_DIRECTORY>/capture.py"
+    }
+  },
+  "import_mapping": [
+    {
+      "module": "tests.PROBE",
+      "loaded_file": "<OLD_IMPLEMENTATION_DIRECTORY>/probe.py",
+      "function_code_file": "<OLD_IMPLEMENTATION_DIRECTORY>/probe.py"
+    },
+    {
+      "module": "capture_spawn",
+      "loaded_file": "<OLD_IMPLEMENTATION_DIRECTORY>/capture.py"
+    }
+  ],
+  "test_harness": {
+    "revision": "f0bf9c78cfaccd17e4b8f423039760b661427435",
+    "git_path": "tests/research/t10-test-nginx-probe.py",
+    "sha256": "713f77c9316582618d0aa97476aab6bd7b6423b3979780db89166e007ac1313a"
+  },
+  "shared_fixture_inputs": {
+    "scripts/research/t10-proxy-fixture.py": {
+      "sha256": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+      "identical_to_old_revision": true
+    },
+    "docs/research/t10-nginx-probe.conf": {
+      "sha256": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77",
+      "identical_to_old_revision": true
+    }
+  },
+  "monkeypatches": [
+    "tests.PROBE replaced by oldprobe loaded from verified old Git blob; ROOT points to checkout for unchanged shared fixtures.",
+    "spec_from_file_location maps only capture_spawn to verified old capture Git blob.",
+    "Popen wrappers in exact new test harness create real children then signal before returning the handle; captured resources are rescued in finally.",
+    "Other local-resource wrappers signal after creation before assignment; StringIO wrapper records owner reports without modifying them."
+  ],
+  "outcome": {
+    "tests": 3,
+    "failures": 3,
+    "errors": 0,
+    "skips": 0
+  },
+  "reports": [
+    {
+      "observed_at": "2026-11-13T16:52:23.015845+00:00",
+      "tested_sha": "4cca6552f0348c86d78b63cb7759416a3638a32b",
+      "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+      "host_python": "3.14.8",
+      "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+      "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+      "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=<NGINX_BUILD_PREFIX> --without-http_gzip_module",
+      "control": null,
+      "fixture_hashes": {
+        "scripts/research/t10-nginx-probe.py": "c8e505039b7e23f2bb9b42d1295155dd8ce28717ed10c4c09465bbbcf3253008",
+        "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+        "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+      },
+      "nginx_config_check": "nginx: the configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf syntax is ok\nnginx: configuration file <OWNED_TEMP_DIRECTORY>/nginx.conf test is successful",
+      "failure": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "passed_checks": [],
+        "signal": "SIGTERM"
+      },
+      "nginx_log": "",
+      "nginx_log_truncated": false,
+      "cleanup": {
+        "owned_nginx_exited": true,
+        "owned_backend_thread_exited": true
+      },
+      "cancellation": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "passed_checks": [],
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "kind": "public-response-observation-not-account-or-content-attestation",
+      "sources": [
+        {
+          "id": "owned-child",
+          "url": "unused",
+          "observed_at": "2026-11-13T16:52:23.529167+00:00",
+          "error": "cancelled by SIGTERM",
+          "cancelled": true
+        }
+      ],
+      "failure": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "signal": "SIGTERM"
+      }
+    },
+    {
+      "failure": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "passed_checks": [],
+        "signal": "SIGTERM"
+      },
+      "cleanup": {
+        "owned_nginx_exited": true,
+        "owned_backend_thread_exited": true
+      },
+      "cancellation": {
+        "type": "ExperimentCancelled",
+        "detail": "cancelled by SIGTERM",
+        "passed_checks": [],
+        "signal": "SIGTERM"
+      }
+    }
+  ],
+  "rescue": "Only handles captured by the test harness authorize cleanup; each test finally kills/reaps/closes its owned resources."
+}

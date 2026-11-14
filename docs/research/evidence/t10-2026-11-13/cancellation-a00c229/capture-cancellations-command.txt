@@ -1,0 +1,27 @@
+# Actual raw-cancellation capture invocation with only local paths substituted.
+# Replace placeholders and use an existing output directory at tested revision a00c229.
+T10_NGINX_BINARY=<OWNED_NGINX_BINARY> python -O - <<'CANCELLATION'
+from pathlib import Path
+import importlib.util,json,subprocess,unittest,io
+from unittest import mock
+root=Path.cwd();logs=Path('<OUTPUT_DIRECTORY>');spec=importlib.util.spec_from_file_location('cancel_evidence_tests',root/'tests/research/t10-test-nginx-probe.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+original=subprocess.Popen;reports=[];seen=set()
+def popen(*args,**kwargs):
+ process=original(*args,**kwargs);communicate=process.communicate
+ def record(*a,**k):
+  stdout,stderr=communicate(*a,**k)
+  if process.returncode in (130,143) and process.pid not in seen:
+   try:report=json.loads(stdout)
+   except (TypeError,ValueError):return stdout,stderr
+   seen.add(process.pid);reports.append({'entrypoint':'source-capture main with owned loopback SOURCES' if 'sources' in report else 'actual local Nginx CLI','exit_code':process.returncode,'report':report,'stderr':stderr})
+  return stdout,stderr
+ process.communicate=record
+ return process
+suite=unittest.TestSuite([m.CancellationRegression('test_cli_signals_after_readiness_cleanup_and_emit_json'),m.CancellationRegression('test_source_capture_signal_reaps_worker_and_retains_completed_rows')])
+output=io.StringIO()
+with mock.patch.object(subprocess,'Popen',side_effect=popen):result=unittest.TextTestRunner(stream=output,verbosity=2).run(suite)
+(logs/'t10-cancellation-raw-capture-a00c229.log').write_text(output.getvalue())
+if not result.wasSuccessful() or len(reports)!=4:raise SystemExit(output.getvalue()+'report count '+str(len(reports)))
+head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip();payload={'tested_revision':head,'invocation':'python -O stdin; two actual cancellation regression methods with communicate result capture','assertion_result':'Both methods passed; each exercises SIGTERM and SIGINT, checks nonzero JSON, process/worker cleanup, temporary deletion or retained completed source rows.','runs':reports}
+(logs/'t10-cancellation-raw-a00c229.json').write_text(json.dumps(payload,indent=2)+'\n');print('captured',len(reports),'signal reports at',head)
+CANCELLATION

@@ -1,0 +1,135 @@
+{
+  "tested_revision": "a00c22929c224d9b35975c90c461a34501719192",
+  "invocation": "python -O stdin; two actual cancellation regression methods with communicate result capture",
+  "assertion_result": "Both methods passed; each exercises SIGTERM and SIGINT, checks nonzero JSON, process/worker cleanup, temporary deletion or retained completed source rows.",
+  "runs": [
+    {
+      "entrypoint": "actual local Nginx CLI",
+      "exit_code": 143,
+      "report": {
+        "observed_at": "2026-11-13T13:49:20.542213+00:00",
+        "tested_sha": "a00c22929c224d9b35975c90c461a34501719192",
+        "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+        "host_python": "3.14.8",
+        "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+        "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+        "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=<OWNED_BUILD_PREFIX> --without-http_gzip_module",
+        "control": "long-read-timeout",
+        "fixture_hashes": {
+          "scripts/research/t10-nginx-probe.py": "6d5598c274752fb4437ab9620b99b957ab3e01cef21a6bfe75c6e725441ff4ad",
+          "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+          "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+        },
+        "nginx_config_check": "nginx: the configuration file <OWNED_TEMP>/nginx.conf syntax is ok\nnginx: configuration file <OWNED_TEMP>/nginx.conf test is successful",
+        "failure": {
+          "type": "ExperimentCancelled",
+          "detail": "cancelled by SIGTERM",
+          "passed_checks": [],
+          "signal": "SIGTERM"
+        },
+        "nginx_log": "",
+        "nginx_log_truncated": false,
+        "cleanup": {
+          "owned_nginx_exited": true,
+          "owned_backend_thread_exited": true
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "entrypoint": "actual local Nginx CLI",
+      "exit_code": 130,
+      "report": {
+        "observed_at": "2026-11-13T13:49:21.215138+00:00",
+        "tested_sha": "a00c22929c224d9b35975c90c461a34501719192",
+        "host": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+        "host_python": "3.14.8",
+        "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+        "nginx_binary_sha256": "98bbddab325a4fe4983ec396af636c528667f0962c5cad7b77a09746a451aa8a",
+        "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 16.2.1 20260810 (GCC) \nconfigure arguments: --prefix=<OWNED_BUILD_PREFIX> --without-http_gzip_module",
+        "control": "long-read-timeout",
+        "fixture_hashes": {
+          "scripts/research/t10-nginx-probe.py": "6d5598c274752fb4437ab9620b99b957ab3e01cef21a6bfe75c6e725441ff4ad",
+          "scripts/research/t10-proxy-fixture.py": "48b934dad908631ed862d8fdc4eabdec394b9e17aaa541d13a429e208345bb5c",
+          "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+        },
+        "nginx_config_check": "nginx: the configuration file <OWNED_TEMP>/nginx.conf syntax is ok\nnginx: configuration file <OWNED_TEMP>/nginx.conf test is successful",
+        "failure": {
+          "type": "ExperimentCancelled",
+          "detail": "cancelled by SIGINT",
+          "passed_checks": [],
+          "signal": "SIGINT"
+        },
+        "nginx_log": "",
+        "nginx_log_truncated": false,
+        "cleanup": {
+          "owned_nginx_exited": true,
+          "owned_backend_thread_exited": true
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "entrypoint": "source-capture main with owned loopback SOURCES",
+      "exit_code": 143,
+      "report": {
+        "kind": "public-response-observation-not-account-or-content-attestation",
+        "sources": [
+          {
+            "id": "healthy",
+            "url": "http://127.0.0.1:58897/healthy",
+            "observed_at": "2026-11-13T13:49:21.891876+00:00",
+            "final_url": "http://127.0.0.1:58897/healthy",
+            "bytes": 2,
+            "sha256": "2689367b205c16ce32ed4200942b8b8b1e262dfc70d9bc9fbc77c49699a4f1df",
+            "status": 200
+          },
+          {
+            "id": "slow",
+            "url": "http://127.0.0.1:58897/slow",
+            "observed_at": "2026-11-13T13:49:22.003475+00:00",
+            "error": "cancelled by SIGTERM",
+            "cancelled": true
+          }
+        ],
+        "failure": {
+          "type": "ExperimentCancelled",
+          "detail": "cancelled by SIGTERM",
+          "signal": "SIGTERM"
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "entrypoint": "source-capture main with owned loopback SOURCES",
+      "exit_code": 130,
+      "report": {
+        "kind": "public-response-observation-not-account-or-content-attestation",
+        "sources": [
+          {
+            "id": "healthy",
+            "url": "http://127.0.0.1:46989/healthy",
+            "observed_at": "2026-11-13T13:49:22.260462+00:00",
+            "final_url": "http://127.0.0.1:46989/healthy",
+            "bytes": 2,
+            "sha256": "2689367b205c16ce32ed4200942b8b8b1e262dfc70d9bc9fbc77c49699a4f1df",
+            "status": 200
+          },
+          {
+            "id": "slow",
+            "url": "http://127.0.0.1:46989/slow",
+            "observed_at": "2026-11-13T13:49:22.372479+00:00",
+            "error": "cancelled by SIGINT",
+            "cancelled": true
+          }
+        ],
+        "failure": {
+          "type": "ExperimentCancelled",
+          "detail": "cancelled by SIGINT",
+          "signal": "SIGINT"
+        }
+      },
+      "stderr": ""
+    }
+  ]
+}

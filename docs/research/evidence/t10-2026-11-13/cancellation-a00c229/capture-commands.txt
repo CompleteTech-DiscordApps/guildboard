@@ -1,0 +1,22 @@
+# Actual invocations, with local binary/output paths replaced by placeholders.
+T10_NGINX_BINARY=<OWNED_NGINX_BINARY> python tests/research/t10-test-nginx-probe.py
+T10_NGINX_BINARY=<OWNED_NGINX_BINARY> python -O tests/research/t10-test-nginx-probe.py
+
+python -O - <<'NETWORK'
+from pathlib import Path
+import importlib.util,json
+s=importlib.util.spec_from_file_location('cancel_network',Path('scripts/research/t10-nginx-probe.py'));m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
+binary='<OWNED_NGINX_BINARY>'
+reports=[m.run_local(binary,c) for c in (None,*m.HANDSHAKE_REJECTIONS,'publish-private-assets','long-read-timeout')]
+Path('<NETWORK_JSON>').write_text(json.dumps(reports,indent=2)+'\n')
+print('captured baseline and',len(reports)-1,'controls at',reports[0]['tested_sha'])
+NETWORK
+
+# Cancellation raw capture used python -O stdin with the following operations:
+# import the committed test module, intercept completed Popen.communicate results,
+# and run these two regression methods (each tests SIGTERM and SIGINT):
+# CancellationRegression.test_cli_signals_after_readiness_cleanup_and_emit_json
+# CancellationRegression.test_source_capture_signal_reaps_worker_and_retains_completed_rows
+# Preserve each parsed owner JSON, exit code and stderr in cancellations.sanitized.json.
+# Both methods must pass, including worker/process ownership and cleanup assertions.
+# cancellation-capture.log is the exact unittest output from this capture invocation.

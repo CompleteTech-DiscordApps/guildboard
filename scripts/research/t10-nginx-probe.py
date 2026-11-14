@@ -1,0 +1,562 @@
+"""Run an owned, cached-image-only Nginx network experiment. Python stdlib only."""
+import argparse
+import contextlib
+import hashlib
+import importlib.util
+import http.server
+import socket
+import tempfile
+import threading
+import json
+import os
+import signal
+import sys
+import re
+from pathlib import Path
+import platform
+import subprocess
+import time
+import uuid
+from datetime import datetime, timezone
+
+ROOT = Path(__file__).resolve().parents[2]
+NGINX = "sha256:62ff2089abf5a9ed33bd232895bef5e22f7bb4b200675cec49a5ebc48e3d4ac8"
+PYTHON = "sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70"
+
+
+MAX_DIAGNOSTIC_BYTES = 64 * 1024
+
+HANDSHAKE_REJECTIONS = {
+    "strip-upgrade": "HTTP/1.1 426 Upgrade Required",
+    "strip-connection": "HTTP/1.1 400 Bad Request",
+    "strip-key": "HTTP/1.1 400 Bad Request",
+    "strip-version": "HTTP/1.1 426 Upgrade Required",
+}
+
+
+def apply_control(config, control):
+    replacements = {
+        "strip-upgrade": ("proxy_set_header Upgrade $http_upgrade;", "proxy_set_header Upgrade '';"),
+        "strip-connection": ("proxy_set_header Connection $connection_upgrade;", "proxy_set_header Connection '';"),
+        "strip-key": ("proxy_http_version 1.1;", "proxy_http_version 1.1;\n            proxy_set_header Sec-WebSocket-Key '';"),
+        "strip-version": ("proxy_http_version 1.1;", "proxy_http_version 1.1;\n            proxy_set_header Sec-WebSocket-Version '';"),
+        "publish-private-assets": ("location /private-assets/ { return 404; }", "location /private-assets/ { return 200 'exposed'; }"),
+        "long-read-timeout": ("proxy_read_timeout 2s;", "proxy_read_timeout 60s;"),
+    }
+    if control is None:
+        return config
+    if control not in replacements:
+        raise ValueError("unknown negative control")
+    old, new = replacements[control]
+    if config.count(old) != 1:
+        raise ValueError(control + " control requires exactly one " + old)
+    return config.replace(old, new)
+
+
+def bounded_diagnostic(value):
+    data = value if isinstance(value, bytes) else str(value).encode("utf-8", errors="replace")
+    return data[-MAX_DIAGNOSTIC_BYTES:].decode("utf-8", errors="replace"), len(data) > MAX_DIAGNOSTIC_BYTES
+
+
+def failure_record(error):
+    detail, truncated = bounded_diagnostic(str(error))
+    record = {"type": type(error).__name__, "detail": detail,
+              "passed_checks": getattr(error, "passed_checks", [])}
+    if isinstance(error, ExperimentCancelled):
+        record["signal"] = error.signal_name
+    if truncated:
+        record["detail_truncated"] = True
+    for name in ("stdout", "stderr"):
+        value = getattr(error, name, None)
+        if value is not None:
+            record[name], record[name + "_truncated"] = bounded_diagnostic(value)
+    return record
+
+
+def capture_nginx_log(errors, report):
+    try:
+        errors.flush()
+        errors.seek(0, os.SEEK_END)
+        total = errors.tell()
+        errors.seek(max(0, total - MAX_DIAGNOSTIC_BYTES))
+        report["nginx_log"] = errors.read(MAX_DIAGNOSTIC_BYTES).decode("utf-8", errors="replace")
+        report["nginx_log_truncated"] = total > MAX_DIAGNOSTIC_BYTES
+    except (OSError, ValueError) as error:
+        # Diagnostic failure must not replace the original experiment failure.
+        report["nginx_log_error"] = failure_record(error)
+
+
+def run_owned_command(args, **kwargs):
+    # These short commands own transient children too. Keep subprocess.run's
+    # spawn/assignment/exit sequence intact, with a bounded cancellation delay.
+    kwargs.setdefault("timeout", 5)
+    with owned_cleanup({}):
+        return subprocess.run(args, **kwargs)
+
+
+def docker(*args, input_text=None):
+    result = run_owned_command(["docker", *args], capture_output=True, text=True, timeout=30, input=input_text)
+    if result.returncode:
+        raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+    return result
+
+
+class ExperimentCancelled(RuntimeError):
+    def __init__(self, signum):
+        self.signum = signum
+        self.signal_name = signal.Signals(signum).name
+        self.exit_code = 128 + signum
+        super().__init__("cancelled by " + self.signal_name)
+
+
+_cancellation_state = None
+
+
+@contextlib.contextmanager
+def cancellation_signals():
+    """Record the first signal; deliver it outside protected owned cleanup."""
+    global _cancellation_state
+    previous = {}
+    previous_state = _cancellation_state
+    state = {"signal": None, "delivered": False, "cleanup_depth": 0, "publication_depth": 0, "publication_started": False, "startup": True}
+    _cancellation_state = state
+    def cancel(signum, _frame):
+        if state["signal"] is None:
+            state["signal"] = signum
+        # Defer during handler setup, the startup handoff, owned-resource
+        # lifecycles and pre-staging. Safe checkpoints deliver cancellation.
+        frame = _frame if _frame is not None else sys._getframe(1)
+        protected = False
+        while frame is not None:
+            if frame.f_globals is globals() and (frame.f_code.co_name == "cancellation_signals"
+                    or (frame.f_code.co_name == "main" and state["startup"])
+                    or frame.f_code.co_name in ('run', 'run_local', 'cleanup_owned_containers', 'owned_cleanup')
+                    or (frame.f_code.co_name in ("emit_report", "emit_source_report")
+                        and not state["publication_started"])):
+                protected = True
+                break
+            frame = frame.f_back
+        if not protected and not state["delivered"] and not state["cleanup_depth"] and not state["publication_depth"]:
+            state["delivered"] = True
+            raise ExperimentCancelled(state["signal"])
+    try:
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            previous[signum] = signal.getsignal(signum)
+            signal.signal(signum, cancel)
+        yield state
+    finally:
+        state["delivered"] = True
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+        _cancellation_state = previous_state
+
+
+@contextlib.contextmanager
+def owned_cleanup(report):
+    """Finish every owned cleanup operation before delivering a first signal."""
+    state = _cancellation_state
+    if state is not None:
+        state["cleanup_depth"] += 1
+    try:
+        yield
+    except Exception as error:
+        error.report = report
+        report.setdefault("failure", failure_record(error))
+        raise
+    finally:
+        if state is not None:
+            state["cleanup_depth"] -= 1
+            if not state["cleanup_depth"] and state["signal"] is not None and not state["delivered"]:
+                state["delivered"] = True
+                error = ExperimentCancelled(state["signal"])
+                record = failure_record(error)
+                report["cancellation"] = record
+                report.setdefault("failure", record)
+                error.report = report
+                raise error
+
+
+class DockerCleanupError(RuntimeError):
+    def __init__(self, failures, report):
+        self.failures = failures
+        self.report = report
+        super().__init__("Owned Docker cleanup failed: " + "; ".join(failures))
+
+
+def inspect_container(reference):
+    """Only an explicit missing-container response establishes absence."""
+    try:
+        output = docker("container", "inspect", reference).stdout
+    except subprocess.CalledProcessError as error:
+        missing = r"(?:Error:|Error response from daemon:) No such (?:object|container): " + re.escape(reference)
+        if error.returncode == 1 and re.fullmatch(missing, (error.stderr or "").strip()):
+            return None
+        raise
+    data = json.loads(output)
+    if not isinstance(data, list) or len(data) != 1 or not isinstance(data[0], dict):
+        raise RuntimeError("Invalid container inspection: " + reference)
+    return data[0]
+
+
+def create_owned_container(intended, name, *args):
+    # A collision is not ours even if the caller reuses a token. Never delete it.
+    if inspect_container(name) is not None:
+        raise RuntimeError("Container name already exists: " + name)
+    # The daemon may create the resource before the CLI times out or disconnects.
+    intended.append(name)
+    docker("create", "--name", name, *args)
+    state = _cancellation_state
+    if state is not None and state["signal"] is not None and not state["delivered"]:
+        state["delivered"] = True
+        raise ExperimentCancelled(state["signal"])
+
+
+def cleanup_owned_containers(intended, token, report):
+    with owned_cleanup(report):
+        cleanup, failures = [], []
+        for name in reversed(intended):
+            try:
+                info = inspect_container(name)
+                if info is None:
+                    cleanup.append({"kind": "container", "name": name, "absence_verified": True})
+                    continue
+                labels = info.get("Config", {}).get("Labels", {})
+                identifier = info.get("Id")
+                if (not isinstance(labels, dict) or labels.get("guildboard.t10.probe") != token
+                        or info.get("Name") != "/" + name
+                        or not isinstance(identifier, str) or re.fullmatch(r"[0-9a-f]{64}", identifier) is None):
+                    raise RuntimeError("Ownership/identity mismatch; refusing cleanup: " + name)
+                removal_error = None
+                try:
+                    # Bind removal to the inspected immutable ID, not a reusable name.
+                    docker("container", "rm", "--force", identifier)
+                except (subprocess.SubprocessError, OSError) as error:
+                    removal_error = error
+                if inspect_container(identifier) is not None:
+                    raise RuntimeError("Cleanup absence not verified: " + name) from removal_error
+                cleanup.append({"kind": "container", "name": name, "id": identifier, "absence_verified": True})
+            except Exception as error:
+                # Failure to inspect/remove one resource must not strand the others.
+                failures.append(name + ": " + type(error).__name__ + ": " + str(error))
+        report["cleanup"] = cleanup
+        if failures:
+            report["cleanup_failures"] = failures
+            raise DockerCleanupError(failures, report)
+
+
+def run(control=None):
+    token = "gb-t10-" + uuid.uuid4().hex[:12]
+    backend, proxy = token + "-backend", token + "-proxy"
+    label = "guildboard.t10.probe=" + token
+    intended = []
+    report = {}
+    if _cancellation_state is not None:
+        _cancellation_state["report"] = report
+    report.update({"observed_at": datetime.now(timezone.utc).isoformat(), "host": platform.platform(),
+              "host_python": platform.python_version(), "images": {"nginx": NGINX, "python": PYTHON},
+              "resource_scope": {"network": "network=none backend; nginx shares its owned network namespace", "published_ports": [], "mounts": [],
+                                 "per_container": "0.5 CPU / 128MiB / 64 PIDs / nonroot / read-only / cap-drop ALL"}})
+    try:
+        for image in (NGINX, PYTHON):
+            docker("image", "inspect", image)  # No pulls or installs; fail if absent.
+        common = ["--pull=never", "--label", label, "--cpus", "0.5", "--memory", "128m", "--pids-limit", "64", "--user", "65534:65534", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m,mode=1777"]
+        create_owned_container(intended, backend, "--network", "none", *common, "--entrypoint", "python", PYTHON, "-c", "import time; time.sleep(3600)")
+        docker("start", backend)
+        docker("exec", "-i", backend, "python", "-c", "import sys; from pathlib import Path; Path('/tmp/probe.py').write_text(sys.stdin.read())", input_text=(ROOT / "scripts/research/t10-proxy-fixture.py").read_text())
+        docker("exec", "-d", backend, "python", "/tmp/probe.py", "serve")
+        create_owned_container(intended, proxy, "--network", "container:" + backend, *common, "--entrypoint", "sleep", NGINX, "3600")
+        docker("start", proxy)
+        config = (ROOT / "docs/research/t10-nginx-probe.conf").read_text()
+        config = apply_control(config, control)
+        docker("exec", "-i", proxy, "sh", "-c", "cat > /tmp/nginx.conf", input_text=config)
+        check = docker("exec", proxy, "nginx", "-c", "/tmp/nginx.conf", "-t")
+        report["nginx_config_check"] = (check.stdout + check.stderr).strip()
+        docker("exec", "-d", proxy, "nginx", "-c", "/tmp/nginx.conf", "-g", "daemon off;")
+        # Bounded readiness; successful traffic is required before the acceptance probe.
+        readiness = "import urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8080/ready', timeout=1); raise SystemExit(0 if response.status == 200 else 1)"
+        for attempt in range(20):
+            try:
+                docker("exec", backend, "python", "-c", readiness)
+                break
+            except subprocess.CalledProcessError:
+                if attempt == 19:
+                    raise
+                time.sleep(0.1)
+        version = docker("exec", proxy, "nginx", "-v")
+        report["nginx_version"] = (version.stdout + version.stderr).strip()
+        report["container_python"] = docker("exec", backend, "python", "--version").stdout.strip()
+        try:
+            report["result"] = json.loads(docker("exec", backend, "python", "/tmp/probe.py", "probe").stdout)
+        except subprocess.CalledProcessError as error:
+            expected = {**{name: "websocket-status" for name in HANDSHAKE_REJECTIONS}, "publish-private-assets": "private-assets-not-public",
+                        "long-read-timeout": "idle-close-deadline"}
+            try:
+                failure = json.loads(error.stdout)["failure"]
+            except (ValueError, KeyError, TypeError):
+                raise error
+            if isinstance(failure, dict):
+                report["failure"] = failure
+            if (not isinstance(failure, dict) or control not in expected or failure.get("check") != expected[control]
+                    or (control in HANDSHAKE_REJECTIONS and failure.get("detail") != HANDSHAKE_REJECTIONS[control])):
+                raise
+            report["negative_control"] = {"variant": control, "detected": True, "failure": failure}
+        if control and "negative_control" not in report:
+            raise AssertionError("unsafe negative control escaped the probe")
+        report["fixture_hashes"] = {str(path.relative_to(ROOT)).replace("\\", "/"): hashlib.sha256(path.read_bytes()).hexdigest()
+                                    for path in (ROOT / "docs/research/t10-nginx-probe.conf", ROOT / "scripts/research/t10-proxy-fixture.py")}
+    except Exception as error:
+        error.report = report
+        report.setdefault("failure", failure_record(error))
+        raise
+    finally:
+        cleanup_owned_containers(intended, token, report)
+    return report
+
+
+def stop_local_proxy(proxy):
+    """Stop only the session created for this owned Nginx master and its workers."""
+    try:
+        try:
+            os.killpg(proxy.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            proxy.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+    finally:
+        # Failed/interrupted waits and an exited master cannot skip worker cleanup.
+        try:
+            os.killpg(proxy.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proxy.wait(timeout=5)
+
+
+def run_local(nginx_binary, control=None):
+    """Owned loopback processes only; no Docker, privilege or system service changes."""
+    if os.name != "posix" or platform.system() == "Windows":
+        raise RuntimeError("local Nginx runner requires POSIX process groups; use Docker mode on Windows")
+    binary = str(Path(nginx_binary).resolve(strict=True))
+    spec = importlib.util.spec_from_file_location("t10_local_fixture", ROOT / "scripts/research/t10-proxy-fixture.py")
+    fixture = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fixture)
+    server = thread = proxy = errors = temporary_directory = None
+    report = {}
+    if _cancellation_state is not None:
+        _cancellation_state["report"] = report
+    try:
+        # Keep acquisition and handle registration in one deferred-signal phase.
+        with owned_cleanup(report):
+            server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), fixture.Handler)
+            server.idle_stop = threading.Event()
+        # The shutdown probe closes the listening socket before checking the 502.
+        def serve():
+            try:
+                server.serve_forever()
+            finally:
+                server.server_close()
+        with owned_cleanup(report):
+            thread = threading.Thread(target=serve)
+            thread.start()
+        with owned_cleanup(report):
+            temporary_directory = tempfile.TemporaryDirectory(prefix="gb-t10-nginx-")
+        temporary = temporary_directory.name
+        root = Path(temporary)
+        (root / "logs").mkdir()
+        with owned_cleanup(report):
+            with socket.socket() as reserve:
+                reserve.bind(("127.0.0.1", 0))
+                proxy_port = reserve.getsockname()[1]
+        fixture.PROXY_PORT = proxy_port
+        config = (ROOT / "docs/research/t10-nginx-probe.conf").read_text()
+        config = config.replace("listen 8080;", f"listen 127.0.0.1:{proxy_port};")
+        config = config.replace("127.0.0.1:8000", f"127.0.0.1:{server.server_port}")
+        config = config.replace("/tmp/", temporary + "/")
+        config = apply_control(config, control)
+        path = root / "nginx.conf"
+        with owned_cleanup(report):
+            path.write_text(config)
+        report.update({"observed_at": datetime.now(timezone.utc).isoformat(),
+                  "tested_sha": run_owned_command(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, capture_output=True, check=True).stdout.strip(),
+                  "host": platform.platform(), "host_python": platform.python_version(),
+                  "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
+                  "nginx_binary_sha256": hashlib.sha256(Path(binary).read_bytes()).hexdigest(),
+                  "nginx_version": run_owned_command([binary, "-V"], capture_output=True, text=True, check=True).stderr.strip(),
+                  "control": control,
+                  "fixture_hashes": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in
+                                     (ROOT / "scripts/research/t10-nginx-probe.py", ROOT / "scripts/research/t10-proxy-fixture.py", ROOT / "docs/research/t10-nginx-probe.conf")}})
+        checked = run_owned_command([binary, "-p", temporary + "/", "-c", str(path), "-t"], capture_output=True, text=True, check=True)
+        report["nginx_config_check"] = checked.stderr.strip()
+        with owned_cleanup(report):
+            errors = (root / "stderr.log").open("w+b")
+        with owned_cleanup(report):
+            proxy = subprocess.Popen([binary, "-p", temporary + "/", "-c", str(path), "-g", "daemon off;"], stdout=subprocess.DEVNULL, stderr=errors, start_new_session=True)
+        for attempt in range(50):
+            try:
+                if fixture.request("/ready")[0] == 200:
+                    break
+            except OSError:
+                pass
+            if proxy.poll() is not None:
+                raise RuntimeError("owned nginx exited before readiness")
+            time.sleep(0.05)
+        else:
+            raise RuntimeError("owned nginx readiness deadline")
+        try:
+            report["result"] = fixture.probe()
+        except fixture.ProbeFailure as error:
+            expected = {**{name: "websocket-status" for name in HANDSHAKE_REJECTIONS}, "publish-private-assets": "private-assets-not-public",
+                        "long-read-timeout": "idle-close-deadline"}
+            if (control not in expected or error.check != expected[control]
+                    or (control in HANDSHAKE_REJECTIONS and error.detail != HANDSHAKE_REJECTIONS[control])):
+                raise
+            report["negative_control"] = {"variant": control, "detected": True, "failure": str(error)}
+        if control and "negative_control" not in report:
+            raise AssertionError("unsafe negative control escaped the probe")
+    except Exception as error:
+        error.report = report
+        report.setdefault("failure", failure_record(error))
+        raise
+    finally:
+        with owned_cleanup(report):
+            failures = []
+            if proxy is not None:
+                try:
+                    stop_local_proxy(proxy)
+                except Exception as error:
+                    failures.append("nginx: " + repr(error))
+            if server is not None:
+                server.idle_stop.set()
+                for action in (
+                    lambda: server.shutdown() if thread is not None and thread.is_alive() else None,
+                    lambda: thread.join(timeout=5) if thread is not None and thread.ident is not None else None,
+                    server.server_close,
+                ):
+                    try:
+                        action()
+                    except Exception as error:
+                        failures.append("backend: " + repr(error))
+            # Preserve final owned stderr after process cleanup, before unlinking it.
+            if errors is not None:
+                capture_nginx_log(errors, report)
+                try:
+                    errors.close()
+                except (OSError, ValueError) as error:
+                    failures.append("stderr close: " + repr(error))
+            if temporary_directory is not None:
+                try:
+                    temporary_directory.cleanup()
+                except (OSError, ValueError) as error:
+                    failures.append("temporary directory: " + repr(error))
+            report["cleanup"] = {"owned_nginx_exited": proxy is None or proxy.poll() is not None,
+                                 "owned_backend_thread_exited": thread is None or not thread.is_alive()}
+            if failures:
+                report["cleanup_failures"] = failures
+                error = RuntimeError("Owned local cleanup failed: " + "; ".join(failures))
+                error.report = report
+                raise error
+    return report
+
+
+_publication_spec = importlib.util.spec_from_file_location(
+    "t10_report_publication", Path(__file__).with_name("t10-report-publication.py"))
+_publication = importlib.util.module_from_spec(_publication_spec)
+_publication_spec.loader.exec_module(_publication)
+report_notice = _publication.report_notice
+report_copy = _publication.report_copy
+write_report_stdout = _publication.write_report_stdout
+discard_stdout_buffer = _publication.discard_stdout_buffer
+REPORT_STDOUT_SECONDS = _publication.REPORT_STDOUT_SECONDS
+
+
+def emit_report(report, output_path=None):
+    state = _cancellation_state
+    snapshot, automatic, requested_ok = None, False, True
+    output = None
+    try:
+        # A complete local snapshot precedes any stdout bytes. Only local
+        # serialization/staging defers signals; a blocked stdout never does.
+        if state is not None:
+            state["publication_depth"] += 1
+        try:
+            output = json.dumps(report, indent=2) + "\n"
+            try:
+                snapshot, automatic, requested_ok = report_copy(output, output_path)
+            except (OSError, ValueError) as error:
+                requested_ok = False
+                report_notice("Cannot stage probe report recovery copy: " + str(error))
+            if state is not None and state["signal"] is not None and not state["delivered"]:
+                state["delivered"] = True
+                # Keep the already staged snapshot immutable. Late publication
+                # cancellation is represented by exit status, not a second JSON.
+        finally:
+            if state is not None:
+                state["publication_depth"] -= 1
+        if state is not None:
+            state["publication_started"] = True
+        write_report_stdout(output)
+    except (ExperimentCancelled, OSError, ValueError) as error:
+        # Never append/retry a JSON object after streaming may have started.
+        discard_stdout_buffer()
+        if snapshot is not None:
+            report_notice("Probe report recovery: " + json.dumps({"path": str(snapshot), "reason": str(error)}))
+        else:
+            report_notice("Probe report unavailable after publication failure: " + str(error))
+        return False
+    finally:
+        if state is not None:
+            # Final status is computed after handler restoration. A first signal
+            # at this boundary is recorded, without escaping or re-emitting JSON.
+            state["delivered"] = True
+    if automatic and snapshot is not None:
+        try:
+            snapshot.unlink()
+        except OSError as error:
+            report_notice("Cannot remove completed probe recovery copy: " + str(error))
+            return False
+    return requested_ok
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--nginx-binary", type=Path, help="Use an explicit local binary with owned POSIX loopback processes")
+    parser.add_argument("--negative-control", choices=[*HANDSHAKE_REJECTIONS, "publish-private-assets", "long-read-timeout"])
+    args = parser.parse_args(argv)
+    report, exit_code = {}, 0
+    with cancellation_signals() as state:
+        try:
+            try:
+                state["startup"] = False
+                if state["signal"] is not None and not state["delivered"]:
+                    state["delivered"] = True
+                    raise ExperimentCancelled(state["signal"])
+                report = run_local(args.nginx_binary, args.negative_control) if args.nginx_binary else run(args.negative_control)
+                if state["signal"] is not None and not state["delivered"]:
+                    state["delivered"] = True
+                    raise ExperimentCancelled(state["signal"])
+            except Exception as error:
+                report = getattr(error, "report", state.get("report", report))
+                report.setdefault("failure", failure_record(error))
+                if isinstance(error, ExperimentCancelled):
+                    report["cancellation"] = failure_record(error)
+                exit_code = 1
+            if not emit_report(report, args.output):
+                exit_code = 1
+        except ExperimentCancelled as error:
+            report = getattr(error, "report", state.get("report", report))
+            # Retry only before stdout publication begins; an exception at the
+            # emitter finalization boundary can arrive after all bytes were sent.
+            report["cancellation"] = failure_record(error)
+            report.setdefault("failure", failure_record(error))
+            if not state["publication_started"]:
+                emit_report(report, args.output)
+            exit_code = 1
+        finally:
+            state["delivered"] = True
+    return 128 + state["signal"] if state["signal"] is not None else exit_code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

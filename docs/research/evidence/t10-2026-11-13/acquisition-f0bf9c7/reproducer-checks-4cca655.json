@@ -1,0 +1,60 @@
+{
+  "kind": "reproducer-explicit-check-validation",
+  "validated_at_utc": "2026-11-13T16:53:20.164369+00:00",
+  "tested_reproducer_revision": "4cca6552f0348c86d78b63cb7759416a3638a32b",
+  "reproducer_path": "docs/research/evidence/t10-2026-11-13/acquisition-f0bf9c7/reproduce-before.py",
+  "reproducer_sha256": "ee812ab00d38978676f06f2de13133910b77c147db3588573d4a147fe2db699e",
+  "test_harness_revision": "f0bf9c78cfaccd17e4b8f423039760b661427435",
+  "test_harness_sha256": "713f77c9316582618d0aa97476aab6bd7b6423b3979780db89166e007ac1313a",
+  "executed_old_implementation_revision": "9802c81b2ef1031798c8155990484eb0f9cf8999",
+  "change": "Every source/provenance/outcome assert is replaced by an explicit RuntimeError check; successful owner artifact is written only after expected failure and report counts are verified.",
+  "commands": [
+    "python docs/research/evidence/t10-2026-11-13/acquisition-f0bf9c7/reproduce-before.py --nginx-binary <OWNED_NGINX_BINARY> --output-directory <OUTPUT_DIRECTORY_NORMAL>",
+    "python -O docs/research/evidence/t10-2026-11-13/acquisition-f0bf9c7/reproduce-before.py --nginx-binary <OWNED_NGINX_BINARY> --output-directory <OUTPUT_DIRECTORY_OPTIMIZED>",
+    "python <CHECK_REPRODUCER_SCRIPT> --nginx-binary <OWNED_NGINX_BINARY>"
+  ],
+  "valid_runs": {
+    "normal": {
+      "exit_code": 0,
+      "report": "before-explicit-normal.sanitized.json",
+      "log": "before-explicit-normal.log",
+      "outcome": {
+        "tests": 3,
+        "failures": 3,
+        "errors": 0,
+        "skips": 0
+      }
+    },
+    "optimized": {
+      "exit_code": 0,
+      "report": "before-explicit-optimized.sanitized.json",
+      "log": "before-explicit-optimized.log",
+      "outcome": {
+        "tests": 3,
+        "failures": 3,
+        "errors": 0,
+        "skips": 0
+      }
+    }
+  },
+  "negative_checks": {
+    "script": "check-reproducer.py",
+    "script_sha256": "49a9dd85627332a9ff23756fa47726a36e7c799ff005508b028bec4602ac25e8",
+    "reports": "reproducer-rejections.json",
+    "checks": 10,
+    "cases": [
+      "mismatched exact-harness bytes",
+      "no expected failures",
+      "unexpected errors",
+      "unexpected skips",
+      "missing captured reports"
+    ],
+    "modes": [
+      "normal",
+      "-O"
+    ],
+    "required_result": "nonzero exit, explicit expected error, no verification message and no success owner JSON artifact"
+  },
+  "historical_artifacts": "Original before-acquisition and first provenance rerun reports/logs are unchanged. Earlier script used assert and was verified only in normal Python. Current explicit checks are validated in normal and optimized interpreters.",
+  "production_validation": "No production source/config/test changes; prior f0bf59 normal/59 optimized suite results remain attributed to that exact revision."
+}

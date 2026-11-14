@@ -1,0 +1,98 @@
+{
+  "kind": "file-first-bounded-source-publication-and-report-handoff",
+  "observed_at_utc": "2026-11-14T08:32:12.744972+00:00",
+  "tested_revision": "9a35817037d5983c7b7faccd5da89cd77f3e7072",
+  "tested_tree": "c874e0b1d09011448fb6703818485c4ecb6bd3d1",
+  "before_revision": "c9b0e0f61ba290ec1da0d1d7d0e75990d2253d2b",
+  "findings": [
+    "T10-SOURCE-REPORT-CANCEL-2 / discussion_r4572494232",
+    "T10-SOURCE-REPORT-HANDOFF-3 / discussion_r4572528004"
+  ],
+  "source_sha256": {
+    "scripts/research/t10-nginx-probe.py": "99621b00f1430be0c488151266d0654a950be08bab5b544a7c403ec19ffef312",
+    "scripts/research/t10-proxy-fixture.py": "ee47f50f7c006edbe7b6500bb4dd14c795feddcab5239e88ed3fabd879f071d1",
+    "scripts/research/t10-capture-sources.py": "2ca9878633b4e30619433e6e2c8a2899b5b9e881ef6c956aa15e894dde018ac7",
+    "scripts/research/t10-report-publication.py": "9706e459f2ffd25310d6e7384f87bd9ef51a71fc366281951ef9bcfd8af969a4",
+    "tests/research/t10-test-nginx-probe.py": "70068e228a182898c3de88ddae8373e58004798a0c8780c07222e33661fb8937",
+    "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+  },
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+    "nginx_binary_sha256": "ad85035dbd4c1cff5df30b1846e272f7ae902088893105a9ccda9b5fad6c087e",
+    "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) \nconfigure arguments: --prefix=<RECOVERY>/scratch/nginx-build/install --without-http_gzip_module\n"
+  },
+  "validation": {
+    "normal": {
+      "tests": 80,
+      "skips": 0,
+      "exit_code": 0,
+      "command": "T10_NGINX_BINARY=<OWNED_NGINX_BINARY> PYTHONDONTWRITEBYTECODE=1 python3 tests/research/t10-test-nginx-probe.py -v"
+    },
+    "optimized": {
+      "tests": 80,
+      "skips": 0,
+      "exit_code": 0,
+      "command": "T10_NGINX_BINARY=<OWNED_NGINX_BINARY> PYTHONDONTWRITEBYTECODE=1 python3 -O tests/research/t10-test-nginx-probe.py -v"
+    },
+    "new_source_methods": 10,
+    "actual_large_pipe_matrix_cases_per_suite": 24,
+    "small_buffered_closed_stdout_cases_per_suite": 4,
+    "old_portable_capture_cases": 20,
+    "fixed_portable_capture_cases": 21,
+    "source_handoff_trace_modes": "normal/-O with SIGTERM/SIGINT after actual healthy fetch at capture-return; old completed row lost, current retained",
+    "nginx_handoff_tests": "actual local Nginx completed network report preserved at return trace; modeled Docker command boundary separate, not actual Docker",
+    "actual_local_nginx_baseline_checks": 12,
+    "unsafe_controls_detected": 6,
+    "planning": "471items/457parents/600dependencies/zeroerrors;api.save no-op",
+    "malformed_capture_rejections": 6,
+    "measurement_limits": "worker_reaped is null without an observed slow-worker PID; file-before-drain is null outside undrained cases"
+  },
+  "capture_command": "python3 -B docs/research/evidence/t10-source-publication-2026-11-14/capture.py --repository <FIXED_WORKTREE> --before-repository <C9_BEFORE_WORKTREE> --tested-revision 9a35817037d5983c7b7faccd5da89cd77f3e7072 --nginx-binary <OWNED_NGINX_BINARY> --output <CAPTURE_JSON>",
+  "original_capture_sha256": "c17db7f5ef22da9f4d126ca5e4c2be396effbe6695dbee3bf1fdc874f9b00746",
+  "sanitization": "Case paths replaced by <CASE>/<REPOSITORY>; recovery namespace replaced by <RECOVERY>. Original byte hashes inside cases refer to unsanitized bytes, artifact hash to published sanitized JSON. Results, source hashes and SHAs unchanged.",
+  "publication_scope": "Later docs/evidence commit; all six executable/helper/config/test hashes remain equal to tested_revision. Before runs use actual c9 source CLI plus this orchestration, not an old full-suite run.",
+  "artifacts": {
+    "capture-rejections.json": {
+      "sha256": "e789dcdb9e1dead8916221632f98209893c66df3792b75cd37a36ea6989bd97b",
+      "bytes": 5648
+    },
+    "README.md": {
+      "sha256": "51f854ba7cc017ac4d4283101b32601eeef8bf51628c64b6b97a97cf3087bf57",
+      "bytes": 4750
+    },
+    "suite-optimized.log": {
+      "sha256": "216769d03778cbd3b74c878d386edb8e4e868a30a43ec22e20d26f4f5dc97c8c",
+      "bytes": 12566
+    },
+    "planning-validation.json": {
+      "sha256": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7",
+      "bytes": 743
+    },
+    "capture.py": {
+      "sha256": "cad6f9083410e6d9a60576791b883beb6124252b597941ed0c3777dd4352b13d",
+      "bytes": 12729
+    },
+    "source-publication.sanitized.json": {
+      "sha256": "6bddd312914cf6f1c35795d32c8a522a1d6c76e5a7aa06add0539fb49ecee780",
+      "bytes": 781937
+    },
+    "capture.log": {
+      "sha256": "166f9a6d70727ddc2f9ee354514e3e6ccbc9ade4fc19a237588f94a3096f268d",
+      "bytes": 138
+    },
+    "suite-normal.log": {
+      "sha256": "861cb596c2fafe0c4fe371344c06628bbcf44051ce3aec0535fded1f2b15b35c",
+      "bytes": 12566
+    }
+  },
+  "limits": [
+    "Real healthy/slow HTTP loopback and worker processes; deterministic trace-at-return injection isolates handoff, not an arbitrary-instruction or distributed-concurrency proof.",
+    "Source --output full file precedes stdout; normal summary preserved, cancellation/write-failure output is full JSON. A late publication signal can be represented by exit status rather than mutation of a frozen report.",
+    "Two-second stdout bound applies to POSIX descriptors. Full/closed stderr may drop notices; requested regular file remains the known location. Invalid destination falls back to an intentional automatic copy when possible.",
+    "Local filesystem/kernel stalls, all unavailable output destinations, custom/nonPOSIXstreams,SIGKILL/hostfailure/powerloss are outside guarantees; no fsync/durablebackup claim.",
+    "Before undrained cases require scoped SIGKILL rescue of their captured owned parent after demonstrating the hang; fetch worker reaping is independently checked.",
+    "Source/Nginx cancellation states remain separate; shared helper contains pure I/O only. All old bundles preserved.",
+    "Missing private laptop receipts/uncommitted work not recovered; no actual GoDaddy/Discord/publicTLS/DNS/actualDocker/SQL recovery/nativeapproval/merge/issueclosure established."
+  ]
+}

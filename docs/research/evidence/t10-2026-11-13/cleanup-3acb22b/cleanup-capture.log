@@ -1,0 +1,8 @@
+test_first_signal_during_normal_docker_cleanup_is_deferred (cleanup_tests.CancellationRegression.test_first_signal_during_normal_docker_cleanup_is_deferred) ... ok
+test_first_signal_during_normal_local_cleanup_finishes_all_actions (cleanup_tests.CancellationRegression.test_first_signal_during_normal_local_cleanup_finishes_all_actions) ... ok
+test_first_signal_during_normal_fetch_worker_cleanup_reaps_and_reports (cleanup_tests.CancellationRegression.test_first_signal_during_normal_fetch_worker_cleanup_reaps_and_reports) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 2.357s
+
+OK

@@ -1,0 +1,1 @@
+old false acceptance reproduced; fixed rejects; valid post-upgrade idle passes; actual Nginx baseline and six controls captured

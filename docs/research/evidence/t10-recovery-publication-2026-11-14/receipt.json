@@ -1,0 +1,93 @@
+{
+  "kind": "bounded-report-publication-cancellation-followup",
+  "observed_at_utc": "2026-11-14T07:56:12.106002+00:00",
+  "tested_revision": "b1ea6c99456d19b0560b63880e8b519bc0eb1f90",
+  "tested_tree": "6df61ab0411511d2faae37035d82ffd2e231b1b1",
+  "before_revision": "aae49862fc2c0c4cba63f4742cb8d02b4481cf2e",
+  "finding": "T10-REPORT-CANCEL-1 / discussion_r4572325321",
+  "source_sha256": {
+    "scripts/research/t10-nginx-probe.py": "4d06bf66e46eb13eb453a99997fd8e93a6a925725e213fffae0438b7c87e1230",
+    "scripts/research/t10-proxy-fixture.py": "ee47f50f7c006edbe7b6500bb4dd14c795feddcab5239e88ed3fabd879f071d1",
+    "scripts/research/t10-capture-sources.py": "3f0207c3a2b15fa008939413a7a1564a7b92e759e4ae4f3ee605bbe3d4701d28",
+    "tests/research/t10-test-nginx-probe.py": "2157ef54f476907f84f339ddf53fd1d9f5c3163eaa4e36df0ec7d631b5c01a12",
+    "docs/research/t10-nginx-probe.conf": "b13ecb4a371891e723b4524c30d4ebdbccf5113ec0c37694e1b4fce8c768ed77"
+  },
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+    "nginx_version": "nginx version: nginx/1.28.0\nbuilt by gcc 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) \nconfigure arguments: --prefix=<RECOVERY>/scratch/nginx-build/install --without-http_gzip_module\n",
+    "nginx_binary_sha256": "ad85035dbd4c1cff5df30b1846e272f7ae902088893105a9ccda9b5fad6c087e",
+    "source_archive_sha256": "c6b5c6b086c0df9d3ca3ff5e084c1d0ef909e6038279c71c1c3e985f576ff76a"
+  },
+  "validation": {
+    "normal": {
+      "tests": 70,
+      "skips": 0,
+      "exit_code": 0,
+      "command": "T10_NGINX_BINARY=<OWNED_NGINX_BINARY> PYTHONDONTWRITEBYTECODE=1 python3 tests/research/t10-test-nginx-probe.py -v"
+    },
+    "optimized": {
+      "tests": 70,
+      "skips": 0,
+      "exit_code": 0,
+      "command": "T10_NGINX_BINARY=<OWNED_NGINX_BINARY> PYTHONDONTWRITEBYTECODE=1 python3 -O tests/research/t10-test-nginx-probe.py -v"
+    },
+    "publication_regression_methods": 8,
+    "publication_regression_scenarios_per_suite": 24,
+    "old_actual_CLI_failures": 4,
+    "fixed_actual_CLI_capture_cases": 10,
+    "actual_local_nginx_baseline_checks": 12,
+    "unsafe_controls_detected": 6,
+    "planning": "471 items /457 parentedges/600 dependencies/zero errors; api.save no-op to respect lease",
+    "capture_malformed_rejections": {
+      "checks": 4,
+      "modes": [
+        "normal",
+        "-O"
+      ],
+      "result": "wrong before revision and mismatched tested-source bytes rejected before any success artifact"
+    }
+  },
+  "publication_scope": "Later documentation/evidence commit; executable/config/test hashes unchanged from tested_revision. Capture helper executed from publication worktree and independently hash-bound as artifact. This is not an old full-suite reproduction.",
+  "capture_command": "python3 -B docs/research/evidence/t10-recovery-publication-2026-11-14/capture.py --repository <FIXED_WORKTREE> --before-repository <READ_ONLY_BEFORE_WORKTREE> --tested-revision b1ea6c99456d19b0560b63880e8b519bc0eb1f90 --nginx-binary <OWNED_NGINX_BINARY> --output <CAPTURE_OUTPUT>",
+  "original_capture_sha256": "129790db7297b1a2e0d3b2aba897f1ac1e26068d671832472eb98310130846be",
+  "sanitization": "Publication case private paths use <CASE>/<REPOSITORY>; top-level new-server recovery namespace is replaced by <RECOVERY>. Original byte hashes inside observations refer to unsanitized captures; published artifact hashes below refer to the sanitized artifact. Results/revisions/source hashes unchanged.",
+  "artifacts": {
+    "suite-optimized.log": {
+      "sha256": "539f52b21899fdfb12842ef7202454b4d0360afc1b9c9803a513a7b21de3d20b",
+      "bytes": 10888
+    },
+    "capture.py": {
+      "sha256": "c9263382f69be65352cb733b09b5f97bb453453f63f7bf2d1461073dba98163a",
+      "bytes": 8760
+    },
+    "publication.sanitized.json": {
+      "sha256": "3984b44251e581a76c71c9de0112db261f48e9fcf5a9a5e64355f84b6fb44761",
+      "bytes": 830757
+    },
+    "capture.log": {
+      "sha256": "4b4334c5b093d59220b811078b1390ce919b0814c98b50a2327d3076327ffb15",
+      "bytes": 124
+    },
+    "suite-normal.log": {
+      "sha256": "d8ee49a3ac6f12b0b2c3a66d69a78917c0752800f925728f97c80a1ae542850f",
+      "bytes": 10888
+    },
+    "capture-rejections.json": {
+      "sha256": "1d8b55e8abc8910adcc52205b5d091f34eb0e3ddf4d7a56e965482f21f83d330",
+      "bytes": 3401
+    },
+    "planning-validation.json": {
+      "sha256": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7",
+      "bytes": 743
+    }
+  },
+  "limits": [
+    "Normal/optimized suite uses actual local Nginx; publication cases use an owned synthetic startup-failure executable and real OS pipes, not real Nginx startup failures. Separate network rows use actual Nginx.",
+    "stdout can be a partial prefix after cancellation/backpressure; exactly one complete local snapshot is retained. Notices are best effort and may be dropped on full/closed stderr. Use --output ordinary file for known recovery location.",
+    "Two-second deadline bounds POSIX descriptor stdout backpressure; in-memory/custom streams, non-POSIX streams, filesystem/kernel stalls, SIGKILL and powerloss have no such guarantee.",
+    "Automatic report copies intentionally retained on failed/interrupted publication require caller retention/removal; normal completed stdout removes them. No fsync/durable-backup claim.",
+    "No actual Docker, Discord, public TLS/DNS, GoDaddy deployment/recovery, native approval, merge or issue completion established.",
+    "Original private laptop receipts and uncommitted work remain unrecovered; old committed evidence is preserved unchanged."
+  ]
+}
