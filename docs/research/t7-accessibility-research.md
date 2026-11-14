@@ -169,9 +169,10 @@ python scripts/github-bootstrap/validate.py
 git diff --check
 ```
 
-The probe writes its screenshot beside the requested report, with `.png` appended
-to the report filename. It stages the copy before atomic publication, leaving the
-historical screenshot intact. Use a separate output path for each observation.
+The probe publishes a uniquely named screenshot beside the requested report and
+atomically replaces the report after cleanup. Previous screenshots remain intact
+if report publication fails; an unreferenced screenshot may remain. Use a separate
+output path for each observation to retain each report.
 
 The [probe](../../scripts/research/t7-browser-probe.py) uses an already-cached
 immutable `mcp/playwright` image through its own Docker MCP stdio session, not a
@@ -187,7 +188,12 @@ entrypoint explicitly uses `--no-sandbox`, recorded in evidence; this is bounded
 local browser automation, not production isolation or the sandbox-enabled #483
 browser configuration. Exact image/source/screenshot hashes are in the report.
 
-[Current evidence](t7-browser-evidence.json): **23 assertions passed** covering
+The prototype and checks were later changed to move focus to the permission
+explanation on asynchronous revocation; the retained historical hashes and
+results describe the earlier source, not that change. Local browser behavior is
+not evidence of screen-reader speech or human acceptance.
+
+[Historical evidence](t7-browser-evidence.json): **23 assertions passed** covering
 keyboard skip/selection/form submission, modal focus/Tab/Escape restoration,
 semantic pending status without focus theft, no promotion before simulated ACK,
 revoke/reconnect/rejection draft preservation, accepted local text/position,
@@ -204,7 +210,7 @@ with absence readback; all owned containers were confirmed absent. No test was
 weakened to pass. These are research fixture fixes, not Guildboard feature fixes.
 
 Local verification also passed JS syntax checking, all 14 source metadata entries,
-prototype/test/screenshot hash agreement and planning validation (471 items,
+then-current prototype/test/screenshot hash agreement and planning validation (471 items,
 457 expected native relationships, 600 expected dependencies, zero errors).
 The validator's unrelated CRLF-only audit rewrite was restored; final whitespace
 validation passed. Hosted workflows are unchanged and do not execute this browser

@@ -8,6 +8,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import queue
 import platform
@@ -92,14 +93,15 @@ def main() -> int:
         report['browser_result']=json.loads(payload)
         if report['browser_result'].get('result')!='pass': raise RuntimeError('browser result failed')
         report['stage']='screenshot-copy'
-        target=args.output.with_name(args.output.name+'.png')
+        target=args.output.with_name(args.output.name+'.'+uuid.uuid4().hex+'.png')
         target.parent.mkdir(parents=True,exist_ok=True)
         # Stage on the destination filesystem, then publish only after a complete copy.
         with tempfile.TemporaryDirectory(prefix='.t7-screenshot-',dir=target.parent) as staging:
             staged=Path(staging)/'screenshot.png'
             subprocess.run([*docker,'cp',name+':/tmp/guildboard-t7-fixture.png',str(staged)],check=True,capture_output=True,timeout=15)
             screenshot_sha256=hashlib.sha256(staged.read_bytes()).hexdigest()
-            staged.replace(target)
+            # Hard-link publication refuses collisions and never replaces older evidence.
+            os.link(staged,target)
         report['screenshot_path']=str(target)
         report['screenshot_sha256']=screenshot_sha256
         report['result']='pass'
@@ -134,7 +136,11 @@ def main() -> int:
                 failed=True;report.update(result='blocked-or-failed',cleanup_error=str(error)[:4000])
         try:
             args.output.parent.mkdir(parents=True,exist_ok=True)
-            args.output.write_bytes((json.dumps(report,indent=2,sort_keys=True)+'\n').encode())
+            # A report is visible only once all its bytes have been written.
+            with tempfile.TemporaryDirectory(prefix='.t7-report-',dir=args.output.parent) as staging:
+                staged=Path(staging)/'report.json'
+                staged.write_bytes((json.dumps(report,indent=2,sort_keys=True)+'\n').encode())
+                staged.replace(args.output)
         except OSError as error:
             failed=True;report.update(result='blocked-or-failed',report_write_error=str(error)[:4000])
     print(json.dumps({k:report.get(k) for k in ('result','owned_container_absent','error','report_write_error')}))

@@ -42,7 +42,7 @@
   <button id="help">Keyboard guide</button>
 </header>
 <main>
-  <p id="permission">Writer verified in local fixture.</p>
+  <p id="permission" tabindex="-1">Writer verified in local fixture.</p>
   <div class="workspace">
     <section aria-labelledby="objects" tabindex="-1" id="object-section">
       <h2 id="objects" tabindex="-1">Objects in reading order</h2>
@@ -82,7 +82,7 @@
 <dialog id="guide" aria-labelledby="guide-heading">
   <h2 id="guide-heading">Keyboard editing guide</h2>
   <p>Use Tab and Shift+Tab to move through native controls. Choose an object, edit the labeled text and numeric fields, then queue the local change.</p>
-  <p>Escape closes this guide. Status changes do not move your focus.</p>
+  <p>Escape closes this guide. Status changes keep focus in place, except that revoked editing moves focus from the disabled queue button to the permission explanation.</p>
   <button id="close-guide" autofocus>Close guide</button>
 </dialog>
 <script>
@@ -118,10 +118,12 @@
   }
   function sync() {
     for (const id of ['object-text','object-x','object-y']) $(id).readOnly=!canEdit()||pending?.id===selected;
+    const queueLosingFocus=!canEdit()&&document.activeElement===$('queue');
     $('queue').disabled=!canEdit(); $('accept').disabled=!pending||!canEdit();
     $('reject').disabled=!pending;
     $('permission').textContent=!connected?'Disconnected; editing unavailable.':verified?
       'Writer verified in local fixture.':'Editing unavailable; writer verification required.';
+    if(queueLosingFocus) $('permission').focus();
   }
   for(const id of ['object-text','object-x','object-y']) $(id).addEventListener('input',()=>{
     if(!canEdit()||pending?.id===selected)return;

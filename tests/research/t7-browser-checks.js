@@ -27,7 +27,9 @@ async (page) => {
   check('keyboard queues change without accepting content', current.pending?.text==='Accessible next action'&&current.revision===0&&current.accepted[1].text==='Write the first action.');
   check('pending status is semantic and does not steal focus',
     await page.locator('#status').getAttribute('role')==='status'&&await page.locator('#status').getAttribute('aria-live')==='polite'&&await page.locator('#queue').evaluate(e=>e===document.activeElement));
-  await page.locator('#revoke').click(); current=await state();
+  await page.evaluate(()=>document.querySelector('#revoke').click()); current=await state();
+  check('asynchronous revoke moves focus to permission explanation',
+    await page.locator('#permission').evaluate(e=>e===document.activeElement)&&await page.locator('#queue').isDisabled());
   check('revoke preserves pending draft and blocks local acceptance', current.revision===0&&current.pending?.text==='Accessible next action'&&await page.locator('#accept').isDisabled()&&await page.locator('#object-text').evaluate(e=>e.readOnly));
   await page.locator('#disconnect').click(); await page.locator('#reconnect').click(); current=await state();
   check('reconnect does not optimistically restore writer', current.connected&&!current.verified&&await page.locator('#queue').isDisabled()&&current.pending!==null);

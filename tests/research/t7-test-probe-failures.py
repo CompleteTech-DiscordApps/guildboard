@@ -101,9 +101,51 @@ class FailureReports(unittest.TestCase):
         self.assertEqual(self.run_failure('copy', b'copy failed: \xff')['command_stderr'], 'copy failed: \ufffd')
 
 
+class ReportPublicationFailures(unittest.TestCase):
+    def exercise(self, partial):
+        process = OwnedProcess()
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'evidence.json'
+            old_image = Path(directory) / 'old.png'
+            old_image.write_bytes(b'old screenshot')
+            old_report = json.dumps({'result': 'pass', 'screenshot_path': str(old_image),
+                                     'screenshot_sha256': hashlib.sha256(old_image.read_bytes()).hexdigest()})
+            output.write_text(old_report)
+            original_write = Path.write_bytes
+            def write(path, data):
+                if path.name == 'report.json':
+                    if partial:
+                        original_write(path, data[:10])
+                    raise OSError('injected report write failure')
+                return original_write(path, data)
+            def check_output(command, **kwargs):
+                if command[0] == 'git': return 'fixture-head\n'
+                if command[1:] == ['context', 'show']: return 'test-context\n'
+                return ''
+            def run(command, **kwargs):
+                if 'cp' in command: Path(command[-1]).write_bytes(b'new screenshot')
+                return subprocess.CompletedProcess(command, 1 if 'container' in command else 0, stdout='')
+            with patch.object(sys, 'argv', ['probe', '--output', str(output)]), \
+                 patch.object(PROBE.subprocess, 'check_output', side_effect=check_output), \
+                 patch.object(PROBE.subprocess, 'run', side_effect=run), \
+                 patch.object(PROBE.subprocess, 'Popen', return_value=process), \
+                 patch.object(Path, 'write_bytes', write), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(PROBE.main(), 1)
+            self.assertEqual(output.read_text(), old_report)
+            self.assertEqual(old_image.read_bytes(), b'old screenshot')
+            self.assertEqual(list(Path(directory).glob('.t7-report-*')), [])
+            self.assertTrue(process.terminated)
+
+    def test_failure_before_report_open(self):
+        self.exercise(False)
+
+    def test_partial_report_write_failure(self):
+        self.exercise(True)
+
+
 class CliStartupReports(unittest.TestCase):
     def run_cli_failure(self, mode):
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory(dir=ROOT if mode == 'missing-repository' else None) as directory:
             root = Path(directory)
             script = root / 'scripts/research/t7-browser-probe.py'
             script.parent.mkdir(parents=True)
@@ -117,14 +159,25 @@ class CliStartupReports(unittest.TestCase):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text('standalone test fixture')
             env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+            # A malformed gitfile stops parent discovery even inside a checkout.
+            (root / '.git').write_text('not a gitdir')
+            env['GIT_CEILING_DIRECTORIES'] = str(root)
+            guard = root / 'guard-bin'
+            guard.mkdir()
+            docker = guard / 'docker'
+            marker = root / 'docker-called'
+            docker.write_text('#!' + sys.executable + '\nfrom pathlib import Path\nPath(' + repr(str(marker)) + ').touch()\nraise SystemExit(99)\n')
+            docker.chmod(0o755)
+            env['PATH'] = str(guard) + os.pathsep + env.get('PATH', '')
             if mode == 'missing-git':
-                env['PATH'] = str(root / 'empty-bin')
+                env['PATH'] = str(guard)
             output = root / 'output/evidence.json'
             result = subprocess.run([sys.executable, str(script), '--output', str(output)],
                                     cwd=root, env=env, capture_output=True, text=True, timeout=15)
             self.assertEqual(result.returncode, 1, result.stderr)
             self.assertTrue(output.exists(), result.stderr)
             report = json.loads(output.read_text())
+            self.assertFalse(marker.exists(), 'startup test invoked Docker')
         self.assertEqual(report['result'], 'blocked-or-failed')
         self.assertTrue(report['owned_container_absent'])
         self.assertNotIn('browser_result', report)
@@ -208,7 +261,7 @@ else:
             report = json.loads(output.read_text())
             self.assertEqual(result.returncode, int(fail_copy), result.stderr)
             self.assertEqual(historical.read_bytes(), b'historical evidence')
-            self.assertEqual(screenshot.read_bytes(), b'previous evidence' if fail_copy else b'new screenshot')
+            self.assertEqual(screenshot.read_bytes(), b'previous evidence')
             self.assertEqual(list(output.parent.glob('.t7-screenshot-*')), [])
             self.assertTrue(report['owned_container_absent'])
             calls = [json.loads(line) for line in (root / 'docker.log').read_text().splitlines()]
@@ -220,7 +273,9 @@ else:
                 self.assertNotIn('screenshot_sha256', report)
             else:
                 self.assertEqual(report['result'], 'pass')
-                self.assertEqual(report['screenshot_path'], str(screenshot))
+                published = Path(report['screenshot_path'])
+                self.assertNotEqual(published, screenshot)
+                self.assertEqual(published.read_bytes(), b'new screenshot')
                 self.assertEqual(report['screenshot_sha256'], hashlib.sha256(b'new screenshot').hexdigest())
 
     def test_partial_copy_preserves_existing_evidence(self):
