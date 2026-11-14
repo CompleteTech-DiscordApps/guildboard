@@ -1496,5 +1496,250 @@ class SourceCaptureRegression(unittest.TestCase):
         popen.assert_not_called()
 
 
+@unittest.skipUnless(POSIX_LOCAL and Path("/proc").is_dir(), "POSIX/Linux source publication and worker ownership")
+class SourceReportPublicationRegression(unittest.TestCase):
+    def source_case(self, number=signal.SIGTERM, optimized=False, unbuffered=False,
+                    destination_kind="file", stdout_mode="draining", full_stderr=False, handoff=False):
+        import socketserver
+        import tempfile
+        stop, slow_connected = threading.Event(), threading.Event()
+        class Handler(socketserver.BaseRequestHandler):
+            def handle(self):
+                request = b""
+                while b"\r\n\r\n" not in request and len(request) < 65536:
+                    chunk = self.request.recv(4096)
+                    if not chunk:
+                        return
+                    request += chunk
+                try:
+                    if b"GET /slow " in request:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 1000000\r\n\r\n")
+                        slow_connected.set()
+                        while not stop.wait(.02):
+                            self.request.sendall(b"x")
+                    else:
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+        process, worker = None, None
+        with tempfile.TemporaryDirectory(prefix="t10-source-publication-") as scratch, \
+             socketserver.ThreadingTCPServer(("127.0.0.1", 0), Handler) as server:
+            thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=.05))
+            thread.start()
+            directory = Path(scratch)
+            temporary = directory / "temporary"
+            temporary.mkdir()
+            destination = directory / "report.json"
+            if destination_kind == "directory":
+                destination = directory
+            elif destination_kind in ("fifo", "fifo-symlink"):
+                fifo = directory / "report.fifo"
+                os.mkfifo(fifo)
+                destination = fifo
+                if destination_kind == "fifo-symlink":
+                    destination = directory / "report.link"
+                    destination.symlink_to(fifo)
+            url = "http://127.0.0.1:" + str(server.server_address[1])
+            program = ("import importlib.util,sys,os; "
+                       "s=importlib.util.spec_from_file_location('capture',sys.argv[1]); "
+                       "m=importlib.util.module_from_spec(s);s.loader.exec_module(m); "
+                       "m.SOURCES=[('healthy',sys.argv[2]+'/'+'x'*10000)]" +
+                       ("+[('slow',sys.argv[2]+'/slow')]; " if number is not None and not handoff else "; "))
+            if full_stderr:
+                program += "os.write(2,b'z'*4096); "
+            if handoff:
+                program += ("\ndef trace_return(frame,event,arg):\n"
+                            " if frame.f_code is m.capture.__code__ and event=='return' and isinstance(arg,dict):\n"
+                            "  sys.settrace(None)\n  os.kill(os.getpid()," + str(int(number)) + ")\n"
+                            " return trace_return\nsys.settrace(trace_return)\n")
+            program += "raise SystemExit(m.main(['--output',sys.argv[3]]))"
+            command = [sys.executable, *(["-O"] if optimized else []), *(["-u"] if unbuffered else []),
+                       "-c", program, str(ROOT / "scripts/research/t10-capture-sources.py"), url, str(destination)]
+            try:
+                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                           pipesize=4096, env={**os.environ, "TMPDIR": str(temporary), "PYTHONDONTWRITEBYTECODE": "1"})
+                if number is not None and not handoff:
+                    self.assertTrue(slow_connected.wait(8), "actual slow worker must be fetching after healthy row")
+                    for pid in Path(f"/proc/{process.pid}/task/{process.pid}/children").read_text().split():
+                        try:
+                            cmdline = Path(f"/proc/{pid}/cmdline").read_bytes()
+                        except FileNotFoundError:
+                            continue
+                        if b"--fetch-worker" in cmdline and url.encode() in cmdline:
+                            worker = int(pid)
+                    self.assertIsNotNone(worker)
+                if stdout_mode == "closed":
+                    process.stdout.close()
+                    process.stdout = None
+                started = time.monotonic()
+                if number is not None and not handoff:
+                    process.send_signal(number)
+                if stdout_mode == "undrained":
+                    # The requested copy must become complete before stdout can
+                    # finish. Do not read either pipe until bounded process exit.
+                    deadline = time.monotonic() + 3
+                    complete = None
+                    while time.monotonic() < deadline:
+                        try:
+                            complete = json.loads(destination.read_text())
+                            break
+                        except (OSError, ValueError):
+                            time.sleep(.02)
+                    self.assertIsNotNone(complete, "file-first source snapshot must precede drain")
+                    if process.poll() is None and number is not None:
+                        process.send_signal(signal.SIGINT if number == signal.SIGTERM else signal.SIGTERM)
+                    process.wait(timeout=6)
+                    self.assertLess(time.monotonic() - started, 6)
+                stdout, stderr = process.communicate(timeout=8)
+                stdout = stdout or b""
+                self.assertNotIn(b"Traceback", stderr)
+                expected = 128 + number if number is not None else int(destination_kind != "file" or stdout_mode == "closed")
+                self.assertEqual(process.returncode, expected, stderr)
+                if destination_kind == "file":
+                    report_bytes = destination.read_bytes()
+                    report = json.loads(report_bytes)
+                else:
+                    report_bytes = stdout
+                    report = json.loads(stdout)
+                    self.assertIn(b"Cannot write source report", stderr)
+                self.assertEqual(report["sources"][0]["id"], "healthy")
+                self.assertEqual(report["sources"][0]["bytes"], 2)
+                if number is not None:
+                    if handoff:
+                        self.assertEqual(len(report["sources"]), 1)
+                    else:
+                        self.assertTrue(report["sources"][1]["cancelled"])
+                        self.assertFalse(Path(f"/proc/{worker}").exists(), "owned fetch worker must be reaped")
+                    self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+                    self.assertTrue(report_bytes.startswith(stdout), "no second JSON after partial cancellation output")
+                    if stdout_mode == "draining":
+                        self.assertEqual(report_bytes, stdout)
+                elif destination_kind == "file" and stdout_mode == "draining":
+                    self.assertEqual(json.loads(stdout), {"observed": 1, "http_200": 1, "failures": []})
+                self.assertFalse(any(path.is_dir() for path in temporary.iterdir()))
+            finally:
+                if process is not None and process.poll() is None:
+                    process.kill()
+                    process.communicate(timeout=5)
+                if worker is not None and Path(f"/proc/{worker}").exists():
+                    try:
+                        cmdline = Path(f"/proc/{worker}/cmdline").read_bytes()
+                        if b"--fetch-worker" in cmdline and url.encode() in cmdline:
+                            os.kill(worker, signal.SIGKILL)
+                    except FileNotFoundError:
+                        pass
+                stop.set()
+                server.shutdown()
+                thread.join(timeout=2)
+        self.assertFalse(thread.is_alive())
+
+    def test_cancelled_source_publication_real_pipe_matrix(self):
+        for optimized in (False, True):
+            for unbuffered in (False, True):
+                for number in (signal.SIGTERM, signal.SIGINT):
+                    for mode in ("draining", "closed", "undrained"):
+                        with self.subTest(optimized=optimized, unbuffered=unbuffered, signal=number, stdout=mode):
+                            self.source_case(number, optimized, unbuffered, stdout_mode=mode)
+
+    def test_source_cancellation_does_not_wait_for_full_stderr(self):
+        self.source_case(stdout_mode="undrained", full_stderr=True)
+
+    def test_source_ordinary_success_summary_and_write_failure(self):
+        for kind in ("file", "directory"):
+            with self.subTest(destination=kind):
+                self.source_case(None, destination_kind=kind)
+
+    def test_source_output_fifo_and_symlink_fail_fast(self):
+        for kind in ("fifo", "fifo-symlink"):
+            with self.subTest(destination=kind):
+                self.source_case(None, destination_kind=kind)
+
+    def test_source_success_closed_stdout_retains_requested_report(self):
+        self.source_case(None, stdout_mode="closed")
+
+    def test_source_first_signal_during_staging_has_complete_file(self):
+        import tempfile
+        import contextlib
+        spec = importlib.util.spec_from_file_location("source_staging", ROOT / "scripts/research/t10-capture-sources.py")
+        capture = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(capture)
+        result = {"kind": "fixture", "sources": [{"id": "healthy", "status": 200, "bytes": 2}]}
+        for number in (signal.SIGTERM, signal.SIGINT):
+            original = capture.report_copy
+            def inject(*args, **kwargs):
+                os.kill(os.getpid(), number)
+                return original(*args, **kwargs)
+            output = io.StringIO()
+            with self.subTest(signal=number), tempfile.TemporaryDirectory() as directory, \
+                 mock.patch.object(capture, "capture", return_value=result), \
+                 mock.patch.object(capture, "report_copy", side_effect=inject), contextlib.redirect_stdout(output):
+                destination = Path(directory) / "report.json"
+                self.assertEqual(capture.main(["--output", str(destination)]), 128 + number)
+                self.assertEqual(json.loads(destination.read_text()), result)
+                self.assertEqual(json.loads(output.getvalue()), {"observed": 1, "http_200": 1, "failures": []})
+
+    def test_source_return_handoff_retains_completed_real_healthy_row(self):
+        for optimized in (False, True):
+            for number in (signal.SIGTERM, signal.SIGINT):
+                with self.subTest(optimized=optimized, signal=number):
+                    self.source_case(number, optimized, handoff=True)
+
+    @unittest.skipUnless(os.environ.get("T10_NGINX_BINARY"), "explicit local Nginx binary required")
+    def test_nginx_return_handoff_retains_completed_network_report(self):
+        import contextlib
+        for number in (signal.SIGTERM, signal.SIGINT):
+            triggered = False
+            def trace_return(frame, event, arg):
+                nonlocal triggered
+                if not triggered and frame.f_code is PROBE.run_local.__code__ and event == "return" and isinstance(arg, dict):
+                    triggered = True
+                    os.kill(os.getpid(), number)
+                return trace_return
+            output, previous = io.StringIO(), sys.gettrace()
+            try:
+                sys.settrace(trace_return)
+                with self.subTest(signal=number), contextlib.redirect_stdout(output):
+                    code = PROBE.main(["--nginx-binary", os.environ["T10_NGINX_BINARY"]])
+            finally:
+                sys.settrace(previous)
+            report = json.loads(output.getvalue())
+            self.assertTrue(triggered)
+            self.assertEqual(code, 128 + number)
+            self.assertEqual(len(report["result"]["checks"]), 12)
+            self.assertTrue(all(report["cleanup"].values()))
+            self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+
+    def test_docker_command_boundary_return_handoff_retains_result_and_cleanup(self):
+        import contextlib
+        for number in (signal.SIGTERM, signal.SIGINT):
+            fake = FakeDocker()
+            def command(*args, **kwargs):
+                if args[0] == "exec" and args[-1] == "probe":
+                    return SimpleNamespace(stdout=json.dumps({"checks": [{"name": "modeled-complete", "passed": True}]}), stderr="")
+                return fake(*args, **kwargs)
+            triggered = False
+            def trace_return(frame, event, arg):
+                nonlocal triggered
+                if not triggered and frame.f_code is PROBE.run.__code__ and event == "return" and isinstance(arg, dict):
+                    triggered = True
+                    os.kill(os.getpid(), number)
+                return trace_return
+            output, previous = io.StringIO(), sys.gettrace()
+            try:
+                sys.settrace(trace_return)
+                with self.subTest(signal=number), mock.patch.object(PROBE, "docker", side_effect=command), contextlib.redirect_stdout(output):
+                    code = PROBE.main([])
+            finally:
+                sys.settrace(previous)
+            report = json.loads(output.getvalue())
+            self.assertTrue(triggered)
+            self.assertEqual(code, 128 + number)
+            self.assertEqual(report["result"]["checks"][0]["name"], "modeled-complete")
+            self.assertEqual(len(report["cleanup"]), 2)
+            self.assertEqual(fake.containers, {})
+            self.assertEqual(report["failure"]["signal"], signal.Signals(number).name)
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

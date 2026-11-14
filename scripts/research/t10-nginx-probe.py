@@ -10,8 +10,6 @@ import threading
 import json
 import os
 import signal
-import select
-import stat
 import sys
 import re
 from pathlib import Path
@@ -27,7 +25,6 @@ PYTHON = "sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc7
 
 
 MAX_DIAGNOSTIC_BYTES = 64 * 1024
-REPORT_STDOUT_SECONDS = 2.0
 
 HANDSHAKE_REJECTIONS = {
     "strip-upgrade": "HTTP/1.1 426 Upgrade Required",
@@ -235,10 +232,13 @@ def run(control=None):
     backend, proxy = token + "-backend", token + "-proxy"
     label = "guildboard.t10.probe=" + token
     intended = []
-    report = {"observed_at": datetime.now(timezone.utc).isoformat(), "host": platform.platform(),
+    report = {}
+    if _cancellation_state is not None:
+        _cancellation_state["report"] = report
+    report.update({"observed_at": datetime.now(timezone.utc).isoformat(), "host": platform.platform(),
               "host_python": platform.python_version(), "images": {"nginx": NGINX, "python": PYTHON},
               "resource_scope": {"network": "network=none backend; nginx shares its owned network namespace", "published_ports": [], "mounts": [],
-                                 "per_container": "0.5 CPU / 128MiB / 64 PIDs / nonroot / read-only / cap-drop ALL"}}
+                                 "per_container": "0.5 CPU / 128MiB / 64 PIDs / nonroot / read-only / cap-drop ALL"}})
     try:
         for image in (NGINX, PYTHON):
             docker("image", "inspect", image)  # No pulls or installs; fail if absent.
@@ -326,6 +326,8 @@ def run_local(nginx_binary, control=None):
     spec.loader.exec_module(fixture)
     server = thread = proxy = errors = temporary_directory = None
     report = {}
+    if _cancellation_state is not None:
+        _cancellation_state["report"] = report
     try:
         # Keep acquisition and handle registration in one deferred-signal phase.
         with owned_cleanup(report):
@@ -358,7 +360,7 @@ def run_local(nginx_binary, control=None):
         path = root / "nginx.conf"
         with owned_cleanup(report):
             path.write_text(config)
-        report = {"observed_at": datetime.now(timezone.utc).isoformat(),
+        report.update({"observed_at": datetime.now(timezone.utc).isoformat(),
                   "tested_sha": run_owned_command(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, capture_output=True, check=True).stdout.strip(),
                   "host": platform.platform(), "host_python": platform.python_version(),
                   "scope": "local loopback Nginx processes; no TLS/Discord/GoDaddy acceptance",
@@ -366,7 +368,7 @@ def run_local(nginx_binary, control=None):
                   "nginx_version": run_owned_command([binary, "-V"], capture_output=True, text=True, check=True).stderr.strip(),
                   "control": control,
                   "fixture_hashes": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in
-                                     (ROOT / "scripts/research/t10-nginx-probe.py", ROOT / "scripts/research/t10-proxy-fixture.py", ROOT / "docs/research/t10-nginx-probe.conf")}}
+                                     (ROOT / "scripts/research/t10-nginx-probe.py", ROOT / "scripts/research/t10-proxy-fixture.py", ROOT / "docs/research/t10-nginx-probe.conf")}})
         checked = run_owned_command([binary, "-p", temporary + "/", "-c", str(path), "-t"], capture_output=True, text=True, check=True)
         report["nginx_config_check"] = checked.stderr.strip()
         with owned_cleanup(report):
@@ -440,119 +442,15 @@ def run_local(nginx_binary, control=None):
     return report
 
 
-def report_notice(message):
-    # Diagnostics are best effort: a full stderr pipe must not hold cancellation.
-    try:
-        descriptor = sys.stderr.fileno()
-    except (AttributeError, OSError, ValueError):
-        try:
-            print(message, file=sys.stderr)
-        except (OSError, ValueError):
-            pass
-        return
-    if os.name != "posix":
-        try:
-            print(message, file=sys.stderr)
-        except (OSError, ValueError):
-            pass
-        return
-    try:
-        blocking = os.get_blocking(descriptor)
-        try:
-            os.set_blocking(descriptor, False)
-            os.write(descriptor, (message + "\n").encode("utf-8", errors="replace"))
-        finally:
-            os.set_blocking(descriptor, blocking)
-    except (OSError, ValueError):
-        pass
-
-
-def write_regular_report(path, output):
-    # Do not let a FIFO/device (including a symlink to one) block publication
-    # while signals are deferred. Inspect the opened object before truncating.
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | getattr(os, "O_NONBLOCK", 0), 0o600)
-    try:
-        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
-            raise ValueError("probe report destination must be a regular file")
-        os.ftruncate(descriptor, 0)
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
-            descriptor = None
-            stream.write(output)
-    finally:
-        if descriptor is not None:
-            os.close(descriptor)
-
-
-def report_copy(output, output_path):
-    requested_ok = True
-    if output_path is not None:
-        try:
-            write_regular_report(output_path, output)
-            return output_path, False, requested_ok
-        except (OSError, ValueError) as error:
-            requested_ok = False
-            report_notice("Cannot write probe report: " + str(error))
-    descriptor, name = tempfile.mkstemp(prefix="guildboard-t10-report-", suffix=".json")
-    path, stream = Path(name), None
-    try:
-        stream = os.fdopen(descriptor, "w", encoding="utf-8", newline="\n")
-        with stream:
-            stream.write(output)
-    except BaseException:
-        if stream is None:
-            os.close(descriptor)
-        try:
-            path.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise
-    return path, True, requested_ok
-
-
-def write_report_stdout(output):
-    try:
-        descriptor = sys.stdout.fileno()
-    except (AttributeError, OSError, ValueError):
-        # In-memory test/library streams have no descriptor or pipe backpressure.
-        sys.stdout.write(output)
-        sys.stdout.flush()
-        return
-    if os.name != "posix":
-        sys.stdout.write(output)
-        sys.stdout.flush()
-        return
-    blocking = os.get_blocking(descriptor)
-    try:
-        os.set_blocking(descriptor, False)
-        sys.stdout.flush()
-        pending = memoryview(output.encode("utf-8"))
-        deadline = time.monotonic() + REPORT_STDOUT_SECONDS
-        while pending:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0 or not select.select([], [descriptor], [], max(0, remaining))[1]:
-                raise TimeoutError("probe stdout report publication deadline exceeded")
-            try:
-                written = os.write(descriptor, pending)
-            except BlockingIOError:
-                continue
-            if written <= 0:
-                raise BrokenPipeError("probe stdout accepted no report bytes")
-            pending = pending[written:]
-    finally:
-        os.set_blocking(descriptor, blocking)
-
-
-def discard_stdout_buffer():
-    # An interrupted TextIOWrapper flush must not block again at interpreter exit.
-    try:
-        descriptor = sys.stdout.fileno()
-        sink = os.open(os.devnull, os.O_WRONLY)
-        try:
-            os.dup2(sink, descriptor)
-        finally:
-            os.close(sink)
-    except (AttributeError, OSError, ValueError):
-        pass
+_publication_spec = importlib.util.spec_from_file_location(
+    "t10_report_publication", Path(__file__).with_name("t10-report-publication.py"))
+_publication = importlib.util.module_from_spec(_publication_spec)
+_publication_spec.loader.exec_module(_publication)
+report_notice = _publication.report_notice
+report_copy = _publication.report_copy
+write_report_stdout = _publication.write_report_stdout
+discard_stdout_buffer = _publication.discard_stdout_buffer
+REPORT_STDOUT_SECONDS = _publication.REPORT_STDOUT_SECONDS
 
 
 def emit_report(report, output_path=None):
@@ -613,7 +511,7 @@ def main(argv=None):
             try:
                 report = run_local(args.nginx_binary, args.negative_control) if args.nginx_binary else run(args.negative_control)
             except Exception as error:
-                report = getattr(error, "report", report)
+                report = getattr(error, "report", state.get("report", report))
                 report.setdefault("failure", failure_record(error))
                 if isinstance(error, ExperimentCancelled):
                     report["cancellation"] = failure_record(error)
@@ -621,6 +519,7 @@ def main(argv=None):
             if not emit_report(report, args.output):
                 exit_code = 1
         except ExperimentCancelled as error:
+            report = getattr(error, "report", state.get("report", report))
             # A first signal between experiment handling and publication has not
             # emitted bytes. Already-delivered signals cannot interrupt staging.
             report["cancellation"] = failure_record(error)

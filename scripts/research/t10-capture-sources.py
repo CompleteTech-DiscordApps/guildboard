@@ -1,6 +1,7 @@
 """Record public primary-response metadata, not a platform verification result."""
 import argparse
 import contextlib
+import importlib.util
 import signal
 from datetime import datetime, timezone
 import http.client
@@ -12,6 +13,18 @@ import time
 from pathlib import Path
 import urllib.request
 import urllib.error
+
+_publication_spec = importlib.util.spec_from_file_location(
+    "t10_report_publication", Path(__file__).with_name("t10-report-publication.py"))
+_publication = importlib.util.module_from_spec(_publication_spec)
+_publication_spec.loader.exec_module(_publication)
+report_notice = _publication.report_notice
+report_copy = _publication.report_copy
+write_report_stdout = _publication.write_report_stdout
+discard_stdout_buffer = _publication.discard_stdout_buffer
+REPORT_STDOUT_SECONDS = _publication.REPORT_STDOUT_SECONDS
+
+
 
 SOURCES = [
     ("godaddy-vps", "https://www.godaddy.com/hosting/vps-hosting"),
@@ -52,20 +65,21 @@ def cancellation_signals():
     """Deliver the first catchable signal outside owned worker cleanup."""
     global _cancellation_state
     previous, previous_state = {}, _cancellation_state
-    state = {"signal": None, "delivered": False, "cleanup_depth": 0}
+    state = {"signal": None, "delivered": False, "cleanup_depth": 0, "publication_depth": 0}
     _cancellation_state = state
     def cancel(signum, _frame):
         if state["signal"] is None:
             state["signal"] = signum
-        if not state["delivered"] and not state["cleanup_depth"]:
+        if not state["delivered"] and not state["cleanup_depth"] and not state["publication_depth"]:
             state["delivered"] = True
             raise ExperimentCancelled(state["signal"])
     try:
         for signum in (signal.SIGINT, signal.SIGTERM):
             previous[signum] = signal.getsignal(signum)
             signal.signal(signum, cancel)
-        yield
+        yield state
     finally:
+        state["delivered"] = True
         for signum, handler in previous.items():
             signal.signal(signum, handler)
         _cancellation_state = previous_state
@@ -149,7 +163,10 @@ def fetch_worker(url):
 
 
 def capture():
-    observations = []
+    report = {"kind": "public-response-observation-not-account-or-content-attestation", "sources": []}
+    if _cancellation_state is not None:
+        _cancellation_state["report"] = report
+    observations = report["sources"]
     row = None
     deadline = time.monotonic() + COLLECTION_SECONDS
     try:
@@ -166,9 +183,56 @@ def capture():
         if row is not None and (not observations or observations[-1] is not row):
             row.update(error=str(error), cancelled=True)
             observations.append(row)
-        error.report = {"kind": "public-response-observation-not-account-or-content-attestation", "sources": observations}
+        error.report = report
         raise
-    return {"kind": "public-response-observation-not-account-or-content-attestation", "sources": observations}
+    return report
+
+
+def emit_source_report(result, output_path):
+    state = _cancellation_state
+    snapshot, automatic, requested_ok = None, False, True
+    try:
+        if state is not None:
+            state["publication_depth"] += 1
+        try:
+            complete = json.dumps(result, indent=2) + "\n"
+            try:
+                snapshot, automatic, requested_ok = report_copy(
+                    complete, output_path, label="source", prefix="guildboard-t10-source-report-")
+            except (OSError, ValueError) as error:
+                requested_ok = False
+                report_notice("Cannot stage source report recovery copy: " + str(error))
+            if "failure" in result or not requested_ok:
+                output = complete
+            else:
+                output = json.dumps({"observed": len(result["sources"]),
+                                     "http_200": sum(row.get("status") == 200 for row in result["sources"]),
+                                     "failures": [row["id"] for row in result["sources"] if "error" in row]}) + "\n"
+            if state is not None and state["signal"] is not None and not state["delivered"]:
+                # Preserve the frozen complete snapshot; final status records a
+                # late signal without appending a replacement JSON to stdout.
+                state["delivered"] = True
+        finally:
+            if state is not None:
+                state["publication_depth"] -= 1
+        write_report_stdout(output)
+    except (ExperimentCancelled, OSError, ValueError) as error:
+        discard_stdout_buffer()
+        if snapshot is not None:
+            report_notice("Source report recovery: " + json.dumps({"path": str(snapshot), "reason": str(error)}))
+        else:
+            report_notice("Source report unavailable after publication failure: " + str(error))
+        return False
+    finally:
+        if state is not None:
+            state["delivered"] = True
+    if automatic and snapshot is not None:
+        try:
+            snapshot.unlink()
+        except OSError as error:
+            report_notice("Cannot remove completed source recovery copy: " + str(error))
+            return False
+    return requested_ok
 
 
 def main(argv=None):
@@ -176,26 +240,25 @@ def main(argv=None):
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args(argv)
     result = {"kind": "public-response-observation-not-account-or-content-attestation", "sources": []}
-    with cancellation_signals():
+    exit_code = 0
+    with cancellation_signals() as state:
         try:
-            result = capture()
             try:
-                args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
-            except (OSError, ValueError) as error:
-                print(json.dumps(result, indent=2))
-                print("Cannot write source report: " + str(error), file=sys.stderr)
-                return 1
-            print(json.dumps({"observed": len(result["sources"]), "http_200": sum(row.get("status") == 200 for row in result["sources"]), "failures": [row["id"] for row in result["sources"] if "error" in row]}))
-            return 0
+                result = capture()
+            except ExperimentCancelled as error:
+                result = getattr(error, "report", state.get("report", result))
+                result["failure"] = {"type": type(error).__name__, "detail": str(error), "signal": error.signal_name}
+                exit_code = 1
+            if not emit_source_report(result, args.output):
+                exit_code = 1
         except ExperimentCancelled as error:
-            result = getattr(error, "report", result)
+            result = getattr(error, "report", state.get("report", result))
             result["failure"] = {"type": type(error).__name__, "detail": str(error), "signal": error.signal_name}
-            print(json.dumps(result, indent=2))
-            try:
-                args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
-            except (OSError, ValueError) as output_error:
-                print("Cannot write source report: " + str(output_error), file=sys.stderr)
-            return error.exit_code
+            emit_source_report(result, args.output)
+            exit_code = 1
+        finally:
+            state["delivered"] = True
+    return 128 + state["signal"] if state["signal"] is not None else exit_code
 
 
 if __name__ == "__main__":
