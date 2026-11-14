@@ -1,0 +1,78 @@
+{
+  "observed_date_utc": "2026-10-25",
+  "base_commit": "da811252acc975a0e5a1b087ab653b523443f3fa",
+  "python": "3.14.3",
+  "result": "finite-model-tests-passed",
+  "tests": 16,
+  "replay_positional_permutations": 720,
+  "replay_unique_value_sequences": 90,
+  "files_sha256": {
+    "research-fixtures/collaboration/model.py": "8a55115c5535d24fc060e79280e9a730b44025fb4dc99e5c3dcd278b5dc7d78e",
+    "research-fixtures/collaboration/test_model.py": "1e70ae44aec86ee894758e4c221f3597fe2a48bc951cc878ab27d65c816bc8b8"
+  },
+  "limitations": [
+    "Sequential scalar model; atomicity assumed, not implemented by a database",
+    "No real authorization, Excalidraw, browser, network, Discord or GoDaddy tests",
+    "No production implementation or accepted specification",
+    "Snapshot and real persistence/crash behavior unimplemented",
+    "Toy restore clears receipts; #481 retired-lineage receipt retention and replay precedence are not modeled"
+  ],
+  "initial_observation": {
+    "observed_date_utc": "2026-10-24",
+    "python": "3.12.14",
+    "tests": 15,
+    "files_sha256": {
+      "research-fixtures/collaboration/model.py": "6f27a4fee48a9371b055c37aa39e19c60eca3e1835d5867c45e8ce835cab6a8a",
+      "research-fixtures/collaboration/test_model.py": "ff1d81f12fdaa4f89ccb871fd1460743409c3c695af39656a0435c49a9a55e24"
+    }
+  },
+  "observed_at_utc": "2026-10-25T23:42:46.587552+00:00",
+  "platform": "Windows",
+  "replay_four_revision_permutations": 24,
+  "review_remediation": {
+    "base_commit": "0bfdf0e976ffbe3de3cf22b5280b863db15e72fc",
+    "finding": "https://github.com/CompleteTech-DiscordApps/guildboard/pull/484#discussion_r4372942614",
+    "gap_closing_regression": [
+      2,
+      3,
+      4,
+      1
+    ],
+    "pre_fix_failing_schedules": 6,
+    "pending_event_limit": 3,
+    "out_of_order_overflow_result": "SNAPSHOT_REQUIRED with no replica state change",
+    "compared_proposed_contract_commit": "19d5f5a35511a1edf3a8bd34773fbb4d57546b89",
+    "cross_restore_receipt_behavior": "not implemented; toy clears receipts and checks lineage before lookup",
+    "commands": [
+      "python -m unittest discover -s research-fixtures/collaboration -v",
+      "python scripts/github-bootstrap/validate.py",
+      "git diff --check"
+    ]
+  },
+  "followup_observations": [
+    {
+      "observed_at_utc": "2026-11-13T02:44:45.733205+00:00",
+      "tested_commit": "3de06ef8c8e675b13f8fa38f79026bcc4f3dac1e",
+      "main_integrated": "c108b552a660e12a3b3998e1e1ad944fbd7a894d",
+      "python": "3.14.8",
+      "platform": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+      "tests": 17,
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s research-fixtures/collaboration -v",
+      "exit_code": 0,
+      "raw_result": "test_atomic_compound_rolls_back_first_valid_change (test_model.Experiment.test_atomic_compound_rolls_back_first_valid_change) ... ok\ntest_auth_denials_no_side_effects (test_model.Experiment.test_auth_denials_no_side_effects) ... ok\ntest_compound_success_one_revision (test_model.Experiment.test_compound_success_one_revision) ... ok\ntest_conflicting_pending_event_detected (test_model.Experiment.test_conflicting_pending_event_detected) ... ok\ntest_delete_tombstone_stale_undo_no_resurrection (test_model.Experiment.test_delete_tombstone_stale_undo_no_resurrection) ... ok\ntest_distinct_elements_all_orders (test_model.Experiment.test_distinct_elements_all_orders) ... ok\ntest_duplicate_invalid_and_oversized_compounds (test_model.Experiment.test_duplicate_invalid_and_oversized_compounds) ... ok\ntest_full_buffer_applies_gap_closing_revision_and_drains_all_orders (test_model.Experiment.test_full_buffer_applies_gap_closing_revision_and_drains_all_orders) ... ok\ntest_gap_and_bounded_overflow_require_recovery (test_model.Experiment.test_gap_and_bounded_overflow_require_recovery) ... ok\ntest_idempotency_unknown_commit_retry (test_model.Experiment.test_idempotency_unknown_commit_retry) ... ok\ntest_replay_all_720_duplicate_and_reorder_schedules (test_model.Experiment.test_replay_all_720_duplicate_and_reorder_schedules) ... ok\ntest_restore_fences_uncommitted_and_foreign_receipt_retries (test_model.Experiment.test_restore_fences_uncommitted_and_foreign_receipt_retries) ... ok\ntest_restore_retains_historical_unknown_outcome_without_reapplying (test_model.Experiment.test_restore_retains_historical_unknown_outcome_without_reapplying) ... ok\ntest_same_element_conflict_all_orders (test_model.Experiment.test_same_element_conflict_all_orders) ... ok\ntest_scoped_actor_identity (test_model.Experiment.test_scoped_actor_identity) ... ok\ntest_serialized_revoke_schedules_and_receipt (test_model.Experiment.test_serialized_revoke_schedules_and_receipt) ... ok\ntest_whole_document_last_write_wins_loses_independent_edit (test_model.Experiment.test_whole_document_last_write_wins_loses_independent_edit) ... ok\n\n----------------------------------------------------------------------\nRan 17 tests in 0.148s\n\nOK\n",
+      "files_sha256": {
+        "research-fixtures/collaboration/model.py": "7307fa33e72ebe80f4240721a5b65099f6e4a0fae07b79e947fa8f8e26802433",
+        "research-fixtures/collaboration/test_model.py": "169cb32497eba535aee861f2a14307939854df2ffd99d6649d21263b783d8158"
+      },
+      "regression_before": {
+        "model_commit": "e5fbefe91e402fc361910e57e643702af245727a",
+        "new_regressions_failing": 2,
+        "observations": [
+          "Historical lost-ack retry returned LINEAGE_CHANGED",
+          "Old receipt disappeared after restore"
+        ]
+      },
+      "scope": "Provisional sequential scalar model only. Current auth/read checks precede retired receipt lookup. Historical acceptance does not reapply restored content. No SQL/network/storage or client reconciliation proof; historical evidence above is unchanged."
+    }
+  ]
+}
