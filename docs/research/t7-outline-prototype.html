@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Board outline — accessibility research</title>
+<style>
+  :root { color-scheme:light; font-family:Georgia,serif; color:#172c33; background:#f7f5ee; }
+  * { box-sizing:border-box; } body { margin:0; } a { color:#064e73; }
+  button,input,textarea { font:inherit; font-family:Verdana,sans-serif; }
+  button,input,textarea { min-height:44px; min-width:44px; border:2px solid #53666b; border-radius:3px; }
+  button { padding:10px 14px; color:#172c33; background:#fff; cursor:pointer; }
+  button:hover { background:#e6f0f2; } button:disabled { cursor:default; opacity:.65; }
+  button[aria-current=true],button.primary { color:#fff; background:#153e4b; }
+  :focus-visible { outline:3px solid #005bd1; outline-offset:3px; }
+  .skip { position:absolute; left:12px; top:-80px; padding:14px; background:white; z-index:5; }
+  .skip:focus { top:10px; } header,main,footer { max-width:1100px; margin:auto; padding:24px; }
+  header { border-bottom:3px solid #172c33; } .eyebrow { font:700 .8rem Verdana,sans-serif; letter-spacing:.1em; }
+  h1 { font-size:clamp(2.2rem,6vw,4rem); line-height:1.05; margin:14px 0; }
+  h2 { font-size:1.5rem; } p,li { line-height:1.55; } .notice { max-width:70ch; }
+  .workspace { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); gap:30px; }
+  section { min-width:0; } ol { padding-left:26px; } li { margin:12px 0; }
+  li button { width:100%; text-align:left; overflow-wrap:anywhere; }
+  .object-detail { display:block; font-size:.85rem; margin-top:6px; }
+  label { display:block; font:700 .9rem Verdana,sans-serif; margin:16px 0 6px; }
+  input,textarea { width:100%; padding:10px; background:white; color:#172c33; }
+  .coordinates { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .feedback { border-left:5px solid #a23e00; padding:10px 16px; background:#fff; min-height:70px; }
+  #error { color:#8b1727; font-weight:bold; } .lab { border-top:2px solid #53666b; margin-top:28px; }
+  .lab-buttons { display:flex; flex-wrap:wrap; gap:10px; } small { font: .85rem Verdana,sans-serif; }
+  dialog { max-width:34rem; width:calc(100% - 32px); color:#172c33; border:3px solid #172c33; padding:24px; }
+  dialog::backdrop { background:#172c33aa; }
+  @media(max-width:650px) { .workspace { grid-template-columns:1fr; } header,main,footer { padding:18px; } }
+  @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+  @media(forced-colors:active) { button[aria-current=true] { border:3px solid Highlight; } .feedback { border-color:CanvasText; } }
+</style>
+<a class="skip" href="#objects">Skip to objects</a>
+<header>
+  <p class="eyebrow">GUILDBOARD / RESEARCH FIXTURE</p>
+  <h1>Board outline</h1>
+  <p class="notice">Select a named object, then edit its text or position without dragging.
+    This local prototype simulates permissions and acknowledgments. Changes stay in this page.</p>
+  <button id="help">Keyboard guide</button>
+</header>
+<main>
+  <p id="permission" tabindex="-1">Writer verified in local fixture.</p>
+  <div class="workspace">
+    <section aria-labelledby="objects" tabindex="-1" id="object-section">
+      <h2 id="objects" tabindex="-1">Objects in reading order</h2>
+      <p>Two text objects. Coordinates describe their visual positions; reading order is listed separately.</p>
+      <ol id="object-list"></ol>
+    </section>
+    <section aria-labelledby="editor-heading">
+      <h2 id="editor-heading">Edit Kickoff note</h2>
+      <form id="editor" novalidate>
+        <label for="object-text">Object text</label>
+        <textarea id="object-text" rows="3" maxlength="200" required></textarea>
+        <div class="coordinates">
+          <div><label for="object-x">Horizontal position</label><input id="object-x" type="number" min="0" max="1000" step="1" required></div>
+          <div><label for="object-y">Vertical position</label><input id="object-y" type="number" min="0" max="1000" step="1" required></div>
+        </div>
+        <p><small id="limits">Positions: 0–1000 local units. Text: 1–200 characters. No drag gesture is needed.</small></p>
+        <p id="error" role="alert"></p>
+        <button class="primary" id="queue" type="submit" aria-describedby="limits">Queue local change</button>
+      </form>
+      <p id="status" class="feedback" role="status" aria-live="polite" aria-atomic="true">No pending change.</p>
+    </section>
+  </div>
+  <section class="lab" aria-labelledby="lab-heading">
+    <h2 id="lab-heading" tabindex="-1">Fixture state controls</h2>
+    <p>These controls simulate state transitions; they do not verify server authorization or durable storage.</p>
+    <div class="lab-buttons">
+      <button id="accept">Simulate accepted receipt</button>
+      <button id="reject">Simulate rejection</button>
+      <button id="revoke">Revoke editing</button>
+      <button id="disconnect">Disconnect</button>
+      <button id="reconnect">Reconnect</button>
+      <button id="verify">Verify writer</button>
+    </div>
+  </section>
+</main>
+<footer><small>Freehand, image interpretation, geometry and Excalidraw integration are outside this fixture.</small></footer>
+<dialog id="guide" aria-labelledby="guide-heading">
+  <h2 id="guide-heading">Keyboard editing guide</h2>
+  <p>Use Tab and Shift+Tab to move through native controls. Choose an object, edit the labeled text and numeric fields, then queue the local change.</p>
+  <p>Escape closes this guide. If editing is revoked while the queue or accepted-receipt control has focus, focus moves to the permission explanation. When a focused receipt or rejection control becomes unavailable after a result, focus moves to the fixture state heading.</p>
+  <button id="close-guide" autofocus>Close guide</button>
+</dialog>
+<script>
+  const $ = id => document.getElementById(id);
+  const accepted = [
+    {id:'note-a',name:'Kickoff note',text:'Agree on the board goal.',x:40,y:80},
+    {id:'note-b',name:'Next step',text:'Write the first action.',x:280,y:160}
+  ];
+  let selected = 'note-a', pending = null, connected = true, verified = true, revision = 0;
+  const drafts = new Map();
+  const current = () => accepted.find(object => object.id === selected);
+  const canEdit = () => connected && verified;
+  const say = text => { if($('status').textContent!==text) $('status').textContent = text; };
+  function list() {
+    const focused=$('object-list').contains(document.activeElement)?document.activeElement.dataset.object:null;
+    $('object-list').replaceChildren(...accepted.map(object => {
+      const item = document.createElement('li'), button = document.createElement('button');
+      button.type='button'; button.dataset.object=object.id;
+      button.setAttribute('aria-current',String(object.id===selected));
+      button.textContent=object.name;
+      const detail=document.createElement('span'); detail.className='object-detail';
+      detail.textContent=`Text: ${object.text} Position ${object.x}, ${object.y}. ID ${object.id}.`;
+      button.append(detail); button.addEventListener('click',()=>{
+        selected=object.id; list(); renderFields(); $('object-text').focus();
+      }); item.append(button); return item;
+    }));
+    if(focused) [...$('object-list').querySelectorAll('[data-object]')].find(button=>button.dataset.object===focused)?.focus();
+  }
+  function renderFields() {
+    const object=drafts.get(selected)||current();
+    $('editor-heading').textContent=`Edit ${current().name}`;
+    $('object-text').value=object.text; $('object-x').value=object.x; $('object-y').value=object.y;
+    sync();
+    $('error').textContent=$('editor').checkValidity()&&$('object-text').value.trim()?'':'Enter nonblank text and whole-number positions from 0 to 1000.';
+  }
+  function sync() {
+    for (const id of ['object-text','object-x','object-y']) $(id).readOnly=!canEdit()||pending?.id===selected;
+    const active=document.activeElement;
+    const permissionFocus=!canEdit()&&(active===$('queue')||active===$('accept'));
+    const labFocus=!pending&&(active===$('accept')||active===$('reject'));
+    $('queue').disabled=!canEdit(); $('accept').disabled=!pending||!canEdit();
+    $('reject').disabled=!pending;
+    $('permission').textContent=!connected?'Disconnected; editing unavailable.':verified?
+      'Writer verified in local fixture.':'Editing unavailable; writer verification required.';
+    if(permissionFocus) $('permission').focus();
+    else if(labFocus) $('lab-heading').focus();
+  }
+  for(const id of ['object-text','object-x','object-y']) $(id).addEventListener('input',()=>{
+    if(!canEdit()||pending?.id===selected)return;
+    drafts.set(selected,{...current(),text:$('object-text').value,x:$('object-x').value,y:$('object-y').value});
+    if($('editor').checkValidity()&&$('object-text').value.trim()) $('error').textContent='';
+    say('Local draft changed; not queued or accepted.');
+  });
+  $('editor').addEventListener('submit',event=>{
+    event.preventDefault(); if(!canEdit()) { say('Editing unavailable; draft preserved.'); return; }
+    if(pending&&pending.id!==selected) { say('Resolve the other pending object before queuing this change.'); return; }
+    if(!$('editor').checkValidity()||!$('object-text').value.trim()) {
+      $('error').textContent='Enter nonblank text and whole-number positions from 0 to 1000.';
+      $('editor').reportValidity(); return;
+    }
+    $('error').textContent='';
+    const draft={...current(),text:$('object-text').value,x:Number($('object-x').value),y:Number($('object-y').value)};
+    drafts.set(selected,draft); pending=draft;
+    say('Change pending; no accepted receipt.'); sync();
+  });
+  $('accept').addEventListener('click',()=>{
+    if(!pending||!canEdit())return;
+    Object.assign(accepted.find(object=>object.id===pending.id),pending);
+    drafts.delete(pending.id); pending=null; revision++;
+    list(); say(`Local fixture accepted revision ${revision}; no network durability was tested.`); sync();
+  });
+  $('reject').addEventListener('click',()=>{if(!pending)return;pending=null;say('Change rejected; local draft preserved.');sync();});
+  $('revoke').addEventListener('click',()=>{verified=false;say('Editing revoked; unconfirmed draft preserved.');sync();});
+  $('disconnect').addEventListener('click',()=>{connected=false;verified=false;say('Disconnected; change outcome remains unconfirmed.');sync();});
+  $('reconnect').addEventListener('click',()=>{connected=true;verified=false;say('Connected; awaiting writer verification and reconciliation.');sync();});
+  $('verify').addEventListener('click',()=>{if(!connected)return;verified=true;say('Writer verified in fixture; pending outcome is still unconfirmed.');sync();});
+  $('help').addEventListener('click',()=>$('guide').showModal());
+  $('close-guide').addEventListener('click',()=>$('guide').close());
+  $('guide').addEventListener('keydown',event=>{
+    if(event.key==='Tab') { event.preventDefault(); $('close-guide').focus(); }
+  });
+  $('guide').addEventListener('close',()=>$('help').focus());
+  window.fixtureState=()=>structuredClone({accepted,pending,connected,verified,revision});
+  list();renderFields();
+</script>
+</html>

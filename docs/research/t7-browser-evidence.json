@@ -1,0 +1,694 @@
+{
+  "browser_result": {
+    "browser": "149.0.7827.22",
+    "checks": [
+      {
+        "details": null,
+        "name": "keyboard skip link is first focus stop",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "skip link moves focus to object heading",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "dialog moves focus inside",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "dialog keeps Tab inside",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "Escape closes dialog and restores trigger focus",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "named object selection focuses labeled text field",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "keyboard queues change without accepting content",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "pending status is semantic and does not steal focus",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "revoke preserves pending draft and blocks local acceptance",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "reconnect does not optimistically restore writer",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "rejection leaves accepted content unchanged and draft available",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "explicit fixture receipt alone promotes queued text and position",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "invalid coordinate has an error and no accepted effect",
+        "result": "pass"
+      },
+      {
+        "details": {
+          "minimumControlHeight": 44,
+          "minimumControlWidth": 108.5,
+          "scrollWidth": 320,
+          "width": 320
+        },
+        "name": "synthetic viewport 320x640 reflows controls",
+        "result": "pass"
+      },
+      {
+        "details": {
+          "minimumControlHeight": 44,
+          "minimumControlWidth": 108.5,
+          "scrollWidth": 360,
+          "width": 360
+        },
+        "name": "synthetic viewport 360x640 reflows controls",
+        "result": "pass"
+      },
+      {
+        "details": {
+          "minimumControlHeight": 44,
+          "minimumControlWidth": 108.5,
+          "scrollWidth": 390,
+          "width": 390
+        },
+        "name": "synthetic viewport 390x844 reflows controls",
+        "result": "pass"
+      },
+      {
+        "details": {
+          "minimumControlHeight": 44,
+          "minimumControlWidth": 108.5,
+          "scrollWidth": 768,
+          "width": 768
+        },
+        "name": "synthetic viewport 768x1024 reflows controls",
+        "result": "pass"
+      },
+      {
+        "details": {
+          "minimumControlHeight": 44,
+          "minimumControlWidth": 108.5,
+          "scrollWidth": 1024,
+          "width": 1024
+        },
+        "name": "synthetic viewport 1024x768 reflows controls",
+        "result": "pass"
+      },
+      {
+        "details": {
+          "minimumControlHeight": 44,
+          "minimumControlWidth": 108.5,
+          "scrollWidth": 1280,
+          "width": 1280
+        },
+        "name": "synthetic viewport 1280x720 reflows controls",
+        "result": "pass"
+      },
+      {
+        "details": {
+          "minimumControlHeight": 44,
+          "minimumControlWidth": 108.5,
+          "scrollWidth": 320,
+          "width": 320
+        },
+        "name": "synthetic viewport 320x256 reflows controls",
+        "result": "pass"
+      },
+      {
+        "details": {
+          "minimumControlHeight": 44,
+          "minimumControlWidth": 108.5,
+          "scrollWidth": 568,
+          "width": 568
+        },
+        "name": "synthetic viewport 568x320 reflows controls",
+        "result": "pass"
+      },
+      {
+        "details": null,
+        "name": "reduced-motion and forced-colors CSS branches available in emulation",
+        "result": "pass"
+      },
+      {
+        "details": {
+          "correctedDraft": {
+            "acceptedUnchanged": true,
+            "alert": "",
+            "clearsAlert": true,
+            "fields": {
+              "text": "Accessible next action",
+              "x": "123",
+              "y": "160"
+            },
+            "fieldsMatch": true,
+            "focus": "object-x",
+            "focusMatches": true,
+            "formValid": true,
+            "notQueuedOrAccepted": true,
+            "pendingUnchanged": true,
+            "revisionUnchanged": true,
+            "selected": [
+              "note-b"
+            ],
+            "selectionMatches": true,
+            "status": "Local draft changed; not queued or accepted.",
+            "statusUnchanged": true
+          },
+          "initialInvalidDraft": {
+            "acceptedUnchanged": true,
+            "alert": "Enter nonblank text and whole-number positions from 0 to 1000.",
+            "fields": {
+              "text": "Accessible next action",
+              "x": "1001",
+              "y": "160"
+            },
+            "fieldsMatch": true,
+            "focus": "object-x",
+            "focusMatches": true,
+            "formValid": false,
+            "pendingUnchanged": true,
+            "revisionUnchanged": true,
+            "selected": [
+              "note-b"
+            ],
+            "selectionMatches": true,
+            "status": "Local draft changed; not queued or accepted.",
+            "statusUnchanged": true
+          },
+          "returnedInvalidDraft": {
+            "acceptedUnchanged": true,
+            "alert": "Enter nonblank text and whole-number positions from 0 to 1000.",
+            "fields": {
+              "text": "Accessible next action",
+              "x": "1001",
+              "y": "160"
+            },
+            "fieldsMatch": true,
+            "focus": "object-text",
+            "focusMatches": true,
+            "formValid": false,
+            "pendingUnchanged": true,
+            "revisionUnchanged": true,
+            "selected": [
+              "note-b"
+            ],
+            "selectionMatches": true,
+            "status": "Local draft changed; not queued or accepted.",
+            "statusUnchanged": true
+          },
+          "validSelection": {
+            "acceptedUnchanged": true,
+            "alert": "",
+            "clearsUnrelatedStaleAlert": true,
+            "fields": {
+              "text": "Agree on the board goal.",
+              "x": "40",
+              "y": "80"
+            },
+            "fieldsMatch": true,
+            "focus": "object-text",
+            "focusMatches": true,
+            "formValid": true,
+            "pendingUnchanged": true,
+            "revisionUnchanged": true,
+            "selected": [
+              "note-a"
+            ],
+            "selectionMatches": true,
+            "status": "Local draft changed; not queued or accepted.",
+            "statusUnchanged": true
+          }
+        },
+        "name": "correcting input clears stale error without claiming acceptance",
+        "result": "pass"
+      }
+    ],
+    "evidence_kind": "local-headless-browser-fixture-only",
+    "limitations": [
+      "No real Discord iframe/client",
+      "No screen reader or human review",
+      "No Excalidraw integration",
+      "Local state simulations, no server authorization/durability",
+      "Viewport/input emulation is not hardware acceptance"
+    ],
+    "result": "pass",
+    "viewports": [
+      {
+        "height": 640,
+        "minimumControlHeight": 44,
+        "minimumControlWidth": 108.5,
+        "scrollWidth": 320,
+        "width": 320
+      },
+      {
+        "height": 640,
+        "minimumControlHeight": 44,
+        "minimumControlWidth": 108.5,
+        "scrollWidth": 360,
+        "width": 360
+      },
+      {
+        "height": 844,
+        "minimumControlHeight": 44,
+        "minimumControlWidth": 108.5,
+        "scrollWidth": 390,
+        "width": 390
+      },
+      {
+        "height": 1024,
+        "minimumControlHeight": 44,
+        "minimumControlWidth": 108.5,
+        "scrollWidth": 768,
+        "width": 768
+      },
+      {
+        "height": 768,
+        "minimumControlHeight": 44,
+        "minimumControlWidth": 108.5,
+        "scrollWidth": 1024,
+        "width": 1024
+      },
+      {
+        "height": 720,
+        "minimumControlHeight": 44,
+        "minimumControlWidth": 108.5,
+        "scrollWidth": 1280,
+        "width": 1280
+      },
+      {
+        "height": 256,
+        "minimumControlHeight": 44,
+        "minimumControlWidth": 108.5,
+        "scrollWidth": 320,
+        "width": 320
+      },
+      {
+        "height": 320,
+        "minimumControlHeight": 44,
+        "minimumControlWidth": 108.5,
+        "scrollWidth": 568,
+        "width": 568
+      }
+    ]
+  },
+  "browser_sandbox": "Cached image entrypoint explicitly uses --no-sandbox; not production isolation evidence.",
+  "checks_sha256": "e19c07abf83791d91cca2a255e964e587ca7262828ba743186e3701e6efb8a18",
+  "container": "guildboard-t7-e6ec60519090",
+  "context": "desktop-linux",
+  "image": "mcp/playwright@sha256:8771dc4666e7c11440bfc6a0c6b00480e9a15b8891b45f29a52d7d995f8d1492",
+  "limits": {
+    "cpus": 1,
+    "host_mounts": false,
+    "memory_mib": 768,
+    "network": "none",
+    "pids": 256
+  },
+  "mcp_server": {
+    "name": "Playwright",
+    "version": "1.61.0-alpha-1781023400000"
+  },
+  "observed_at_utc": "2026-10-26T01:39:55.988846+00:00",
+  "owned_container_absent": true,
+  "prototype_sha256": "cdca74ee8c2be0f55a49b0c0c1a9eb6f118475a33c0da6b89b385f4a273073aa",
+  "result": "pass",
+  "screenshot_sha256": "a0095e451e82a6fa0dc015bf54db00266912c0e96db4f3643dbaf2172114618f",
+  "campaign_verifications": [
+    {
+      "docker_harness": {
+        "browser_sandbox": "Cached image entrypoint explicitly uses --no-sandbox; not production isolation evidence.",
+        "checks_sha256": "e19c07abf83791d91cca2a255e964e587ca7262828ba743186e3701e6efb8a18",
+        "cleanup_note": "No container process was started; preflight failed.",
+        "command_stderr": "permission denied while trying to connect to the docker API at unix:///var/run/docker.sock\n",
+        "container": "guildboard-t7-c90ddd8c58d1",
+        "context": "default",
+        "environment": {
+          "platform": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+          "python": "3.14.8"
+        },
+        "error": "Command '['docker', '--context', 'default', 'image', 'inspect', 'mcp/playwright@sha256:8771dc4666e7c11440bfc6a0c6b00480e9a15b8891b45f29a52d7d995f8d1492']' returned non-zero exit status 1.",
+        "error_type": "CalledProcessError",
+        "image": "mcp/playwright@sha256:8771dc4666e7c11440bfc6a0c6b00480e9a15b8891b45f29a52d7d995f8d1492",
+        "limits": {
+          "cpus": 1,
+          "host_mounts": false,
+          "memory_mib": 768,
+          "network": "none",
+          "pids": 256
+        },
+        "observed_at_utc": "2026-11-13T02:44:40.908783+00:00",
+        "owned_container_absent": true,
+        "prototype_sha256": "cdca74ee8c2be0f55a49b0c0c1a9eb6f118475a33c0da6b89b385f4a273073aa",
+        "result": "blocked-or-failed",
+        "tested_head": "07f3e25575b9a3a89704a9f7835a846ba3664bce"
+      },
+      "local_browser_fallback": {
+        "observed_at": "2026-11-13T02:44:47.690Z",
+        "tested_head": "07f3e25575b9a3a89704a9f7835a846ba3664bce",
+        "environment": "Arch Linux, Node 26.13.0, system Chromium, Playwright 1.56.1, sandbox enabled; not original Docker harness",
+        "result": "pass",
+        "evidence_kind": "local-headless-browser-fixture-only",
+        "browser": "155.0.8059.84",
+        "checks": [
+          {
+            "name": "keyboard skip link is first focus stop",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "skip link moves focus to object heading",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "dialog moves focus inside",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "dialog keeps Tab inside",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "Escape closes dialog and restores trigger focus",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "named object selection focuses labeled text field",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "keyboard queues change without accepting content",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "pending status is semantic and does not steal focus",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "revoke preserves pending draft and blocks local acceptance",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "reconnect does not optimistically restore writer",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "rejection leaves accepted content unchanged and draft available",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "explicit fixture receipt alone promotes queued text and position",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "invalid coordinate has an error and no accepted effect",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "synthetic viewport 320x640 reflows controls",
+            "result": "pass",
+            "details": {
+              "width": 320,
+              "scrollWidth": 320,
+              "minimumControlWidth": 108.5,
+              "minimumControlHeight": 44
+            }
+          },
+          {
+            "name": "synthetic viewport 360x640 reflows controls",
+            "result": "pass",
+            "details": {
+              "width": 360,
+              "scrollWidth": 360,
+              "minimumControlWidth": 108.5,
+              "minimumControlHeight": 44
+            }
+          },
+          {
+            "name": "synthetic viewport 390x844 reflows controls",
+            "result": "pass",
+            "details": {
+              "width": 390,
+              "scrollWidth": 390,
+              "minimumControlWidth": 108.5,
+              "minimumControlHeight": 44
+            }
+          },
+          {
+            "name": "synthetic viewport 768x1024 reflows controls",
+            "result": "pass",
+            "details": {
+              "width": 768,
+              "scrollWidth": 768,
+              "minimumControlWidth": 108.5,
+              "minimumControlHeight": 44
+            }
+          },
+          {
+            "name": "synthetic viewport 1024x768 reflows controls",
+            "result": "pass",
+            "details": {
+              "width": 1024,
+              "scrollWidth": 1024,
+              "minimumControlWidth": 108.5,
+              "minimumControlHeight": 44
+            }
+          },
+          {
+            "name": "synthetic viewport 1280x720 reflows controls",
+            "result": "pass",
+            "details": {
+              "width": 1280,
+              "scrollWidth": 1280,
+              "minimumControlWidth": 108.5,
+              "minimumControlHeight": 44
+            }
+          },
+          {
+            "name": "synthetic viewport 320x256 reflows controls",
+            "result": "pass",
+            "details": {
+              "width": 320,
+              "scrollWidth": 320,
+              "minimumControlWidth": 108.5,
+              "minimumControlHeight": 44
+            }
+          },
+          {
+            "name": "synthetic viewport 568x320 reflows controls",
+            "result": "pass",
+            "details": {
+              "width": 568,
+              "scrollWidth": 568,
+              "minimumControlWidth": 108.5,
+              "minimumControlHeight": 44
+            }
+          },
+          {
+            "name": "reduced-motion and forced-colors CSS branches available in emulation",
+            "result": "pass",
+            "details": null
+          },
+          {
+            "name": "correcting input clears stale error without claiming acceptance",
+            "result": "pass",
+            "details": {
+              "initialInvalidDraft": {
+                "selected": [
+                  "note-b"
+                ],
+                "fields": {
+                  "text": "Accessible next action",
+                  "x": "1001",
+                  "y": "160"
+                },
+                "focus": "object-x",
+                "formValid": false,
+                "alert": "Enter nonblank text and whole-number positions from 0 to 1000.",
+                "status": "Local draft changed; not queued or accepted.",
+                "selectionMatches": true,
+                "fieldsMatch": true,
+                "focusMatches": true,
+                "acceptedUnchanged": true,
+                "revisionUnchanged": true,
+                "pendingUnchanged": true,
+                "statusUnchanged": true
+              },
+              "validSelection": {
+                "selected": [
+                  "note-a"
+                ],
+                "fields": {
+                  "text": "Agree on the board goal.",
+                  "x": "40",
+                  "y": "80"
+                },
+                "focus": "object-text",
+                "formValid": true,
+                "alert": "",
+                "status": "Local draft changed; not queued or accepted.",
+                "selectionMatches": true,
+                "fieldsMatch": true,
+                "focusMatches": true,
+                "acceptedUnchanged": true,
+                "revisionUnchanged": true,
+                "pendingUnchanged": true,
+                "statusUnchanged": true,
+                "clearsUnrelatedStaleAlert": true
+              },
+              "returnedInvalidDraft": {
+                "selected": [
+                  "note-b"
+                ],
+                "fields": {
+                  "text": "Accessible next action",
+                  "x": "1001",
+                  "y": "160"
+                },
+                "focus": "object-text",
+                "formValid": false,
+                "alert": "Enter nonblank text and whole-number positions from 0 to 1000.",
+                "status": "Local draft changed; not queued or accepted.",
+                "selectionMatches": true,
+                "fieldsMatch": true,
+                "focusMatches": true,
+                "acceptedUnchanged": true,
+                "revisionUnchanged": true,
+                "pendingUnchanged": true,
+                "statusUnchanged": true
+              },
+              "correctedDraft": {
+                "selected": [
+                  "note-b"
+                ],
+                "fields": {
+                  "text": "Accessible next action",
+                  "x": "123",
+                  "y": "160"
+                },
+                "focus": "object-x",
+                "formValid": true,
+                "alert": "",
+                "status": "Local draft changed; not queued or accepted.",
+                "selectionMatches": true,
+                "fieldsMatch": true,
+                "focusMatches": true,
+                "acceptedUnchanged": true,
+                "revisionUnchanged": true,
+                "pendingUnchanged": true,
+                "statusUnchanged": true,
+                "clearsAlert": true,
+                "notQueuedOrAccepted": true
+              }
+            }
+          }
+        ],
+        "viewports": [
+          {
+            "width": 320,
+            "height": 640,
+            "scrollWidth": 320,
+            "minimumControlWidth": 108.5,
+            "minimumControlHeight": 44
+          },
+          {
+            "width": 360,
+            "height": 640,
+            "scrollWidth": 360,
+            "minimumControlWidth": 108.5,
+            "minimumControlHeight": 44
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "scrollWidth": 390,
+            "minimumControlWidth": 108.5,
+            "minimumControlHeight": 44
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "scrollWidth": 768,
+            "minimumControlWidth": 108.5,
+            "minimumControlHeight": 44
+          },
+          {
+            "width": 1024,
+            "height": 768,
+            "scrollWidth": 1024,
+            "minimumControlWidth": 108.5,
+            "minimumControlHeight": 44
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "scrollWidth": 1280,
+            "minimumControlWidth": 108.5,
+            "minimumControlHeight": 44
+          },
+          {
+            "width": 320,
+            "height": 256,
+            "scrollWidth": 320,
+            "minimumControlWidth": 108.5,
+            "minimumControlHeight": 44
+          },
+          {
+            "width": 568,
+            "height": 320,
+            "scrollWidth": 568,
+            "minimumControlWidth": 108.5,
+            "minimumControlHeight": 44
+          }
+        ],
+        "limitations": [
+          "No real Discord iframe/client",
+          "No screen reader or human review",
+          "No Excalidraw integration",
+          "Local state simulations, no server authorization/durability",
+          "Viewport/input emulation is not hardware acceptance"
+        ],
+        "screenshot_sha256": "dcf0d4a098d3aa01f060bfb106ac4e8a8a05da8791387c92462f6f2698a7a7db"
+      },
+      "preflight_regressions": {
+        "missing_docker": "pass",
+        "missing_cached_image": "pass",
+        "failed_process_launch": "pass"
+      },
+      "limitation": "System-browser fallback is separate from the unavailable original Docker harness; no real Discord, AT, touch/stylus, human usability or server authorization/durability acceptance."
+    }
+  ]
+}
