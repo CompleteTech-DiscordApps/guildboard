@@ -164,10 +164,14 @@ simulated role/receipt controls are **not backend enforcement or durable saves**
 this is agent visual inspection, not human accessibility review.
 
 ```sh
-python scripts/research/t7-browser-probe.py --output docs/research/t7-browser-evidence.json
+python scripts/research/t7-browser-probe.py --output /tmp/guildboard-t7-recheck/evidence.json
 python scripts/github-bootstrap/validate.py
 git diff --check
 ```
+
+The probe writes its screenshot beside the requested report, with `.png` appended
+to the report filename. It stages the copy before atomic publication, leaving the
+historical screenshot intact. Use a separate output path for each observation.
 
 The [probe](../../scripts/research/t7-browser-probe.py) uses an already-cached
 immutable `mcp/playwright` image through its own Docker MCP stdio session, not a

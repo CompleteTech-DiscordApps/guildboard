@@ -1,5 +1,6 @@
 """Failure-report regressions; no Docker daemon or browser is required."""
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -143,6 +144,90 @@ class CliStartupReports(unittest.TestCase):
 
     def test_cli_missing_browser_checks(self):
         self.assertEqual(self.run_cli_failure('missing-checks')['error_type'], 'FileNotFoundError')
+
+
+class CliScreenshotPublication(unittest.TestCase):
+    def exercise(self, fail_copy):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            script = root / 'scripts/research/t7-browser-probe.py'
+            script.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'scripts/research/t7-browser-probe.py', script)
+            for relative in ('docs/research/t7-outline-prototype.html', 'tests/research/t7-browser-checks.js'):
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('fixture')
+            historical = root / 'docs/research/t7-fixture.png'
+            historical.write_bytes(b'historical evidence')
+            output = root / 'out/evidence.json'
+            output.parent.mkdir()
+            screenshot = output.with_name(output.name + '.png')
+            screenshot.write_bytes(b'previous evidence')
+            fake_bin = root / 'bin'
+            fake_bin.mkdir()
+            git = fake_bin / 'git'
+            git.write_text('#!' + sys.executable + "\nprint('fixture-head')\n")
+            git.chmod(0o755)
+            docker = fake_bin / 'docker'
+            docker.write_text('#!' + sys.executable + "\n" + r"""
+import json, os, pathlib, sys
+args = sys.argv[1:]
+with open(os.environ['FAKE_LOG'], 'a') as log:
+    log.write(json.dumps(args) + '\n')
+if args == ['context', 'show']:
+    print('test-context')
+elif 'image' in args:
+    pass
+elif 'run' in args:
+    for line in sys.stdin:
+        request = json.loads(line)
+        if 'id' not in request:
+            continue
+        method = request['method']
+        result = ({'serverInfo': {'name': 'fake'}} if method == 'initialize' else
+                  {'tools': [{'name': 'browser_run_code'}]} if method == 'tools/list' else
+                  {'content': [{'type': 'text', 'text': '### Result\n{"result":"pass"}'}]})
+        print(json.dumps({'id': request['id'], 'result': result}), flush=True)
+elif 'cp' in args:
+    pathlib.Path(args[-1]).write_bytes(b'partial' if os.environ['FAIL_COPY'] == '1' else b'new screenshot')
+    if os.environ['FAIL_COPY'] == '1':
+        print('copy failed', file=sys.stderr)
+        sys.exit(1)
+elif 'inspect' in args:
+    sys.exit(1)
+elif 'ps' in args:
+    pass
+else:
+    sys.exit(2)
+""")
+            docker.chmod(0o755)
+            env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+            env.update(PATH=str(fake_bin), FAKE_LOG=str(root / 'docker.log'), FAIL_COPY=str(int(fail_copy)))
+            result = subprocess.run([sys.executable, str(script), '--output', str(output)],
+                                    cwd=root, env=env, capture_output=True, text=True, timeout=20)
+            report = json.loads(output.read_text())
+            self.assertEqual(result.returncode, int(fail_copy), result.stderr)
+            self.assertEqual(historical.read_bytes(), b'historical evidence')
+            self.assertEqual(screenshot.read_bytes(), b'previous evidence' if fail_copy else b'new screenshot')
+            self.assertEqual(list(output.parent.glob('.t7-screenshot-*')), [])
+            self.assertTrue(report['owned_container_absent'])
+            calls = [json.loads(line) for line in (root / 'docker.log').read_text().splitlines()]
+            self.assertTrue(any('container' in call and 'inspect' in call for call in calls))
+            self.assertTrue(any('ps' in call for call in calls))
+            if fail_copy:
+                self.assertEqual(report['stage'], 'screenshot-copy')
+                self.assertEqual(report['result'], 'blocked-or-failed')
+                self.assertNotIn('screenshot_sha256', report)
+            else:
+                self.assertEqual(report['result'], 'pass')
+                self.assertEqual(report['screenshot_path'], str(screenshot))
+                self.assertEqual(report['screenshot_sha256'], hashlib.sha256(b'new screenshot').hexdigest())
+
+    def test_partial_copy_preserves_existing_evidence(self):
+        self.exercise(True)
+
+    def test_success_publishes_new_screenshot(self):
+        self.exercise(False)
 
 
 if __name__ == '__main__':

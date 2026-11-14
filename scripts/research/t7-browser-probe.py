@@ -13,6 +13,7 @@ import queue
 import platform
 import subprocess
 import threading
+import tempfile
 import uuid
 
 
@@ -91,9 +92,16 @@ def main() -> int:
         report['browser_result']=json.loads(payload)
         if report['browser_result'].get('result')!='pass': raise RuntimeError('browser result failed')
         report['stage']='screenshot-copy'
-        target=root/'docs/research/t7-fixture.png'
-        subprocess.run([*docker,'cp',name+':/tmp/guildboard-t7-fixture.png',str(target)],check=True,capture_output=True,timeout=15)
-        report['screenshot_sha256']=hashlib.sha256(target.read_bytes()).hexdigest()
+        target=args.output.with_name(args.output.name+'.png')
+        target.parent.mkdir(parents=True,exist_ok=True)
+        # Stage on the destination filesystem, then publish only after a complete copy.
+        with tempfile.TemporaryDirectory(prefix='.t7-screenshot-',dir=target.parent) as staging:
+            staged=Path(staging)/'screenshot.png'
+            subprocess.run([*docker,'cp',name+':/tmp/guildboard-t7-fixture.png',str(staged)],check=True,capture_output=True,timeout=15)
+            screenshot_sha256=hashlib.sha256(staged.read_bytes()).hexdigest()
+            staged.replace(target)
+        report['screenshot_path']=str(target)
+        report['screenshot_sha256']=screenshot_sha256
         report['result']='pass'
     except Exception as error:
         failed=True;report.update(result='blocked-or-failed',error_type=type(error).__name__,error=str(error)[:4000])
