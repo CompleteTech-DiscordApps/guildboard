@@ -262,7 +262,7 @@ claim or dependency pin is implied.
 | --- | --- | --- |
 | S1 | [Google SRE Workbook, Implementing SLOs](https://sre.google/workbook/implementing-slos/) | 2018 workbook, current online chapter; user-focused good/total indicators and iterative adoption. |
 | S2 | [Google SRE Workbook, Alerting on SLOs](https://sre.google/workbook/alerting-on-slos/) | 2018 workbook, current online chapter; multiwindow burn rates and low-traffic limitations. |
-| S3 | [Google SRE Book, Handling Overload](https://sre.google/sre-book/handling-overload/) | 2016 book, current online chapter; bounded queues and overload handling. |
+| S3 | [Google SRE Book, Addressing Cascading Failures: Queue Management](https://sre.google/sre-book/addressing-cascading-failures/#xref_cascading-failure_queue-management) | 2016 book, current online chapter; queue sizing and overload handling. |
 | S4 | [MySQL 8.4 PITR](https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery.html) and [backup policy](https://dev.mysql.com/doc/refman/8.4/en/backup-policy.html) | 8.4 manual, not an 8.4.11 execution here; restore base plus incremental changes and recovery planning. |
 | S5 | [MariaDB full backup and restore](https://mariadb.com/docs/server/server-usage/backup-and-restore/mariadb-backup/full-backup-and-restore-with-mariadb-backup) | Rolling manual; compatible backup/prepare tools, prepared physical consistency, empty isolated restore destination. MariaDB 11.4.13 remains a T5 provisional evaluation input only. |
 | S6 | [Prometheus metric and label naming](https://prometheus.io/docs/practices/naming/) | Rolling practices page, no Prometheus binary installed/evaluated; finite label dimensions. |
