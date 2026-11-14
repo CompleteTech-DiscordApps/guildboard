@@ -209,11 +209,18 @@ def unique_object(pairs):
     return result
 
 
+def open_report_directory(path):
+    """Pin a Linux directory without requiring directory read permission."""
+    if not hasattr(os, 'O_PATH') or not hasattr(os, 'O_DIRECTORY'):
+        raise OSError('pinned report directories require Linux O_PATH and O_DIRECTORY')
+    return os.open(path, os.O_PATH | os.O_DIRECTORY)
+
+
 def save_report(path, report, directory_fd=None):
     """Stage and replace relative to a pinned directory descriptor."""
     own_fd = directory_fd is None
     if own_fd:
-        directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        directory_fd = open_report_directory(path.parent)
     temporary = None
     try:
         while True:
@@ -257,7 +264,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     directory_fd = None
     try:
-        directory_fd = os.open(args.report.parent, os.O_RDONLY | os.O_DIRECTORY)
+        directory_fd = open_report_directory(args.report.parent)
         # Linux procfs resolves through the held directory, even if its original
         # pathname is subsequently retargeted. Fail closed if unavailable.
         anchored_parent = Path('/proc/self/fd') / str(directory_fd)

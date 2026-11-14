@@ -341,6 +341,24 @@ class CliTests(unittest.TestCase):
                     proc.kill()
                     proc.communicate()
 
+    @unittest.skipUnless(hasattr(os, 'O_PATH') and hasattr(os, 'geteuid') and os.geteuid() != 0,
+                         'requires unprivileged Linux user')
+    def test_cli_writes_to_searchable_writable_directory_without_read_permission(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'output'
+            output.mkdir(mode=0o300)
+            report = output / 'report.json'
+            try:
+                proc = subprocess.run([sys.executable, str(SCRIPTS / 'validate.py'),
+                                       '--report', str(report)], capture_output=True,
+                                      text=True, timeout=30)
+                self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+                self.assertEqual(json.loads(report.read_text()), json.loads(proc.stdout))
+                self.assertEqual(json.loads(proc.stdout)['result'], 'pass')
+            finally:
+                output.chmod(0o700)
+            self.assertEqual(list(output.iterdir()), [report])
+
     def test_concurrent_cli_publication(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
