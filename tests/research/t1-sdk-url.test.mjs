@@ -19,8 +19,27 @@ test('preserves WSS protocol while rewriting a configured target', () => {
   assert.equal(rewrite('wss://backend.example.test/socket'), `wss://${proxyHost}/api/socket`);
 });
 
-test('unrelated target remains unchanged rather than being denied by helper', () => {
+test('this unrelated URL remains unchanged rather than being denied by helper', () => {
   assert.equal(rewrite('https://unrelated.invalid/path'), 'https://unrelated.invalid/path');
+});
+
+// Characterize the pinned helper's regex matching, not browser or proxy behavior.
+test('rewrites a lookalike hostname matched by unescaped target dots', () => {
+  assert.equal(rewrite('https://backend-example-test/boards'), `https://${proxyHost}/api/boards`);
+});
+
+test('rewrites a subdomain containing the configured hostname', () => {
+  assert.equal(rewrite('https://sub.backend.example.test/boards'), `https://${proxyHost}/api/boards`);
+});
+
+test('rewrites an unrelated host when its path contains the target', () => {
+  assert.equal(rewrite('https://unrelated.invalid/backend.example.test/boards'),
+    `https://${proxyHost}/api/backend.example.test/boards`);
+});
+
+test('rewrites an unrelated host when its query contains the target', () => {
+  assert.equal(rewrite('https://unrelated.invalid/path?next=https://backend.example.test/boards'),
+    `https://${proxyHost}/api/path?next=https://backend.example.test/boards`);
 });
 
 test('resolves explicit relative URL against supplied proxy origin', () => {

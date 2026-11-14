@@ -121,7 +121,7 @@ def main() -> int:
         report["node_version"] = subprocess.check_output(["node", "--version"], text=True).strip()
         report["url_helper_tests"] = {"exit_code": result.returncode, "count": len(names),
                                       "names": names, "tap_output": result.stdout}
-        report["result"] = "pass" if result.returncode == 0 and len(names) == 8 else "fail"
+        report["result"] = "pass" if result.returncode == 0 and len(names) == 12 else "fail"
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes((json.dumps(report, indent=2, sort_keys=True) + "\n").encode())
     print("SDK 2.5.0 pin/declarations checked; URL utility tests: " + report["result"])

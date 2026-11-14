@@ -87,8 +87,13 @@ arbitrary user-supplied URLs. Production stays on the mandatory GoDaddy Linux VP
 Prefer explicit mapped same-origin paths. Evaluate `patchUrlMappings` only for
 dependencies whose requests cannot be routed explicitly; it changes fetch,
 WebSocket and XHR globals and may affect third-party behavior. The executed URL
-helper leaves unrelated URLs unchanged; **it is not an allowlist or permission
-filter**. CSP/proxy behavior and backend authentication must still be tested.
+helper left one unrelated URL unchanged, but that observation does not generalize.
+In the pinned 2.5.0 helper, an unescaped, unanchored regular expression derived
+from the target host is matched against the whole URL string. Local tests show
+rewrites for a lookalike hostname, a subdomain, and unrelated hosts with the
+target text in the path or query. **It is not an allowlist or permission filter**.
+Test these cases before any global patch adoption; CSP/proxy behavior and backend
+authentication must still be tested independently.
 Inventory fonts/images/workers/imports/exports and all WSS/HTTP paths, including
 their direct public-origin paths, rather than assuming all traffic is protected
 by proxy traversal. D3 documents exceptions to the general proxy description.
@@ -189,7 +194,7 @@ Fetch the fixed public artifact into an automatically cleaned temporary director
 and run from repo root:
 
 ```sh
-python scripts/research/t1-sdk-probe.py --download --output docs/research/t1-sdk-evidence.json
+python scripts/research/t1-sdk-probe.py --download --output t1-sdk-evidence-rerun.json
 python scripts/github-bootstrap/validate.py
 git diff --check
 ```
@@ -201,10 +206,15 @@ selected members without generic extraction, and pins the executed module's hash
 `0865df06e3742aa4cf7092f95c7a1519c09ddd45126f8af9bf6afaaa3aee7038`.
 Windows PowerShell/Python 3.14.3 and Node v24.18.0: all **eight actual helper tests
 passed**—HTTPS/query/fragment rewrite, WSS, relative path, target parameter,
-unrelated target unchanged, and malformed input/target/incomplete-parameter
-negative cases. TAP names/results are in the artifact report; timings/dates can
-vary on rerun. These results do not verify CSP, portal mappings, cookie behavior,
+one unrelated URL unchanged, and malformed input/target/incomplete-parameter
+negative cases. TAP names/results are in the historical artifact report; timings
+and dates can vary on rerun. These results do not verify CSP, portal mappings, cookie behavior,
 PKCE enforcement, authorization or any live client.
+
+The expanded suite adds four characterization cases for the matching limitations
+above. Run the same probe to obtain its 12-test TAP report; the committed
+[t1-sdk-evidence.json](t1-sdk-evidence.json) remains the original eight-test
+historical run and is not overwritten by the reproduction command.
 
 Local evidence checks confirmed 14 successful official-document observations,
 registry/artifact integrity agreement, candidate membership scope literals and
@@ -232,7 +242,7 @@ is performed to manufacture evidence.
 | #34 scope | Observable research evidence | Still-open real acceptance |
 | --- | --- | --- |
 | Launch/lifecycle | D1/D3/D5, dated review and failure plan | Registered-app entry point and interaction launch; ready/close/reconnect on exact clients |
-| Proxy/mappings | D2/D3, eight local pinned-helper tests | Portal/CSP/proxy cookies/HTTPS/WSS and exact GoDaddy origin/mapping behavior |
+| Proxy/mappings | D2/D3, historical and expanded local pinned-helper tests | Portal/CSP/proxy cookies/HTTPS/WSS and exact GoDaddy origin/mapping behavior |
 | OAuth/scopes | D6/D7/O1, actual 2.5.0 declarations and least-scope alternatives | Transaction/state/PKCE binding and error/replay/renewal tests against Discord |
 | Guild/channel trust | D8–D12, nullable declarations and authority matrix | Two-guild REST/bot permission/freshness/revocation tests; stronger launch/presence proof if required |
 | Desktop/browser/mobile | D4–D6 support observations and explicit versioned matrix | Actual OS/client/browser/device versions and completed positive/negative scenarios |
