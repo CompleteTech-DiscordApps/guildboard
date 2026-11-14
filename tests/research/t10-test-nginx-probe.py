@@ -228,15 +228,25 @@ class LocalSetupCleanupRegression(unittest.TestCase):
                 threads.append(thread)
                 return thread
             error = RuntimeError("injected setup failure")
+            commands = []
+            def run_command(args, **kwargs):
+                commands.append(args)
+                if (failing == "git-metadata" and args[0] == "git") or (failing == "nginx-version" and args[1:] == ["-V"]):
+                    raise error
+                return subprocess.CompletedProcess(args, 0, stdout="test-sha", stderr="version")
             with self.subTest(failing=failing):
                 try:
                     with mock.patch.object(PROBE.http.server, "ThreadingHTTPServer", side_effect=make_server), \
                          mock.patch.object(PROBE.threading, "Thread", side_effect=make_thread), \
-                         mock.patch.object(PROBE.subprocess, "check_output", side_effect=error if failing == "git-metadata" else None, return_value="test-sha"), \
-                         mock.patch.object(PROBE.subprocess, "run", side_effect=error), \
+                         mock.patch.object(PROBE.subprocess, "run", side_effect=run_command), \
                          mock.patch.object(PROBE.tempfile, "TemporaryDirectory", side_effect=error if failing == "temporary-directory" else PROBE.tempfile.TemporaryDirectory):
                         with self.assertRaisesRegex(RuntimeError, "injected setup failure"):
                             PROBE.run_local(__file__)
+                    if failing == "git-metadata":
+                        self.assertEqual([args[0] for args in commands], ["git"])
+                    elif failing == "nginx-version":
+                        self.assertEqual(commands[0][0], "git")
+                        self.assertEqual(commands[-1][1:], ["-V"])
                     self.assertTrue(servers)
                     self.assertEqual(servers[0].socket.fileno(), -1)
                     self.assertTrue(all(not thread.is_alive() for thread in threads))
@@ -1798,6 +1808,74 @@ raise SystemExit(code)
                         else:
                             self.assertEqual(output["observed"], 1)
                             self.assertEqual(report["sources"], [{"id": "ok", "status": 200}])
+
+
+@unittest.skipUnless(os.name == "posix", "requires POSIX signals")
+class CriticalEntryRegression(unittest.TestCase):
+    def modules(self):
+        spec = importlib.util.spec_from_file_location("entry_capture", ROOT / "scripts/research/t10-capture-sources.py")
+        capture = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(capture)
+        return (PROBE, capture)
+
+    def test_first_and_repeat_signal_at_cleanup_entry_finish_body(self):
+        for module in self.modules():
+            for number in (signal.SIGTERM, signal.SIGINT):
+                triggered, actions = [], []
+                def trace(frame, event, arg):
+                    if not triggered and event == "line" and frame.f_code is module.owned_cleanup.__wrapped__.__code__:
+                        triggered.append(True)
+                        os.kill(os.getpid(), number)
+                        os.kill(os.getpid(), signal.SIGINT if number == signal.SIGTERM else signal.SIGTERM)
+                    return trace
+                with self.subTest(module=module.__name__, signal=number):
+                    previous = sys.gettrace()
+                    try:
+                        with module.cancellation_signals() as state:
+                            sys.settrace(trace)
+                            with self.assertRaises(module.ExperimentCancelled) as caught:
+                                context = module.owned_cleanup({}) if module is PROBE else module.owned_cleanup()
+                                with context:
+                                    actions.append("closed")
+                            sys.settrace(previous)
+                        self.assertTrue(triggered)
+                        self.assertEqual(actions, ["closed"])
+                        self.assertEqual(caught.exception.signum, number)
+                        self.assertEqual(state["signal"], number)
+                    finally:
+                        sys.settrace(previous)
+
+    def test_signal_at_staging_entry_retains_completed_report(self):
+        import ast
+        import contextlib
+        import tempfile
+        for module in self.modules():
+            function = module.emit_report if module is PROBE else module.emit_source_report
+            tree = ast.parse(Path(module.__file__).read_text())
+            node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == function.__name__)
+            target = next(n for n in node.body if isinstance(n, ast.Try)).body[0].lineno
+            for number in (signal.SIGTERM, signal.SIGINT):
+                triggered = []
+                def trace(frame, event, arg):
+                    if not triggered and event == "line" and frame.f_code is function.__code__ and frame.f_lineno == target:
+                        triggered.append(True)
+                        os.kill(os.getpid(), number)
+                    return trace
+                result = {"result": "complete"} if module is PROBE else {"kind": "fixture", "sources": [{"id": "ok", "status": 200}]}
+                with self.subTest(module=module.__name__, signal=number), tempfile.TemporaryDirectory() as directory:
+                    destination = Path(directory) / "report.json"
+                    output, previous = io.StringIO(), sys.gettrace()
+                    patch = mock.patch.object(module, "run" if module is PROBE else "capture", return_value=result)
+                    try:
+                        with patch, contextlib.redirect_stdout(output):
+                            sys.settrace(trace)
+                            code = module.main(["--output", str(destination)])
+                    finally:
+                        sys.settrace(previous)
+                    self.assertTrue(triggered)
+                    self.assertEqual(code, 128 + number)
+                    self.assertEqual(json.loads(destination.read_text()), result)
+                    json.loads(output.getvalue())
 
 
 if __name__ == "__main__":

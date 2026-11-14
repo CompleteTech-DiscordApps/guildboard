@@ -70,7 +70,18 @@ def cancellation_signals():
     def cancel(signum, _frame):
         if state["signal"] is None:
             state["signal"] = signum
-        if not state["delivered"] and not state["cleanup_depth"] and not state["publication_depth"]:
+        # Do not asynchronously unwind owned-resource lifecycles or an emitter
+        # before its staging guard is active. Their safe checkpoints deliver it.
+        frame = _frame if _frame is not None else sys._getframe(1)
+        protected = False
+        while frame is not None:
+            if frame.f_globals is globals() and (frame.f_code.co_name in ('fetch', 'capture', 'owned_cleanup')
+                    or (frame.f_code.co_name in ("emit_report", "emit_source_report")
+                        and not state["publication_started"])):
+                protected = True
+                break
+            frame = frame.f_back
+        if not protected and not state["delivered"] and not state["cleanup_depth"] and not state["publication_depth"]:
             state["delivered"] = True
             raise ExperimentCancelled(state["signal"])
     try:
@@ -118,7 +129,19 @@ def fetch(url, timeout):
             process = subprocess.Popen([sys.executable, str(Path(__file__).resolve()),
                                        "--fetch-worker", url], stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE, text=True)
-        stdout, stderr = process.communicate(timeout=timeout)
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(process.args, timeout)
+            try:
+                stdout, stderr = process.communicate(timeout=min(remaining, 0.1))
+                break
+            except subprocess.TimeoutExpired:
+                state = _cancellation_state
+                if state is not None and state["signal"] is not None and not state["delivered"]:
+                    state["delivered"] = True
+                    raise ExperimentCancelled(state["signal"])
         if process.returncode:
             raise subprocess.CalledProcessError(process.returncode, process.args, stdout, stderr)
     except subprocess.TimeoutExpired as error:
@@ -247,6 +270,9 @@ def main(argv=None):
         try:
             try:
                 result = capture()
+                if state["signal"] is not None and not state["delivered"]:
+                    state["delivered"] = True
+                    raise ExperimentCancelled(state["signal"])
             except ExperimentCancelled as error:
                 result = getattr(error, "report", state.get("report", result))
                 result["failure"] = {"type": type(error).__name__, "detail": str(error), "signal": error.signal_name}

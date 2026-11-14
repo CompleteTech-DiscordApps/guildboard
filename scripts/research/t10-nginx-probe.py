@@ -123,7 +123,18 @@ def cancellation_signals():
     def cancel(signum, _frame):
         if state["signal"] is None:
             state["signal"] = signum
-        if not state["delivered"] and not state["cleanup_depth"] and not state["publication_depth"]:
+        # Do not asynchronously unwind owned-resource lifecycles or an emitter
+        # before its staging guard is active. Their safe checkpoints deliver it.
+        frame = _frame if _frame is not None else sys._getframe(1)
+        protected = False
+        while frame is not None:
+            if frame.f_globals is globals() and (frame.f_code.co_name in ('run', 'run_local', 'cleanup_owned_containers', 'owned_cleanup')
+                    or (frame.f_code.co_name in ("emit_report", "emit_source_report")
+                        and not state["publication_started"])):
+                protected = True
+                break
+            frame = frame.f_back
+        if not protected and not state["delivered"] and not state["cleanup_depth"] and not state["publication_depth"]:
             state["delivered"] = True
             raise ExperimentCancelled(state["signal"])
     try:
@@ -192,6 +203,10 @@ def create_owned_container(intended, name, *args):
     # The daemon may create the resource before the CLI times out or disconnects.
     intended.append(name)
     docker("create", "--name", name, *args)
+    state = _cancellation_state
+    if state is not None and state["signal"] is not None and not state["delivered"]:
+        state["delivered"] = True
+        raise ExperimentCancelled(state["signal"])
 
 
 def cleanup_owned_containers(intended, token, report):
@@ -512,6 +527,9 @@ def main(argv=None):
         try:
             try:
                 report = run_local(args.nginx_binary, args.negative_control) if args.nginx_binary else run(args.negative_control)
+                if state["signal"] is not None and not state["delivered"]:
+                    state["delivered"] = True
+                    raise ExperimentCancelled(state["signal"])
             except Exception as error:
                 report = getattr(error, "report", state.get("report", report))
                 report.setdefault("failure", failure_record(error))
