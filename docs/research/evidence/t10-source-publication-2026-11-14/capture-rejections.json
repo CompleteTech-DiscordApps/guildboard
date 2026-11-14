@@ -1,0 +1,56 @@
+[
+  {
+    "name": "wrong-before",
+    "optimized": false,
+    "capture_script_sha256": "cad6f9083410e6d9a60576791b883beb6124252b597941ed0c3777dd4352b13d",
+    "exit_code": 1,
+    "success_artifact_exists": false,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 221, in <module>\n    main()\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 180, in main\n    check(git(before, \"rev-parse\", \"HEAD\").decode().strip() == BEFORE, \"wrong before revision\")\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 24, in check\n    raise RuntimeError(message)\nRuntimeError: wrong before revision\n"
+  },
+  {
+    "name": "wrong-tested-source",
+    "optimized": false,
+    "capture_script_sha256": "cad6f9083410e6d9a60576791b883beb6124252b597941ed0c3777dd4352b13d",
+    "exit_code": 1,
+    "success_artifact_exists": false,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 221, in <module>\n    main()\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 184, in main\n    check((repository / path).read_bytes() == expected, \"tested source mismatch: \" + path)\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 24, in check\n    raise RuntimeError(message)\nRuntimeError: tested source mismatch: scripts/research/t10-nginx-probe.py\n"
+  },
+  {
+    "name": "modified-shared-helper",
+    "optimized": false,
+    "capture_script_sha256": "cad6f9083410e6d9a60576791b883beb6124252b597941ed0c3777dd4352b13d",
+    "exit_code": 1,
+    "success_artifact_exists": false,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 221, in <module>\n    main()\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 184, in main\n    check((repository / path).read_bytes() == expected, \"tested source mismatch: \" + path)\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 24, in check\n    raise RuntimeError(message)\nRuntimeError: tested source mismatch: scripts/research/t10-report-publication.py\n"
+  },
+  {
+    "name": "wrong-before",
+    "optimized": true,
+    "capture_script_sha256": "cad6f9083410e6d9a60576791b883beb6124252b597941ed0c3777dd4352b13d",
+    "exit_code": 1,
+    "success_artifact_exists": false,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 221, in <module>\n    main()\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 180, in main\n    check(git(before, \"rev-parse\", \"HEAD\").decode().strip() == BEFORE, \"wrong before revision\")\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 24, in check\n    raise RuntimeError(message)\nRuntimeError: wrong before revision\n"
+  },
+  {
+    "name": "wrong-tested-source",
+    "optimized": true,
+    "capture_script_sha256": "cad6f9083410e6d9a60576791b883beb6124252b597941ed0c3777dd4352b13d",
+    "exit_code": 1,
+    "success_artifact_exists": false,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 221, in <module>\n    main()\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 184, in main\n    check((repository / path).read_bytes() == expected, \"tested source mismatch: \" + path)\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 24, in check\n    raise RuntimeError(message)\nRuntimeError: tested source mismatch: scripts/research/t10-nginx-probe.py\n"
+  },
+  {
+    "name": "modified-shared-helper",
+    "optimized": true,
+    "capture_script_sha256": "cad6f9083410e6d9a60576791b883beb6124252b597941ed0c3777dd4352b13d",
+    "exit_code": 1,
+    "success_artifact_exists": false,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 221, in <module>\n    main()\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 184, in main\n    check((repository / path).read_bytes() == expected, \"tested source mismatch: \" + path)\n  File \"<RECOVERY>/worktrees/pr-497-source-publication/docs/research/evidence/t10-source-publication-2026-11-14/capture.py\", line 24, in check\n    raise RuntimeError(message)\nRuntimeError: tested source mismatch: scripts/research/t10-report-publication.py\n"
+  }
+]

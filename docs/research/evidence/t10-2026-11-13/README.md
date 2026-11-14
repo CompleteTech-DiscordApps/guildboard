@@ -43,3 +43,10 @@ adds complete-snapshot, bounded-stdout and first-signal publication coverage at
 repeated real Nginx baseline/six controls. The earlier bundles did not establish
 first-signal safety during ordinary-failure report publication and remain
 unchanged historical evidence.
+
+[Source-publication and completed-report handoff follow-up](../t10-source-publication-2026-11-14/README.md)
+records 80 normal/optimized tests and real loopback before/fixed cases at
+`9a35817`. Source reports now precede bounded stdout and preserve completed rows
+through return/assignment. The new receipt binds the shared pure I/O helper with
+all other executable/config/test sources. Earlier bundles did not establish this
+source-collector boundary and remain unchanged historical observations.

@@ -537,3 +537,36 @@ are detected. These are new recovered-server observations, not recovery of
 missing private laptop evidence. Older committed bundles remain historical and
 unchanged. Actual GoDaddy HTTPS/WSS, Discord, deployment/recovery, independent
 native approval and fresh complete-candidate review remain open.
+
+### Source-report publication and completed-report handoffs (2026-11-14)
+
+The first publication fix did not cover `t10-capture-sources.py`. Review finding
+`T10-SOURCE-REPORT-CANCEL-2` reproduced a completed healthy row followed by an
+actual slow fetch: cancellation reaped the worker, but a closed stdout lost the
+requested JSON and changed 143/130 to 1 or buffered exit 120; undrained stdout
+could block before the file was written. A separate P3 return-handoff finding
+showed that an actual completed healthy row could be lost if the first signal
+arrived at `capture` return before `main` assigned the returned value.
+
+At executable/helper/test revision
+`9a35817037d5983c7b7faccd5da89cd77f3e7072`, both CLIs use a co-located pure I/O
+helper while retaining separate cancellation state. Source reports are written
+file-first, ordinary stdout summaries remain unchanged, and cancellation/write
+failure publishes full rows only once. Closed or undrained stdout cannot erase
+the complete requested file or overwrite the first signal's status. Regular-file
+checks, bounded POSIX stdout, best-effort stderr and intentional automatic-copy
+retention apply to both CLIs. Per-CLI report references preserve completed
+source/Nginx reports through return/assignment without deferring signals across
+long capture or network work. Late publication signals can be represented by exit
+status rather than mutation of an already frozen report.
+
+[New source evidence](evidence/t10-source-publication-2026-11-14/README.md) records
+80 tests in each Python mode with zero skips, actual healthy/slow loopback
+publication cases, source/Nginx handoff probes, and repeated real local Nginx
+baseline/six controls. Simulated Docker handoff checks remain separate. Exact
+before runs reproduce closed-output/backpressure and lost-row behavior; trace
+handoff injection is not a production/distributed-race proof. Shared helper
+hashes are bound with the other five sources in the new receipt. Prior bundles
+and missing laptop-private evidence remain historical/unrecovered. The earlier
+filesystem, non-POSIX, forced-termination, production, approval and fresh-review
+limits remain open.
