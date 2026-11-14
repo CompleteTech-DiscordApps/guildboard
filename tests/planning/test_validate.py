@@ -244,6 +244,35 @@ class ReportWriteTests(unittest.TestCase):
             self.assertEqual(report.read_text(), previous)
             self.assertEqual(list(Path(directory).iterdir()), [report])
 
+    @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
+    def test_windows_native_rename_failure_preserves_report_and_cleans_stage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / 'report.json'
+            report.write_text('previous')
+            pinned = validator.open_report_directory(root)
+            try:
+                # STATUS_INVALID_PARAMETER exercises the native error path after
+                # a real stage file has been created and written.
+                with mock.patch.object(pinned.nt, 'NtSetInformationFile',
+                                       return_value=-1073741811):
+                    with self.assertRaises(OSError):
+                        validator.save_report(report, {'result': 'pass'}, pinned)
+            finally:
+                pinned.close()
+            self.assertEqual(report.read_text(), 'previous')
+            self.assertEqual(list(root.iterdir()), [report])
+
+    @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
+    def test_windows_native_rename_replaces_unicode_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / 'résultat-報告.json'
+            report.write_text('previous')
+            validator.save_report(report, {'result': 'pass'})
+            self.assertEqual(json.loads(report.read_text()), {'result': 'pass'})
+            self.assertEqual(list(root.iterdir()), [report])
+
     def test_failed_replace_of_directory_cleans_staging(self):
         with tempfile.TemporaryDirectory() as directory:
             report = Path(directory) / 'report.json'

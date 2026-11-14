@@ -235,6 +235,10 @@ class WindowsDirectory:
                                           wintypes.ULONG, wintypes.ULONG, wintypes.ULONG,
                                           wintypes.ULONG, ctypes.c_void_p, wintypes.ULONG]
         self.nt.NtCreateFile.restype = ctypes.c_long
+        self.nt.NtSetInformationFile.argtypes = [wintypes.HANDLE, ctypes.c_void_p,
+                                                   ctypes.c_void_p, wintypes.ULONG,
+                                                   ctypes.c_int]
+        self.nt.NtSetInformationFile.restype = ctypes.c_long
         self.nt.RtlNtStatusToDosError.argtypes = [ctypes.c_long]
         self.nt.RtlNtStatusToDosError.restype = wintypes.ULONG
         self.handle = self.kernel.CreateFileW(str(path), 0x001000a2, 7, None, 3,
@@ -329,7 +333,7 @@ class WindowsDirectory:
                 break
             except OSError as exc:
                 if exc.winerror not in (80, 183):
-                    raise
+                    raise OSError(f'cannot create report stage: {exc}') from exc
         fd = None
         published = False
         try:
@@ -342,7 +346,7 @@ class WindowsDirectory:
                 payload = payload[count:]
             encoded = name.encode('utf-16-le')
             class RenameInfo(c.Structure):
-                _fields_ = [('ReplaceIfExists', w.BOOL), ('RootDirectory', w.HANDLE),
+                _fields_ = [('ReplaceIfExists', c.c_ubyte), ('RootDirectory', w.HANDLE),
                             ('FileNameLength', w.DWORD), ('FileName', w.WCHAR * 1)]
             size = RenameInfo.FileName.offset + len(encoded)
             buffer = c.create_string_buffer(max(size, c.sizeof(RenameInfo)))
@@ -351,8 +355,17 @@ class WindowsDirectory:
             info.RootDirectory = self.handle
             info.FileNameLength = len(encoded)
             c.memmove(c.addressof(buffer) + RenameInfo.FileName.offset, encoded, len(encoded))
-            if not self.kernel.SetFileInformationByHandle(handle, 3, buffer, size):
-                raise c.WinError(c.get_last_error())
+            class IoStatus(c.Structure):
+                _fields_ = [('Status', c.c_void_p), ('Information', c.c_size_t)]
+            ios = IoStatus()
+            # FileRenameInformation (10) preserves RootDirectory. The Win32
+            # FileRenameInfo wrapper returned ERROR_INVALID_PARAMETER on the
+            # hosted Windows runner for this same directory-relative request.
+            status = self.nt.NtSetInformationFile(handle, c.byref(ios), buffer,
+                                                   max(size, c.sizeof(RenameInfo)), 10)
+            if status < 0:
+                error = c.WinError(self.nt.RtlNtStatusToDosError(status))
+                raise OSError(f'cannot rename report stage: {error}') from error
             published = True
         finally:
             if not published:
