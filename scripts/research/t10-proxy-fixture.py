@@ -123,15 +123,40 @@ def request(path, method="GET", body=None, headers=None):
         client.close()
 
 
-def websocket(path, timeout=5):
-    with socket.create_connection(("127.0.0.1", PROXY_PORT), timeout=timeout) as client:
-        client.settimeout(timeout)
+def _websocket_exchange(path, timeout=5):
+    handshake_deadline = time.monotonic() + timeout
+
+    def remaining():
+        budget = handshake_deadline - time.monotonic()
+        if budget <= 0:
+            raise TimeoutError("WebSocket handshake deadline expired")
+        return budget
+
+    with socket.create_connection(("127.0.0.1", PROXY_PORT), timeout=remaining()) as client:
+        client.settimeout(remaining())
         client.sendall((f"GET {path} HTTP/1.1\r\nHost: research.invalid\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n").encode())
         with client.makefile("rb") as stream:
-            status = stream.readline()
+            def handshake_line():
+                # Read at most one byte per operation, resetting the socket to
+                # the remaining TOTAL handshake budget. A slow drip cannot
+                # renew a per-line or per-byte timeout indefinitely.
+                chunks = []
+                size = 0
+                while True:
+                    client.settimeout(remaining())
+                    chunk = stream.readline(1)
+                    remaining()
+                    chunks.append(chunk)
+                    size += len(chunk)
+                    if not chunk or chunk.endswith(b"\n"):
+                        return b"".join(chunks)
+                    if size > 65536:
+                        raise ProbeFailure("websocket-headers", "handshake line too long")
+
+            status = handshake_line()
             headers = {}
             while True:
-                line = stream.readline()
+                line = handshake_line()
                 if line == b"\r\n":
                     break
                 if not line:
@@ -154,8 +179,13 @@ def websocket(path, timeout=5):
                 raise ProbeFailure("websocket-extensions", "unsolicited extensions response")
             if "sec-websocket-protocol" in headers:
                 raise ProbeFailure("websocket-subprotocol", "unsolicited subprotocol response")
+            # Only a fully validated upgrade begins the tunnel's idle phase.
+            # Handshake latency is never evidence of proxy tunnel idleness.
+            idle_started = time.monotonic()
+            client.settimeout(timeout)
             try:
-                return stream.read(1 if path == "/idle" else 7)
+                payload = stream.read(1 if path == "/idle" else 7)
+                return payload, time.monotonic() - idle_started
             except TimeoutError as error:
                 # Only a read AFTER validating the 101 and every upgrade header
                 # proves that the idle tunnel remained open. Connect, request,
@@ -165,10 +195,12 @@ def websocket(path, timeout=5):
                 raise
 
 
+def websocket(path, timeout=5):
+    return _websocket_exchange(path, timeout)[0]
+
+
 def idle_close():
-    started = time.monotonic()
-    payload = websocket("/idle", timeout=IDLE_CLOSE_DEADLINE)
-    elapsed = time.monotonic() - started
+    payload, elapsed = _websocket_exchange("/idle", timeout=IDLE_CLOSE_DEADLINE)
     if payload != b"":
         raise ProbeFailure("idle-upstream-closed")
     if not 1.5 <= elapsed < IDLE_CLOSE_DEADLINE:

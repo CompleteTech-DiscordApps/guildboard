@@ -56,26 +56,79 @@ class FixtureIdleRegression(unittest.TestCase):
         self.assertFalse(thread.is_alive())
 
     def test_expected_proxy_close_is_accepted(self):
-        with mock.patch.object(FIXTURE, "websocket", return_value=b"") as websocket:
-            with mock.patch.object(FIXTURE.time, "monotonic", side_effect=[10, 12]):
-                self.assertEqual(FIXTURE.idle_close(), 2)
-        websocket.assert_called_once_with("/idle", timeout=FIXTURE.IDLE_CLOSE_DEADLINE)
+        with mock.patch.object(FIXTURE, "_websocket_exchange", return_value=(b"", 2)):
+            self.assertEqual(FIXTURE.idle_close(), 2)
 
     def test_late_close_is_not_accepted(self):
-        with mock.patch.object(FIXTURE, "websocket", return_value=b""):
-            with mock.patch.object(FIXTURE.time, "monotonic", side_effect=[10, 14.5]):
-                with self.assertRaisesRegex(AssertionError, "idle-close-within-bounded-window"):
-                    FIXTURE.idle_close()
+        with mock.patch.object(FIXTURE, "_websocket_exchange", return_value=(b"", 4.5)):
+            with self.assertRaisesRegex(AssertionError, "idle-close-within-bounded-window"):
+                FIXTURE.idle_close()
 
     def test_early_close_is_not_accepted(self):
-        with mock.patch.object(FIXTURE, "websocket", return_value=b""):
+        with mock.patch.object(FIXTURE, "_websocket_exchange", return_value=(b"", 0)):
             with self.assertRaisesRegex(AssertionError, "idle-close-within-bounded-window"):
                 FIXTURE.idle_close()
 
     def test_nonempty_idle_payload_is_not_accepted(self):
-        with mock.patch.object(FIXTURE, "websocket", return_value=b"unexpected"):
+        with mock.patch.object(FIXTURE, "_websocket_exchange", return_value=(b"unexpected", 2)):
             with self.assertRaisesRegex(AssertionError, "idle-upstream-closed"):
                 FIXTURE.idle_close()
+
+    def exchange_with_delays(self, handshake_delay=0, idle_delay=0, drip=False):
+        listener = socket.socket()
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        address = listener.getsockname()
+        stop = threading.Event()
+        def serve():
+            try:
+                with listener.accept()[0] as client:
+                    client.settimeout(2)
+                    request = b""
+                    while b"\r\n\r\n" not in request:
+                        request += client.recv(4096)
+                    if stop.wait(handshake_delay):
+                        return
+                    response = (b"HTTP/1.1 101 Switching Protocols\r\n"
+                                b"Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                                b"Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n")
+                    if drip:
+                        for byte in response:
+                            client.sendall(bytes([byte]))
+                            if stop.wait(.03):
+                                return
+                    else:
+                        client.sendall(response)
+                    stop.wait(idle_delay)
+            except (OSError, TimeoutError):
+                pass  # The deadline test deliberately disconnects mid-handshake.
+        thread = threading.Thread(target=serve)
+        thread.start()
+        connect = socket.create_connection
+        try:
+            with mock.patch.object(FIXTURE.socket, "create_connection", side_effect=lambda _, timeout: connect(address, timeout=timeout)):
+                return FIXTURE.idle_close()
+        finally:
+            stop.set()
+            listener.close()
+            thread.join(timeout=3)
+            self.assertFalse(thread.is_alive())
+
+    def test_delayed_handshake_immediate_eof_is_not_idle_evidence(self):
+        with self.assertRaisesRegex(FIXTURE.ProbeFailure, "idle-close-within-bounded-window"):
+            self.exchange_with_delays(handshake_delay=2)
+
+    def test_valid_post_upgrade_two_second_idle_is_accepted(self):
+        elapsed = self.exchange_with_delays(handshake_delay=.1, idle_delay=2)
+        self.assertGreaterEqual(elapsed, 1.5)
+        self.assertLess(elapsed, FIXTURE.IDLE_CLOSE_DEADLINE)
+
+    def test_slow_drip_handshake_has_one_total_deadline(self):
+        started = time.monotonic()
+        with mock.patch.object(FIXTURE, "IDLE_CLOSE_DEADLINE", .25):
+            with self.assertRaises(TimeoutError):
+                self.exchange_with_delays(drip=True)
+        self.assertLess(time.monotonic() - started, 1.5)
 
 
 class UpgradeRequestRegression(unittest.TestCase):
