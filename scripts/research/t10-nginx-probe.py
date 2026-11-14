@@ -10,6 +10,8 @@ import threading
 import json
 import os
 import signal
+import select
+import stat
 import sys
 import re
 from pathlib import Path
@@ -25,6 +27,7 @@ PYTHON = "sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc7
 
 
 MAX_DIAGNOSTIC_BYTES = 64 * 1024
+REPORT_STDOUT_SECONDS = 2.0
 
 HANDSHAKE_REJECTIONS = {
     "strip-upgrade": "HTTP/1.1 426 Upgrade Required",
@@ -118,20 +121,21 @@ def cancellation_signals():
     global _cancellation_state
     previous = {}
     previous_state = _cancellation_state
-    state = {"signal": None, "delivered": False, "cleanup_depth": 0}
+    state = {"signal": None, "delivered": False, "cleanup_depth": 0, "publication_depth": 0}
     _cancellation_state = state
     def cancel(signum, _frame):
         if state["signal"] is None:
             state["signal"] = signum
-        if not state["delivered"] and not state["cleanup_depth"]:
+        if not state["delivered"] and not state["cleanup_depth"] and not state["publication_depth"]:
             state["delivered"] = True
             raise ExperimentCancelled(state["signal"])
     try:
         for signum in (signal.SIGINT, signal.SIGTERM):
             previous[signum] = signal.getsignal(signum)
             signal.signal(signum, cancel)
-        yield
+        yield state
     finally:
+        state["delivered"] = True
         for signum, handler in previous.items():
             signal.signal(signum, handler)
         _cancellation_state = previous_state
@@ -436,17 +440,165 @@ def run_local(nginx_binary, control=None):
     return report
 
 
-def emit_report(report, output_path=None):
-    output = json.dumps(report, indent=2) + "\n"
-    # Keep the complete result recoverable even if the requested file cannot be written.
-    print(output, end="")
-    if output_path:
+def report_notice(message):
+    # Diagnostics are best effort: a full stderr pipe must not hold cancellation.
+    try:
+        descriptor = sys.stderr.fileno()
+    except (AttributeError, OSError, ValueError):
         try:
-            output_path.write_text(output, encoding="utf-8", newline="\n")
+            print(message, file=sys.stderr)
+        except (OSError, ValueError):
+            pass
+        return
+    if os.name != "posix":
+        try:
+            print(message, file=sys.stderr)
+        except (OSError, ValueError):
+            pass
+        return
+    try:
+        blocking = os.get_blocking(descriptor)
+        try:
+            os.set_blocking(descriptor, False)
+            os.write(descriptor, (message + "\n").encode("utf-8", errors="replace"))
+        finally:
+            os.set_blocking(descriptor, blocking)
+    except (OSError, ValueError):
+        pass
+
+
+def write_regular_report(path, output):
+    # Do not let a FIFO/device (including a symlink to one) block publication
+    # while signals are deferred. Inspect the opened object before truncating.
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | getattr(os, "O_NONBLOCK", 0), 0o600)
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise ValueError("probe report destination must be a regular file")
+        os.ftruncate(descriptor, 0)
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
+            descriptor = None
+            stream.write(output)
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def report_copy(output, output_path):
+    requested_ok = True
+    if output_path is not None:
+        try:
+            write_regular_report(output_path, output)
+            return output_path, False, requested_ok
         except (OSError, ValueError) as error:
-            print("Cannot write probe report: " + str(error), file=sys.stderr)
+            requested_ok = False
+            report_notice("Cannot write probe report: " + str(error))
+    descriptor, name = tempfile.mkstemp(prefix="guildboard-t10-report-", suffix=".json")
+    path, stream = Path(name), None
+    try:
+        stream = os.fdopen(descriptor, "w", encoding="utf-8", newline="\n")
+        with stream:
+            stream.write(output)
+    except BaseException:
+        if stream is None:
+            os.close(descriptor)
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+    return path, True, requested_ok
+
+
+def write_report_stdout(output):
+    try:
+        descriptor = sys.stdout.fileno()
+    except (AttributeError, OSError, ValueError):
+        # In-memory test/library streams have no descriptor or pipe backpressure.
+        sys.stdout.write(output)
+        sys.stdout.flush()
+        return
+    if os.name != "posix":
+        sys.stdout.write(output)
+        sys.stdout.flush()
+        return
+    blocking = os.get_blocking(descriptor)
+    try:
+        os.set_blocking(descriptor, False)
+        sys.stdout.flush()
+        pending = memoryview(output.encode("utf-8"))
+        deadline = time.monotonic() + REPORT_STDOUT_SECONDS
+        while pending:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not select.select([], [descriptor], [], max(0, remaining))[1]:
+                raise TimeoutError("probe stdout report publication deadline exceeded")
+            try:
+                written = os.write(descriptor, pending)
+            except BlockingIOError:
+                continue
+            if written <= 0:
+                raise BrokenPipeError("probe stdout accepted no report bytes")
+            pending = pending[written:]
+    finally:
+        os.set_blocking(descriptor, blocking)
+
+
+def discard_stdout_buffer():
+    # An interrupted TextIOWrapper flush must not block again at interpreter exit.
+    try:
+        descriptor = sys.stdout.fileno()
+        sink = os.open(os.devnull, os.O_WRONLY)
+        try:
+            os.dup2(sink, descriptor)
+        finally:
+            os.close(sink)
+    except (AttributeError, OSError, ValueError):
+        pass
+
+
+def emit_report(report, output_path=None):
+    state = _cancellation_state
+    snapshot, automatic, requested_ok = None, False, True
+    output = None
+    try:
+        # A complete local snapshot precedes any stdout bytes. Only local
+        # serialization/staging defers signals; a blocked stdout never does.
+        if state is not None:
+            state["publication_depth"] += 1
+        try:
+            output = json.dumps(report, indent=2) + "\n"
+            try:
+                snapshot, automatic, requested_ok = report_copy(output, output_path)
+            except (OSError, ValueError) as error:
+                requested_ok = False
+                report_notice("Cannot stage probe report recovery copy: " + str(error))
+            if state is not None and state["signal"] is not None and not state["delivered"]:
+                state["delivered"] = True
+                # Keep the already staged snapshot immutable. Late publication
+                # cancellation is represented by exit status, not a second JSON.
+        finally:
+            if state is not None:
+                state["publication_depth"] -= 1
+        write_report_stdout(output)
+    except (ExperimentCancelled, OSError, ValueError) as error:
+        # Never append/retry a JSON object after streaming may have started.
+        discard_stdout_buffer()
+        if snapshot is not None:
+            report_notice("Probe report recovery: " + json.dumps({"path": str(snapshot), "reason": str(error)}))
+        else:
+            report_notice("Probe report unavailable after publication failure: " + str(error))
+        return False
+    finally:
+        if state is not None:
+            # Final status is computed after handler restoration. A first signal
+            # at this boundary is recorded, without escaping or re-emitting JSON.
+            state["delivered"] = True
+    if automatic and snapshot is not None:
+        try:
+            snapshot.unlink()
+        except OSError as error:
+            report_notice("Cannot remove completed probe recovery copy: " + str(error))
             return False
-    return True
+    return requested_ok
 
 
 def main(argv=None):
@@ -455,18 +607,29 @@ def main(argv=None):
     parser.add_argument("--nginx-binary", type=Path, help="Use an explicit local binary with owned POSIX loopback processes")
     parser.add_argument("--negative-control", choices=[*HANDSHAKE_REJECTIONS, "publish-private-assets", "long-read-timeout"])
     args = parser.parse_args(argv)
-    report = {}
-    with cancellation_signals():
+    report, exit_code = {}, 0
+    with cancellation_signals() as state:
         try:
-            report = run_local(args.nginx_binary, args.negative_control) if args.nginx_binary else run(args.negative_control)
-            return 0 if emit_report(report, args.output) else 1
-        except Exception as error:
-            report = getattr(error, "report", report)
+            try:
+                report = run_local(args.nginx_binary, args.negative_control) if args.nginx_binary else run(args.negative_control)
+            except Exception as error:
+                report = getattr(error, "report", report)
+                report.setdefault("failure", failure_record(error))
+                if isinstance(error, ExperimentCancelled):
+                    report["cancellation"] = failure_record(error)
+                exit_code = 1
+            if not emit_report(report, args.output):
+                exit_code = 1
+        except ExperimentCancelled as error:
+            # A first signal between experiment handling and publication has not
+            # emitted bytes. Already-delivered signals cannot interrupt staging.
+            report["cancellation"] = failure_record(error)
             report.setdefault("failure", failure_record(error))
-            if isinstance(error, ExperimentCancelled):
-                report["cancellation"] = failure_record(error)
             emit_report(report, args.output)
-            return error.exit_code if isinstance(error, ExperimentCancelled) else 1
+            exit_code = 1
+        finally:
+            state["delivered"] = True
+    return 128 + state["signal"] if state["signal"] is not None else exit_code
 
 
 if __name__ == "__main__":

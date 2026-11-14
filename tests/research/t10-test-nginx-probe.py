@@ -921,6 +921,156 @@ class CancellationRegression(unittest.TestCase):
         self.assertFalse(thread.is_alive())
 
 
+@unittest.skipUnless(POSIX_LOCAL and sys.platform.startswith("linux"), "POSIX/Linux pipe publication regression")
+class ReportPublicationRegression(unittest.TestCase):
+    def publication_case(self, number=None, optimized=False, requested=False,
+                         drain=True, success=False, full_stderr=False, closed_stdout=False):
+        import tempfile
+        import select
+        with tempfile.TemporaryDirectory(prefix="t10-publication-") as scratch:
+            directory = Path(scratch)
+            temporary = directory / "temporary"
+            temporary.mkdir()
+            binary = directory / "owned-startup-failure"
+            binary.write_text("#!" + sys.executable + "\nimport sys\n"
+                              "if '-V' in sys.argv or '-t' in sys.argv: sys.exit(0)\n"
+                              "print('x'*70000,file=sys.stderr)\nsys.exit(7)\n")
+            binary.chmod(0o700)
+            args = ["--nginx-binary", str(binary)]
+            destination = directory / "requested.json"
+            if requested:
+                args += ["--output", str(destination)]
+            if full_stderr:
+                # Force a failed requested destination and an undrained stderr.
+                args += ["--output", str(directory)]
+            program = ("import importlib.util,sys,os; "
+                       "s=importlib.util.spec_from_file_location('probe',sys.argv[1]); "
+                       "m=importlib.util.module_from_spec(s);s.loader.exec_module(m); ")
+            if success:
+                program += "m.run_local=lambda *a,**k:{'result':'x'*70000}; "
+            if full_stderr:
+                program += "os.write(2,b'z'*4096); "
+            program += "raise SystemExit(m.main(sys.argv[2:]))"
+            command = [sys.executable] + (["-O"] if optimized else []) + ["-c", program, str(PROBE.__file__), *args]
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                       pipesize=4096, env={**os.environ, "TMPDIR": str(temporary), "PYTHONDONTWRITEBYTECODE": "1"})
+            prefix = b""
+            started = time.monotonic()
+            try:
+                if closed_stdout:
+                    process.stdout.close()
+                    process.stdout = None
+                elif number is not None or not drain:
+                    self.assertTrue(select.select([process.stdout], [], [], 8)[0], "report must reach actual pipe")
+                    prefix = os.read(process.stdout.fileno(), 512)
+                    self.assertTrue(prefix)
+                if number is not None:
+                    process.send_signal(number)
+                if not drain:
+                    process.wait(timeout=6)
+                    self.assertLess(time.monotonic() - started, 6)
+                stdout, stderr = process.communicate(timeout=8)
+                stdout = prefix + (stdout or b"")
+                if number is None and drain and not closed_stdout and not full_stderr:
+                    self.assertEqual(process.returncode, 0 if success else 1, stderr)
+                    self.assertEqual(json.loads(stdout).get("result") is not None, success)
+                    if requested:
+                        self.assertEqual(destination.read_bytes(), stdout)
+                    self.assertEqual(list(temporary.iterdir()), [])
+                    return
+                self.assertEqual(process.returncode, 128 + number if number is not None else 1, stderr)
+                self.assertNotIn(b"Traceback", stderr)
+                if requested and not full_stderr:
+                    copies = [destination]
+                else:
+                    copies = list(temporary.glob("guildboard-t10-report-*.json"))
+                self.assertEqual(len(copies), 1, stderr)
+                complete = copies[0].read_bytes()
+                report = json.loads(complete)
+                self.assertEqual(report.get("result") is not None, success)
+                if not success:
+                    self.assertEqual(report["failure"]["type"], "RuntimeError")
+                    self.assertTrue(all(report["cleanup"].values()))
+                self.assertTrue(complete.startswith(stdout), "no second JSON may follow a partial first object")
+                if not full_stderr:
+                    self.assertIn(str(copies[0]).encode(), stderr)
+                self.assertFalse(any(path.is_dir() for path in temporary.iterdir()), "owned Nginx/backend temporary directories removed")
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.communicate(timeout=5)
+
+    def test_failure_publication_first_signal_preserves_snapshot_and_signal_status(self):
+        for optimized in (False, True):
+            for number in (signal.SIGTERM, signal.SIGINT):
+                for requested in (False, True):
+                    with self.subTest(optimized=optimized, signal=number, requested=requested):
+                        self.publication_case(number, optimized, requested)
+
+    def test_success_publication_first_signal_preserves_snapshot(self):
+        for number in (signal.SIGTERM, signal.SIGINT):
+            with self.subTest(signal=number):
+                self.publication_case(number, success=True)
+
+    def test_never_draining_stdout_has_bounded_signal_and_no_signal_exit(self):
+        for number in (None, signal.SIGTERM, signal.SIGINT):
+            with self.subTest(signal=number):
+                self.publication_case(number, drain=False)
+
+    def test_full_stderr_does_not_block_failure_or_signal(self):
+        for number in (None, signal.SIGTERM):
+            with self.subTest(signal=number):
+                self.publication_case(number, drain=False, full_stderr=True)
+
+    def test_closed_stdout_preserves_complete_snapshot(self):
+        self.publication_case(closed_stdout=True)
+
+    def test_no_signal_publishes_one_complete_report_and_removes_automatic_copy(self):
+        for requested in (False, True):
+            with self.subTest(requested=requested):
+                self.publication_case(requested=requested)
+
+    def test_signal_during_serialization_or_staging_is_recorded(self):
+        import tempfile
+        import contextlib
+        for stage in ("serialization", "staging"):
+            for number in (signal.SIGTERM, signal.SIGINT):
+                output = io.StringIO()
+                original = PROBE.json.dumps if stage == "serialization" else PROBE.report_copy
+                triggered = False
+                def inject(*args, **kwargs):
+                    nonlocal triggered
+                    if not triggered:
+                        triggered = True
+                        os.kill(os.getpid(), number)
+                    return original(*args, **kwargs)
+                target, name = (PROBE.json, "dumps") if stage == "serialization" else (PROBE, "report_copy")
+                with self.subTest(stage=stage, signal=number), tempfile.TemporaryDirectory() as directory, \
+                     mock.patch.object(PROBE, "run", return_value={"result": "complete"}), \
+                     mock.patch.object(target, name, side_effect=inject), contextlib.redirect_stdout(output):
+                    code = PROBE.main(["--output", str(Path(directory) / "report.json")])
+                    self.assertEqual(code, 128 + number)
+                    self.assertEqual(json.loads(output.getvalue()), {"result": "complete"})
+                    self.assertEqual(json.loads((Path(directory) / "report.json").read_text()), {"result": "complete"})
+
+    def test_fifo_or_symlink_to_fifo_output_fails_fast_without_mutating_it(self):
+        import tempfile
+        import contextlib
+        import stat
+        with tempfile.TemporaryDirectory() as directory:
+            fifo = Path(directory) / "report.fifo"
+            link = Path(directory) / "report.link"
+            os.mkfifo(fifo)
+            link.symlink_to(fifo)
+            for destination in (fifo, link):
+                stdout, stderr = io.StringIO(), io.StringIO()
+                with self.subTest(destination=destination), contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    self.assertFalse(PROBE.emit_report({"result": "retained"}, destination))
+                self.assertEqual(json.loads(stdout.getvalue()), {"result": "retained"})
+                self.assertTrue(stat.S_ISFIFO(fifo.stat().st_mode))
+                self.assertIn("Cannot write probe report", stderr.getvalue())
+
+
 class FailureAttributionRegression(unittest.TestCase):
     def test_windows_local_runner_fails_before_resources_with_json(self):
         import runpy
