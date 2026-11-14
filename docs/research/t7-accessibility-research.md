@@ -189,7 +189,9 @@ local browser automation, not production isolation or the sandbox-enabled #483
 browser configuration. Exact image/source/screenshot hashes are in the report.
 
 The prototype and checks were later changed to move focus to the permission
-explanation on asynchronous revocation; the retained historical hashes and
+explanation on asynchronous revocation, preserve focused object identity when
+the list rebuilds, and move focus to the fixture heading when a focused receipt
+or rejection control becomes unavailable; the retained historical hashes and
 results describe the earlier source, not that change. Local browser behavior is
 not evidence of screen-reader speech or human acceptance.
 

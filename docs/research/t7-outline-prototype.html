@@ -66,7 +66,7 @@
     </section>
   </div>
   <section class="lab" aria-labelledby="lab-heading">
-    <h2 id="lab-heading">Fixture state controls</h2>
+    <h2 id="lab-heading" tabindex="-1">Fixture state controls</h2>
     <p>These controls simulate state transitions; they do not verify server authorization or durable storage.</p>
     <div class="lab-buttons">
       <button id="accept">Simulate accepted receipt</button>
@@ -82,7 +82,7 @@
 <dialog id="guide" aria-labelledby="guide-heading">
   <h2 id="guide-heading">Keyboard editing guide</h2>
   <p>Use Tab and Shift+Tab to move through native controls. Choose an object, edit the labeled text and numeric fields, then queue the local change.</p>
-  <p>Escape closes this guide. Status changes keep focus in place, except that revoked editing moves focus from the disabled queue button to the permission explanation.</p>
+  <p>Escape closes this guide. If editing is revoked while the queue or accepted-receipt control has focus, focus moves to the permission explanation. When a focused receipt or rejection control becomes unavailable after a result, focus moves to the fixture state heading.</p>
   <button id="close-guide" autofocus>Close guide</button>
 </dialog>
 <script>
@@ -97,6 +97,7 @@
   const canEdit = () => connected && verified;
   const say = text => { if($('status').textContent!==text) $('status').textContent = text; };
   function list() {
+    const focused=$('object-list').contains(document.activeElement)?document.activeElement.dataset.object:null;
     $('object-list').replaceChildren(...accepted.map(object => {
       const item = document.createElement('li'), button = document.createElement('button');
       button.type='button'; button.dataset.object=object.id;
@@ -108,6 +109,7 @@
         selected=object.id; list(); renderFields(); $('object-text').focus();
       }); item.append(button); return item;
     }));
+    if(focused) [...$('object-list').querySelectorAll('[data-object]')].find(button=>button.dataset.object===focused)?.focus();
   }
   function renderFields() {
     const object=drafts.get(selected)||current();
@@ -118,12 +120,15 @@
   }
   function sync() {
     for (const id of ['object-text','object-x','object-y']) $(id).readOnly=!canEdit()||pending?.id===selected;
-    const queueLosingFocus=!canEdit()&&document.activeElement===$('queue');
+    const active=document.activeElement;
+    const permissionFocus=!canEdit()&&(active===$('queue')||active===$('accept'));
+    const labFocus=!pending&&(active===$('accept')||active===$('reject'));
     $('queue').disabled=!canEdit(); $('accept').disabled=!pending||!canEdit();
     $('reject').disabled=!pending;
     $('permission').textContent=!connected?'Disconnected; editing unavailable.':verified?
       'Writer verified in local fixture.':'Editing unavailable; writer verification required.';
-    if(queueLosingFocus) $('permission').focus();
+    if(permissionFocus) $('permission').focus();
+    else if(labFocus) $('lab-heading').focus();
   }
   for(const id of ['object-text','object-x','object-y']) $(id).addEventListener('input',()=>{
     if(!canEdit()||pending?.id===selected)return;

@@ -95,6 +95,31 @@ async (page) => {
     phases.validSelection.formValid&&phases.validSelection.clearsUnrelatedStaleAlert&&
     !phases.returnedInvalidDraft.formValid&&phases.correctedDraft.formValid&&
     phases.correctedDraft.clearsAlert&&phases.correctedDraft.notQueuedOrAccepted,phases);
+  await page.locator('#queue').click();
+  await page.locator('#accept').focus();
+  await page.evaluate(()=>document.querySelector('#revoke').click());
+  check('asynchronous revoke moves focused receipt control to permission',
+    await page.locator('#permission').evaluate(e=>e===document.activeElement)&&await page.locator('#accept').isDisabled()&&(await state()).pending!==null);
+  await page.evaluate(()=>document.querySelector('#accept').click());
+  check('revoked receipt cannot accept the pending change', (await state()).pending!==null&&(await state()).revision===1);
+  await page.locator('#verify').click();
+  await page.locator('#accept').focus(); await page.keyboard.press('Enter');
+  check('keyboard receipt moves focus to fixture heading when action becomes unavailable',
+    await page.locator('#lab-heading').evaluate(e=>e===document.activeElement)&&await page.locator('#accept').isDisabled()&&(await state()).pending===null);
+  await page.locator('#queue').click();
+  await page.locator('#reject').focus(); await page.keyboard.press('Enter');
+  check('keyboard rejection moves focus to fixture heading when action becomes unavailable',
+    await page.locator('#lab-heading').evaluate(e=>e===document.activeElement)&&await page.locator('#reject').isDisabled()&&(await state()).pending===null);
+  await page.locator('#queue').click();
+  await page.locator('[data-object="note-a"]').focus();
+  await page.evaluate(()=>document.querySelector('#accept').click());
+  check('asynchronous receipt retains focused object identity after list rebuild',
+    await page.locator('[data-object="note-a"]').evaluate(e=>e===document.activeElement)&&(await state()).pending===null);
+  await page.locator('#queue').click();
+  await page.locator('#reject').focus();
+  await page.evaluate(()=>document.querySelector('#accept').click());
+  check('asynchronous receipt moves focused rejection control to fixture heading',
+    await page.locator('#lab-heading').evaluate(e=>e===document.activeElement)&&await page.locator('#reject').isDisabled()&&(await state()).pending===null);
   await page.screenshot({path:'/tmp/guildboard-t7-fixture.png',fullPage:true});
   return {result:'pass',evidence_kind:'local-headless-browser-fixture-only',browser:page.context().browser().version(),
     checks,viewports,limitations:['No real Discord iframe/client','No screen reader or human review','No Excalidraw integration','Local state simulations, no server authorization/durability','Viewport/input emulation is not hardware acceptance']};
