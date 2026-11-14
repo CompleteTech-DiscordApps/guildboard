@@ -1183,10 +1183,10 @@ class ActualNginxControls(unittest.TestCase):
             def execute(module):
                 load(module)
                 websocket = module._websocket_exchange
-                def fail_idle_connect(path, **kwargs):
+                def fail_idle_connect(path, *args, **kwargs):
                     if path == "/idle":
                         raise TimeoutError("injected idle connect timeout")
-                    return websocket(path, **kwargs)
+                    return websocket(path, *args, **kwargs)
                 module._websocket_exchange = fail_idle_connect
             spec.loader.exec_module = execute
             return spec
