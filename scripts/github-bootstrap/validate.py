@@ -5,6 +5,7 @@ import collections
 import json
 import os
 import secrets
+import stat
 from pathlib import Path
 
 from api import ROOT
@@ -209,11 +210,176 @@ def unique_object(pairs):
     return result
 
 
+class WindowsDirectory:
+    """Directory-relative Windows operations; never reconstruct a destination path."""
+
+    def __init__(self, path):
+        import ctypes
+        from ctypes import wintypes
+        self.ctypes = ctypes
+        self.wintypes = wintypes
+        self.kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        self.nt = ctypes.WinDLL('ntdll')
+        self.kernel.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+                                            ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD,
+                                            wintypes.HANDLE]
+        self.kernel.CreateFileW.restype = wintypes.HANDLE
+        self.kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        self.kernel.GetFileInformationByHandle.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+        self.kernel.GetFileInformationByHandle.restype = wintypes.BOOL
+        self.kernel.SetFileInformationByHandle.argtypes = [wintypes.HANDLE, ctypes.c_int,
+                                                            ctypes.c_void_p, wintypes.DWORD]
+        self.kernel.SetFileInformationByHandle.restype = wintypes.BOOL
+        self.nt.NtCreateFile.argtypes = [ctypes.POINTER(wintypes.HANDLE), wintypes.ULONG,
+                                          ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+                                          wintypes.ULONG, wintypes.ULONG, wintypes.ULONG,
+                                          wintypes.ULONG, ctypes.c_void_p, wintypes.ULONG]
+        self.nt.NtCreateFile.restype = ctypes.c_long
+        self.nt.RtlNtStatusToDosError.argtypes = [ctypes.c_long]
+        self.nt.RtlNtStatusToDosError.restype = wintypes.ULONG
+        self.handle = self.kernel.CreateFileW(str(path), 0x001000a2, 7, None, 3,
+                                               0x02000000, None)
+        if self.handle == ctypes.c_void_p(-1).value:
+            raise ctypes.WinError(ctypes.get_last_error())
+
+    def close(self):
+        self.kernel.CloseHandle(self.handle)
+
+    def open_relative(self, name, access, disposition, insensitive=False):
+        c, w = self.ctypes, self.wintypes
+        if not name or name in ('.', '..') or any(ch in name for ch in '/\\:'):
+            raise OSError('invalid report filename')
+        encoded = name.encode('utf-16-le')
+        if len(encoded) > 65534:
+            raise OSError('report filename is too long')
+        class UnicodeString(c.Structure):
+            _fields_ = [('Length', w.USHORT), ('MaximumLength', w.USHORT),
+                        ('Buffer', c.c_void_p)]
+        class ObjectAttributes(c.Structure):
+            _fields_ = [('Length', w.ULONG), ('RootDirectory', w.HANDLE),
+                        ('ObjectName', c.POINTER(UnicodeString)), ('Attributes', w.ULONG),
+                        ('SecurityDescriptor', c.c_void_p), ('SecurityQualityOfService', c.c_void_p)]
+        class IoStatus(c.Structure):
+            _fields_ = [('Status', c.c_void_p), ('Information', c.c_size_t)]
+        buffer = c.create_string_buffer(encoded + b'\0\0')
+        name_string = UnicodeString(len(encoded), len(encoded), c.addressof(buffer))
+        attrs = ObjectAttributes(c.sizeof(ObjectAttributes), self.handle,
+                                 c.pointer(name_string), 0x40 if insensitive else 0, None, None)
+        ios = IoStatus()
+        handle = w.HANDLE()
+        status = self.nt.NtCreateFile(c.byref(handle), access | 0x100000,
+                                      c.byref(attrs), c.byref(ios), None, 0x80, 7,
+                                      disposition, 0x60, None, 0)
+        if status < 0:
+            code = self.nt.RtlNtStatusToDosError(status)
+            raise c.WinError(code)
+        return handle.value
+
+    def identity(self, handle):
+        c, w = self.ctypes, self.wintypes
+        class FileInformation(c.Structure):
+            _fields_ = [('attributes', w.DWORD), ('creation', w.FILETIME),
+                        ('access', w.FILETIME), ('write', w.FILETIME),
+                        ('volume', w.DWORD), ('size_high', w.DWORD),
+                        ('size_low', w.DWORD), ('links', w.DWORD),
+                        ('index_high', w.DWORD), ('index_low', w.DWORD)]
+        info = FileInformation()
+        if not self.kernel.GetFileInformationByHandle(handle, c.byref(info)):
+            raise c.WinError(c.get_last_error())
+        index = (info.index_high << 32) | info.index_low
+        if not index:
+            raise OSError('cannot establish file identity')
+        return info.volume, index
+
+    def source_identity(self, path):
+        c = self.ctypes
+        handle = self.kernel.CreateFileW(str(path), 0x80, 7, None, 3, 0x02000000, None)
+        if handle == c.c_void_p(-1).value:
+            raise c.WinError(c.get_last_error())
+        try:
+            return self.identity(handle)
+        finally:
+            self.kernel.CloseHandle(handle)
+
+    def target_identity(self, name):
+        def lookup(insensitive):
+            try:
+                handle = self.open_relative(name, 0x80, 1, insensitive)
+            except OSError as exc:
+                if exc.winerror in (2, 3):
+                    return None
+                raise
+            try:
+                return self.identity(handle)
+            finally:
+                self.kernel.CloseHandle(handle)
+
+        exact, folded = lookup(False), lookup(True)
+        if exact and folded and exact != folded:
+            raise OSError('ambiguous case-sensitive report destination')
+        return exact or folded
+
+    def publish(self, name, report):
+        import msvcrt
+        c, w = self.ctypes, self.wintypes
+        while True:
+            temporary = '.roadmap-' + secrets.token_hex(16) + '.tmp'
+            try:
+                handle = self.open_relative(temporary, 0x00010002, 2)
+                break
+            except OSError as exc:
+                if exc.winerror not in (80, 183):
+                    raise
+        fd = None
+        published = False
+        try:
+            fd = msvcrt.open_osfhandle(handle, os.O_WRONLY | os.O_BINARY)
+            payload = (json.dumps(report, indent=2, ensure_ascii=True) + '\n').encode('utf-8')
+            while payload:
+                count = os.write(fd, payload)
+                if not count:
+                    raise OSError('short report write')
+                payload = payload[count:]
+            encoded = name.encode('utf-16-le')
+            class RenameInfo(c.Structure):
+                _fields_ = [('ReplaceIfExists', w.BOOL), ('RootDirectory', w.HANDLE),
+                            ('FileNameLength', w.DWORD), ('FileName', w.WCHAR * 1)]
+            size = RenameInfo.FileName.offset + len(encoded)
+            buffer = c.create_string_buffer(max(size, c.sizeof(RenameInfo)))
+            info = RenameInfo.from_buffer(buffer)
+            info.ReplaceIfExists = True
+            info.RootDirectory = self.handle
+            info.FileNameLength = len(encoded)
+            c.memmove(c.addressof(buffer) + RenameInfo.FileName.offset, encoded, len(encoded))
+            if not self.kernel.SetFileInformationByHandle(handle, 3, buffer, size):
+                raise c.WinError(c.get_last_error())
+            published = True
+        finally:
+            if not published:
+                delete = w.BOOL(True)
+                self.kernel.SetFileInformationByHandle(handle, 4, c.byref(delete), c.sizeof(delete))
+            if fd is None:
+                self.kernel.CloseHandle(handle)
+            else:
+                os.close(fd)
+
+
 def open_report_directory(path):
-    """Pin a Linux directory without requiring directory read permission."""
-    if not hasattr(os, 'O_PATH') or not hasattr(os, 'O_DIRECTORY'):
-        raise OSError('pinned report directories require Linux O_PATH and O_DIRECTORY')
-    return os.open(path, os.O_PATH | os.O_DIRECTORY)
+    """Pin a POSIX directory without resolving its pathname again."""
+    if os.name == 'nt':
+        return WindowsDirectory(path)
+    if os.name != 'posix' or not all(fn in os.supports_dir_fd for fn in
+                                      (os.open, os.stat, os.rename, os.unlink)):
+        raise OSError('pinned report directory operations are unavailable')
+    flags = getattr(os, 'O_PATH', os.O_RDONLY) | getattr(os, 'O_DIRECTORY', 0)
+    fd = os.open(path, flags)
+    try:
+        if not stat.S_ISDIR(os.fstat(fd).st_mode):
+            raise NotADirectoryError(str(path))
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
 
 
 def save_report(path, report, directory_fd=None):
@@ -221,6 +387,13 @@ def save_report(path, report, directory_fd=None):
     own_fd = directory_fd is None
     if own_fd:
         directory_fd = open_report_directory(path.parent)
+    if isinstance(directory_fd, WindowsDirectory):
+        try:
+            directory_fd.publish(path.name, report)
+        finally:
+            if own_fd:
+                directory_fd.close()
+        return
     temporary = None
     try:
         while True:
@@ -246,14 +419,29 @@ def save_report(path, report, directory_fd=None):
 
 
 
-def paths_alias(first, second):
-    """Recognize lexical, symlink and hardlink aliases of an input file."""
-    if first.resolve() == second.resolve():
-        return True
+def report_aliases_input(directory_fd, report_name, sources):
+    """Compare existing input identities to the destination in the pinned directory.
+
+    Missing inputs are rejected: without their identities we cannot establish that
+    a dangling destination link or a case-insensitive name does not alias them.
+    """
+    if isinstance(directory_fd, WindowsDirectory):
+        source_ids = [directory_fd.source_identity(source) for source in sources]
+        target = directory_fd.target_identity(report_name)
+        return target is not None and target in source_ids
+    source_stats = [os.stat(source) for source in sources]
     try:
-        return first.samefile(second)
+        target = os.stat(report_name, dir_fd=directory_fd)
     except FileNotFoundError:
         return False
+    return any(os.path.samestat(target, source) for source in source_stats)
+
+
+def close_report_directory(directory):
+    if isinstance(directory, WindowsDirectory):
+        directory.close()
+    else:
+        os.close(directory)
 
 
 def main(argv=None):
@@ -265,17 +453,11 @@ def main(argv=None):
     directory_fd = None
     try:
         directory_fd = open_report_directory(args.report.parent)
-        # Linux procfs resolves through the held directory, even if its original
-        # pathname is subsequently retargeted. Fail closed if unavailable.
-        anchored_parent = Path('/proc/self/fd') / str(directory_fd)
-        if not anchored_parent.is_dir():
-            raise OSError('cannot inspect pinned report directory (procfs unavailable)')
-        anchored_report = anchored_parent / args.report.name
-        if any(paths_alias(anchored_report, source) for source in (args.manifest, args.schema)):
+        if report_aliases_input(directory_fd, args.report.name, (args.manifest, args.schema)):
             raise ValueError('report must not alias the manifest or schema; inputs preserved')
     except (OSError, ValueError, RuntimeError) as exc:
         if directory_fd is not None:
-            os.close(directory_fd)
+            close_report_directory(directory_fd)
         print(json.dumps({'result': 'fail', 'errors': ['report path: ' + str(exc),
               'cannot write validation report: unsafe or unavailable destination']}, indent=2))
         return 1
@@ -292,7 +474,7 @@ def main(argv=None):
             report['result'] = 'fail'
             report['errors'].append('cannot write validation report: ' + str(exc))
     finally:
-        os.close(directory_fd)
+        close_report_directory(directory_fd)
     print(json.dumps(report, indent=2))
     return int(report['result'] != 'pass')
 

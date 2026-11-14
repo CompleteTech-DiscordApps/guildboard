@@ -191,6 +191,7 @@ class ValidatorTests(unittest.TestCase):
 
 
 class ReportWriteTests(unittest.TestCase):
+    @unittest.skipIf(os.name == 'nt', 'POSIX replace interception; Windows uses native rename')
     def test_concurrent_writers_publish_their_own_report(self):
         # Force both writers to finish staging before either publishes. Then
         # observe each publication, without imposing a general winner policy.
@@ -231,6 +232,7 @@ class ReportWriteTests(unittest.TestCase):
             self.assertEqual(json.loads(report.read_text()), second)
             self.assertEqual(list(Path(directory).iterdir()), [report])
 
+    @unittest.skipIf(os.name == 'nt', 'POSIX replace interception; Windows uses native rename')
     def test_failed_publication_cleans_staging_and_preserves_previous_report(self):
         with tempfile.TemporaryDirectory() as directory:
             report = Path(directory) / 'report.json'
@@ -242,11 +244,22 @@ class ReportWriteTests(unittest.TestCase):
             self.assertEqual(report.read_text(), previous)
             self.assertEqual(list(Path(directory).iterdir()), [report])
 
+    def test_failed_replace_of_directory_cleans_staging(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / 'report.json'
+            report.mkdir()
+            with self.assertRaises(OSError):
+                validator.save_report(report, {'result': 'fail'})
+            self.assertTrue(report.is_dir())
+            self.assertEqual(list(Path(directory).iterdir()), [report])
+
 
 class CliTests(unittest.TestCase):
     def run_cli(self, manifest_text, schema_text=None, report_name='report.json'):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            if os.name == 'nt':
+                root = Path('\\\\?\\' + str(root))
             manifest = root / 'manifest.json'
             schema = root / 'schema.json'
             report = root / report_name
@@ -284,7 +297,12 @@ class CliTests(unittest.TestCase):
                             if alias_kind == 'same_path':
                                 report = source
                             elif alias_kind == 'symlink':
-                                report.symlink_to(source)
+                                try:
+                                    report.symlink_to(source)
+                                except OSError as exc:
+                                    if os.name == 'nt' and exc.winerror == 1314:
+                                        continue
+                                    raise
                             else:
                                 report.hardlink_to(source)
                             proc = subprocess.run(
@@ -305,7 +323,7 @@ class CliTests(unittest.TestCase):
                             else:
                                 self.assertTrue(report.samefile(source))
 
-    @unittest.skipUnless(hasattr(os, 'mkfifo') and Path('/proc/self/fd').is_dir(), 'requires Linux procfs and FIFO')
+    @unittest.skipUnless(hasattr(os, 'mkfifo') and os.name == 'posix', 'requires POSIX FIFO')
     def test_cli_parent_symlink_retarget_keeps_pinned_destination(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -341,6 +359,44 @@ class CliTests(unittest.TestCase):
                     proc.kill()
                     proc.communicate()
 
+    @unittest.skipUnless(os.name == 'nt', 'requires Windows junctions')
+    def test_windows_junction_retarget_after_alias_check(self):
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs, output = root / 'inputs', root / 'output'
+            inputs.mkdir()
+            output.mkdir()
+            schema = inputs / 'schema.json'
+            schema.write_text(json.dumps(SCHEMA))
+            manifest = inputs / 'manifest.json'
+            manifest.write_text(json.dumps(MANIFEST))
+            before = schema.read_bytes()
+            link = root / 'report-directory'
+            def junction(target):
+                subprocess.run(['cmd', '/c', 'mklink', '/J', str(link), str(target)],
+                               check=True, capture_output=True)
+            junction(output)
+            original = validator.report_aliases_input
+            def retarget(*args):
+                result = original(*args)
+                os.rmdir(link)
+                junction(inputs)
+                return result
+            try:
+                with mock.patch.object(validator, 'report_aliases_input', retarget):
+                    with contextlib.redirect_stdout(io.StringIO()) as stdout:
+                        code = validator.main(['--manifest', str(manifest), '--schema', str(schema),
+                                               '--report', str(link / 'schema.json')])
+                self.assertEqual(code, 0, stdout.getvalue())
+                self.assertEqual(schema.read_bytes(), before)
+                self.assertEqual(json.loads((output / 'schema.json').read_text()),
+                                 json.loads(stdout.getvalue()))
+                self.assertEqual(list(output.glob('.roadmap-*.tmp')), [])
+            finally:
+                os.rmdir(link)
+
     @unittest.skipUnless(hasattr(os, 'O_PATH') and hasattr(os, 'geteuid') and os.geteuid() != 0,
                          'requires unprivileged Linux user')
     def test_cli_writes_to_searchable_writable_directory_without_read_permission(self):
@@ -358,6 +414,30 @@ class CliTests(unittest.TestCase):
             finally:
                 output.chmod(0o700)
             self.assertEqual(list(output.iterdir()), [report])
+
+    def test_missing_input_fails_closed_without_replacing_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / 'report.json'
+            report.write_text('previous')
+            proc = subprocess.run(
+                [sys.executable, str(SCRIPTS / 'validate.py'),
+                 '--manifest', str(root / 'missing.json'), '--report', str(report)],
+                capture_output=True, text=True, timeout=15)
+            self.assertEqual(proc.returncode, 1)
+            self.assertEqual(json.loads(proc.stdout)['result'], 'fail')
+            self.assertEqual(report.read_text(), 'previous')
+            self.assertEqual(list(root.iterdir()), [report])
+
+    @unittest.skipIf(os.name == 'nt', 'Windows uses native handles')
+    def test_missing_dir_fd_capability_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / 'report.json'
+            report.write_text('previous')
+            with mock.patch.object(os, 'supports_dir_fd', set()):
+                with self.assertRaisesRegex(OSError, 'unavailable'):
+                    validator.open_report_directory(report.parent)
+            self.assertEqual(report.read_text(), 'previous')
 
     def test_concurrent_cli_publication(self):
         with tempfile.TemporaryDirectory() as directory:
