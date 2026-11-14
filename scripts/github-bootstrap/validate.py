@@ -3,7 +3,8 @@
 import argparse
 import collections
 import json
-import tempfile
+import os
+import secrets
 from pathlib import Path
 
 from api import ROOT
@@ -208,19 +209,33 @@ def unique_object(pairs):
     return result
 
 
-def save_report(path, report):
-    """Escape even JSON-valid lone surrogates before writing diagnostic text."""
+def save_report(path, report, directory_fd=None):
+    """Stage and replace relative to a pinned directory descriptor."""
+    own_fd = directory_fd is None
+    if own_fd:
+        directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
     temporary = None
     try:
-        with tempfile.NamedTemporaryFile(
-                mode='w', encoding='utf-8', dir=path.parent,
-                prefix='.roadmap-', suffix='.tmp', delete=False) as stream:
-            temporary = Path(stream.name)
+        while True:
+            candidate = '.roadmap-' + secrets.token_hex(16) + '.tmp'
+            try:
+                fd = os.open(candidate, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                             0o600, dir_fd=directory_fd)
+                temporary = candidate
+                break
+            except FileExistsError:
+                continue
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
             stream.write(json.dumps(report, indent=2, ensure_ascii=True) + '\n')
-        temporary.replace(path)
+        os.replace(temporary, path.name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
     finally:
         if temporary is not None:
-            temporary.unlink(missing_ok=True)
+            try:
+                os.unlink(temporary, dir_fd=directory_fd)
+            except FileNotFoundError:
+                pass
+        if own_fd:
+            os.close(directory_fd)
 
 
 
@@ -240,24 +255,37 @@ def main(argv=None):
     parser.add_argument('--schema', type=Path, default=ROOT / 'planning/project-schema.json')
     parser.add_argument('--report', type=Path, default=ROOT / 'planning/audit/local-validation.json')
     args = parser.parse_args(argv)
+    directory_fd = None
     try:
-        if any(paths_alias(args.report, source) for source in (args.manifest, args.schema)):
+        directory_fd = os.open(args.report.parent, os.O_RDONLY | os.O_DIRECTORY)
+        # Linux procfs resolves through the held directory, even if its original
+        # pathname is subsequently retargeted. Fail closed if unavailable.
+        anchored_parent = Path('/proc/self/fd') / str(directory_fd)
+        if not anchored_parent.is_dir():
+            raise OSError('cannot inspect pinned report directory (procfs unavailable)')
+        anchored_report = anchored_parent / args.report.name
+        if any(paths_alias(anchored_report, source) for source in (args.manifest, args.schema)):
             raise ValueError('report must not alias the manifest or schema; inputs preserved')
     except (OSError, ValueError, RuntimeError) as exc:
-        # An unsafe or unverifiable destination must never replace an input.
-        print(json.dumps({'result': 'fail', 'errors': ['report path: ' + str(exc)]}, indent=2))
+        if directory_fd is not None:
+            os.close(directory_fd)
+        print(json.dumps({'result': 'fail', 'errors': ['report path: ' + str(exc),
+              'cannot write validation report: unsafe or unavailable destination']}, indent=2))
         return 1
     try:
-        manifest = json.loads(args.manifest.read_text(), object_pairs_hook=unique_object)
-        schema = json.loads(args.schema.read_text(), object_pairs_hook=unique_object)
-        report = validate_manifest(manifest, schema)
-    except (OSError, UnicodeError, ValueError, RecursionError) as exc:
-        report = {'result': 'fail', 'errors': ['input: ' + str(exc)]}
-    try:
-        save_report(args.report, report)
-    except (OSError, UnicodeError, ValueError) as exc:
-        report['result'] = 'fail'
-        report['errors'].append('cannot write validation report: ' + str(exc))
+        try:
+            manifest = json.loads(args.manifest.read_text(), object_pairs_hook=unique_object)
+            schema = json.loads(args.schema.read_text(), object_pairs_hook=unique_object)
+            report = validate_manifest(manifest, schema)
+        except (OSError, UnicodeError, ValueError, RecursionError) as exc:
+            report = {'result': 'fail', 'errors': ['input: ' + str(exc)]}
+        try:
+            save_report(args.report, report, directory_fd)
+        except (OSError, UnicodeError, ValueError) as exc:
+            report['result'] = 'fail'
+            report['errors'].append('cannot write validation report: ' + str(exc))
+    finally:
+        os.close(directory_fd)
     print(json.dumps(report, indent=2))
     return int(report['result'] != 'pass')
 

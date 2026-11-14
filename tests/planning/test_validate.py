@@ -3,6 +3,7 @@ import copy
 import concurrent.futures
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -198,21 +199,21 @@ class ReportWriteTests(unittest.TestCase):
             staged = threading.Barrier(2)
             first_published = threading.Event()
             observed = {}
-            original_replace = Path.replace
+            original_replace = os.replace
             first = {'result': 'fail', 'errors': ['invalid manifest']}
             second = {'result': 'pass', 'errors': []}
 
-            def replace(path, destination):
+            def replace(path, destination, **kwargs):
                 staged.wait(timeout=10)
                 if threading.current_thread().name == 'invalid':
                     try:
-                        result = original_replace(path, destination)
+                        result = original_replace(path, destination, **kwargs)
                         observed['invalid'] = json.loads(report.read_text())
                         return result
                     finally:
                         first_published.set()
                 self.assertTrue(first_published.wait(timeout=10))
-                result = original_replace(path, destination)
+                result = original_replace(path, destination, **kwargs)
                 observed['valid'] = json.loads(report.read_text())
                 return result
 
@@ -220,7 +221,7 @@ class ReportWriteTests(unittest.TestCase):
                 threading.current_thread().name = name
                 validator.save_report(report, value)
 
-            with mock.patch.object(Path, 'replace', replace):
+            with mock.patch.object(os, 'replace', replace):
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
                     pending = [pool.submit(write, 'invalid', first),
                                pool.submit(write, 'valid', second)]
@@ -235,7 +236,7 @@ class ReportWriteTests(unittest.TestCase):
             report = Path(directory) / 'report.json'
             previous = '{"result":"pass","previous":true}'
             report.write_text(previous)
-            with mock.patch.object(Path, 'replace', side_effect=OSError('replace denied')):
+            with mock.patch.object(os, 'replace', side_effect=OSError('replace denied')):
                 with self.assertRaisesRegex(OSError, 'replace denied'):
                     validator.save_report(report, {'result': 'fail'})
             self.assertEqual(report.read_text(), previous)
@@ -303,6 +304,58 @@ class CliTests(unittest.TestCase):
                                 self.assertTrue(report.is_symlink())
                             else:
                                 self.assertTrue(report.samefile(source))
+
+    @unittest.skipUnless(hasattr(os, 'mkfifo') and Path('/proc/self/fd').is_dir(), 'requires Linux procfs and FIFO')
+    def test_cli_parent_symlink_retarget_keeps_pinned_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = root / 'inputs'
+            output = root / 'output'
+            inputs.mkdir()
+            output.mkdir()
+            schema = inputs / 'schema.json'
+            schema.write_text(json.dumps(SCHEMA))
+            before = schema.read_bytes()
+            fifo = root / 'manifest.fifo'
+            os.mkfifo(fifo)
+            link = root / 'report-directory'
+            link.symlink_to(output, target_is_directory=True)
+            proc = subprocess.Popen([sys.executable, str(SCRIPTS / 'validate.py'),
+                                     '--manifest', str(fifo), '--schema', str(schema),
+                                     '--report', str(link / 'schema.json')],
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            try:
+                # The reader opens the FIFO only after pinning and checking the destination.
+                with fifo.open('w') as writer:
+                    link.unlink()
+                    link.symlink_to(inputs, target_is_directory=True)
+                    writer.write(json.dumps(MANIFEST))
+                stdout, stderr = proc.communicate(timeout=15)
+                self.assertEqual(proc.returncode, 0, stderr)
+                self.assertEqual(json.loads(stdout)['result'], 'pass')
+                self.assertEqual(schema.read_bytes(), before)
+                self.assertEqual(json.loads((output / 'schema.json').read_text()), json.loads(stdout))
+                self.assertEqual(list(output.glob('.roadmap-*.tmp')), [])
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
+                    proc.communicate()
+
+    def test_concurrent_cli_publication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / 'report.json'
+            command = [sys.executable, str(SCRIPTS / 'validate.py'), '--report', str(report)]
+            writers = [subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                        text=True) for _ in range(8)]
+            outputs = []
+            for writer in writers:
+                stdout, stderr = writer.communicate(timeout=30)
+                self.assertEqual(writer.returncode, 0, stderr)
+                outputs.append(json.loads(stdout))
+            self.assertIn(json.loads(report.read_text()), outputs)
+            self.assertTrue(all(output['result'] == 'pass' for output in outputs))
+            self.assertEqual(list(root.glob('.roadmap-*.tmp')), [])
 
     def test_cli_long_valid_report_basename_replaces_previous_report(self):
         # The destination itself fits Linux NAME_MAX; staging must not append
