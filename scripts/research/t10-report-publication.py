@@ -123,5 +123,3 @@ def discard_stdout_buffer():
             os.close(sink)
     except (AttributeError, OSError, ValueError):
         pass
-
-

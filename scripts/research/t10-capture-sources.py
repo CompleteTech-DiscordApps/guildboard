@@ -65,7 +65,7 @@ def cancellation_signals():
     """Deliver the first catchable signal outside owned worker cleanup."""
     global _cancellation_state
     previous, previous_state = {}, _cancellation_state
-    state = {"signal": None, "delivered": False, "cleanup_depth": 0, "publication_depth": 0}
+    state = {"signal": None, "delivered": False, "cleanup_depth": 0, "publication_depth": 0, "publication_started": False}
     _cancellation_state = state
     def cancel(signum, _frame):
         if state["signal"] is None:
@@ -215,6 +215,8 @@ def emit_source_report(result, output_path):
         finally:
             if state is not None:
                 state["publication_depth"] -= 1
+        if state is not None:
+            state["publication_started"] = True
         write_report_stdout(output)
     except (ExperimentCancelled, OSError, ValueError) as error:
         discard_stdout_buffer()
@@ -254,7 +256,8 @@ def main(argv=None):
         except ExperimentCancelled as error:
             result = getattr(error, "report", state.get("report", result))
             result["failure"] = {"type": type(error).__name__, "detail": str(error), "signal": error.signal_name}
-            emit_source_report(result, args.output)
+            if not state["publication_started"]:
+                emit_source_report(result, args.output)
             exit_code = 1
         finally:
             state["delivered"] = True

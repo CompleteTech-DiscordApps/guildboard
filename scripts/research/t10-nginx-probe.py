@@ -118,7 +118,7 @@ def cancellation_signals():
     global _cancellation_state
     previous = {}
     previous_state = _cancellation_state
-    state = {"signal": None, "delivered": False, "cleanup_depth": 0, "publication_depth": 0}
+    state = {"signal": None, "delivered": False, "cleanup_depth": 0, "publication_depth": 0, "publication_started": False}
     _cancellation_state = state
     def cancel(signum, _frame):
         if state["signal"] is None:
@@ -476,6 +476,8 @@ def emit_report(report, output_path=None):
         finally:
             if state is not None:
                 state["publication_depth"] -= 1
+        if state is not None:
+            state["publication_started"] = True
         write_report_stdout(output)
     except (ExperimentCancelled, OSError, ValueError) as error:
         # Never append/retry a JSON object after streaming may have started.
@@ -520,11 +522,12 @@ def main(argv=None):
                 exit_code = 1
         except ExperimentCancelled as error:
             report = getattr(error, "report", state.get("report", report))
-            # A first signal between experiment handling and publication has not
-            # emitted bytes. Already-delivered signals cannot interrupt staging.
+            # Retry only before stdout publication begins; an exception at the
+            # emitter finalization boundary can arrive after all bytes were sent.
             report["cancellation"] = failure_record(error)
             report.setdefault("failure", failure_record(error))
-            emit_report(report, args.output)
+            if not state["publication_started"]:
+                emit_report(report, args.output)
             exit_code = 1
         finally:
             state["delivered"] = True

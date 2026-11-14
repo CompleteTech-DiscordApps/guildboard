@@ -1747,5 +1747,58 @@ class SourceReportPublicationRegression(unittest.TestCase):
 
 
 
+@unittest.skipUnless(os.name == "posix", "requires POSIX signals")
+class PublicationFinalizationRegression(unittest.TestCase):
+    def test_first_signal_at_finally_entry_does_not_republish(self):
+        import ast
+        import tempfile
+        program = r"""
+import importlib.util, os, sys
+path, function, target, number, destination = sys.argv[1:]
+spec = importlib.util.spec_from_file_location('candidate', path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+if function == 'emit_report':
+    module.run = lambda *a, **kw: {'result': 'complete'}
+else:
+    module.capture = lambda: {'kind': 'fixture', 'sources': [{'id': 'ok', 'status': 200}]}
+triggered = False
+def trace(frame, event, arg):
+    global triggered
+    if not triggered and frame.f_code is getattr(module, function).__code__ and event == 'line' and frame.f_lineno == int(target):
+        triggered = True
+        os.kill(os.getpid(), int(number))
+    return trace
+sys.settrace(trace)
+code = module.main(['--output', destination])
+sys.settrace(None)
+if not triggered:
+    raise RuntimeError('finalization boundary was not reached')
+raise SystemExit(code)
+"""
+        for filename, function in (("t10-nginx-probe.py", "emit_report"),
+                                   ("t10-capture-sources.py", "emit_source_report")):
+            path = ROOT / "scripts/research" / filename
+            tree = ast.parse(path.read_text())
+            emitter = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == function)
+            target = next(node for node in emitter.body if isinstance(node, ast.Try)).finalbody[0].lineno
+            for optimized in (False, True):
+                for number in (signal.SIGTERM, signal.SIGINT):
+                    with self.subTest(script=filename, optimized=optimized, signal=number), tempfile.TemporaryDirectory() as directory:
+                        destination = Path(directory) / "report.json"
+                        command = [sys.executable, *(["-O"] if optimized else []), "-B", "-c", program,
+                                   str(path), function, str(target), str(number), str(destination)]
+                        result = subprocess.run(command, capture_output=True, text=True, timeout=8)
+                        self.assertEqual(result.returncode, 128 + number, result.stderr)
+                        output = json.loads(result.stdout)
+                        report = json.loads(destination.read_text())
+                        if function == "emit_report":
+                            self.assertEqual(output, {"result": "complete"})
+                            self.assertEqual(report, output)
+                        else:
+                            self.assertEqual(output["observed"], 1)
+                            self.assertEqual(report["sources"], [{"id": "ok", "status": 200}])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
