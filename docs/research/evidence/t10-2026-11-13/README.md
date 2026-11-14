@@ -34,3 +34,5 @@ artifacts above remain historical and unchanged.
 The [acquisition before-run provenance audit](acquisition-f0bf9c7/before-provenance.json) distinguishes checkout metadata from dynamically imported old executable Git blobs and links a reproducible three-failure rerun. Original reports and fixed-head test results remain unchanged.
 
 [Reproducer validation under optimization](acquisition-f0bf9c7/reproducer-checks-4cca655.json) replaces removable provenance/outcome assertions with explicit checks. Real old-code reruns pass their expected-failure checks under normal/-O, and ten malformed-input/outcome cases are explicitly rejected. Production code/results are unchanged.
+
+[Post-upgrade idle timing](idle-6950c3e/README.md) records 62 normal/optimized tests and real Nginx baseline/six controls at `6950c3e`. A delayed two-second handshake plus immediate EOF reproduces the old false acceptance and is rejected after separating handshake and postvalidated idle clocks.
