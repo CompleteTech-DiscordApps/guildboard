@@ -121,7 +121,7 @@ test("successful builds remove stale output and bind hashes deterministically", 
 test("actual boundary CLI rejects a forbidden import", () => {
   const dir = copy();
   try {
-    fs.symlinkSync(path.join(root, "node_modules"), path.join(dir, "node_modules"), "dir");
+    linkDependencies(dir);
     fs.writeFileSync(
       path.join(dir, "apps/activity/src/index.ts"),
       "import '@guildboard/config';\n",
