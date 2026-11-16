@@ -332,7 +332,12 @@ class ReportWriteTests(unittest.TestCase):
                                        side_effect=legacy_rename):
                     with self.assertRaisesRegex(OSError, 'cannot rename report stage'):
                         validator.save_report(report, {'result': 'pass'}, pinned)
-                self.assertEqual(report.read_bytes(), b'previous')
+                # Python's ordinary open does not share DELETE access; inspect
+                # the still-open native file and its directory-relative identity.
+                self.assertEqual(pinned.target_identity(report.name),
+                                 pinned.identity(msvcrt.get_osfhandle(fd)))
+                self.assertEqual(os.read(fd, 100), b'previous')
+                os.lseek(fd, 0, os.SEEK_SET)
                 self.assertEqual(list(root.glob('.roadmap-*.tmp')), [])
                 validator.save_report(report, {'result': 'pass', 'new': True}, pinned)
                 self.assertEqual(json.loads(report.read_text()),
