@@ -1,0 +1,28 @@
+{
+  "observed_at": 1794862563.4039788,
+  "tag_commit": "541bdc8bb8c084f9a3621553d4ada500565cc48f",
+  "tag_signature": "GitHub API reports verified=true; no local cryptographic verification",
+  "source_license_equals_published_archive": true,
+  "checks": [
+    {
+      "source": "source-parser-license",
+      "bytes": 1086,
+      "sha256": "2e97627cb278aa7556fb9e8817368302301a595b6c7582512b8d74c57b773652",
+      "git_blob": "d4c7fc583804df4b030668031e21435eb2ba4910",
+      "blob_match": true
+    },
+    {
+      "source": "source-parser-package",
+      "bytes": 1560,
+      "sha256": "24ce574d572add887560a863f36c7912af9eaa2d6447510257a962b7b6ced056",
+      "git_blob": "eaea78de350c8c70666a90736e8cac1c261dda9a",
+      "blob_match": true
+    },
+    {
+      "check": "source root named AUTHORS",
+      "status": "inspection-only",
+      "evidence": "Nonrecursive untruncated tree has 54 entries; no case-insensitive author path. 404 lookup is not used as absence proof."
+    }
+  ],
+  "limitations": "Source version and LICENSE binding do not establish historical referenced AUTHORS coverage, Prettier build mapping or license clearance. Owner retains targeted parser subtree/history investigation."
+}

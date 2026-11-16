@@ -1,0 +1,47 @@
+{
+  "name": "@babel/parser",
+  "version": "8.1.0",
+  "url": "https://registry.npmjs.org/@babel/parser/-/parser-8.1.0.tgz",
+  "status": 200,
+  "final_url": "https://registry.npmjs.org/@babel/parser/-/parser-8.1.0.tgz",
+  "observed_at": 1794862275.9736953,
+  "archive_bytes": 122544,
+  "archive_sha256": "7bccb4efde016940ca7a32876dd005ad7d8940cc7dca07ecd1fe2aafc1be2376",
+  "sha512_sri": "sha512-fpqZYAC+Tthr19JbEKxXhCGutvfm/+roMe+ULrgUKI+GVyzkQiTMTSheORcWIAzW8T3Oo3W5UavWSvAWmsp7fA==",
+  "sha1": "872b51d371a0ffc4053fbdea64213daf3fd7ab97",
+  "production_scanner_sha256": "a64098dd7b4a731de35be81f66ec723e3b486dc783039296c19e18c76d3472ba",
+  "raw_scan_before_tarfile": true,
+  "expanded_bytes": 600576,
+  "regular_member_paths": [
+    "package/CHANGELOG.md",
+    "package/LICENSE",
+    "package/README.md",
+    "package/bin/babel-parser.js",
+    "package/lib/index.d.ts",
+    "package/lib/index.js",
+    "package/package.json",
+    "package/typings/babel-parser.d.ts"
+  ],
+  "selected": [
+    {
+      "archive_path": "package/LICENSE",
+      "file": "parser-8.1.0-LICENSE.txt",
+      "bytes": 1086,
+      "sha256": "2e97627cb278aa7556fb9e8817368302301a595b6c7582512b8d74c57b773652"
+    },
+    {
+      "archive_path": "package/README.md",
+      "file": "parser-8.1.0-README.md.txt",
+      "bytes": 412,
+      "sha256": "73c03df678cff2141c7f1949cf171a6b44257f4159ff0783dd61ecee9b1f6e54"
+    },
+    {
+      "archive_path": "package/package.json",
+      "file": "parser-8.1.0-package.json.txt",
+      "bytes": 1518,
+      "sha256": "6bbb15486557f7bbae761e411ebe2cab371de23f3b279ca22f15cf655f89d7de"
+    }
+  ],
+  "AUTHORS_member_present": false,
+  "limits": "Actual bounded raw archive scan and selected bytes; no extraction/execution, no signature/provenance authentication or historicalAUTHORS/sourcecommit mapping yet"
+}

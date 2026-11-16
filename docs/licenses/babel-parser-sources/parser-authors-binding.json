@@ -1,0 +1,11 @@
+{
+  "observed_at": 1794862641.5265093,
+  "tag": "v8.1.0",
+  "tag_object": "f05a9c1cb7e24870ac79f802045e3e940ef11880",
+  "commit": "541bdc8bb8c084f9a3621553d4ada500565cc48f",
+  "root_to_packages_to_parser_tree_verified": true,
+  "AUTHORS_bytes": 586,
+  "AUTHORS_sha256": "42533f5f13d1a34663c441a9c7ad0b7bee45c1e39f1cfe979214fc9d2e3ffbc9",
+  "AUTHORS_git_blob": "2f39deff4b27bd9482ec507358ec61d4069268d0",
+  "interpretation": "Exact parser8.1.0 tagged source packages/babel-parser/AUTHORS retained; root has no named AUTHORS. Published parser archive omits it. This targeted source resolves where parser reference points, pending independent verification/retention and Prettier build/source binding; no license clearance claimed."
+}

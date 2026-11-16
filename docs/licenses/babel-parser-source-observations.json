@@ -1,0 +1,283 @@
+{
+  "schema": "bounded-babel-parser-source-observations-v1",
+  "base": "25342d7bbcd86732c60195743bc70fc2acc098bd",
+  "package": {
+    "name": "@babel/parser",
+    "version": "8.1.0",
+    "source_path": "packages/babel-parser",
+    "registry_metadata_gitHead": "absent"
+  },
+  "sources": [
+    {
+      "kind": "prior_observation_receipt",
+      "path": "babel-parser-sources/metadata-receipt.json",
+      "sha256": "e870657926d8cf8913366dac05623bf8daca519cf67b1d18296ada956397b354",
+      "bytes": 1574,
+      "source_url": "https://registry.npmjs.org/@babel%2fparser/8.1.0",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "prior_observation_receipt",
+      "path": "babel-parser-sources/archive-receipt.json",
+      "sha256": "0c2eaca2ad1ada6c1ee015e81df07ce6a2ceb6c43d7899653b14abb59591a3d5",
+      "bytes": 1817,
+      "source_url": "https://registry.npmjs.org/@babel/parser/-/parser-8.1.0.tgz",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/parser-8.1.0-metadata.json",
+      "sha256": "58dba3d24ab59a8da5c9ba4cca1068295ab432d4a2fa9fc2a9c08d9f384c1d75",
+      "bytes": 2567,
+      "source_url": "https://registry.npmjs.org/@babel%2fparser/8.1.0",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/parser-8.1.0-LICENSE.txt",
+      "sha256": "2e97627cb278aa7556fb9e8817368302301a595b6c7582512b8d74c57b773652",
+      "bytes": 1086,
+      "source_url": "https://registry.npmjs.org/@babel/parser/-/parser-8.1.0.tgz#package/LICENSE",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/parser-8.1.0-README.md.txt",
+      "sha256": "73c03df678cff2141c7f1949cf171a6b44257f4159ff0783dd61ecee9b1f6e54",
+      "bytes": 412,
+      "source_url": "https://registry.npmjs.org/@babel/parser/-/parser-8.1.0.tgz#package/README.md",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/parser-8.1.0-package.json.txt",
+      "sha256": "6bbb15486557f7bbae761e411ebe2cab371de23f3b279ca22f15cf655f89d7de",
+      "bytes": 1518,
+      "source_url": "https://registry.npmjs.org/@babel/parser/-/parser-8.1.0.tgz#package/package.json",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/tag-ref-v8.1.0.json",
+      "sha256": "fac8c07fe317ccc8d14c654e584b8088dd13d4c685c946426f26dce169c32d67",
+      "bytes": 325,
+      "source_url": "https://api.github.com/repos/babel/babel/git/refs/tags/v8.1.0",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/annotated-tag-v8.1.0.json",
+      "sha256": "f688cc4a73115ca56c932ba58d3b0a47343bbf07832c67477aab70db58155803",
+      "bytes": 1264,
+      "source_url": "https://api.github.com/repos/babel/babel/git/tags/f05a9c1cb7e24870ac79f802045e3e940ef11880",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/source-root-tree.json",
+      "sha256": "573625e7ea776b8095961d51682d0add3f460d74239f0d7a4aae65657b03d835",
+      "bytes": 11589,
+      "source_url": "https://api.github.com/repos/babel/babel/git/trees/541bdc8bb8c084f9a3621553d4ada500565cc48f",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/source-packages-tree.json",
+      "sha256": "e6837a2746164fdcecc6c5846f75ab431fa8c09d1e4665a626c2568d2ec56071",
+      "bytes": 34308,
+      "source_url": "https://api.github.com/repos/babel/babel/git/trees/6af37a295311fb273ef26572eadd449e77bf14e9",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/source-parser-tree.json",
+      "sha256": "a9f610a2065e405e3c424139ddfc52f79dae0ad936cb1edb4fcaefb097e1edcd",
+      "bytes": 2821,
+      "source_url": "https://api.github.com/repos/babel/babel/git/trees/54544e5c9ea052eaa80a8d9150a228c9fd9a3ca9",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/source-parser-authors.response.json",
+      "sha256": "d6457044f171341c2b39d0967ea1ea1f6477b6a228e48645c1deed733c5081bc",
+      "bytes": 1138,
+      "source_url": "https://api.github.com/repos/babel/babel/git/blobs/2f39deff4b27bd9482ec507358ec61d4069268d0",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/source-parser-authors.txt",
+      "sha256": "42533f5f13d1a34663c441a9c7ad0b7bee45c1e39f1cfe979214fc9d2e3ffbc9",
+      "bytes": 586,
+      "source_url": "https://api.github.com/repos/babel/babel/git/blobs/2f39deff4b27bd9482ec507358ec61d4069268d0",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "prior_observation_receipt",
+      "path": "babel-parser-sources/parser-authors-binding.json",
+      "sha256": "64d2706fee61c19b7eccfa70db5bcf3130b72c0c74878d22a72b94d6543c2de2",
+      "bytes": 731,
+      "source_url": null,
+      "provenance": "locally retained prior observation"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/source-parser-license.response.json",
+      "sha256": "9cebe37c1d04673ec7c385f6a1765f3798f6da4b5b669da7eadab41d89c059d9",
+      "bytes": 1824,
+      "source_url": "https://api.github.com/repos/babel/babel/git/blobs/d4c7fc583804df4b030668031e21435eb2ba4910",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/source-parser-license.txt",
+      "sha256": "2e97627cb278aa7556fb9e8817368302301a595b6c7582512b8d74c57b773652",
+      "bytes": 1086,
+      "source_url": "https://api.github.com/repos/babel/babel/git/blobs/d4c7fc583804df4b030668031e21435eb2ba4910",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/source-parser-package.response.json",
+      "sha256": "3c91e8ca9a61fd1b1fd8088484a3b5dbd36508a173e82adaefb6ce375199cda3",
+      "bytes": 2486,
+      "source_url": "https://api.github.com/repos/babel/babel/git/blobs/eaea78de350c8c70666a90736e8cac1c261dda9a",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/source-parser-package.txt",
+      "sha256": "24ce574d572add887560a863f36c7912af9eaa2d6447510257a962b7b6ced056",
+      "bytes": 1560,
+      "source_url": "https://api.github.com/repos/babel/babel/git/blobs/eaea78de350c8c70666a90736e8cac1c261dda9a",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "retained_source_or_api_response",
+      "path": "babel-parser-sources/root-authors-lookup.response.json",
+      "sha256": "ca4828f0aadbc42c0beae349c718cc5db0cacc81b79fc20ef619b13a479b13d9",
+      "bytes": 576,
+      "source_url": "https://api.github.com/repos/babel/babel/contents/AUTHORS?ref=541bdc8bb8c084f9a3621553d4ada500565cc48f",
+      "provenance": "upstream URL or prior receipt identifies upstream source"
+    },
+    {
+      "kind": "prior_observation_receipt",
+      "path": "babel-parser-sources/source-binding-progress.json",
+      "sha256": "0eecb6551e0f8da78dc967ba1b6c978f3523799edb0181129b75f05919cbda1a",
+      "bytes": 1203,
+      "source_url": null,
+      "provenance": "locally retained prior observation"
+    }
+  ],
+  "tag_association": {
+    "ref": "v8.1.0",
+    "tag_object": "f05a9c1cb7e24870ac79f802045e3e940ef11880",
+    "commit": "541bdc8bb8c084f9a3621553d4ada500565cc48f",
+    "api_reports_verified": true,
+    "local_cryptographic_verification": "not run"
+  },
+  "api_tree_observations": [
+    {
+      "path": ".",
+      "entries": 54,
+      "url": "https://api.github.com/repos/babel/babel/git/trees/541bdc8bb8c084f9a3621553d4ada500565cc48f",
+      "reported_tree_sha": "541bdc8bb8c084f9a3621553d4ada500565cc48f"
+    },
+    {
+      "path": "packages",
+      "entries": 151,
+      "sha": "6af37a295311fb273ef26572eadd449e77bf14e9",
+      "parent_entry_sha": "6af37a295311fb273ef26572eadd449e77bf14e9",
+      "url": "https://api.github.com/repos/babel/babel/git/trees/6af37a295311fb273ef26572eadd449e77bf14e9"
+    },
+    {
+      "path": "packages/babel-parser",
+      "entries": 13,
+      "sha": "54544e5c9ea052eaa80a8d9150a228c9fd9a3ca9",
+      "parent_entry_sha": "54544e5c9ea052eaa80a8d9150a228c9fd9a3ca9",
+      "url": "https://api.github.com/repos/babel/babel/git/trees/54544e5c9ea052eaa80a8d9150a228c9fd9a3ca9"
+    }
+  ],
+  "sibling_authors": {
+    "path": "packages/babel-parser/AUTHORS",
+    "bytes": 586,
+    "names": 39,
+    "sha256": "42533f5f13d1a34663c441a9c7ad0b7bee45c1e39f1cfe979214fc9d2e3ffbc9",
+    "git_blob": "2f39deff4b27bd9482ec507358ec61d4069268d0",
+    "finding": "positive source tree observation"
+  },
+  "source_license": {
+    "path": "packages/babel-parser/LICENSE",
+    "bytes": 1086,
+    "sha256": "2e97627cb278aa7556fb9e8817368302301a595b6c7582512b8d74c57b773652",
+    "identical_to_published_parser_license": true,
+    "text": "Full MIT grant; copyright notice refers to AUTHORS. Retention does not adopt the license."
+  },
+  "manifest_comparison": {
+    "source": "babel-parser-sources/source-parser-package.txt",
+    "release": "babel-parser-sources/parser-8.1.0-package.json.txt",
+    "dependency_value_transformations": [
+      {
+        "field": "dependencies.@babel/types",
+        "source": "workspace:^",
+        "release": "^8.1.0"
+      },
+      {
+        "field": "devDependencies.@babel/code-frame",
+        "source": "workspace:^",
+        "release": "^8.0.6"
+      },
+      {
+        "field": "devDependencies.@babel/helper-check-duplicate-nodes",
+        "source": "workspace:^",
+        "release": "^8.0.5"
+      },
+      {
+        "field": "devDependencies.@babel/helper-fixtures",
+        "source": "workspace:^",
+        "release": "^8.0.7"
+      },
+      {
+        "field": "devDependencies.@babel/helper-string-parser",
+        "source": "workspace:^",
+        "release": "^8.0.8"
+      },
+      {
+        "field": "devDependencies.@babel/helper-validator-identifier",
+        "source": "workspace:^",
+        "release": "^8.0.6"
+      },
+      {
+        "field": "devDependencies.charcodes",
+        "source": "catalog:dev",
+        "release": "^0.2.0"
+      },
+      {
+        "field": "devDependencies.typescript",
+        "source": "catalog:dev",
+        "release": "6.0.2"
+      }
+    ],
+    "other_parsed_fields_equal": true,
+    "byte_equal": false
+  },
+  "historical_observations": {
+    "root_lookup": "Prior 404 alone does not establish absence; timestamped progress and lookup records are retained unchanged.",
+    "root_tree": "Nonrecursive root has 54 entries and no AUTHORS; this does not establish whole-repository absence. Later parser subtree positively identifies sibling AUTHORS.",
+    "progress_observed_at": 1794862563.4039788,
+    "authors_binding_observed_at": 1794862641.5265093,
+    "archive": "Prior receipt only; no repeated archive inspection.",
+    "archive_bytes": 122544,
+    "archive_sha256": "7bccb4efde016940ca7a32876dd005ad7d8940cc7dca07ecd1fe2aafc1be2376",
+    "archive_sri": "sha512-fpqZYAC+Tthr19JbEKxXhCGutvfm/+roMe+ULrgUKI+GVyzkQiTMTSheORcWIAzW8T3Oo3W5UavWSvAWmsp7fA==",
+    "raw_scanner_expanded_bytes": 600576,
+    "regular_members": 8,
+    "authors_member_present": false
+  },
+  "limitations": [
+    "No authentication, signature or attestation verification, build execution, license adoption, finding closure, runtime acceptance or PR approval is inferred.",
+    "Existing Acorn 8.19 supplement does not automatically apply to Babel; the retained source AUTHORS is independent new source evidence.",
+    "Prettier build/source applicability is unverified; six policy unknowns remain unchanged.",
+    "Fresh independent reviews of the assembled full SHA and native validation remain required before publication."
+  ]
+}

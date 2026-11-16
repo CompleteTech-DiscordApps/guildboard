@@ -1,0 +1,40 @@
+{
+  "url": "https://registry.npmjs.org/@babel%2fparser/8.1.0",
+  "status": 200,
+  "final_url": "https://registry.npmjs.org/@babel%2fparser/8.1.0",
+  "bytes": 2567,
+  "sha256": "58dba3d24ab59a8da5c9ba4cca1068295ab432d4a2fa9fc2a9c08d9f384c1d75",
+  "observed_at": 1794862253.1953752,
+  "name": "@babel/parser",
+  "version": "8.1.0",
+  "gitHead": null,
+  "repository": {
+    "url": "https://github.com/babel/babel.git",
+    "type": "git",
+    "directory": "packages/babel-parser"
+  },
+  "dist": {
+    "shasum": "872b51d371a0ffc4053fbdea64213daf3fd7ab97",
+    "tarball": "https://registry.npmjs.org/@babel/parser/-/parser-8.1.0.tgz",
+    "fileCount": 8,
+    "integrity": "sha512-fpqZYAC+Tthr19JbEKxXhCGutvfm/+roMe+ULrgUKI+GVyzkQiTMTSheORcWIAzW8T3Oo3W5UavWSvAWmsp7fA==",
+    "signatures": [
+      {
+        "sig": "MEQCIC7GpCC8CcMX8LX+6BVCkLZNVblWRck9pO5hp4CcAZ2WAiAp2Ca3aE0AAq/SI9VUE/3D7h9Cy+nlILaWJZKBT/dBbQ==",
+        "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+      },
+      {
+        "sig": "MEQCIGgIZnzHh7QenoR8llb7tRYEsrQtGaTMc6ZGfvZmbgtZAiBtHvz3gjjz3AU8AeQ5pmK3XwGCMhmVFgn+imHi9F9iqw==",
+        "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+      }
+    ],
+    "attestations": {
+      "url": "https://registry.npmjs.org/-/npm/v1/attestations/@babel%2fparser@8.1.0",
+      "provenance": {
+        "predicateType": "https://slsa.dev/provenance/v1"
+      }
+    },
+    "unpackedSize": 593901
+  },
+  "limits": "Exact bounded metadata observation only; signatures/gitHead not independently authenticated; archive/source inspection pending"
+}
