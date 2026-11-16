@@ -20,3 +20,5 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run typecheck:config
       - run: npm run test:config
+      - run: node scripts/verification/verify_config.mjs
+      - run: node scripts/verification/verify_config_failure_paths.mjs
