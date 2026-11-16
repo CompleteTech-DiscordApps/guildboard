@@ -1,6 +1,6 @@
 # Architecture boundaries and initial constraints
 
-This is an implementation proposal awaiting the native research/specification gates, not a certified running architecture.
+The owner accepted the controlled experiment and VPS direction in [ADR 0001](adr/0001-editor-activity-vps-direction.md). The system specification and downstream research and verification gates remain open; this is not a certified running architecture.
 
 | Boundary | Responsibility | Trust rule |
 | --- | --- | --- |
