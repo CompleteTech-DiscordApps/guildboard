@@ -1,6 +1,6 @@
 # @guildboard/config
 
-Private ESM TypeScript package targeting ES2022. Current deliverable: [GB-T0.03.02.T1.S1 / #451](https://github.com/CompleteDotTech/guildboard/issues/451), the secret-safe diagnostic failure variant. The complete `parseConfig` function and service startup wiring remain [parent issue #23](https://github.com/CompleteDotTech/guildboard/issues/23) work.
+Private ESM TypeScript package targeting ES2022. Includes the pure `parseConfig` facade for [GB-T0.03.02.T1 / #23](https://github.com/CompleteTech-DiscordApps/guildboard/issues/23), built on the secret-safe diagnostics (#451) and numeric/URL helpers (#452). Service startup wiring is separate. Independent acceptance (#24), required reviews, merge and post-merge verification remain outstanding.
 
 ```ts
 import { createConfigFailure } from "@guildboard/config";
@@ -27,8 +27,48 @@ Tooling is pinned in the root lockfile. See [tooling dependency notes](../../doc
 
 ## Numeric and URL checks
 
-[GB-T0.03.02.T1.S2 / #452](https://github.com/CompleteDotTech/guildboard/issues/452) adds pure `parsePort(value)` and `parseDatabaseUrl(value)` helpers. Each takes `string | undefined` and returns the accepted value (`number` or original URL string), or `undefined` for a failed check. The future `parseConfig` caller must aggregate failed names through `createConfigFailure`; these helpers do not implement that parent parser.
+[GB-T0.03.02.T1.S2 / #452](https://github.com/CompleteDotTech/guildboard/issues/452) adds pure `parsePort(value)` and `parseDatabaseUrl(value)` helpers. Each takes `string | undefined` and returns the accepted value (`number` or original URL string), or `undefined` for a failed check. `parseConfig` aggregates failed names through `createConfigFailure`; helper success alone does not establish valid configuration.
 
 `parsePort` accepts ASCII decimal digits, including leading zeroes, only when the numeric value is in 1–65535. Signs, whitespace (including a final newline), fractions, exponents, alternate bases, Unicode digits and overflow fail. `parseDatabaseUrl` uses the platform URL parser and requires normalized protocol `mysql:`, a nonempty hostname and a path beyond `/`; query/fragment text cannot supply a missing database path. Scheme case follows URL parsing rules. Accepted URL input is preserved exactly, including credentials/encoding; **do not log it**. Caught URL errors are discarded because they may retain the input.
 
 This is structural validation, not a database connection, driver compatibility, hostname reachability, TLS-policy or production readiness check. URL normalization and connector behavior need separate integration coverage. The helpers never read global environment, mutate input, open connections or exit. Both helper test files run through `npm run test:config`; boundary, malformed-input and no-output/caller-continuation checks require no credentials or infrastructure.
+
+## Full configuration parser
+
+```ts
+import { parseConfig } from "@guildboard/config";
+import type { AppConfig, ConfigResult } from "@guildboard/config";
+
+const result: ConfigResult = parseConfig(environmentProvidedByCaller);
+if (!result.ok) {
+  // Only CONFIG_INVALID and canonical invalid/missing names are present.
+  // The service caller decides how to report this and stop before binding.
+  handleInvalidConfiguration(result.error);
+} else {
+  const config: AppConfig = result.value;
+  // Pass config directly to trusted startup code; never log or serialize it.
+}
+```
+
+All five keys are required. `NODE_ENV` is exactly `development`, `test` or
+`production`. `DISCORD_CLIENT_ID` contains only nonempty ASCII decimal digits
+and remains a string, preserving leading zeroes and values beyond numeric safe
+integer precision. `SESSION_SECRET` must have at least 32 JavaScript string
+characters and cannot consist entirely of whitespace; accepted secrets are not
+trimmed. This structural length check is not an entropy or strength guarantee.
+Generate and rotate secrets securely in the separate deployment/security work.
+
+The parser reads only the five named properties from its input and never mutates
+or retains the input map. Unrelated variables are ignored. It collects every
+failed name and returns a fresh failure object with sorted unique canonical
+names, never input values or thrown URL exceptions. Successful values include
+credentials: **do not log the success result, configuration or raw environment**.
+There are no defaults, global `process.env` reads, logging, network calls,
+listeners or exit calls. The TypeScript API expects an environment record of
+strings/undefined, not arbitrary objects with throwing property accessors.
+
+The full facade tests cover all-missing/empty values, simultaneous failures,
+required boundaries and malformed forms, exact string preservation, unrelated
+properties, immutable input, unexpected JavaScript field types, a throwing global
+environment guard and captured child-process stdout/stderr with sentinel secrets.
+No real Discord application, database, VPS or runtime service is verified.
