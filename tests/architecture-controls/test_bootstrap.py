@@ -66,3 +66,33 @@ class BootstrapTests(unittest.TestCase):
         with mock.patch.object(g.os,'read',side_effect=growing):
             with self.assertRaises(g.Invalid): g.read(self.head,'apps/api/README.md')
         self.assertTrue(real_read)
+
+    def test_directory_replacement_and_symlink_during_inventory(self):
+        original = g.os.listdir
+        target = self.head/'apps/api'
+        fired = []
+        def swap(fd):
+            names = original(fd)
+            if not fired and 'README.md' in names and 'package.json' in names:
+                fired.append(True)
+                target.rename(target.with_name('api-old'))
+                target.symlink_to('api-old', target_is_directory=True)
+            return names
+        with mock.patch.object(g.os, 'listdir', side_effect=swap):
+            with self.assertRaises(g.Invalid): g.inventory(self.head)
+        self.assertTrue(fired)
+
+    def test_file_replacement_during_inventory(self):
+        original = g.os.read
+        target = self.head/'apps/api/README.md'
+        fired = []
+        def replace(fd, size):
+            data = original(fd, size)
+            if not fired and data.startswith(target.read_bytes()[:32]) and target.read_bytes():
+                fired.append(True)
+                target.rename(target.with_name('README.old'))
+                target.write_text('replacement')
+            return data
+        with mock.patch.object(g.os, 'read', side_effect=replace):
+            with self.assertRaises(g.Invalid): g.inventory(self.head)
+        self.assertTrue(fired)

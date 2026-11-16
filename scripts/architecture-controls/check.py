@@ -62,16 +62,70 @@ def exact(obj, keys, label):
     require(type(obj) is dict and set(obj) == set(keys), 'invalid shape: ' + label)
 
 def inventory(root, allow_missing=False):
-    paths = {p for p in FIXED if not allow_missing or os.path.lexists(root / p)}
-    for name in ROOTS:
-        folder = root / name
-        require(folder.is_dir() and not folder.is_symlink(), 'missing boundary root: ' + name)
-        for p in folder.rglob('*'):
-            require(not p.is_symlink(), 'symlink in boundary: ' + str(p))
-            if p.is_file(): paths.add(p.relative_to(root).as_posix())
-            else: require(p.is_dir(), 'nonregular boundary entry: ' + str(p))
+    # All traversal and reads stay relative to opened directory descriptors.
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK
+    fileflags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+    paths = {}
+    def stamp(st):
+        return (st.st_dev, st.st_ino, st.st_mode, st.st_size, st.st_mtime_ns, st.st_ctime_ns)
+    def file_at(parent, name, path):
+        before = os.stat(name, dir_fd=parent, follow_symlinks=False)
+        fd = os.open(name, fileflags, dir_fd=parent)
+        try:
+            info = os.fstat(fd)
+            require(stat.S_ISREG(info.st_mode) and stamp(info) == stamp(before), 'unstable or nonregular entry: ' + path)
+            require(info.st_size <= MAX_FILE, 'file too large: ' + path)
+            data = bytearray()
+            while len(data) <= MAX_FILE:
+                chunk = os.read(fd, min(65536, MAX_FILE + 1 - len(data)))
+                if not chunk: break
+                data.extend(chunk)
+            require(len(data) == info.st_size and stamp(os.fstat(fd)) == stamp(info) and
+                    stamp(os.stat(name, dir_fd=parent, follow_symlinks=False)) == stamp(info), 'file changed: ' + path)
+            paths[path] = hashlib.sha256(data).hexdigest()
             require(len(paths) <= MAX_FILES, 'too many boundary files')
-    return {p: hashlib.sha256(read(root, p)).hexdigest() for p in sorted(paths)}
+        finally: os.close(fd)
+    def walk(parent, name, path):
+        before = os.stat(name, dir_fd=parent, follow_symlinks=False)
+        fd = os.open(name, flags, dir_fd=parent)
+        try:
+            info = os.fstat(fd)
+            require(stat.S_ISDIR(info.st_mode) and stamp(info) == stamp(before), 'unstable directory: ' + path)
+            names = sorted(os.listdir(fd))
+            require(len(names) <= MAX_FILES, 'too many boundary entries')
+            for child in names:
+                childpath = path + '/' + child
+                st = os.stat(child, dir_fd=fd, follow_symlinks=False)
+                if stat.S_ISDIR(st.st_mode): walk(fd, child, childpath)
+                else: file_at(fd, child, childpath)
+            require(names == sorted(os.listdir(fd)) and stamp(os.fstat(fd)) == stamp(info) and
+                    stamp(os.stat(name, dir_fd=parent, follow_symlinks=False)) == stamp(info), 'directory changed: ' + path)
+        finally: os.close(fd)
+    try:
+        rootfd = os.open(root, flags)
+        try:
+            for path in FIXED:
+                parts = path.split('/'); fds = []; parent = rootfd
+                try:
+                    for part in parts[:-1]:
+                        parent = os.open(part, flags, dir_fd=parent); fds.append(parent)
+                    file_at(parent, parts[-1], path)
+                except FileNotFoundError:
+                    if not allow_missing: raise
+                finally:
+                    for fd in reversed(fds): os.close(fd)
+            for path in ROOTS:
+                parts = path.split('/'); fds = []; parent = rootfd
+                try:
+                    for part in parts[:-1]:
+                        parent = os.open(part, flags, dir_fd=parent); fds.append(parent)
+                    walk(parent, parts[-1], path)
+                finally:
+                    for fd in reversed(fds): os.close(fd)
+        finally: os.close(rootfd)
+    except OSError as e:
+        raise Invalid('cannot safely inventory: ' + str(e)) from e
+    return dict(sorted(paths.items()))
 
 def baseline(root):
     x = load(root, 'docs/architecture-controls/baseline.json')
@@ -141,7 +195,7 @@ def check(base, current, old=None):
     require(matched == set(changes), 'undocumented boundaries: ' + ', '.join(sorted(set(changes) - matched)))
     return len(changes)
 
-BOOTSTRAP_SHA = '6e219f930a12a372b6cbec8e81feb542a030fb65'
+BOOTSTRAP_SHA = '8f75fdb398dfb48d577135ee08f295a4c4f634b6'
 
 def bootstrap(base, current, base_sha):
     require(base_sha == BOOTSTRAP_SHA, 'wrong bootstrap base SHA')
