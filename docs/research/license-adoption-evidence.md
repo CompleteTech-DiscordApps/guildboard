@@ -72,3 +72,7 @@ No executable policy gate or packaging test exists in this report. Fresh archite
 ## Recheck the repository observations
 
 From the repository clone, use `git show REV:path` for each exact revision above; `git ls-tree -r --name-only REV` enumerates tracked paths. Read all eight main package manifests and the proposed branch package-lock.json. The source font ledger was obtained from GitHub's recursive tree endpoint for the exact Excalidraw commit and the linked index files. Tarball sources and verified notice hashes are retained in the tooling ledger. This report contains a dated manual review, not an automated ongoing audit.
+
+## 2026-11-16 — delegated #16 policy disposition
+
+The earlier observations above retain their original dates and scope. Native prerequisite #3 has closed; the delegated section owner accepts the engineering policy in [docs/licenses/POLICY.md](../licenses/POLICY.md) for the current locked tooling graph. The 2026-10-24 tarball evidence corresponds to current lock versions; installed notice bytes independently match all four recorded hashes, including TypeScript's third-party notice. No fresh tarballs were available and no packaging was inspected. The inventory records unresolved distribution and image-rights gaps; new dependencies and runtime artifacts require their own review. This decision is not legal clearance or certification. #17 remains independent verification after #16 integration.
