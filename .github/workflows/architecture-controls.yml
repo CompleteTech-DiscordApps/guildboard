@@ -20,7 +20,23 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           path: head
           persist-credentials: false
-      - name: Check using base policy and baseline
+      - name: Run policy and regression tests
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TMPDIR: ${{ runner.temp }}
         run: |
-          test -f base/scripts/architecture-controls/check.py || { echo 'Bootstrap requires explicit native integration review'; exit 1; }
-          python3 base/scripts/architecture-controls/check.py --base base --current head
+          set -eu
+          python3 - "$BASE_SHA" "$HEAD_SHA" <<'PY'
+          import re, sys
+          if not all(re.fullmatch(r'[0-9a-f]{40}', x) for x in sys.argv[1:]):
+              raise SystemExit('Invalid base or head SHA')
+          PY
+          if [ -f base/scripts/architecture-controls/check.py ]; then
+            python3 -m unittest discover -s base/tests/architecture-controls -p 'test_*.py' -v
+            python3 base/scripts/architecture-controls/check.py --base base --current head
+          else
+            test "$BASE_SHA" = 6e219f930a12a372b6cbec8e81feb542a030fb65 || { echo 'Missing trusted base policy'; exit 1; }
+            python3 -m unittest discover -s head/tests/architecture-controls -p 'test_*.py' -v
+            python3 head/scripts/architecture-controls/check.py --base base --current head --bootstrap-base-sha "$BASE_SHA"
+          fi

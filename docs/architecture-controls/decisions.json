@@ -1,4 +1,22 @@
 {
-  "records": [],
-  "version": 1
+  "version": 1,
+  "records": [
+    {
+      "id": "DEC-0001",
+      "revision": 1,
+      "boundary": "docs/security/GB-T0-04-02-threat-model.md",
+      "old_sha256": null,
+      "new_sha256": "40bc4302b216fcbba5720b20edff74d717ff40de0a0513b7bf82dd3d58dcce32",
+      "rationale": "Introduce the documented threat model as an initial controlled boundary.",
+      "alternatives": [
+        "Defer the initial threat model"
+      ],
+      "controls": [
+        "docs/security/GB-T0-04-02-threat-model.md"
+      ],
+      "test_evidence": [
+        "tests/architecture-controls/test_gate.py"
+      ]
+    }
+  ]
 }

@@ -3,6 +3,8 @@
 import argparse
 import hashlib
 import json
+import os
+import stat
 import re
 import sys
 from pathlib import Path
@@ -20,11 +22,32 @@ def require(ok, message):
 
 def read(root, name):
     require(isinstance(name, str) and name and not name.startswith('/') and all(x not in ('', '.', '..') for x in name.split('/')), 'invalid path')
-    p = root / name
-    require(not any(q.is_symlink() for q in [p, *p.parents] if q != root.parent), 'symlink: ' + name)
-    require(p.is_file(), 'missing file: ' + name)
-    require(p.stat().st_size <= MAX_FILE, 'file too large: ' + name)
-    return p.read_bytes()
+    parts = name.split('/')
+    fds = []
+    try:
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK
+        fd = os.open(root, flags); fds.append(fd)
+        for part in parts[:-1]:
+            fd = os.open(part, flags, dir_fd=fd); fds.append(fd)
+        fd = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd); fds.append(fd)
+        info = os.fstat(fd)
+        require(stat.S_ISREG(info.st_mode), 'not a regular file: ' + name)
+        require(info.st_size <= MAX_FILE, 'file too large: ' + name)
+        chunks = []; total = 0
+        while total <= MAX_FILE:
+            chunk = os.read(fd, min(65536, MAX_FILE + 1 - total))
+            if not chunk: break
+            chunks.append(chunk); total += len(chunk)
+        require(total <= MAX_FILE, 'file too large: ' + name)
+        after = os.fstat(fd)
+        require((info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns) ==
+                (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns)
+                and total == info.st_size, 'file changed while reading: ' + name)
+        return b''.join(chunks)
+    except OSError as e:
+        raise Invalid('cannot safely read ' + name + ': ' + str(e)) from e
+    finally:
+        for fd in reversed(fds): os.close(fd)
 
 def load(root, name):
     def unique(pairs):
@@ -38,14 +61,15 @@ def load(root, name):
 def exact(obj, keys, label):
     require(type(obj) is dict and set(obj) == set(keys), 'invalid shape: ' + label)
 
-def inventory(root):
-    paths = set(FIXED)
+def inventory(root, allow_missing=False):
+    paths = {p for p in FIXED if not allow_missing or os.path.lexists(root / p)}
     for name in ROOTS:
         folder = root / name
         require(folder.is_dir() and not folder.is_symlink(), 'missing boundary root: ' + name)
         for p in folder.rglob('*'):
             require(not p.is_symlink(), 'symlink in boundary: ' + str(p))
             if p.is_file(): paths.add(p.relative_to(root).as_posix())
+            else: require(p.is_dir(), 'nonregular boundary entry: ' + str(p))
             require(len(paths) <= MAX_FILES, 'too many boundary files')
     return {p: hashlib.sha256(read(root, p)).hexdigest() for p in sorted(paths)}
 
@@ -91,8 +115,8 @@ def check_trace(root):
             v = entry[key]
             require(type(v) is list and v and len(v) == len(set(v)) and set(v) <= set(t[key]), rid + ' invalid ' + key)
 
-def check(base, current):
-    old, new = baseline(base), baseline(current)
+def check(base, current, old=None):
+    old, new = baseline(base) if old is None else old, baseline(current)
     check_trace(current)
     records = load(current, 'docs/architecture-controls/decisions.json')
     exact(records, ('version', 'records'), 'decisions')
@@ -117,11 +141,25 @@ def check(base, current):
     require(matched == set(changes), 'undocumented boundaries: ' + ', '.join(sorted(set(changes) - matched)))
     return len(changes)
 
+BOOTSTRAP_SHA = '6e219f930a12a372b6cbec8e81feb542a030fb65'
+
+def bootstrap(base, current, base_sha):
+    require(base_sha == BOOTSTRAP_SHA, 'wrong bootstrap base SHA')
+    for name in ('scripts/architecture-controls/check.py', 'docs/architecture-controls/baseline.json', '.github/workflows/architecture-controls.yml'):
+        require(not os.path.lexists(base / name), 'base already has gate: ' + name)
+    manifest = load(current, 'docs/architecture-controls/bootstrap.json')
+    exact(manifest, ('version', 'base_sha', 'boundaries', 'review'), 'bootstrap manifest')
+    require(manifest['version'] == 1 and type(manifest['version']) is int and manifest['base_sha'] == BOOTSTRAP_SHA, 'invalid bootstrap manifest')
+    require(manifest['review'] == 'independent review and protected merge required', 'missing review requirement')
+    require(type(manifest['boundaries']) is dict and manifest['boundaries'] == inventory(base, allow_missing=True), 'bootstrap witness mismatch')
+    return check(base, current, manifest['boundaries'])
+
 def main():
-    parser = argparse.ArgumentParser(); parser.add_argument('--base', required=True); parser.add_argument('--current', required=True)
+    parser = argparse.ArgumentParser(); parser.add_argument('--base', required=True); parser.add_argument('--current', required=True); parser.add_argument('--bootstrap-base-sha')
     a = parser.parse_args()
     try:
-        count = check(Path(a.base).resolve(strict=True), Path(a.current).resolve(strict=True))
+        base, current = Path(a.base).resolve(strict=True), Path(a.current).resolve(strict=True)
+        count = bootstrap(base, current, a.bootstrap_base_sha) if a.bootstrap_base_sha is not None else check(base, current)
         print(f'PASS: {count} changed boundary file(s); semantic review required')
         return 0
     except (Invalid, OSError, ValueError, KeyError, TypeError, RecursionError) as e:

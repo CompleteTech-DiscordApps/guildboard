@@ -15,3 +15,5 @@ An ADR filename alone is rejected because an unrelated ADR does not explain a pa
 ## Consequences and follow-through
 
 The manager UUID `01a1d2c4-663a-7181-824d-febb00e1dd4a` owns native integration and validation of the executable schema, baseline comparison, regression and PR checks, and coordinating independent #31 verification. The gate must be least privilege, offline-capable for local checks and not deploy an app or require secrets. Reviewers must assess actual diffs, changed trust boundaries, alternatives, acceptance evidence and downstream effects. Maintainer/native protected review remains necessary; this ADR does not assert review, runtime, platform or release results.
+
+The first installation uses the explicitly pinned base witness and review procedure documented in `docs/architecture-controls/README.md`. Its proposed policy and witness need fresh independent review before protected integration; a passing bootstrap check is not that review.
