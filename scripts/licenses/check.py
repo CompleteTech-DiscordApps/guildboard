@@ -15,7 +15,7 @@ HEX = re.compile(r'^[0-9a-f]{64}$')
 STATUS = {'interpreted', 'unresolved'}
 # Section decision identity, subject to fresh independent review; not legal approval.
 # Changes to the catalog require an explicit code update and fresh review.
-DECISION_CATALOG_SHA256 = '9c6b5c7702f8a6d68c366ebfc005f5b0a777bb1003dfcb7abdd0c255b5be6c5a'
+DECISION_CATALOG_SHA256 = '849aa106bbf49ab635613cac7735262e081b830eb002ba8159d6892dc1eccab0'
 
 def decision_catalog_digest(inventory):
     # Scope and coverage are assessed separately; every other field, including
@@ -183,6 +183,14 @@ def _validate(root):
                     key=(lp,member,h,len(data)); require(key in selected, 'unknown archive notice binding'); bound.add(key); matched=True
                 elif kind == 'supplemental_notice':
                     path_parts(s['path']); path_parts(s.get('member',s.get('source_path'))); require(s['sha256']==h and any(q.get('ordinal')==s['ordinal'] and q.get('notice_sha256')==h for q in inv['prettier_supplemental']['sections']), 'invalid supplemental binding'); matched=True
+                elif kind == 'supplemental_additional_notice':
+                    path_parts(s['path'])
+                    require(type(s['ordinal']) is int and s['sha256']==h and any(
+                        q.get('ordinal')==s['ordinal'] and any(
+                            isinstance(extra,dict) and extra.get('sha256')==h and extra.get('source_path')==s['path']
+                            for extra in q.get('supplemental_notices',[]))
+                        for q in inv['prettier_supplemental']['sections']), 'invalid additional supplemental binding')
+                    matched=True
                 elif kind in ('supplemental_source','supplemental_path'):
                     path_parts(s['path']); require(s['lock_path'] in components, 'unknown supplemental component')
                     c=components[s['lock_path']]; refs=c['effective_classification'].get('supplemental_notice_sources',[])
@@ -201,6 +209,19 @@ def _validate(root):
         for s in supp:
             i=s['ordinal']; require(type(i) is int and 1 <= i <= len(original) and i not in supplements and s['original_decision']==original[i-1] and s['name']==original[i-1]['name'] and s['current_status'] in STATUS, 'invalid supplemental decision')
             require(s['notice_sha256'] in retained_hashes and digest(s['actual_full_notice'].encode())==s['notice_sha256'], 'supplemental notice missing')
+            extras=s.get('supplemental_notices',[])
+            require(isinstance(extras,list), 'invalid additional supplemental notices')
+            seen_extra=set()
+            for extra in extras:
+                require(isinstance(extra,dict) and isinstance(extra.get('text'),str) and extra['text'].strip() and
+                        isinstance(extra.get('sha256'),str), 'invalid additional supplemental notice')
+                h=extra['sha256']; path_parts(extra['source_path'])
+                require(h not in seen_extra and h!=s['notice_sha256'] and h in retained_hashes and
+                        digest(extra['text'].encode())==h, 'additional supplemental notice missing or inconsistent')
+                require(any(n['sha256']==h and any(ref.get('kind')=='supplemental_additional_notice' and
+                        ref.get('ordinal')==i and ref.get('path')==extra['source_path'] for ref in n['sources'])
+                        for n in retained), 'additional supplemental notice has no retained source binding')
+                seen_extra.add(h)
             supplements[i]=s
         unresolved=[]
         for i,(o,e) in enumerate(zip(original,effective),1):

@@ -1,5 +1,21 @@
 # Current candidate evidence — 2026-11-16
 
+## Successor integration to published dad1918, 2026-11-16
+
+This record describes the integration after `dad191837d5ef5f377acdf5f2c4c22c8beaf09ea`; its exact revision is the enclosing Git commit. Sections 119 and 236 now have bounded known-term interpretations with all original and intermediate unresolved decisions retained. The full CC0 text and two upstream wcwidth comments add three content-addressed notices. The inventory has 100 components, 246 original sections and 66 notices, occupies 2,073,254 bytes below the unchanged 2 MiB cap, and binds catalog `849aa106bbf49ab635613cac7735262e081b830eb002ba8159d6892dc1eccab0`. No original decision was removed to fit the cap.
+
+Root executed the following sequentially with an absolute private TMPDIR and the 100-archive fixture/receipt:
+
+- `python3 -B -m unittest discover -s tests/licenses -v`: 40 tests passed, including five new supplemental binding/history regressions. The initial 40-test invocation had one unsupported-scope structural assertion failure without its diagnostic. An isolated reproduction was valid; assertions now include diagnostics, and the full 40-test rerun passed. The initial log remains retained; its cause is unestablished, and fresh independent verification is required.
+- `check_archives.verify_archives(root, artifacts)`: the actual live-fetched cache verified 100 components and 100 component notice bindings; this differs from 66 unique retained notices.
+- `check.assess(root)`: structure valid, clearance unknown, seven diagnostics. Ordinals 5, 6 and 180 remain unresolved alongside Prettier classification, two AUTHORS gaps and distribution scope. The CLI remains a failing gate with exit 1.
+
+Both supplemental npm archives were also verified using bounded gzip and raw header scanning before selected manifest metadata was parsed. Available lomemo MIT/CC0 terms do not establish distribution inclusion or unknown separate vendor terms. Wcwidth ancestry and 142 matching ranges support the identified historical grant but do not establish behavioral equivalence or complete source provenance.
+
+Native license-policy runs [43924798509](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/43924798509) and [43924809671](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/43924809671) concern the preceding published dad1918 revision (the PR run checked a synthetic merge). Each passed 35 tests and 100 archive bindings and then failed the assessment with nine unknown diagnostics. They are prior evidence for this successor. Fresh exact-revision review, publication and native CI remain required. Issue #16 and #17, distribution scope, asset/action rights and release holds remain open.
+
+## Earlier 82ac8b record, retained verbatim
+
 Private draft PR #482 candidate `82ac8b2593864e885194d665d38da17b509ad3d4` is unpublished and has no issue acceptance or inherited approval. Main #507 merged engineering graph as `8f75`; actual repository head is `2dcb`. #3 is closed; #17 remains open on #16. The following are supplied prior evidence, not tests executed for this documentation update: 35 root tests passed; a live fetch of 100 archives used an unchanged fetch file; current archive verification matched 100 components and 100 notice bindings. The assessment reports 100 components (four nested), 246 sections, 63 retained notices, five unresolved ordinals 5, 6, 119, 180 and 236, 99 interpreted components with Prettier unresolved, two AUTHORS gaps, unknown scope and nine diagnostics with exit 1. The initial 31-test run had a stale expected notice count failure and the corrected 35-test run passed; the original failure remains historical evidence. Grant 217 retains the exact 1,103-byte README notice without an added LF; the 190 history remains retained.
 
 The current interfaces and workflow are documented in [policy](POLICY.md). Native CI has not yet run. The workflow's fixture-backed test and archive identity gates precede an unwrapped assessment that is expected to fail while unknowns remain. A pass of the former is not license clearance. Manager follow-through includes actual CI, fresh independent review, publication and the remaining five terms, two AUTHORS gaps and scope evidence. No legal, distribution or whole-issue clearance follows.

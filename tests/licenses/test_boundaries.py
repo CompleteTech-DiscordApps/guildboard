@@ -66,7 +66,7 @@ class ArchiveChecks(unittest.TestCase):
                 elif field=='notice': c['notices'][0]['bytes']+=1
                 elif field=='retained': (self.root/'docs/licenses/notices'/ (sha(self.notice)+'.txt')).write_bytes(b'changed')
                 else: c['artifact']['url']='https://wrong.example/'
-                invpath.write_text(json.dumps(inv))
+                invpath.write_text(json.dumps(inv,separators=(',',':'),ensure_ascii=False))
                 with self.assertRaises(archive.Invalid): self.verify()
     def test_bad_members(self):
         for extra in (regular('a/LICENSE',b'x'), regular('../escape',b'x'), ('a/link',b'',tarfile.SYMTYPE), ('a/device',b'',tarfile.CHRTYPE), regular('a/./x',b''), regular('a\\x',b'')):
@@ -104,7 +104,7 @@ class ValidatedInputChecks(unittest.TestCase):
             inv = json.loads(ip.read_text()); lock = json.loads(lp.read_text())
             p = next(iter(inv['components'])); url = 'https://attacker.example/changed.tgz'
             inv['components'][p]['artifact']['url'] = url; lock['packages'][p]['resolved'] = url
-            ip.write_text(json.dumps(inv)); lp.write_text(json.dumps(lock))
+            ip.write_text(json.dumps(inv,separators=(',',':'),ensure_ascii=False)); lp.write_text(json.dumps(lock))
             return evidence
         with patch.object(archive.check, 'validate_structure', side_effect=replace):
             with self.assertRaisesRegex(archive.Invalid, 'input changed after validation'):

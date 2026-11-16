@@ -22,7 +22,7 @@ class Contract(unittest.TestCase):
         self.inventory = self.root / 'docs/licenses/inventory.json'
         self.inv = json.loads(self.inventory.read_bytes())
     def tearDown(self): self.temp.cleanup()
-    def save(self): self.inventory.write_text(json.dumps(self.inv))
+    def save(self): self.inventory.write_text(json.dumps(self.inv,separators=(',',':'),ensure_ascii=False))
     def invalid(self):
         self.save()
         with patch.object(check, 'DECISION_CATALOG_SHA256', check.decision_catalog_digest(self.inv)):
@@ -31,10 +31,10 @@ class Contract(unittest.TestCase):
         self.inv['input_sha256'][path] = hashlib.sha256((self.root / path).read_bytes()).hexdigest()
     def test_actual_assessment(self):
         result = check.assess(self.root)
-        self.assertTrue(result['structure_valid'])
-        self.assertEqual(result['counts'], {'components':100, 'sections':246, 'notices':63})
-        self.assertEqual(len(result['diagnostics']), 9)
-        self.assertEqual([d['ordinal'] for d in result['diagnostics'] if d['kind']=='section'], [5, 6, 119, 180, 236])
+        self.assertTrue(result['structure_valid'], result.get('diagnostics'))
+        self.assertEqual(result['counts'], {'components':100, 'sections':246, 'notices':66})
+        self.assertEqual(len(result['diagnostics']), 7)
+        self.assertEqual([d['ordinal'] for d in result['diagnostics'] if d['kind']=='section'], [5, 6, 180])
         self.assertEqual(sum(d['kind']=='classification' for d in result['diagnostics']),1)
         self.assertEqual(sum(d['kind']=='notice_coverage' for d in result['diagnostics']),2)
         self.assertEqual(sum(d['kind']=='distribution_scope' for d in result['diagnostics']),1)
@@ -49,9 +49,42 @@ class Contract(unittest.TestCase):
         }
         self.save()
         result = check.assess(self.root)
-        self.assertTrue(result['structure_valid'])
+        self.assertTrue(result['structure_valid'], result.get('diagnostics'))
         self.assertEqual(result['clearance_status'], 'unknown')
         self.assertEqual(sum(d['kind'] == 'distribution_scope' for d in result['diagnostics']), 1)
+
+    def test_additional_notice_text_and_history_are_bound(self):
+        self.assertTrue(check.assess(self.root)['structure_valid'])
+        for ordinal, count in ((119, 1), (236, 2)):
+            s = next(s for s in self.inv['prettier_supplemental']['sections'] if s['ordinal'] == ordinal)
+            self.assertEqual(s['integration_prior_decision']['current_status'], 'unresolved')
+            self.assertEqual(s['original_decision'], self.inv['prettier_original_sections'][ordinal-1])
+            self.assertEqual(len(s['supplemental_notices']), count)
+            for extra in s['supplemental_notices']:
+                self.assertEqual((self.root / 'docs/licenses/notices' / (extra['sha256']+'.txt')).read_bytes(), extra['text'].encode())
+
+    def test_missing_additional_notice_rejected(self):
+        s = next(s for s in self.inv['prettier_supplemental']['sections'] if s['ordinal'] == 119)
+        h = s['supplemental_notices'][0]['sha256']
+        self.inv['retained_notices'] = [n for n in self.inv['retained_notices'] if n['sha256'] != h]
+        self.invalid()
+
+    def test_additional_notice_text_tampering_rejected(self):
+        s = next(s for s in self.inv['prettier_supplemental']['sections'] if s['ordinal'] == 119)
+        s['supplemental_notices'][0]['text'] += 'changed'
+        self.inv['effective_prettier_sections'][118]['supplemental_decision'] = copy.deepcopy(s)
+        self.invalid()
+
+    def test_additional_notice_wrong_ordinal_rejected(self):
+        n = next(n for n in self.inv['retained_notices'] if n['sources'][0]['kind'] == 'supplemental_additional_notice')
+        n['sources'][0]['ordinal'] = 217
+        self.invalid()
+
+    def test_duplicate_additional_notice_rejected(self):
+        s = next(s for s in self.inv['prettier_supplemental']['sections'] if s['ordinal'] == 119)
+        s['supplemental_notices'].append(copy.deepcopy(s['supplemental_notices'][0]))
+        self.inv['effective_prettier_sections'][118]['supplemental_decision'] = copy.deepcopy(s)
+        self.invalid()
 
     def test_complete_self_declared_scope_cannot_suppress_diagnostic(self):
         self.inv['distribution_scope'] = 'development-only'
@@ -62,10 +95,10 @@ class Contract(unittest.TestCase):
         }
         self.save()
         result = check.assess(self.root)
-        self.assertTrue(result['structure_valid'])
-        self.assertEqual(result['counts'], {'components': 100, 'sections': 246, 'notices': 63})
+        self.assertTrue(result['structure_valid'], result.get('diagnostics'))
+        self.assertEqual(result['counts'], {'components': 100, 'sections': 246, 'notices': 66})
         self.assertEqual(result['clearance_status'], 'unknown')
-        self.assertEqual(len(result['diagnostics']), 9)
+        self.assertEqual(len(result['diagnostics']), 7)
         self.assertEqual(sum(d['kind'] == 'distribution_scope' for d in result['diagnostics']), 1)
         with patch('sys.argv', ['check', '--root', str(self.root)]), patch('sys.stdout'):
             self.assertEqual(check.main(), 1)

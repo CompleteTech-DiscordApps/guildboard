@@ -89,7 +89,7 @@ class FetchTests(unittest.TestCase):
             if relative.endswith('inventory.json'):
                 inventory = json.loads(original)
                 inventory['owned_decisions'] = []
-                path.write_text(json.dumps(inventory))
+                path.write_text(json.dumps(inventory,separators=(',',':'),ensure_ascii=False))
             with self.subTest(path=relative), self.assertRaises(fetch.Invalid):
                 fetch.fetch(copy, self.output, Opener(self.mapping))
             path.write_bytes(original)
