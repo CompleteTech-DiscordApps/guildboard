@@ -1,0 +1,84 @@
+{
+  "repository": "excalidraw/excalidraw",
+  "commit": "a2ec2889babf7d2295469c6d90ebe77fae57df84",
+  "entries": [
+    {
+      "path": "packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-279a7b317d12eb88de06167bd672b4b4.woff2",
+      "git_blob_sha1": "269b2c706f612736ccd6cf0b6790f7e004f2d826",
+      "sha256": "fa930fceb529a4b51ba3055d590302722c27704f6a6357495873950136b1e2ea",
+      "bytes": 17488,
+      "file": "269b2c706f612736ccd6cf0b6790f7e004f2d826.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-6e066e8de2ac57ea9283adb9c24d7f0c.woff2",
+      "git_blob_sha1": "984ce67f564feddcc67e38f5b65952fc8dd7a028",
+      "sha256": "782f24081b810b8de9f04da055007ce4f1445c18abbf096c831f8888d65935c1",
+      "bytes": 1292,
+      "file": "984ce67f564feddcc67e38f5b65952fc8dd7a028.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-dc6a8806fa96795d7b3be5026f989a17.woff2",
+      "git_blob_sha1": "de0a8e978f945a8a2bb61d5a44fcce9e0a0cc9cc",
+      "sha256": "61c376d32e1773588f6163599aed24fe0387b5a5cb622bd200455f20c2b36a87",
+      "bytes": 2816,
+      "file": "de0a8e978f945a8a2bb61d5a44fcce9e0a0cc9cc.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-fcb0fc02dcbee4c9846b3e2508668039.woff2",
+      "git_blob_sha1": "bef7d540cb39126eff39e1c9f5ac43b804501121",
+      "sha256": "ee641c2e35730c3e6e3826855f1b6cc3b343a017c3e216e4e4a2e47010c53ad1",
+      "bytes": 9856,
+      "file": "bef7d540cb39126eff39e1c9f5ac43b804501121.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-349fac6ca4700ffec595a7150a0d1e1d.woff2",
+      "git_blob_sha1": "3c81f0babd0321450c6549028078928c38ed5e37",
+      "sha256": "a0637cff365c7344d2f7a15905a1f74dceaf56b5ac2ff913d150358bed6921f0",
+      "bytes": 2656,
+      "file": "3c81f0babd0321450c6549028078928c38ed5e37.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-3f2c5db56cc93c5a6873b1361d730c16.woff2",
+      "git_blob_sha1": "1e9c460ba68d5a67053e89b71150e32d58ee8a01",
+      "sha256": "18ea9be1dd6b5a67b057f44eba8e34cb290f88308c272bcf35c79c1a220d0d7b",
+      "bytes": 2104,
+      "file": "1e9c460ba68d5a67053e89b71150e32d58ee8a01.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-41b173a47b57366892116a575a43e2b6.woff2",
+      "git_blob_sha1": "507c11df102519b4c484a748583f787224a1fac2",
+      "sha256": "c96649a5f96e2faa9143ee94e5b590b5afb08092f8d67c67f09cef332d66e4a7",
+      "bytes": 8712,
+      "file": "507c11df102519b4c484a748583f787224a1fac2.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-623ccf21b21ef6b3a0d87738f77eb071.woff2",
+      "git_blob_sha1": "aa49c3605adc3ecd107f70d7acf39fee68500ace",
+      "sha256": "b004007be100261e58188cf8a0f7e850e997702f35d57110915995cd880e49f1",
+      "bytes": 824,
+      "file": "aa49c3605adc3ecd107f70d7acf39fee68500ace.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2",
+      "git_blob_sha1": "98b9616a39025e37dcaacb5bce5a7791666bf38b",
+      "sha256": "e4423b318e11432aff2e6e865e300b7ca270f92321a3f56632268fede01c1b48",
+      "bytes": 24956,
+      "file": "98b9616a39025e37dcaacb5bce5a7791666bf38b.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-b9dcf9d2e50a1eaf42fc664b50a3fd0d.woff2",
+      "git_blob_sha1": "58e960cf4cc7ed064e6fb7aa8e8fd7d36b9a4208",
+      "sha256": "b424d16da4398be3e9852857a54ff70e043c8e2ec5c4444dbf7f88d7469b9859",
+      "bytes": 13296,
+      "file": "58e960cf4cc7ed064e6fb7aa8e8fd7d36b9a4208.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-be310b9bcd4f1a43f571c46df7809174.woff2",
+      "git_blob_sha1": "b413197a2122f16d42602adaf92024136686ad4b",
+      "sha256": "4fb8ad69be9aeac5664d99e5aa3a68a27ea40c98943b80387f7cd55c034fcc93",
+      "bytes": 12220,
+      "file": "b413197a2122f16d42602adaf92024136686ad4b.woff2"
+    }
+  ],
+  "meaning": "Pinnedsourcefontbytes identity only; noformat/license/distributionclearance"
+}

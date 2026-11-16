@@ -1,0 +1,233 @@
+{
+  "schema": "font-source-terms-v1",
+  "repository": "excalidraw/excalidraw",
+  "commit": "a2ec2889babf7d2295469c6d90ebe77fae57df84",
+  "candidate": "8f265000d49d8ef59ce5378c05d315355c48968f",
+  "scope": "Supplementary source evidence for exactly these two families; no distribution, export, modification or whole-inventory clearance.",
+  "evidence_method": "Hash raw index and source bytes; compare all two-family receipt paths and Git blob IDs with the 234-path inventory and index imports. No font parser or font code executed.",
+  "inventory": {
+    "path": "docs/research/evidence/license-source-inventory-2026-10-24.json",
+    "sha256": "57e1f71be3590bf885a376721386b90360d1c3babe0b1a632ab5cb24d8175335",
+    "total_paths": 234
+  },
+  "source_receipt_sha256": "fdbc6caa197415a9207488d6497b56047aff3136704f37e57be3a9962fa3df56",
+  "font_bytes_receipt_sha256": "37533265334b1adbfdc47d0bb17835a51dab5a6d2b2e20d11f04546e57be04a4",
+  "families": [
+    {
+      "family": "ComicShanns",
+      "index": {
+        "path": "packages/excalidraw/fonts/ComicShanns/index.ts",
+        "git_blob_sha1": "bf78650b4bcac8235b57c5ccd15b1c18a4674d88",
+        "sha256": "43742ce64655de872db8eeaaab9c12a665fb0b333114ae59283714848b988bec",
+        "bytes": 4173,
+        "receipt_file": "ComicShanns-index.ts",
+        "retained_path": "docs/licenses/font-sources/ComicShanns-index.ts.txt",
+        "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/ComicShanns/index.ts"
+      },
+      "version_label_in_generated_index": "1.3.0",
+      "version_scope": "index metadata only; no internal font table decoded",
+      "index_license_spdx": "MIT",
+      "binary_license_status": "unresolved: index association is not independent binary license provenance",
+      "notices": [
+        {
+          "field": "origin_copyright_field",
+          "text": "MIT License\n\nCopyright (c) 2018 Shannon Miwa\nCopyright (c) 2023 Jesus Gonzalez\nCopyright (c) 2023 Rodrigo Batista de Moraes\nCopyright (c) 2024 Fini Jastrow\nCopyright (c) 2024 Kyle Beechly\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+          "sha256_utf8": "e001cdb75c49d99c5f4f35381e71fe2a60c88d5afe49da5cbd8fd1c7a34cc432"
+        },
+        {
+          "field": "origin_license_field",
+          "text": "MIT License\n\nCopyright (c) 2018 Shannon Miwa\nCopyright (c) 2023 Jesus Gonzalez\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+          "sha256_utf8": "603f9c7d4fc4e249e612cf3b5f95fd46edb7c013a2c35b6480ae912fa9555c9a"
+        }
+      ],
+      "known_conditional_terms": [
+        "MIT permission includes use, copying, modification, distribution, sublicensing and sale; retain the copyright and permission notices in copies or substantial portions.",
+        "The text disclaims warranties and liability. MIT contains no express reserved-font-name condition; font embedding and export are not separately addressed by this notice."
+      ],
+      "reserved_font_names": "No reserved font name identified in either quoted MIT block; this is not proof none exists elsewhere.",
+      "mapping_gap": "The generated origin copyright and license fields contain different copyright lists; the imports establish association, not which notice or rights attach to each split binary. Obtain authoritative provenance and applicable notices for each blob.",
+      "files": [
+        {
+          "path": "packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-279a7b317d12eb88de06167bd672b4b4.woff2",
+          "git_blob_sha1": "269b2c706f612736ccd6cf0b6790f7e004f2d826",
+          "sha256": "fa930fceb529a4b51ba3055d590302722c27704f6a6357495873950136b1e2ea",
+          "bytes": 17488,
+          "file": "269b2c706f612736ccd6cf0b6790f7e004f2d826.woff2",
+          "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-279a7b317d12eb88de06167bd672b4b4.woff2"
+        },
+        {
+          "path": "packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-6e066e8de2ac57ea9283adb9c24d7f0c.woff2",
+          "git_blob_sha1": "984ce67f564feddcc67e38f5b65952fc8dd7a028",
+          "sha256": "782f24081b810b8de9f04da055007ce4f1445c18abbf096c831f8888d65935c1",
+          "bytes": 1292,
+          "file": "984ce67f564feddcc67e38f5b65952fc8dd7a028.woff2",
+          "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-6e066e8de2ac57ea9283adb9c24d7f0c.woff2"
+        },
+        {
+          "path": "packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-dc6a8806fa96795d7b3be5026f989a17.woff2",
+          "git_blob_sha1": "de0a8e978f945a8a2bb61d5a44fcce9e0a0cc9cc",
+          "sha256": "61c376d32e1773588f6163599aed24fe0387b5a5cb622bd200455f20c2b36a87",
+          "bytes": 2816,
+          "file": "de0a8e978f945a8a2bb61d5a44fcce9e0a0cc9cc.woff2",
+          "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-dc6a8806fa96795d7b3be5026f989a17.woff2"
+        },
+        {
+          "path": "packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-fcb0fc02dcbee4c9846b3e2508668039.woff2",
+          "git_blob_sha1": "bef7d540cb39126eff39e1c9f5ac43b804501121",
+          "sha256": "ee641c2e35730c3e6e3826855f1b6cc3b343a017c3e216e4e4a2e47010c53ad1",
+          "bytes": 9856,
+          "file": "bef7d540cb39126eff39e1c9f5ac43b804501121.woff2",
+          "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/ComicShanns/ComicShanns-Regular-fcb0fc02dcbee4c9846b3e2508668039.woff2"
+        }
+      ]
+    },
+    {
+      "family": "Excalifont",
+      "index": {
+        "path": "packages/excalidraw/fonts/Excalifont/index.ts",
+        "git_blob_sha1": "7e11af6c619a089ec98adbe151bc3057bd4b5bfa",
+        "sha256": "db994e57791014204ba89e7ff902f2409b46ace3cd53907c3b4ac0e88d8e18c9",
+        "bytes": 6903,
+        "receipt_file": "Excalifont-index.ts",
+        "retained_path": "docs/licenses/font-sources/Excalifont-index.ts.txt",
+        "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Excalifont/index.ts"
+      },
+      "version_label_in_generated_index": "Version 1.000;Glyphs 3.2 (3227)",
+      "version_scope": "index metadata only; no internal font table decoded",
+      "index_license_spdx": "OFL-1.1",
+      "binary_license_status": "unresolved: index association is not independent binary license provenance",
+      "notices": [
+        {
+          "field": "origin_copyright_field",
+          "text": "Copyright (c) 2024 by Excalidraw. All rights reserved.",
+          "sha256_utf8": "b9f0842b55242ef95e1c1612cb1814296e2fbf1d6c9757d943610c626aa5239e"
+        },
+        {
+          "field": "origin_license_field",
+          "text": "This Font Software is licensed under the SIL Open Font License, Version 1.1.\nThis license is copied below, and is also available with a FAQ at:\nhttp://scripts.sil.org/OFL\n\n\n-----------------------------------------------------------\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007\n-----------------------------------------------------------\n\nPREAMBLE\nThe goals of the Open Font License (OFL) are to stimulate worldwide\ndevelopment of collaborative font projects, to support the font creation\nefforts of academic and linguistic communities, and to provide a free and\nopen framework in which fonts may be shared and improved in partnership\nwith others.\n\nThe OFL allows the licensed fonts to be used, studied, modified and\nredistributed freely as long as they are not sold by themselves. The\nfonts, including any derivative works, can be bundled, embedded, \nredistributed and/or sold with any software provided that any reserved\nnames are not used by derivative works. The fonts and derivatives,\nhowever, cannot be released under any other type of license. The\nrequirement for fonts to remain under this license does not apply\nto any document created using the fonts or their derivatives.\n\nDEFINITIONS\n\"Font Software\" refers to the set of files released by the Copyright\nHolder(s) under this license and clearly marked as such. This may\ninclude source files, build scripts and documentation.\n\n\"Reserved Font Name\" refers to any names specified as such after the\ncopyright statement(s).\n\n\"Original Version\" refers to the collection of Font Software components as\ndistributed by the Copyright Holder(s).\n\n\"Modified Version\" refers to any derivative made by adding to, deleting,\nor substituting -- in part or in whole -- any of the components of the\nOriginal Version, by changing formats or by porting the Font Software to a\nnew environment.\n\n\"Author\" refers to any designer, engineer, programmer, technical\nwriter or other person who contributed to the Font Software.\n\nPERMISSION & CONDITIONS\nPermission is hereby granted, free of charge, to any person obtaining\na copy of the Font Software, to use, study, copy, merge, embed, modify,\nredistribute, and sell modified and unmodified copies of the Font\nSoftware, subject to the following conditions:\n\n1) Neither the Font Software nor any of its individual components,\nin Original or Modified Versions, may be sold by itself.\n\n2) Original or Modified Versions of the Font Software may be bundled,\nredistributed and/or sold with any software, provided that each copy\ncontains the above copyright notice and this license. These can be\nincluded either as stand-alone text files, human-readable headers or\nin the appropriate machine-readable metadata fields within text or\nbinary files as long as those fields can be easily viewed by the user.\n\n3) No Modified Version of the Font Software may use the Reserved Font\nName(s) unless explicit written permission is granted by the corresponding\nCopyright Holder. This restriction only applies to the primary font name as\npresented to the users.\n\n4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font\nSoftware shall not be used to promote, endorse or advertise any\nModified Version, except to acknowledge the contribution(s) of the\nCopyright Holder(s) and the Author(s) or with their explicit written\npermission.\n\n5) The Font Software, modified or unmodified, in part or in whole,\nmust be distributed entirely under this license, and must not be\ndistributed under any other license. The requirement for fonts to\nremain under this license does not apply to any document created\nusing the Font Software.\n\nTERMINATION\nThis license becomes null and void if any of the above conditions are\nnot met.\n\nDISCLAIMER\nTHE FONT SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND,\nEXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF\nMERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT\nOF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE\nCOPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,\nINCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL\nDAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING\nFROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM\nOTHER DEALINGS IN THE FONT SOFTWARE.",
+          "sha256_utf8": "697383c6addd5dd14d7e1ff053aaa44520ce86a58589eef1f9985ab66e08db08"
+        }
+      ],
+      "known_conditional_terms": [
+        "OFL 1.1 permits use, study, copying, embedding, modification and redistribution including sale with software, subject to its conditions; the font or an individual component may not be sold by itself.",
+        "Copies bundled or redistributed with software must include copyright and license in the stated accessible forms; modified and unmodified font software must remain under OFL, while documents created using it need not.",
+        "A modified version cannot use a reserved font name as its primary user-facing name without written permission; holder and author names cannot promote modified versions except for acknowledgement or written permission.",
+        "The license terminates for breach and disclaims warranties and liability. Embedding is expressly permitted subject to conditions; export documents are distinct from font software, but actual embedded-font distribution requires examination."
+      ],
+      "reserved_font_names": "No name is explicitly specified as a Reserved Font Name after the copyright statement in the available index; absence elsewhere has not been established.",
+      "mapping_gap": "The generated index states an OFL grant for the origin font and imports the seven split binaries, but does not independently establish the rights, reserved-name declarations, or transformation provenance for each binary. Obtain authoritative release and transformation evidence.",
+      "files": [
+        {
+          "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-349fac6ca4700ffec595a7150a0d1e1d.woff2",
+          "git_blob_sha1": "3c81f0babd0321450c6549028078928c38ed5e37",
+          "sha256": "a0637cff365c7344d2f7a15905a1f74dceaf56b5ac2ff913d150358bed6921f0",
+          "bytes": 2656,
+          "file": "3c81f0babd0321450c6549028078928c38ed5e37.woff2",
+          "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Excalifont/Excalifont-Regular-349fac6ca4700ffec595a7150a0d1e1d.woff2"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-3f2c5db56cc93c5a6873b1361d730c16.woff2",
+          "git_blob_sha1": "1e9c460ba68d5a67053e89b71150e32d58ee8a01",
+          "sha256": "18ea9be1dd6b5a67b057f44eba8e34cb290f88308c272bcf35c79c1a220d0d7b",
+          "bytes": 2104,
+          "file": "1e9c460ba68d5a67053e89b71150e32d58ee8a01.woff2",
+          "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Excalifont/Excalifont-Regular-3f2c5db56cc93c5a6873b1361d730c16.woff2"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-41b173a47b57366892116a575a43e2b6.woff2",
+          "git_blob_sha1": "507c11df102519b4c484a748583f787224a1fac2",
+          "sha256": "c96649a5f96e2faa9143ee94e5b590b5afb08092f8d67c67f09cef332d66e4a7",
+          "bytes": 8712,
+          "file": "507c11df102519b4c484a748583f787224a1fac2.woff2",
+          "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Excalifont/Excalifont-Regular-41b173a47b57366892116a575a43e2b6.woff2"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-623ccf21b21ef6b3a0d87738f77eb071.woff2",
+          "git_blob_sha1": "aa49c3605adc3ecd107f70d7acf39fee68500ace",
+          "sha256": "b004007be100261e58188cf8a0f7e850e997702f35d57110915995cd880e49f1",
+          "bytes": 824,
+          "file": "aa49c3605adc3ecd107f70d7acf39fee68500ace.woff2",
+          "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Excalifont/Excalifont-Regular-623ccf21b21ef6b3a0d87738f77eb071.woff2"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2",
+          "git_blob_sha1": "98b9616a39025e37dcaacb5bce5a7791666bf38b",
+          "sha256": "e4423b318e11432aff2e6e865e300b7ca270f92321a3f56632268fede01c1b48",
+          "bytes": 24956,
+          "file": "98b9616a39025e37dcaacb5bce5a7791666bf38b.woff2",
+          "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-b9dcf9d2e50a1eaf42fc664b50a3fd0d.woff2",
+          "git_blob_sha1": "58e960cf4cc7ed064e6fb7aa8e8fd7d36b9a4208",
+          "sha256": "b424d16da4398be3e9852857a54ff70e043c8e2ec5c4444dbf7f88d7469b9859",
+          "bytes": 13296,
+          "file": "58e960cf4cc7ed064e6fb7aa8e8fd7d36b9a4208.woff2",
+          "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Excalifont/Excalifont-Regular-b9dcf9d2e50a1eaf42fc664b50a3fd0d.woff2"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Excalifont/Excalifont-Regular-be310b9bcd4f1a43f571c46df7809174.woff2",
+          "git_blob_sha1": "b413197a2122f16d42602adaf92024136686ad4b",
+          "sha256": "4fb8ad69be9aeac5664d99e5aa3a68a27ea40c98943b80387f7cd55c034fcc93",
+          "bytes": 12220,
+          "file": "b413197a2122f16d42602adaf92024136686ad4b.woff2",
+          "url": "https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Excalifont/Excalifont-Regular-be310b9bcd4f1a43f571c46df7809174.woff2"
+        }
+      ]
+    }
+  ],
+  "owned_decisions": [
+    {
+      "owner": "assigned font evidence worker",
+      "items": "issue16 ComicShanns and Excalifont source evidence",
+      "decision": "Record full index grants and conditional terms while leaving per-binary applicability unresolved.",
+      "rationale": "Imports, pinned byte identities and index origin metadata support association, not independent grant or transformation proof.",
+      "validation": "Verify all 11 receipt and inventory paths/blob IDs, index imports and raw bytes, and notice excerpts and hashes.",
+      "follow_through": "Manager integrate this supplemental catalog separately from npm inventory and commission fresh independent review."
+    }
+  ],
+  "next_actions": [
+    "Manager 01a1d2c4-663a-7181-824d-febb00e1dd4a: integrate reviewable font catalog separately from npm inventory and commission fresh independent review.",
+    "Obtain authoritative origin/release and split-transformation provenance and applicable notices, including any reserved font names, for all 11 blobs; investigate the two differing ComicShanns copyright lists.",
+    "Establish actual product shipping, export/embedding and modification history before assessing applicable delivery obligations."
+  ],
+  "delivery_repository": "CompleteTech-DiscordApps/guildboard",
+  "status": "unresolved_source_applicability_and_distribution",
+  "source_delivery_sha256": "1742f89ce7d4b89d4ca88a0cc221d219f109658f52e65313479a548b8fc835ae",
+  "retained_sources": [
+    {
+      "path": "docs/licenses/font-sources/ComicShanns-index.ts.txt",
+      "sha256": "43742ce64655de872db8eeaaab9c12a665fb0b333114ae59283714848b988bec",
+      "bytes": 4173
+    },
+    {
+      "path": "docs/licenses/font-sources/Excalifont-index.ts.txt",
+      "sha256": "db994e57791014204ba89e7ff902f2409b46ace3cd53907c3b4ac0e88d8e18c9",
+      "bytes": 6903
+    },
+    {
+      "path": "docs/licenses/font-sources/Excalidraw-root-LICENSE.txt",
+      "sha256": "1352d204fdb90d5e482c13139d848bc2c9300a9a7de358a0a558a23e72d0d8be",
+      "bytes": 1067
+    },
+    {
+      "path": "docs/licenses/font-sources/source-receipt.json",
+      "sha256": "fdbc6caa197415a9207488d6497b56047aff3136704f37e57be3a9962fa3df56",
+      "bytes": 5160
+    },
+    {
+      "path": "docs/licenses/font-sources/font-bytes-receipt.json",
+      "sha256": "37533265334b1adbfdc47d0bb17835a51dab5a6d2b2e20d11f04546e57be04a4",
+      "bytes": 4182
+    },
+    {
+      "path": "docs/licenses/font-sources/root-license-receipt.json",
+      "sha256": "ef4c0325f4fbf030b5e66cf462203f0f65c9e52e40f4eedf6cc51159c64c6c24",
+      "bytes": 281
+    }
+  ],
+  "source_copy_license": {
+    "path": "docs/licenses/font-sources/Excalidraw-root-LICENSE.txt",
+    "scope": "MIT notice for retained source code copies; font-specific grants remain separately recorded"
+  }
+}
