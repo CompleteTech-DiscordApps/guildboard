@@ -1,0 +1,363 @@
+{
+  "repository": "CompleteTech-DiscordApps/guildboard",
+  "issue": 34,
+  "draft_pr": 491,
+  "assessment_date": "2026-11-16",
+  "source_candidate_full_sha": "bac51866d428b378c10250e5d55f1d2a801a5867",
+  "accepted_main_full_sha": "4daa35ce46b6f824a68442a0ab5fbc78687e4e45",
+  "later_t0_acceptance_pr": 481,
+  "later_t0_acceptance_source_revision": "724c9912e4d4e14072e4709a54fbc94d4b9ceca6",
+  "scope": "Bounded documentation research; no issue completion or platform capability acceptance.",
+  "design_context": "Later T0 acceptance establishes the canonical design contract; proposal-era pending-design language is historical. This does not establish runtime implementation.",
+  "verification_provenance": {
+    "current_context": "Read research table and six traceability rows, T1 workstream, current main architecture and system contract; parse HTML as inert text with Python HTMLParser, suppress script/style/nav/header/footer/svg. Line offsets are 1-based original UTF-8 HTML source lines, heading text disambiguates location; table rows are actual definition entries. Source SHA/time/URL are copied from prior receipt, not recalculated. No browser, assets, JS, network, subprocess or SDK execution.",
+    "source_observations": "URLs, hashes, byte lengths and timestamps copied from the supplied primary observation receipt; source identity checks are prior evidence and were not repeated for this addendum.",
+    "prior_sdk": "SDK 2.5.0 archive identity, declarations, probe and twelve helper tests are prior evidence, not rerun here; they do not prove current platform behavior or exact SDK implementation.",
+    "not_run": "No live app, client, network, provider, credentials, portal, GoDaddy, tunnel, deployment, SDK execution or controlled two-guild tests.",
+    "historical_comparison": "2026-10-25 HTML bodies unavailable; no semantic comparison or unchanged claim."
+  },
+  "source_observations": [
+    {
+      "id": "D1",
+      "url": "https://docs.discord.com/developers/activities/how-activities-work",
+      "sha256": "3e596fcb42b24bc44bb4596a07f3b114ec8f206b8e921fc72446f45fb187659e",
+      "bytes": 243637,
+      "observed_at_utc": "2026-11-16T21:13:44.635659+00:00"
+    },
+    {
+      "id": "D2",
+      "url": "https://docs.discord.com/developers/activities/development-guides/networking",
+      "sha256": "0960b2d27a22bc6037d3864a726f24a5db08994b214dd1114aac8ce730e91e0e",
+      "bytes": 236625,
+      "observed_at_utc": "2026-11-16T21:13:44.636018+00:00"
+    },
+    {
+      "id": "D3",
+      "url": "https://docs.discord.com/developers/activities/development-guides/local-development",
+      "sha256": "6c34e45c19e85ca8383accc4fe1d0f96916671fc9d7f1ee8a02df291e0353773",
+      "bytes": 292236,
+      "observed_at_utc": "2026-11-16T21:13:44.636311+00:00"
+    },
+    {
+      "id": "D4",
+      "url": "https://docs.discord.com/developers/activities/development-guides/mobile",
+      "sha256": "a79253f44239caa01b2ef4b170533db4766ca806d4f70e3350a1a93f8860af56",
+      "bytes": 251476,
+      "observed_at_utc": "2026-11-16T21:13:44.960273+00:00"
+    },
+    {
+      "id": "D5",
+      "url": "https://docs.discord.com/developers/activities/development-guides/production-readiness",
+      "sha256": "aeb42dfb13408a334d37e4ce32b8c1b6d327ae858610acafc59379117053adaf",
+      "bytes": 215089,
+      "observed_at_utc": "2026-11-16T21:13:44.962354+00:00"
+    },
+    {
+      "id": "D6",
+      "url": "https://docs.discord.com/developers/developer-tools/embedded-app-sdk",
+      "sha256": "1081b6a5b4e88299803e2371153ec469a1782231fde07f0bd8117fd96edbd610",
+      "bytes": 876225,
+      "observed_at_utc": "2026-11-16T21:13:44.980198+00:00"
+    },
+    {
+      "id": "D7",
+      "url": "https://docs.discord.com/developers/topics/oauth2",
+      "sha256": "f24d0e8ba87c4c027562e94a568f3550ed6ce3c624a98687575db1cf484b57c4",
+      "bytes": 476108,
+      "observed_at_utc": "2026-11-16T21:13:45.209644+00:00"
+    },
+    {
+      "id": "D8",
+      "url": "https://docs.discord.com/developers/resources/user",
+      "sha256": "8033bf18a8f446e033def0c84068f5db2900f526525b85114b35d098d894cbb7",
+      "bytes": 341499,
+      "observed_at_utc": "2026-11-16T21:13:45.213550+00:00"
+    },
+    {
+      "id": "D9",
+      "url": "https://docs.discord.com/developers/resources/guild",
+      "sha256": "ac06a21f595de2ce7b62a648c01ed8ac990419cfb7080c584c6f1c6644ddc4f5",
+      "bytes": 803181,
+      "observed_at_utc": "2026-11-16T21:13:45.296864+00:00"
+    },
+    {
+      "id": "D10",
+      "url": "https://docs.discord.com/developers/resources/channel",
+      "sha256": "50ce92bad462e5cd6439870cf7b5ce3e1debaecb5d8275ad1815c9f6513aa436",
+      "bytes": 545582,
+      "observed_at_utc": "2026-11-16T21:13:45.473631+00:00"
+    },
+    {
+      "id": "D11",
+      "url": "https://docs.discord.com/developers/topics/permissions",
+      "sha256": "2684c3f2720dbe1e173a8c713d08c0e1b52166f80652a042eb08b65ea07c43b5",
+      "bytes": 354372,
+      "observed_at_utc": "2026-11-16T21:13:45.593829+00:00"
+    },
+    {
+      "id": "D12",
+      "url": "https://docs.discord.com/developers/events/gateway",
+      "sha256": "f22d40632b82d0e3d96b378d32d645d1de74f30e3e8b4fb3aeda55ec904c4f2b",
+      "bytes": 500994,
+      "observed_at_utc": "2026-11-16T21:13:45.611452+00:00"
+    },
+    {
+      "id": "D13",
+      "url": "https://docs.discord.com/developers/topics/rate-limits",
+      "sha256": "743c4aa595bea511c5869d606adf09d4a70f7bd8cd51f6ca5e74d9341fc9c3a9",
+      "bytes": 259562,
+      "observed_at_utc": "2026-11-16T21:13:45.727842+00:00"
+    },
+    {
+      "id": "O1",
+      "url": "https://www.rfc-editor.org/rfc/rfc9700.html",
+      "sha256": "c00e2234fcd79581bc29669c60d693afaa42f67d9205bddee848f757ae975419",
+      "bytes": 261599,
+      "observed_at_utc": "2026-11-16T21:13:45.834981+00:00"
+    },
+    {
+      "id": "npm-latest",
+      "url": "https://registry.npmjs.org/@discord%2fembedded-app-sdk/latest",
+      "sha256": "6ccc4757e9e165fd419e7235f1d35adec827985ee482aafcd66b4fd279fd839e",
+      "bytes": 3529,
+      "observed_at_utc": "2026-11-16T21:13:45.897867+00:00",
+      "package": "@discord/embedded-app-sdk",
+      "version": "2.5.0",
+      "integrity": "sha512-FNoe5PbSkoKEbqPubaBmq6tlEMOftMjR3gu55YrdrrKmBfKKM4i9P/Z+Zxl0RZdJcKviBwVcTyYMMPM/aGex/w==",
+      "tarball": "https://registry.npmjs.org/@discord/embedded-app-sdk/-/embedded-app-sdk-2.5.0.tgz",
+      "same_sri_as_prior_archive": "The observed integrity matches the prior 2.5.0 archive identity; this is inherited identity evidence, not a fresh archive verification."
+    }
+  ],
+  "source_context_rows": [
+    {
+      "id": "D1",
+      "exact_scoped_claim": "Activity entry point / LAUNCH_ACTIVITY and ready then authorize lifecycle",
+      "assessment_status": "supported",
+      "context_paraphrase": "With Activities enabled, the user invokes the App Launcher entry point or an interaction responds with callback type 12. SDK construction starts a handshake; READY resolves ready(), then authorization and authentication follow. READY is connection state, not membership proof.",
+      "heading": "Launching Activities; Entry Point Command; Interaction Response; Activity Lifecycle",
+      "html_line_offsets_1_based": "408-420,424-430",
+      "residual_questions": "Which authoritative server evidence proves exact launch or current presence?"
+    },
+    {
+      "id": "D2",
+      "exact_scoped_claim": "Proxy/WebSocket, unsupported WebRTC, patchUrlMappings, client trust, and iframe SameSite/Partitioned cookies",
+      "assessment_status": "supported",
+      "context_paraphrase": "Proxy supports WebSockets while WebRTC is unsupported. Mapping helper changes fetch, WebSocket and XHR globals and may have side effects. Client identity/channel data can be falsified and trusted facts require server API checks. Cookie guidance specifies full app domain and SameSite=None Partitioned for iframe requests.",
+      "heading": "Activity Proxy Considerations; Using External Resources; Trusting Client Data; Using Cookies",
+      "html_line_offsets_1_based": "406-412,432-443,460,463-468",
+      "residual_questions": "Actual CSP, mappings, WSS and cookie behavior per client remain untested."
+    },
+    {
+      "id": "D3",
+      "exact_scoped_claim": "Mapping prefix/target format and order, CSP API exceptions, platform toggles",
+      "assessment_status": "supported",
+      "context_paraphrase": "Portal maps prefixes to targets without protocol, targets directories, and orders longer overlapping paths before shorter. CSP permits listed Discord API and CDN paths without proxy mappings. Shelf display depends on platform checkboxes.",
+      "heading": "Launch your application from the Discord Client; URL Mapping; Prefix/Target formatting rules; Exceptions",
+      "html_line_offsets_1_based": "441-442,458-472,475-483",
+      "residual_questions": "Actual portal configuration and deployed routing require tests."
+    },
+    {
+      "id": "D4",
+      "exact_scoped_claim": "Web/desktop default, iOS/Android toggles, safe areas, thermal availability versus supported versions",
+      "assessment_status": "supported",
+      "context_paraphrase": "Web/desktop launch is default; platform checkboxes enable or disable Web/iOS/Android. Safe-area inset example and thermal-state subscriptions are documented; Android thermal updates require Android 10 or higher. This is not a tested Guildboard client-version matrix.",
+      "heading": "Supported Platforms: Web, iOS, Android; Mobile Safe Areas; Mobile Thermal States",
+      "html_line_offsets_1_based": "406-412,416-425,435-446,464-465",
+      "residual_questions": "Exact supported Discord, OS, browser and device versions remain unknown."
+    },
+    {
+      "id": "D5",
+      "exact_scoped_claim": "Cache busting, rate limits, and INVALID_COMMAND on older clients",
+      "assessment_status": "supported",
+      "context_paraphrase": "Non-HTML assets need cache-busting; proxy strips cache headers from HTML. Both client and server should respect API limits. New commands typically require newer clients; unsupported older clients return INVALID_COMMAND.",
+      "heading": "Cache Busting; Handling Rate Limits; Backward Compatibility / New Commands",
+      "html_line_offsets_1_based": "406-410,416-418",
+      "residual_questions": "Actual compatibility and recovery require versioned client tests."
+    },
+    {
+      "id": "D6",
+      "exact_scoped_claim": "AuthorizeRequest optional state/S256 challenge and documented code-only AuthorizeResponse",
+      "assessment_status": "supported",
+      "context_paraphrase": "The request table marks state and code_challenge optional and code_challenge_method optional S256; the response table lists code. These declarations establish neither runtime PKCE enforcement nor an echoed state.",
+      "heading": "AuthorizeRequest; AuthorizeResponse",
+      "html_line_offsets_1_based": "1024-1027",
+      "residual_questions": "SDK/provider transaction and response binding, state propagation and verifier enforcement remain unknown."
+    },
+    {
+      "id": "D7",
+      "exact_scoped_claim": "Token form encoding, redirect state, PKCE code flow and scopes versus unknown SDK postMessage binding",
+      "assessment_status": "supported",
+      "context_paraphrase": "Token and revocation endpoints require form encoding; redirect flow returns previously sent state for validation and code for exchange, while some scopes need approval. Production guidance recommends code grant with PKCE. This redirect description does not establish SDK postMessage response binding.",
+      "heading": "OAuth2 URLs; OAuth2 Scopes; State and Security; Authorization Code Grant; Implicit Grant",
+      "html_line_offsets_1_based": "410-415,420-435,442-446,534",
+      "residual_questions": "Approved scopes and actual SDK/provider binding and exchange behavior remain open."
+    },
+    {
+      "id": "D8",
+      "exact_scoped_claim": "identify current user and guilds.members.read selected-guild membership versus guild listing",
+      "assessment_status": "supported",
+      "context_paraphrase": "User fields list identify; the selected-guild current-user member endpoint requires guilds.members.read, whereas current-user guild listing returns partial guilds and requires guilds. The endpoints have distinct purposes.",
+      "heading": "User Object; Get Current User Guilds; Get Current User Guild Member",
+      "html_line_offsets_1_based": "426,517-519,539-541",
+      "residual_questions": "Actual granted scopes and selected-guild access require controlled tests."
+    },
+    {
+      "id": "D9",
+      "exact_scoped_claim": "Guild member roles, role definitions and privileged list intent; one member need not be listed",
+      "assessment_status": "supported",
+      "context_paraphrase": "Member roles are role IDs; guild role endpoint returns role objects. Get Guild Member returns one specified member; List Guild Members explicitly requires GUILD_MEMBERS privileged intent. This does not establish every authorization prerequisite for the single-member route.",
+      "heading": "Guild Member Object; Get Guild Member; List Guild Members; Get Guild Roles",
+      "html_line_offsets_1_based": "578,894-900,996-998",
+      "residual_questions": "Validate actual endpoint permissions and role freshness in controlled guilds."
+    },
+    {
+      "id": "D10",
+      "exact_scoped_claim": "Channel guild association and permission overwrites, not bot visibility as user presence",
+      "assessment_status": "supported",
+      "context_paraphrase": "Channel object fields include optional guild_id and member/role permission_overwrites; guild_id may be absent in some gateway dispatches. These fields are policy inputs, not proof of user access, launch, or current presence.",
+      "heading": "Channel Object",
+      "html_line_offsets_1_based": "410",
+      "residual_questions": "Determine a trusted source and actual user access and presence separately."
+    },
+    {
+      "id": "D11",
+      "exact_scoped_claim": "Role/overwrite permissions, string BigInteger representation, ADMINISTRATOR and tenant boundary",
+      "assessment_status": "supported",
+      "context_paraphrase": "Discord combines guild roles with channel/member overwrites; permissions are serialized as strings and Big Integer handling is recommended. ADMINISTRATOR bypasses Discord channel overwrites; Guildboard tenant isolation is an application contract and cannot be inferred away from that Discord permission.",
+      "heading": "Permissions introduction; Bitwise Permission Flags; Permission Overwrites",
+      "html_line_offsets_1_based": "406-409,425,439-450",
+      "residual_questions": "Implement and verify Guildboard policy and tenant fences independently."
+    },
+    {
+      "id": "D12",
+      "exact_scoped_claim": "Member/role events and privileged intent approval; bot token is not intent approval",
+      "assessment_status": "supported",
+      "context_paraphrase": "GUILDS intent includes role events; GUILD_MEMBERS includes member add/update/remove. Privileged intents require portal enablement; verified apps and other specified thresholds require approval/review. An unconfigured or unapproved privileged intent can close the connection.",
+      "heading": "Gateway Intents; List of Intents; Privileged Intents; Privileged Intent Access Review",
+      "html_line_offsets_1_based": "577-585,589,713-727",
+      "residual_questions": "Actual app intent approval, applicable threshold and event delivery remain unknown."
+    },
+    {
+      "id": "D13",
+      "exact_scoped_claim": "Actual Retry-After, route and global rate-limit guidance",
+      "assessment_status": "supported",
+      "context_paraphrase": "Limits are variable; parse response headers instead of hardcoding. Routes can share buckets and depend on top-level resources; global limits are independent. On 429 use Retry-After or retry_after to decide delay.",
+      "heading": "Rate limits introduction; Header Format; Exceeding A Rate Limit; Global Rate Limit",
+      "html_line_offsets_1_based": "406-410,423-435,484-488",
+      "residual_questions": "Implement bounded retry and validate behavior against real traffic."
+    },
+    {
+      "id": "O1",
+      "exact_scoped_claim": "RFC 9700 CSRF, code injection, PKCE and redirect binding; not Discord SDK proof",
+      "assessment_status": "supported",
+      "context_paraphrase": "For redirect flows clients must prevent CSRF; reliance on PKCE requires established server support, otherwise securely user-agent-bound state is specified. Public clients must use PKCE; confidential clients are recommended to use it. Challenges must be transaction-specific and bound to client and user agent; server verifier enforcement and redirect validation are normative guidance, not evidence of Discord implementation.",
+      "heading": "2.1 Protecting Redirect-Based Flows; 2.1.1 Authorization Code Grant; 4.1 Insufficient Redirection URI Validation",
+      "html_line_offsets_1_based": "1746,1780-1813,2146",
+      "residual_questions": "Verify provider enforcement and SDK response binding in the actual flow."
+    }
+  ],
+  "requirement_clauses": [
+    {
+      "clause": "Launch/lifecycle",
+      "exact_claim": "D1/D3/D5 research and failure plan; registered-app entry point and interaction launch, ready/close/reconnect on exact clients",
+      "assessment_status": "partially-supported",
+      "source_rows": [
+        "D1",
+        "D3",
+        "D5"
+      ],
+      "bounded_assessment": "Documented launch and lifecycle support a research proposal, while actual registered-app launch, disconnect and reconnect are untested."
+    },
+    {
+      "clause": "Proxy/mappings",
+      "exact_claim": "D2/D3 and historical helper tests; portal/CSP/proxy cookies/HTTPS/WSS and exact GoDaddy origin/mapping behavior",
+      "assessment_status": "partially-supported",
+      "source_rows": [
+        "D2",
+        "D3"
+      ],
+      "bounded_assessment": "Documented mapping, CSP exceptions and cookie guidance support proposed investigation; real configuration, WSS, cookies and hosting are unverified."
+    },
+    {
+      "clause": "OAuth/scopes",
+      "exact_claim": "D6/D7/O1 and 2.5.0 declarations; transaction/state/PKCE binding and error/replay/renewal tests against Discord",
+      "assessment_status": "partially-supported",
+      "source_rows": [
+        "D6",
+        "D7",
+        "O1"
+      ],
+      "bounded_assessment": "Declarations and OAuth security guidance identify a testable flow; actual state binding, PKCE enforcement, approved scopes, negative cases and renewal remain unknown."
+    },
+    {
+      "clause": "Guild/channel trust",
+      "exact_claim": "D8–D12, nullable declarations and authority matrix; two-guild REST/bot permission/freshness/revocation tests and stronger presence proof if required",
+      "assessment_status": "partially-supported",
+      "source_rows": [
+        "D8",
+        "D9",
+        "D10",
+        "D11",
+        "D12"
+      ],
+      "bounded_assessment": "Documented membership, roles, overwrites and intents inform server-side evaluation; two-guild access and revocation are untested and actual launch/presence authority is not established."
+    },
+    {
+      "clause": "Desktop/browser/mobile",
+      "exact_claim": "D4–D6 support observations and versioned matrix; actual OS/client/browser/device versions and positive/negative scenarios",
+      "assessment_status": "partially-supported",
+      "source_rows": [
+        "D4",
+        "D5",
+        "D6"
+      ],
+      "bounded_assessment": "Documented platform controls and backward-compatibility guidance are available; no supported Guildboard versions or actual client scenarios are established."
+    },
+    {
+      "clause": "Sources/versions/alternatives/uncertainty",
+      "exact_claim": "14 official documents, current registry observation, fixed SRI and local report; review, #35 specification and downstream tests",
+      "assessment_status": "partially-supported",
+      "source_rows": [
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "D6",
+        "D7",
+        "D8",
+        "D9",
+        "D10",
+        "D11",
+        "D12",
+        "D13",
+        "O1"
+      ],
+      "bounded_assessment": "Fourteen current bodies were context-inspected, with identity metadata and SDK results inherited rather than rerun. Historical body comparison, full acceptance, real implementation and required native review/checks remain open; generic role labels alone do not create a human approval gate."
+    }
+  ],
+  "limitations": [
+    "2026-10-25 bodies unavailable: no semantic diff or unchanged claim is possible.",
+    "No live app, credentials, provider, two-guild, client, cookie, WSS, GoDaddy or deployment tests.",
+    "Only six changed source files are represented by the supplied manifest, not a complete Git tree.",
+    "D12 source describes both verified-app and user-count review criteria; actual applicability must be established for the app.",
+    "Canonical contract design acceptance is established by laterT0history; sourceproposalstatus ishistorical, not newhuman/teamgate. Realruntime/platform gaps persist.",
+    "Authoritative exact launch and current voice presence remain unproven.",
+    "SDK/provider state propagation, response binding and PKCE verifier enforcement remain unverified; the documented SDK response lists code only while OAuth redirect documentation describes state.",
+    "Actual desktop, iOS and Android client and OS versions, intent and approval applicability, and real app/client/credentials and qualified runtime prerequisites remain unestablished.",
+    "Actual proxy mappings, cookies, WSS, caching and platform behavior, and GoDaddy tunnel, redirects and HTTPS deployment remain untested.",
+    "Android 10+ is documented availability for thermal updates, not a chosen Guildboard minimum.",
+    "Client data and Discord ADMINISTRATOR cannot bypass server tenant authority."
+  ],
+  "owned_decisions": [
+    {
+      "affected_items": "GB-T1.R1 design-status interpretation and research scope",
+      "decision_owner": "01a1d2c4-663a-7181-824d-febb00e1dd4a",
+      "chosen_action": "Record the accepted design context and retain all runtime gaps; proceed with a dated research addendum.",
+      "rationale": "Later T0 acceptance supersedes proposal-era pending design statements; documentation is not runtime evidence.",
+      "requirements_evidence": "Accepted main and PR481 revision above; D1–D13/O1 and six requirement clauses below.",
+      "validation": "Inherited source-context inspection and receipt; no live verification.",
+      "follow_through": "Integrate through the isolated PR worktree and obtain fresh candidate reviews and native checks; retain actual access and protection restrictions."
+    }
+  ]
+}

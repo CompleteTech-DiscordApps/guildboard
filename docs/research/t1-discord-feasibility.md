@@ -255,3 +255,12 @@ release gates. Actual current-head Copilot/independent Sol MAX, functional/secur
 and CODEOWNER reviews, hosted CI, merge and post-merge evidence remain separate.
 No acceptance checkbox, native dependency, runtime implementation or issue closure
 is changed by this research.
+
+
+## 2026-11-16 — bounded current-source assessment
+
+The [current-source assessment](t1-current-source-assessment-2026-11-16.json) records 15 dated source identities, 14 paragraph contexts and all six requirement clauses. These are bounded documentary observations, not platform acceptance. The accepted design contract on main `4daa35ce46b6f824a68442a0ab5fbc78687e4e45`, including later T0 acceptance PR 481 (source revision `724c9912e4d4e14072e4709a54fbc94d4b9ceca6`), supersedes earlier dated statements that design acceptance was pending; historical records above remain intact. Runtime implementation remains unaccepted.
+
+Current paragraph-context inspection supports documented launch, networking, OAuth, guild and platform guidance only. In particular, the SDK documentation lists a code-only authorization response while OAuth redirect guidance describes state; actual SDK/provider binding and PKCE enforcement remain open. Server tenant authority cannot be bypassed by client data or Discord ADMINISTRATOR. Android 10+ describes thermal-update availability, not a Guildboard minimum. D12 describes several approval criteria; their applicability to this app is unestablished.
+
+The previous SDK archive identity, declarations, probe and 12 helper tests are prior evidence, not repeated here. The registry observation reports 2.5.0 with the same recorded SRI; no fresh archive or exact implementation verification is implied. Older HTML bodies are unavailable, so no semantic comparison is claimed. Live app/client/network evidence was **not run**. Authoritative exact launch/current voice presence, controlled two-guild membership/roles/channel and revocation, actual desktop/iOS/Android versions, intent and approval applicability, proxy mappings/cookies/WSS/cache/platform behavior, and actual GoDaddy tunnel/redirect/HTTPS deployment remain open. Real app, client, credentials and qualified runtime prerequisites are not established.
