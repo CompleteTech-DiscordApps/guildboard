@@ -303,6 +303,50 @@ class ReportWriteTests(unittest.TestCase):
             self.assertEqual(list(root.iterdir()), [report])
 
     @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
+    def test_windows_replace_with_previous_publisher_handle_still_open(self):
+        import msvcrt
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / 'report.json'
+            report.write_bytes(b'previous')
+            pinned = validator.open_report_directory(root)
+            fd = None
+            handle = None
+            try:
+                # Match an earlier publisher's DELETE/write handle and retain
+                # read access so the old file's survival is observable.
+                handle = pinned.open_relative(report.name, 0x00010003, 1)
+                fd = msvcrt.open_osfhandle(handle, os.O_RDWR | os.O_BINARY)
+                handle = None  # the descriptor owns the native handle now
+                original = pinned.nt.NtSetInformationFile
+
+                def legacy_rename(file, ios, buffer, size, information_class):
+                    # Negative control: the former BOOLEAN replace operation
+                    # cannot replace the destination while this handle is open.
+                    flags = pinned.ctypes.cast(
+                        buffer, pinned.ctypes.POINTER(pinned.wintypes.ULONG))
+                    flags[0] = 1
+                    return original(file, ios, buffer, size, 10)
+
+                with mock.patch.object(pinned.nt, 'NtSetInformationFile',
+                                       side_effect=legacy_rename):
+                    with self.assertRaisesRegex(OSError, 'cannot rename report stage'):
+                        validator.save_report(report, {'result': 'pass'}, pinned)
+                self.assertEqual(report.read_bytes(), b'previous')
+                self.assertEqual(list(root.glob('.roadmap-*.tmp')), [])
+                validator.save_report(report, {'result': 'pass', 'new': True}, pinned)
+                self.assertEqual(json.loads(report.read_text()),
+                                 {'result': 'pass', 'new': True})
+                self.assertEqual(os.read(fd, 100), b'previous')
+                self.assertEqual(list(root.iterdir()), [report])
+            finally:
+                if fd is not None:
+                    os.close(fd)
+                elif handle is not None:
+                    pinned.kernel.CloseHandle(handle)
+                pinned.close()
+
+    @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
     def test_windows_native_rename_replaces_unicode_destination(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
