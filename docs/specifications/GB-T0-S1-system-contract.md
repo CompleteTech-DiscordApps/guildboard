@@ -3,10 +3,7 @@
 Status: **proposed, not accepted and not an implementation authorization**.
 Issue: [#3](https://github.com/CompleteTech-DiscordApps/guildboard/issues/3).
 Prepared 2026-10-24 against main `da811252acc975a0e5a1b087ab653b523443f3fa`.
-Native prerequisite [#2](https://github.com/CompleteTech-DiscordApps/guildboard/issues/2)
-and its delivery [#477](https://github.com/CompleteTech-DiscordApps/guildboard/pull/477)
-remain unmerged. Architecture, security and consuming engineering reviews are
-outstanding. This document does not alter issue readiness or Project fields.
+Current status: prerequisite [#2](https://github.com/CompleteTech-DiscordApps/guildboard/issues/2) is closed; PRs #477 and #500 are merged. [ADR 0001](../adr/0001-editor-activity-vps-direction.md) accepts the controlled experiment direction. This contract remains pending fresh independent technical reviews and delegated coordinator acceptance. Formal native repository protections remain as configured and must be checked at merge. This document does not alter issue readiness or Project fields.
 
 ## 1. Decision scope and evidence
 
@@ -17,7 +14,7 @@ prove a running application. MVP means the integrated scenarios in
 [the MVP matrix](../../planning/MVP-ACCEPTANCE.md); v1.0 additionally needs all
 mandatory workstream and GoDaddy production gates. Neither is achieved here.
 
-The input is the limited static research at PR #477 head
+A historical input was the limited static research at PR #477 head
 `47964d5b697aeae70e99403c6b42dfea0ace6816`, including its exact Excalidraw 0.18.1
 and Discord SDK 2.5.0 artifact identities. It supports a controlled editor
 experiment, not browser compatibility, distribution clearance or VPS readiness.
@@ -89,11 +86,26 @@ mode matrices remain T2/T6 contracts; until an action is enumerated, deny it.
 **Linearization:** each write transaction locks the scoped policy/board state in
 a documented global lock order, validates the authoritative identity/session
 and policy generation, applies expiry using server/database time, validates the
-command and commits. Revocation, role invalidation, lock and grant changes
+command and commits. If trusted time or required current policy or membership evidence is unavailable or stale at commit, fail closed; no mutation commits. Revocation, role invalidation, lock and grant changes
 serialize against that same fence. A command committed before a revoke remains
 accepted; no command using the invalidated authority may commit after the revoke
 commits. Broadcasting a revoke before/after this point cannot substitute for
 fencing. Multi-board or multi-guild effects require a separate reviewed contract.
+
+**Read delivery fence:** For each release of a live event, replay event or snapshot
+chunk into the transport, serialize that release with session revocation/expiry,
+membership invalidation and changes to scoped read authority. At the release
+point verify current session validity, sufficiently fresh membership evidence and
+current read policy using trusted time. Missing or stale required freshness,
+policy or trusted time fails closed; do not release the data. A revoke or expiry
+ordered first suppresses application-queued data, including already prepared
+replay and snapshot chunks. A release ordered first may complete; bytes already
+emitted to the transport cannot be recalled. Delivery denial must not mutate
+content, allocate a revision or disclose protected data; use existing safe
+`UNAUTHENTICATED`, `NOT_FOUND`/`FORBIDDEN`, or `DEPENDENCY_UNAVAILABLE`
+semantics as applicable. Transport backpressure and the fence must not allow
+queued data to escape after invalidation. T1/T2/T4/T8 define and verify the
+mechanism and freshness bounds before implementation adoption.
 
 ## 4. Versioned command, receipt and error shapes
 
@@ -120,10 +132,10 @@ HTTP proposed mapping: `INVALID_MESSAGE`/`UNSUPPORTED_VERSION` → 400;
 `DEPENDENCY_UNAVAILABLE` → 503. WSS carries the same error codes. Clients must
 not infer that a retryable/timeout response proves no commit occurred.
 
-Proposed initial safety budgets, subject to T3/T4/T9 validation: 64 KiB decoded
+Proposed initial safety budgets, subject to T3/T4/T9 validation: 64 KiB encoded UTF-8
 command message; 100 element changes per compound; 256 KiB inbound queued
 command bytes per socket; 1 MiB outbound durable queue per socket. Enforce byte
-limits before expensive parse and expanded/decoded limits afterwards. Never
+limits on encoded UTF-8 bytes before parsing; initially disable transport/message decompression. Enforce any additional expanded/decoded limits afterwards. Never
 split a compound to get under the limit. Presence has a separate small schema,
 coalescing and rate limit; it is not persisted. T3/T5 define image/geometry/asset
 budgets; missing budgets block that operation kind rather than permit infinity.
@@ -298,8 +310,7 @@ Architecture for boundaries; T1/T2/T9 for identity/revocation/tenant controls;
 T3/T4 for editor/conflict/undo; T5 for SQL/durability/restore; T8 for transport
 schemas; T10/T11 for platform/recovery; T12 for deterministic and real-platform
 acceptance. Record reviewer, exact commit, findings and remediation; fresh
-independent review follows material edits. Formal CODEOWNER approval remains
-separate. A sole-author approval conflict is not resolved by writing “reviewed”.
+independent review follows material edits. The current codeowner-authorized process uses fresh-agent clean independent review; record actual findings and remediation without claiming a native GitHub APPROVED review. Check the actual configured native protections at merge.
 
 ## 9. Fixtures, traceability and acceptance still required
 
@@ -312,9 +323,9 @@ adapter can exercise policy branches but cannot prove Discord membership APIs.
 | Issue #3 clause | Reviewable artifact | Required result not yet obtained |
 |---|---|---|
 | Boundaries/trust zones/ownership | §§2–3 and transport-to-transaction flow | Architecture + T1/T2/T8/T9 review |
-| Consistency and versioned schemas | §§4–6; fixtures F01–F22 | T3/T4/T5/T8 integration review and executable payload schemas |
+| Consistency and versioned schemas | §§4–6; fixtures F01–F30 | T3/T4/T5/T8 integration review and executable payload schemas |
 | Errors/security/fixtures | Error table and negative/crash fixtures | T9/T12 no-side-effect and fault-injection evidence |
-| ADR process | §8 | Maintainer/consumer review, native #2 gate and formal PR approval |
+| ADR process | §8 | Fresh independent technical and consuming review, delegated coordinator acceptance and configured native merge protections |
 | Measurable scope/limits | §7, bounded-ingress proposal | T0 #6/T11/T12 accepted workload and actual measurements |
 | Integration documentation | T0 handoff link | Post-merge evidence and truthful downstream adoption |
 
@@ -330,7 +341,7 @@ legal clearance, acceptance or issue closure is performed by this draft.
 Local checks for this documentation are planning manifest validation, JSON parse,
 fixture ID/reference consistency and whitespace validation. They establish
 repository/document consistency only. Commands/results are recorded in T0;
-actual consuming reviews must be appended with verified links before acceptance.
+fresh independent and consuming reviews must be appended with verified links before acceptance.
 
 ```sh
 python3 scripts/github-bootstrap/validate.py
@@ -341,11 +352,11 @@ p = Path('docs/specifications/fixtures/GB-T0-S1-scenarios.json')
 d = json.loads(p.read_text())
 s = d['scenarios']
 assert d['status'] == 'proposed-not-executed'
-assert [x['id'] for x in s] == [f'F{i:02}' for i in range(1, 23)]
-assert len({x['invariant'] for x in s}) == 22
+assert [x['id'] for x in s] == [f'F{i:02}' for i in range(1, 31)]
+assert len({x['invariant'] for x in s}) == 30
 assert all(set(x) == {'id', 'invariant', 'owner', 'given', 'when', 'expected'}
            and x['expected'] for x in s)
-print('22 declarative scenarios structurally valid; product behavior not executed')
+print('30 declarative scenarios structurally valid; product behavior not executed')
 PY
 git diff --check
 ```

@@ -396,6 +396,136 @@
         "additionalServerRevisions": 0,
         "saveStatusDerivedFromCurrentAcceptedState": true
       }
+    },
+    {
+      "id": "F23",
+      "invariant": "read-revoke-before-release",
+      "owner": "T1/T2/T4/T8/T9/T12",
+      "given": {
+        "condition": "live event queued; read access revoked before release"
+      },
+      "when": "attempt release",
+      "expected": {
+        "code": "NOT_FOUND",
+        "dataReleased": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0
+      }
+    },
+    {
+      "id": "F24",
+      "invariant": "read-release-before-revoke",
+      "owner": "T1/T2/T4/T8/T9/T12",
+      "given": {
+        "condition": "live event release serialized before read revoke"
+      },
+      "when": "complete release then revoke",
+      "expected": {
+        "dataReleased": true,
+        "releasePrecedesRevoke": true,
+        "laterQueuedDataReleased": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0
+      }
+    },
+    {
+      "id": "F25",
+      "invariant": "queued-snapshot-revoke",
+      "owner": "T1/T2/T4/T8/T9/T12",
+      "given": {
+        "condition": "snapshot chunk queued; read access revoked before release"
+      },
+      "when": "attempt chunk release",
+      "expected": {
+        "code": "NOT_FOUND",
+        "dataReleased": false,
+        "partialStatePromoted": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0
+      }
+    },
+    {
+      "id": "F26",
+      "invariant": "queued-replay-revoke",
+      "owner": "T1/T2/T4/T8/T9/T12",
+      "given": {
+        "condition": "replay event queued; read access revoked before release"
+      },
+      "when": "attempt replay release",
+      "expected": {
+        "code": "NOT_FOUND",
+        "dataReleased": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0
+      }
+    },
+    {
+      "id": "F27",
+      "invariant": "in-flight-session-revoke",
+      "owner": "T1/T2/T4/T8/T9/T12",
+      "given": {
+        "condition": "session revoked before queued event release"
+      },
+      "when": "attempt release on existing connection",
+      "expected": {
+        "code": "UNAUTHENTICATED",
+        "dataReleased": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0
+      }
+    },
+    {
+      "id": "F28",
+      "invariant": "in-flight-session-expiry",
+      "owner": "T1/T2/T4/T8/T9/T12",
+      "given": {
+        "condition": "session expires by trusted time before queued chunk release"
+      },
+      "when": "attempt release on existing connection",
+      "expected": {
+        "code": "UNAUTHENTICATED",
+        "dataReleased": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0
+      }
+    },
+    {
+      "id": "F29",
+      "invariant": "read-freshness-unavailable",
+      "owner": "T1/T2/T4/T8/T9/T12",
+      "given": {
+        "condition": "membership evidence or trusted time or current policy unavailable at release"
+      },
+      "when": "attempt queued event release",
+      "expected": {
+        "code": "DEPENDENCY_UNAVAILABLE",
+        "dataReleased": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0
+      }
+    },
+    {
+      "id": "F30",
+      "invariant": "in-flight-membership-invalidation",
+      "owner": "T1/T2/T4/T8/T9/T12",
+      "given": {
+        "condition": "verified membership invalidated before queued replay event release"
+      },
+      "when": "attempt release on existing connection",
+      "expected": {
+        "code": "NOT_FOUND",
+        "dataReleased": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0
+      }
     }
   ]
 }
