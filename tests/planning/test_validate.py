@@ -396,6 +396,8 @@ class ReportWriteTests(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
     def test_windows_case_mode_query_failure_preserves_report_and_inputs(self):
+        import contextlib
+        import io
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manifest = root / 'manifest.json'
