@@ -1,0 +1,26 @@
+{
+  "observed_at": 1794846186.0275064,
+  "provenance": "Primarypublisher page content obtained via trusted web tool; excerpts transcribed verbatim with URLs/line references, not raw HTTP bytes or runtime tests. Direct HTTP403 retained in source-receipts.json. Full official Oracle source/tag and MariaDB Markdown bytes separately retained.",
+  "sources": [
+    {
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/json.html",
+      "lines": [
+        240,
+        242
+      ],
+      "excerpts": [
+        "MySQL supports a native `JSON`",
+        "Automatic validation of JSON documents stored in `JSON` columns. Invalid documents produce an error."
+      ]
+    },
+    {
+      "url": "https://dev.mysql.com/doc/relnotes/mysql/8.4/en/news-8-4-7.html",
+      "lines": [
+        74
+      ],
+      "excerpts": [
+        "Changes in MySQL 8.4.7 (2025-10-21)"
+      ]
+    }
+  ]
+}
