@@ -1,9 +1,32 @@
 // Independent contract acceptance: run after the config package has been built.
 import assert from 'node:assert/strict';
-import { parseConfig } from '../../packages/config/dist/src/index.js';
 import fs from 'node:fs';
 import net from 'node:net';
 import { syncBuiltinESMExports } from 'node:module';
+
+// Keep prerequisite failures independent of Node's potentially sensitive diagnostics.
+let parseConfig;
+try {
+  ({ parseConfig } = await import('../../packages/config/dist/src/index.js'));
+  if (typeof parseConfig !== 'function') throw new Error('missing parser');
+} catch {
+  console.error(JSON.stringify({ status: 'failed', scenario: 'prerequisite' }));
+  process.exit(1);
+}
+// Test-only handshake: the parent explicitly releases execution after observing readiness.
+if (process.env.CONFIG_VERIFY_HANDSHAKE === '1') {
+  console.log(JSON.stringify({ status: 'ready' }));
+  let input = '';
+  for await (const chunk of process.stdin) {
+    input += chunk;
+    if (input.length > 32) break;
+    if (input.includes('\n')) break;
+  }
+  if (input !== 'continue\n') {
+    console.error(JSON.stringify({ status: 'failed', scenario: 'handshake' }));
+    process.exit(1);
+  }
+}
 
 const valid = Object.freeze({ PORT: '3000', NODE_ENV: 'test', DATABASE_URL: 'mysql://fixture:password-marker@localhost/guild', DISCORD_CLIENT_ID: '900719925474099312345', SESSION_SECRET: 'secret-marker-01234567890123456789' });
 const fields = ['DATABASE_URL', 'DISCORD_CLIENT_ID', 'NODE_ENV', 'PORT', 'SESSION_SECRET'];
