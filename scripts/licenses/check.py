@@ -13,6 +13,17 @@ MAX_FILE = 8 * 1024 * 1024
 MAX_TOTAL = 64 * 1024 * 1024
 HEX = re.compile(r'^[0-9a-f]{64}$')
 STATUS = {'interpreted', 'unresolved'}
+# Section decision identity, subject to fresh independent review; not legal approval.
+# Changes to the catalog require an explicit code update and fresh review.
+DECISION_CATALOG_SHA256 = '7d9b90505b214a3991c910f0cf0ee424fdc055232e12873da41c5b1852586c67'
+
+def decision_catalog_digest(inventory):
+    # Scope and coverage are assessed separately; every other field, including
+    # unknown fields, belongs to the bounded decision and evidence catalog.
+    catalog = {k: v for k, v in inventory.items()
+               if k not in ('distribution_scope', 'distribution_coverage')}
+    return digest(json.dumps(catalog, sort_keys=True, separators=(',', ':'),
+                             ensure_ascii=False).encode('utf-8'))
 
 class Invalid(ValueError):
     pass
@@ -124,6 +135,7 @@ def _validate(root):
     try:
         inv = r.json('docs/licenses/inventory.json', 2 * 1024 * 1024)
         require(isinstance(inv, dict) and inv.get('schema_version') == 3 and inv.get('status') in ('incomplete-not-clearance', 'complete-not-clearance'), 'invalid inventory schema or status')
+        require(decision_catalog_digest(inv) == DECISION_CATALOG_SHA256, 'section decision catalog identity mismatch')
         pkg = r.json('package.json'); lock = r.json('package-lock.json')
         packages = lock['packages']; require(isinstance(packages, dict) and all(isinstance(k, str) and isinstance(v, dict) and type(v.get('link', False)) is bool for k, v in packages.items()), 'invalid lock packages')
         workspaces = pkg.get('workspaces', [])

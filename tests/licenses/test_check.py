@@ -25,20 +25,85 @@ class Contract(unittest.TestCase):
     def save(self): self.inventory.write_text(json.dumps(self.inv))
     def invalid(self):
         self.save()
-        with self.assertRaises(check.Invalid): check.validate_structure(self.root)
+        with patch.object(check, 'DECISION_CATALOG_SHA256', check.decision_catalog_digest(self.inv)):
+            with self.assertRaises(check.Invalid): check.validate_structure(self.root)
     def anchor(self, path):
         self.inv['input_sha256'][path] = hashlib.sha256((self.root / path).read_bytes()).hexdigest()
     def test_actual_assessment(self):
         result = check.assess(self.root)
         self.assertTrue(result['structure_valid'])
         self.assertEqual(result['counts'], {'components':100, 'sections':246, 'notices':62})
-        self.assertEqual(len(result['diagnostics']), 13)
-        self.assertEqual(sum(d['kind']=='section' for d in result['diagnostics']),9)
+        self.assertEqual(len(result['diagnostics']), 11)
+        self.assertEqual([d['ordinal'] for d in result['diagnostics'] if d['kind']=='section'], [5, 6, 119, 180, 190, 217, 236])
         self.assertEqual(sum(d['kind']=='classification' for d in result['diagnostics']),1)
         self.assertEqual(sum(d['kind']=='notice_coverage' for d in result['diagnostics']),2)
         self.assertEqual(sum(d['kind']=='distribution_scope' for d in result['diagnostics']),1)
         with patch('sys.argv', ['check', '--root', str(self.root)]), patch('sys.stdout'):
             self.assertEqual(check.main(), 1)
+    def test_unsupported_distribution_scope_remains_unknown(self):
+        self.inv['distribution_scope'] = 'unsupported'
+        self.inv['distribution_coverage'] = {
+            'components': sorted(self.inv['components']),
+            'section_ordinals': list(range(1, 247)),
+            'notice_sha256': sorted(n['sha256'] for n in self.inv['retained_notices']),
+        }
+        self.save()
+        result = check.assess(self.root)
+        self.assertTrue(result['structure_valid'])
+        self.assertEqual(result['clearance_status'], 'unknown')
+        self.assertEqual(sum(d['kind'] == 'distribution_scope' for d in result['diagnostics']), 1)
+
+    def catalog_invalid(self):
+        self.save()
+        with self.assertRaisesRegex(check.Invalid, 'section decision catalog identity mismatch'):
+            check.validate_structure(self.root)
+
+    def test_coordinated_supplement_removal(self):
+        baseline = copy.deepcopy(self.inv)
+        for ordinal in (168, 72):
+            with self.subTest(ordinal=ordinal):
+                self.inv = copy.deepcopy(baseline)
+                sections = self.inv['prettier_supplemental']['sections']
+                sections[:] = [s for s in sections if s['ordinal'] != ordinal]
+                for notice in self.inv['retained_notices']:
+                    notice['sources'] = [source for source in notice['sources']
+                                         if source.get('ordinal') != ordinal]
+                effective = self.inv['effective_prettier_sections'][ordinal - 1]
+                effective.pop('supplemental_decision')
+                effective['effective_status'] = self.inv['prettier_original_sections'][ordinal - 1]['status']
+                unresolved = [e['ordinal'] for e in self.inv['effective_prettier_sections']
+                              if e['effective_status'] == 'unresolved']
+                self.inv['unresolved_section_ordinals'] = unresolved
+                self.inv['remaining_unresolved_section_ordinals'] = unresolved[:]
+                self.catalog_invalid()
+                # The former self-consistency rules accept this coordinated rewrite.
+                with patch.object(check, 'DECISION_CATALOG_SHA256', check.decision_catalog_digest(self.inv)):
+                    check.validate_structure(self.root)
+
+    def test_coordinated_component_reclassification(self):
+        c = self.inv['components']['node_modules/prettier']
+        c['classification']['status'] = 'interpreted'
+        c['effective_classification']['status'] = 'interpreted'
+        if 'classification_overlay' in c:
+            c['classification_overlay']['status'] = 'interpreted'
+        self.catalog_invalid()
+
+    def test_coordinated_copyright_decision_rewrite(self):
+        ordinal = 168
+        original = self.inv['prettier_original_sections'][ordinal - 1]
+        original['copyright_lines'] = ['replacement attribution decision']
+        original['rationale'] = 'replacement grant decision'
+        self.inv['effective_prettier_sections'][ordinal - 1]['original_decision'] = copy.deepcopy(original)
+        supplement = next(s for s in self.inv['prettier_supplemental']['sections'] if s['ordinal'] == ordinal)
+        supplement['original_decision'] = copy.deepcopy(original)
+        supplement['interpretation_and_version_applicability'] = 'replacement grant decision'
+        self.inv['effective_prettier_sections'][ordinal - 1]['supplemental_decision'] = copy.deepcopy(supplement)
+        self.catalog_invalid()
+
+    def test_unknown_critical_catalog_field(self):
+        self.inv['components']['node_modules/prettier']['new_critical_decision'] = 'unreviewed'
+        self.catalog_invalid()
+
     def test_notice_missing_or_corrupt(self):
         p = self.root / self.inv['retained_notices'][0]['path']; original = p.read_bytes()
         for value in (None, b'altered'):
