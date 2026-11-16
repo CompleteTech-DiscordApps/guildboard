@@ -39,4 +39,12 @@ jobs:
           python-version: '3.12'
       - name: Test offline roadmap validation
         run: python -m unittest discover -s tests/planning -v
+      - name: Exercise Windows concurrent publication interleavings
+        if: runner.os == 'Windows'
+        timeout-minutes: 3
+        run: >-
+          python -c "import sys, unittest; sys.path.insert(0, 'tests/planning');
+          import test_validate; suite = unittest.TestSuite(
+          test_validate.CliTests('test_concurrent_cli_publication') for _ in range(20));
+          sys.exit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())"
       - run: python scripts/github-bootstrap/validate.py
