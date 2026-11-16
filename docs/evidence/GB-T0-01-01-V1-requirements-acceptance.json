@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "issue": "GB-T0.01.01.V1",
+  "source_revision": "ae7aa92a76ff18522e643821df6840bf3bbabc4d",
+  "artifact_revision": null,
+  "environment": {
+    "python": "3.12.3",
+    "system": "Linux",
+    "execution": "offline local scratch copy"
+  },
+  "status": "local definition verification only; native CI and independent review pending",
+  "results": {
+    "definition_check": "pass",
+    "negative_tests": "pass: 9 in-process cases",
+    "planning_validator": "pass",
+    "platform_or_product_execution": "not performed"
+  },
+  "scope_mapping": {
+    "acceptance_scenarios": "R01-R08 and UC01-UC20 definition and trace checks; fixtures remain declarative",
+    "workshops_viewers_guild_abuse": "R01-R06 and critical actor/boundary checks; remaining case prose reviewed",
+    "mvp_v1": "R07, UC17, MVP matrix and milestone gates",
+    "objectives": "R08, UC18 and five definition checks; 10*5*5=250 operations/s and 10*20=200 reconnects; no measurement",
+    "raw_revision_environment_defects": "source revision and local results recorded; no definition defect observed; future artifact commit and native CI pending",
+    "discord_godaddy": "not executed or passed; real integration evidence required",
+    "invalid_configuration_unavailable_interruption": "controlled in-process verifier tests only"
+  },
+  "limitations": [
+    "These checks examine documents and fixtures, not service behavior.",
+    "No Discord, GoDaddy, VPS, database, browser, accessibility, license, security or production measurements were performed.",
+    "Actual native CI, independent review, protected merge and post-merge verification remain open.",
+    "Source requirements and prior accepted history are not modified."
+  ],
+  "historical_candidate_record_note": "The original fields above describe the rejected candidate; repair results below supersede their current-status implications and preserve history.",
+  "repair": {
+    "status": "definition verification only; issue 7 remains open pending fresh independent review and manager disposition of F3",
+    "raw_results": "GB-T0-01-01-V1-raw-results.json",
+    "source_candidate_revision": "fc825aac8194ca7282c4b5b984fd5a065eb5c0a0",
+    "accepted_requirements_revision": "ae7aa92a76ff18522e643821df6840bf3bbabc4d",
+    "future_artifact_revision": "not yet available; native CI and fresh independent review must bind actual integrated SHA",
+    "F3": "Definition checks are not product scenario execution. Manager retains acceptance question until fresh review assesses exact issue requirements; T1-T13 implementation owners must execute relevant product/platform criteria.",
+    "owned_decisions": [
+      {
+        "section": "issue 7 definition verification",
+        "owner": "delegated section repair owner",
+        "decision": "Pin whitespace-normalized entire accepted requirements document and each UC actor, preconditions, action and expected field; retain exact trace checks.",
+        "rationale": "Accepted issue 6 definitions are the independent oracle; exact immutable text detects inversions, missing wording, comparators, denominators and arithmetic changes without pretending to interpret prose or execute product scenarios.",
+        "evidence": "requirements6-final-candidate definitions byte-match candidate inputs; accepted source revision supplied as ae7aa92a76ff18522e643821df6840bf3bbabc4d.",
+        "validation": "Raw checker, mutation, negative test and planning outputs linked above.",
+        "follow_through": "Any accepted definition change requires fresh independent review before baseline update; coordinator integrates against current main and obtains native CI and fresh independent successor review."
+      }
+    ]
+  }
+}
