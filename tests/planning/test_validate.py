@@ -517,7 +517,7 @@ class CliTests(unittest.TestCase):
             outputs = []
             for writer in writers:
                 stdout, stderr = writer.communicate(timeout=30)
-                self.assertEqual(writer.returncode, 0, stderr)
+                self.assertEqual(writer.returncode, 0, stdout + stderr)
                 outputs.append(json.loads(stdout))
             self.assertIn(json.loads(report.read_text()), outputs)
             self.assertTrue(all(output['result'] == 'pass' for output in outputs))
