@@ -234,16 +234,9 @@ def assess(root):
     for i in inv['unresolved_section_ordinals']: diagnostics.append({'kind':'section','ordinal':i})
     for gap in inv['notice_coverage_gaps']:
         if gap['status']=='unresolved': diagnostics.append({'kind':'notice_coverage','component':gap['component'],'reference':str(gap.get('reference',''))[:200]})
-    # A development-only fixture may explicitly enumerate its complete coverage.
-    coverage = inv.get('distribution_coverage')
-    scope = inv.get('distribution_scope')
-    defined = (scope == 'development-only' and isinstance(coverage, dict)
-               and coverage.get('components') == sorted(inv['components'])
-               and coverage.get('section_ordinals') == list(range(1, len(inv['effective_prettier_sections']) + 1))
-               and coverage.get('notice_sha256') == sorted(n['sha256'] for n in inv['retained_notices']))
-    if not defined:
-        diagnostics.append({'kind':'distribution_scope','detail':'unknown; explicit supported scope and coverage required'})
-    return {'structure_valid':True, **evidence, 'clearance_status':'validated-development-only' if defined and not diagnostics else 'unknown', 'diagnostics':diagnostics}
+    # Distribution scope requires independently reviewed, versioned evidence.
+    diagnostics.append({'kind':'distribution_scope','detail':'unknown; explicit supported scope and coverage required'})
+    return {'structure_valid':True, **evidence, 'clearance_status':'unknown', 'diagnostics':diagnostics}
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__); parser.add_argument('--root',default=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))

@@ -53,6 +53,44 @@ class Contract(unittest.TestCase):
         self.assertEqual(result['clearance_status'], 'unknown')
         self.assertEqual(sum(d['kind'] == 'distribution_scope' for d in result['diagnostics']), 1)
 
+    def test_complete_self_declared_scope_cannot_suppress_diagnostic(self):
+        self.inv['distribution_scope'] = 'development-only'
+        self.inv['distribution_coverage'] = {
+            'components': sorted(self.inv['components']),
+            'section_ordinals': list(range(1, 247)),
+            'notice_sha256': sorted(n['sha256'] for n in self.inv['retained_notices']),
+        }
+        self.save()
+        result = check.assess(self.root)
+        self.assertTrue(result['structure_valid'])
+        self.assertEqual(result['counts'], {'components': 100, 'sections': 246, 'notices': 62})
+        self.assertEqual(result['clearance_status'], 'unknown')
+        self.assertEqual(len(result['diagnostics']), 11)
+        self.assertEqual(sum(d['kind'] == 'distribution_scope' for d in result['diagnostics']), 1)
+        with patch('sys.argv', ['check', '--root', str(self.root)]), patch('sys.stdout'):
+            self.assertEqual(check.main(), 1)
+
+    def test_scope_unknown_when_fixture_has_no_other_diagnostics(self):
+        # Controlled assessment fixture: no catalog decisions or source files are changed.
+        evidence, inv = check._validate(self.root)
+        inv['distribution_scope'] = 'development-only'
+        inv['distribution_coverage'] = {
+            'components': sorted(inv['components']),
+            'section_ordinals': list(range(1, 247)),
+            'notice_sha256': sorted(n['sha256'] for n in inv['retained_notices']),
+        }
+        for component in inv['components'].values():
+            component['effective_classification']['status'] = 'interpreted'
+        inv['unresolved_section_ordinals'] = []
+        for gap in inv['notice_coverage_gaps']:
+            gap['status'] = 'interpreted'
+        with patch.object(check, '_validate', return_value=(evidence, inv)):
+            result = check.assess(self.root)
+            self.assertEqual(result['clearance_status'], 'unknown')
+            self.assertEqual([d['kind'] for d in result['diagnostics']], ['distribution_scope'])
+            with patch('sys.argv', ['check', '--root', str(self.root)]), patch('sys.stdout'):
+                self.assertEqual(check.main(), 1)
+
     def catalog_invalid(self):
         self.save()
         with self.assertRaisesRegex(check.Invalid, 'section decision catalog identity mismatch'):
