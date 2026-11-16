@@ -1,0 +1,95 @@
+{
+  "issue": "GB-T0.03.02.V1 / #24",
+  "recorded_utc": "2026-11-16T14:47:13Z",
+  "tested_product_revision": "6ca5b24d4fc42a9f38bbbc1786f99d817be0f6af",
+  "verification_artifact_revision": "not yet committed; different from tested product revision",
+  "harness_sha256": "ad4a167e82c55686e55bc37c173a2b6a11df719e12225707337ba50fd9861811",
+  "environment": {
+    "node": "v24.22.1",
+    "npm": "11.19.1",
+    "typescript": "5.9.3",
+    "platform": "linux x64",
+    "tooling": "copied config478-tooling; no install or network"
+  },
+  "results": [
+    {
+      "classification": "actual-executed",
+      "name": "source provenance hashes",
+      "command": "python3 provenance comparison of copied-source inputs against verification24-provenance.json",
+      "raw": {
+        "status": "passed",
+        "matched_candidate_and_copied_files": {
+          "packages/config/src/index.ts": true,
+          "packages/config/src/parsers.ts": true,
+          "packages/config/test/config.test.ts": true,
+          "packages/config/tsconfig.json": true,
+          "packages/config/package.json": true
+        }
+      }
+    },
+    {
+      "classification": "actual-executed",
+      "name": "compile copied source and existing tests",
+      "command": "node scratch/verification24/run/node_modules/typescript/bin/tsc -p scratch/verification24/run/packages/config/tsconfig.json",
+      "raw_stdout_stderr": "",
+      "exit_code": 0
+    },
+    {
+      "classification": "actual-executed",
+      "name": "independent acceptance harness",
+      "command": "node scratch/verification24/run/scripts/verification/verify_config.mjs",
+      "raw": {
+        "status": "passed",
+        "scenarios": 131125,
+        "assertions": 262252,
+        "effects": 0
+      },
+      "exit_code": 0
+    },
+    {
+      "classification": "prior-evidence",
+      "name": "original 20-test suite and typecheck",
+      "source": "Coordinator-provided prior native CI evidence and existing T0 case history; not independently rerun in this assignment",
+      "result": "reported passed; separate from direct harness"
+    },
+    {
+      "classification": "not-run",
+      "name": "native CI for verification artifact",
+      "reason": "CI and subsequent independent review/merge are coordinator-owned"
+    },
+    {
+      "classification": "not-run",
+      "name": "unavailable prerequisite and interrupted execution",
+      "reason": "no child-process failure injection in the qualified sandbox; service startup integration is outside this pure parser"
+    },
+    {
+      "classification": "not-run",
+      "name": "Discord, GoDaddy, database and real service integration",
+      "reason": "local structural validation only; no services, credentials or network authorized"
+    }
+  ],
+  "acceptance_mapping": {
+    "five_fields_and_valid_missing_malformed": "exact success/failure structure, each missing/empty field, all missing, aggregate invalid fields; enum, URL, ID and secret fixtures",
+    "port": "all decimal values 0..65536 twice, plain and three leading zeroes; malformed forms",
+    "names_only_and_credential_redaction": "deep equality against exact canonical failure shape with sentinel credential-bearing invalid input",
+    "precision_and_preservation": "long decimal ID, zero prefixes, original URL and secret compared as strings",
+    "side_effects": "every input checked unchanged; frozen valid input; unrelated key; global environment proxy; traps for console log/error/warn, exit, synchronous fs read/write and net connect/createConnection; caller continues",
+    "limitations": "traps do not cover every possible IO/logging API, import-time effects, asynchronous activity or transient mutations restored before observation; no full-suite rerun in this sandbox",
+    "failure_paths": "invalid config exercised; unavailable prerequisites and interrupted execution not run"
+  },
+  "defects": [],
+  "owned_decisions": [
+    {
+      "owner": "independent verification assignee",
+      "decision": "Use direct compiled-module structural oracle and exhaustive decimal ports; retain mandatory original suite before harness in native CI",
+      "rationale": "independent coverage without sandbox-prohibited child-process suite",
+      "validation": "131125 scenarios, 262252 assertions, zero trapped effects",
+      "follow_through": "coordinator must run native CI and obtain independent review"
+    }
+  ],
+  "remaining_acceptance_gaps": [
+    "Unavailable-prerequisite and interrupted-execution acceptance scenarios not executed.",
+    "Artifact native CI, required review, merge and post-merge checks remain outstanding.",
+    "No external integration or runtime service claims."
+  ]
+}
