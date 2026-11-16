@@ -4,6 +4,9 @@ import gzip
 import hashlib
 import io
 import json
+import os
+import shutil
+import contextlib
 import sys
 import tarfile
 import tempfile
@@ -44,7 +47,10 @@ class ArchiveChecks(unittest.TestCase):
         (self.root/'docs/licenses/inventory.json').write_text(json.dumps({'components':{self.path:self.component}}))
         (self.root/'package-lock.json').write_text(json.dumps({'packages':{self.path:{'resolved':self.url,'integrity':artifact['integrity']}}}))
     def verify(self):
-        with patch.object(archive.check, 'validate_structure'):
+        # Synthetic parser fixtures do not satisfy the real structure contract.
+        hashes = {str(p.relative_to(self.root)): sha(p.read_bytes()) for p in (self.root/'docs/licenses').rglob('*') if p.is_file()}
+        hashes['package-lock.json'] = sha((self.root/'package-lock.json').read_bytes())
+        with patch.object(archive.check, 'validate_structure', return_value={'hashes': hashes}):
             return archive.verify_archives(self.root, self.root/'cache')
     def test_exact_identity_nested_and_types_root(self):
         self.save(); self.assertEqual(self.verify()['counts'], {'components':1,'notices':1})
@@ -81,5 +87,69 @@ class ArchiveChecks(unittest.TestCase):
         for malformed in (raw[:600], raw[:-512]+b'X'*512, b'X'+raw[1:]):
             with self.assertRaises(archive.Invalid): archive.scan(malformed, [])
         with self.assertRaises(archive.Invalid): archive.unpack_gzip(gzip.compress(raw)+b'junk')
+
+class ValidatedInputChecks(unittest.TestCase):
+    """Exercise real structural validation against the copied candidate and cache."""
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)/'source'
+        shutil.copytree(Path(__file__).resolve().parents[2], self.root)
+        self.cache = Path(os.environ['LICENSE16_ARTIFACT_FIXTURE'])
+        self.validate = archive.check.validate_structure
+
+    def test_matching_inventory_lock_rewrite_after_validation(self):
+        def replace(root):
+            evidence = self.validate(root)
+            ip = self.root/'docs/licenses/inventory.json'; lp = self.root/'package-lock.json'
+            inv = json.loads(ip.read_text()); lock = json.loads(lp.read_text())
+            p = next(iter(inv['components'])); url = 'https://attacker.example/changed.tgz'
+            inv['components'][p]['artifact']['url'] = url; lock['packages'][p]['resolved'] = url
+            ip.write_text(json.dumps(inv)); lp.write_text(json.dumps(lock))
+            return evidence
+        with patch.object(archive.check, 'validate_structure', side_effect=replace):
+            with self.assertRaisesRegex(archive.Invalid, 'input changed after validation'):
+                archive.verify_archives(self.root, self.cache)
+        with self.assertRaises(archive.Invalid): self.validate(self.root)
+
+    def test_retained_notice_replaced_after_validation(self):
+        def replace(root):
+            evidence = self.validate(root)
+            inv = json.loads((self.root/'docs/licenses/inventory.json').read_text())
+            component = next(c for c in inv['components'].values() if c['notices'])
+            notice = self.root/'docs/licenses/notices'/(component['notices'][0]['sha256']+'.txt')
+            notice.write_bytes(b'replaced')
+            return evidence
+        with patch.object(archive.check, 'validate_structure', side_effect=replace):
+            with self.assertRaisesRegex(archive.Invalid, 'input changed after validation'):
+                archive.verify_archives(self.root, self.cache)
+
+    def test_missing_and_symlink_cache_are_bounded_and_close_source(self):
+        link = Path(self.temp.name)/'link'; link.symlink_to(self.cache, target_is_directory=True)
+        real_reader = archive.check.Reader
+        for cache in (Path(self.temp.name)/'missing', link):
+            opened = []
+            def reader(root):
+                result = real_reader(root); opened.append(result); return result
+            with self.subTest(cache=cache), patch.object(archive.check, 'Reader', side_effect=reader):
+                with self.assertRaises(archive.Invalid): archive.verify_archives(self.root, cache)
+                self.assertTrue(opened); self.assertTrue(all(not r.chain for r in opened))
+            stderr = io.StringIO()
+            with patch.object(sys, 'argv', ['check_archives.py', '--root', str(self.root), '--artifacts', str(cache)]), contextlib.redirect_stderr(stderr):
+                self.assertEqual(archive.main(), 1)
+            self.assertTrue(stderr.getvalue().startswith('BLOCKED: ')); self.assertLessEqual(len(stderr.getvalue()), 510)
+            self.assertNotIn('Traceback', stderr.getvalue())
+
+    def test_opened_readers_close_on_read_failure(self):
+        real_reader = archive.check.Reader; opened = []
+        def reader(root):
+            result = real_reader(root); opened.append(result)
+            if Path(root) == self.cache:
+                def fail(*args, **kwargs): raise OSError('simulated cache read failure')
+                result.read = fail
+            return result
+        with patch.object(archive.check, 'Reader', side_effect=reader):
+            with self.assertRaisesRegex(archive.Invalid, 'simulated cache read failure'):
+                archive.verify_archives(self.root, self.cache)
+        self.assertGreaterEqual(len(opened), 2); self.assertTrue(all(not r.chain for r in opened))
 
 if __name__ == '__main__': unittest.main()

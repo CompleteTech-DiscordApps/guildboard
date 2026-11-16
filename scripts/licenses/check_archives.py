@@ -102,11 +102,20 @@ def scan(data, wanted):
     return selected
 
 def verify_archives(root, artifacts):
-    check.validate_structure(root)
-    source = check.Reader(root); cache = check.Reader(artifacts)
+    source = cache = None
     try:
-        inv = source.json('docs/licenses/inventory.json', 2 * 1024 * 1024)
-        lock = source.json('package-lock.json')['packages']
+        evidence = check.validate_structure(root)
+        source = check.Reader(root); cache = check.Reader(artifacts)
+        def bound_read(path, limit=check.MAX_FILE):
+            data = source.read(path, limit)
+            require(evidence['hashes'].get(path) == hashlib.sha256(data).hexdigest(),
+                    'input changed after validation: '+path)
+            return data
+        def bound_json(path, limit=check.MAX_FILE):
+            return json.loads(bound_read(path, limit).decode('utf-8'), object_pairs_hook=check.pairs,
+                              parse_constant=lambda _: (_ for _ in ()).throw(Invalid('invalid JSON constant')))
+        inv = bound_json('docs/licenses/inventory.json', 2 * 1024 * 1024)
+        lock = bound_json('package-lock.json')['packages']
         notices = 0
         for path, component in sorted(inv['components'].items()):
             artifact = component['artifact']; entry = lock[path]
@@ -128,14 +137,17 @@ def verify_archives(root, artifacts):
             for n in component['notices']:
                 content = files[n['archive_path']]
                 require(len(content) == n['bytes'] and hashlib.sha256(content).hexdigest() == n['sha256'], 'notice identity mismatch: '+path)
-                retained = source.read('docs/licenses/notices/'+n['sha256']+'.txt')
+                retained = bound_read('docs/licenses/notices/'+n['sha256']+'.txt')
                 require(content == retained, 'retained notice mismatch: '+path); notices += 1
         return {'archive_identity_verified': True, 'clearance': False, 'counts': {'components': len(inv['components']), 'notices': notices}}
     except (OSError, KeyError, TypeError, UnicodeError, ValueError) as e:
         if isinstance(e, Invalid): raise
         raise Invalid('archive verification failed: '+str(e)[:300]) from e
     finally:
-        source.close(); cache.close()
+        try:
+            if cache is not None: cache.close()
+        finally:
+            if source is not None: source.close()
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
