@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Offline identity/peer inspection, not a semantic or runtime test."""
-import argparse, hashlib, json, os, pathlib, tempfile
+import argparse, hashlib, json, os, pathlib, tempfile, stat
 
 HASHES = {
 'react_19.1.0.json':'f93e69ad3ae948242a4ca5c8c0171c49025ab0920f682e83c1cb74352051b2e5',
@@ -14,12 +14,47 @@ HASHES = {
 'fastify-v5.6.1-typescript.md':'25436f3a03044b3cbfeb6af4bc5032fd43e996789961a01c8703afeb3898b363',
 'fastify-v5.6.1-validation.md':'f7b980759f4b2f93c4a2f3ebbd7aef80d254dfc758246eee2e36ee4460505d8d'}
 
+MAX_INPUT = 2 * 1024 * 1024
+
+def read_input(root, name):
+    # Open every component without following links; FIFOs must never block.
+    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+    fds, links = [], []
+    try:
+        parts = pathlib.Path(root).absolute().parts
+        fd = os.open(parts[0], flags | os.O_DIRECTORY); fds.append(fd)
+        for part in (*parts[1:], *name.split('/')):
+            if part in ('', '.', '..'):
+                raise ValueError('invalid input component')
+            is_last = part == name.split('/')[-1] and len(fds) == len(parts) + len(name.split('/')) - 1
+            parent = fd
+            fd = os.open(part, flags | (0 if is_last else os.O_DIRECTORY), dir_fd=parent)
+            fds.append(fd); links.append((parent, part, fd))
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_INPUT:
+            raise ValueError('input is not a bounded regular file: ' + name)
+        chunks, size = [], 0
+        while True:
+            chunk = os.read(fd, min(65536, MAX_INPUT + 1 - size))
+            if not chunk: break
+            chunks.append(chunk); size += len(chunk)
+            if size > MAX_INPUT: raise ValueError('input exceeds limit: ' + name)
+        after = os.fstat(fd)
+        if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns) or size != before.st_size:
+            raise ValueError('input changed while reading: ' + name)
+        for parent, part, opened in links:
+            current = os.stat(part, dir_fd=parent, follow_symlinks=False)
+            opened_stat = os.fstat(opened)
+            if (current.st_dev, current.st_ino) != (opened_stat.st_dev, opened_stat.st_ino):
+                raise ValueError('input component changed: ' + name)
+        return b''.join(chunks)
+    finally:
+        for fd in reversed(fds): os.close(fd)
+
 def inspect(root):
-    root = pathlib.Path(root)
     data = {}
     for name, expected in HASHES.items():
-        path = root / name
-        raw = path.read_bytes()
+        raw = read_input(root, name)
         if hashlib.sha256(raw).hexdigest() != expected:
             raise ValueError('hash mismatch: ' + name)
         data[name] = raw
