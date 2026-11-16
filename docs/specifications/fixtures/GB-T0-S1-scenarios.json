@@ -526,6 +526,133 @@
         "additionalRevisions": 0,
         "newAcceptedEvents": 0
       }
+    },
+    {
+      "id": "F31",
+      "invariant": "queued-receipt-revoke-before-release",
+      "owner": "T1/T2/T4/T5/T8/T9/T12",
+      "given": {
+        "condition": "matching retained receipt prepared after current read check; revoke board visibility before release"
+      },
+      "when": "attempt release of receipt and later queued protected chunks",
+      "expected": {
+        "receiptExposed": false,
+        "digestMatchExposed": false,
+        "lineageExposed": false,
+        "revisionExposed": false,
+        "unknownOutcomeSettledByDenial": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0,
+        "code": "NOT_FOUND",
+        "laterQueuedDataReleased": false
+      }
+    },
+    {
+      "id": "F32",
+      "invariant": "queued-digest-conflict-revoke-before-release",
+      "owner": "T1/T2/T4/T5/T8/T9/T12",
+      "given": {
+        "condition": "retained receipt lookup passed current read check and mismatching digest conflict prepared; revoke board visibility before release"
+      },
+      "when": "attempt release of conflict and later queued protected chunks",
+      "expected": {
+        "receiptExposed": false,
+        "digestMatchExposed": false,
+        "lineageExposed": false,
+        "revisionExposed": false,
+        "unknownOutcomeSettledByDenial": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0,
+        "code": "NOT_FOUND",
+        "laterQueuedDataReleased": false
+      }
+    },
+    {
+      "id": "F33",
+      "invariant": "receipt-and-conflict-release-before-revoke",
+      "owner": "T1/T2/T4/T5/T8/T9/T12",
+      "given": {
+        "condition": "two independent authorized retries prepare matching retained receipt and mismatching digest conflict"
+      },
+      "when": "serialize each complete response release before revoke; then attempt later queued protected chunks",
+      "expected": {
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0,
+        "receiptReleased": true,
+        "receiptCode": "accepted",
+        "conflictReleased": true,
+        "conflictCode": "IDEMPOTENCY_CONFLICT",
+        "releasePrecedesRevoke": true,
+        "laterQueuedDataReleased": false
+      }
+    },
+    {
+      "id": "F34",
+      "invariant": "receipt-and-conflict-session-expiry-before-release",
+      "owner": "T1/T2/T4/T5/T8/T9/T12",
+      "given": {
+        "condition": "independent matching receipt and mismatching digest responses prepared after current read check; session expires by trusted time"
+      },
+      "when": "attempt each response release",
+      "expected": {
+        "receiptExposed": false,
+        "digestMatchExposed": false,
+        "lineageExposed": false,
+        "revisionExposed": false,
+        "unknownOutcomeSettledByDenial": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0,
+        "codeForEitherResponse": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "id": "F35",
+      "invariant": "receipt-and-conflict-freshness-denial",
+      "owner": "T1/T2/T4/T5/T8/T9/T12",
+      "given": {
+        "condition": "independent matching receipt and mismatching digest responses prepared after current read check; membership freshness, current policy or trusted time becomes unavailable or stale"
+      },
+      "when": "attempt each response release for each unavailable or stale prerequisite",
+      "expected": {
+        "receiptExposed": false,
+        "digestMatchExposed": false,
+        "lineageExposed": false,
+        "revisionExposed": false,
+        "unknownOutcomeSettledByDenial": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0,
+        "codeForEitherResponse": "DEPENDENCY_UNAVAILABLE"
+      }
+    },
+    {
+      "id": "F36",
+      "invariant": "committed-write-ack-denied-after-revoke",
+      "owner": "T1/T2/T4/T5/T8/T9/T12",
+      "given": {
+        "condition": "write committed under atomic write fence with durable receipt and event; accepted ACK queued; read access revoked before ACK release"
+      },
+      "when": "attempt ACK release and later queued protected chunks",
+      "expected": {
+        "code": "NOT_FOUND",
+        "ackReleased": false,
+        "receiptExposed": false,
+        "digestMatchExposed": false,
+        "lineageExposed": false,
+        "revisionExposed": false,
+        "unknownOutcomeSettledByDenial": false,
+        "originalCommitRemainsAccepted": true,
+        "originalReceiptRemainsDurable": true,
+        "originalEventRemainsDurable": true,
+        "laterQueuedDataReleased": false,
+        "additionalWrites": 0,
+        "additionalRevisions": 0,
+        "newAcceptedEvents": 0
+      }
     }
   ]
 }

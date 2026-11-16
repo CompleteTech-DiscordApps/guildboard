@@ -92,20 +92,33 @@ accepted; no command using the invalidated authority may commit after the revoke
 commits. Broadcasting a revoke before/after this point cannot substitute for
 fencing. Multi-board or multi-guild effects require a separate reviewed contract.
 
-**Read delivery fence:** For each release of a live event, replay event or snapshot
-chunk into the transport, serialize that release with session revocation/expiry,
-membership invalidation and changes to scoped read authority. At the release
+**Read delivery fence:** Every release into transport of protected board data or
+results is serialized with session revocation, expiry, membership invalidation
+and changes to scoped read authority. This includes live and replay events,
+snapshot metadata and chunks, retained or newly committed receipts and ACKs,
+and all results whose existence or content depends on a receipt or digest,
+including `IDEMPOTENCY_CONFLICT`. It applies to prepared responses and every
+application-queued chunk, not just the initial request or lookup. At each release
 point verify current session validity, sufficiently fresh membership evidence and
-current read policy using trusted time. Missing or stale required freshness,
-policy or trusted time fails closed; do not release the data. A revoke or expiry
-ordered first suppresses application-queued data, including already prepared
-replay and snapshot chunks. A release ordered first may complete; bytes already
-emitted to the transport cannot be recalled. Delivery denial must not mutate
-content, allocate a revision or disclose protected data; use existing safe
-`UNAUTHENTICATED`, `NOT_FOUND`/`FORBIDDEN`, or `DEPENDENCY_UNAVAILABLE`
-semantics as applicable. Transport backpressure and the fence must not allow
-queued data to escape after invalidation. T1/T2/T4/T8 define and verify the
-mechanism and freshness bounds before implementation adoption.
+current scoped read policy using trusted time. Missing or stale required
+freshness, policy or trusted time fails closed. A revoke, expiry or invalidation
+ordered first suppresses the response and all later queued protected chunks; a
+release ordered first may complete. Bytes already emitted to transport cannot be
+recalled. Backpressure must not allow a subsequent queued chunk to bypass the
+fence. Use existing safe `UNAUTHENTICATED`, `NOT_FOUND`/`FORBIDDEN`, or
+`DEPENDENCY_UNAVAILABLE` semantics as applicable, independent of receipt existence
+or digest match. Denial reveals no receipt, digest result, lineage or revision,
+and cannot settle an unknown outcome. It causes no content write, revision
+allocation or accepted event. A commit already accepted under the atomic write
+fence remains durable and accepted even if its subsequent ACK delivery is denied;
+never roll it back or report it uncommitted on account of delivery denial.
+
+Asset and export delivery is subject to the same serialized release-time checks
+for the board and each included asset's scoped read authority, including metadata
+and every queued stream chunk. If the implementation cannot enforce the fence at
+that boundary, it must not release the affected data; a one-time authorization,
+pre-signed direct URL or storage bypass is not an equivalent fence. T1/T2/T4/T5/
+T8/T9 define and verify the mechanism and freshness bounds before adoption.
 
 ## 4. Versioned command, receipt and error shapes
 
@@ -151,10 +164,10 @@ budgets; missing budgets block that operation kind rather than permit infinity.
    (lineage, base revision and expected policy generation); exclude transport
    request ID. Same identity with different digest is `IDEMPOTENCY_CONFLICT`.
 3. A prior committed receipt with the same digest returns the existing receipt
-   only if the caller still has read access; it causes no new write or sequence.
+   only if the caller still has read access at the serialized release fence in §3; it causes no new write or sequence.
    This applies to retained receipts from retired lineages after restore, before
    checking whether the command lineage is active. A different digest still
-   returns `IDEMPOTENCY_CONFLICT` at step 2, even for a retired lineage. Current
+   prepares `IDEMPOTENCY_CONFLICT` at step 2, even for a retired lineage, subject to the same release fence. Current
    loss of write permission must not repeat the mutation. If the identity is no
    longer authorized to read, deny at step 1 without exposing the receipt or
    digest-match result. A historical receipt records acceptance in its original
@@ -323,7 +336,7 @@ adapter can exercise policy branches but cannot prove Discord membership APIs.
 | Issue #3 clause | Reviewable artifact | Required result not yet obtained |
 |---|---|---|
 | Boundaries/trust zones/ownership | §§2–3 and transport-to-transaction flow | Architecture + T1/T2/T8/T9 review |
-| Consistency and versioned schemas | §§4–6; fixtures F01–F30 | T3/T4/T5/T8 integration review and executable payload schemas |
+| Consistency and versioned schemas | §§4–6; fixtures F01–F36 | T3/T4/T5/T8 integration review and executable payload schemas |
 | Errors/security/fixtures | Error table and negative/crash fixtures | T9/T12 no-side-effect and fault-injection evidence |
 | ADR process | §8 | Fresh independent technical and consuming review, delegated coordinator acceptance and configured native merge protections |
 | Measurable scope/limits | §7, bounded-ingress proposal | T0 #6/T11/T12 accepted workload and actual measurements |
@@ -352,11 +365,11 @@ p = Path('docs/specifications/fixtures/GB-T0-S1-scenarios.json')
 d = json.loads(p.read_text())
 s = d['scenarios']
 assert d['status'] == 'proposed-not-executed'
-assert [x['id'] for x in s] == [f'F{i:02}' for i in range(1, 31)]
-assert len({x['invariant'] for x in s}) == 30
+assert [x['id'] for x in s] == [f'F{i:02}' for i in range(1, 37)]
+assert len({x['invariant'] for x in s}) == 36
 assert all(set(x) == {'id', 'invariant', 'owner', 'given', 'when', 'expected'}
            and x['expected'] for x in s)
-print('30 declarative scenarios structurally valid; product behavior not executed')
+print('36 declarative scenarios structurally valid; product behavior not executed')
 PY
 git diff --check
 ```
