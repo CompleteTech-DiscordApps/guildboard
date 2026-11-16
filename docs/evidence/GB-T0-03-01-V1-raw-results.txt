@@ -1,0 +1,71 @@
+PASS apps/activity -> apps/api: deny (apps/activity/src/index.ts:1: forbidden dependency apps/activity -> apps/api (@guildboard/api))
+PASS apps/activity -> apps/bot: deny (apps/activity/src/index.ts:1: forbidden dependency apps/activity -> apps/bot (@guildboard/bot))
+PASS apps/activity -> packages/contracts: allow
+PASS apps/activity -> packages/canvas: allow
+PASS apps/activity -> packages/auth: deny (apps/activity/src/index.ts:1: forbidden dependency apps/activity -> packages/auth (@guildboard/auth))
+PASS apps/activity -> packages/collaboration: deny (apps/activity/src/index.ts:1: forbidden dependency apps/activity -> packages/collaboration (@guildboard/collaboration))
+PASS apps/activity -> packages/config: deny (apps/activity/src/index.ts:1: forbidden dependency apps/activity -> packages/config (@guildboard/config))
+PASS apps/api -> apps/activity: deny (apps/api/src/index.ts:1: forbidden dependency apps/api -> apps/activity (@guildboard/activity))
+PASS apps/api -> apps/bot: deny (apps/api/src/index.ts:1: forbidden dependency apps/api -> apps/bot (@guildboard/bot))
+PASS apps/api -> packages/contracts: allow
+PASS apps/api -> packages/canvas: deny (apps/api/src/index.ts:1: forbidden dependency apps/api -> packages/canvas (@guildboard/canvas))
+PASS apps/api -> packages/auth: allow
+PASS apps/api -> packages/collaboration: allow
+PASS apps/api -> packages/config: allow
+PASS apps/bot -> apps/activity: deny (apps/bot/src/index.ts:1: forbidden dependency apps/bot -> apps/activity (@guildboard/activity))
+PASS apps/bot -> apps/api: deny (apps/bot/src/index.ts:1: forbidden dependency apps/bot -> apps/api (@guildboard/api))
+PASS apps/bot -> packages/contracts: allow
+PASS apps/bot -> packages/canvas: deny (apps/bot/src/index.ts:1: forbidden dependency apps/bot -> packages/canvas (@guildboard/canvas))
+PASS apps/bot -> packages/auth: allow
+PASS apps/bot -> packages/collaboration: allow
+PASS apps/bot -> packages/config: allow
+PASS packages/contracts -> apps/activity: deny (packages/contracts/src/index.ts:1: forbidden dependency packages/contracts -> apps/activity (@guildboard/activity))
+PASS packages/contracts -> apps/api: deny (packages/contracts/src/index.ts:1: forbidden dependency packages/contracts -> apps/api (@guildboard/api))
+PASS packages/contracts -> apps/bot: deny (packages/contracts/src/index.ts:1: forbidden dependency packages/contracts -> apps/bot (@guildboard/bot))
+PASS packages/contracts -> packages/canvas: deny (packages/contracts/src/index.ts:1: forbidden dependency packages/contracts -> packages/canvas (@guildboard/canvas))
+PASS packages/contracts -> packages/auth: deny (packages/contracts/src/index.ts:1: forbidden dependency packages/contracts -> packages/auth (@guildboard/auth))
+PASS packages/contracts -> packages/collaboration: deny (packages/contracts/src/index.ts:1: forbidden dependency packages/contracts -> packages/collaboration (@guildboard/collaboration))
+PASS packages/contracts -> packages/config: deny (packages/contracts/src/index.ts:1: forbidden dependency packages/contracts -> packages/config (@guildboard/config))
+PASS packages/canvas -> apps/activity: deny (packages/canvas/src/index.ts:1: forbidden dependency packages/canvas -> apps/activity (@guildboard/activity))
+PASS packages/canvas -> apps/api: deny (packages/canvas/src/index.ts:1: forbidden dependency packages/canvas -> apps/api (@guildboard/api))
+PASS packages/canvas -> apps/bot: deny (packages/canvas/src/index.ts:1: forbidden dependency packages/canvas -> apps/bot (@guildboard/bot))
+PASS packages/canvas -> packages/contracts: allow
+PASS packages/canvas -> packages/auth: deny (packages/canvas/src/index.ts:1: forbidden dependency packages/canvas -> packages/auth (@guildboard/auth))
+PASS packages/canvas -> packages/collaboration: deny (packages/canvas/src/index.ts:1: forbidden dependency packages/canvas -> packages/collaboration (@guildboard/collaboration))
+PASS packages/canvas -> packages/config: deny (packages/canvas/src/index.ts:1: forbidden dependency packages/canvas -> packages/config (@guildboard/config))
+PASS packages/auth -> apps/activity: deny (packages/auth/src/index.ts:1: forbidden dependency packages/auth -> apps/activity (@guildboard/activity))
+PASS packages/auth -> apps/api: deny (packages/auth/src/index.ts:1: forbidden dependency packages/auth -> apps/api (@guildboard/api))
+PASS packages/auth -> apps/bot: deny (packages/auth/src/index.ts:1: forbidden dependency packages/auth -> apps/bot (@guildboard/bot))
+PASS packages/auth -> packages/contracts: allow
+PASS packages/auth -> packages/canvas: deny (packages/auth/src/index.ts:1: forbidden dependency packages/auth -> packages/canvas (@guildboard/canvas))
+PASS packages/auth -> packages/collaboration: deny (packages/auth/src/index.ts:1: forbidden dependency packages/auth -> packages/collaboration (@guildboard/collaboration))
+PASS packages/auth -> packages/config: deny (packages/auth/src/index.ts:1: forbidden dependency packages/auth -> packages/config (@guildboard/config))
+PASS packages/collaboration -> apps/activity: deny (packages/collaboration/src/index.ts:1: forbidden dependency packages/collaboration -> apps/activity (@guildboard/activity))
+PASS packages/collaboration -> apps/api: deny (packages/collaboration/src/index.ts:1: forbidden dependency packages/collaboration -> apps/api (@guildboard/api))
+PASS packages/collaboration -> apps/bot: deny (packages/collaboration/src/index.ts:1: forbidden dependency packages/collaboration -> apps/bot (@guildboard/bot))
+PASS packages/collaboration -> packages/contracts: allow
+PASS packages/collaboration -> packages/canvas: deny (packages/collaboration/src/index.ts:1: forbidden dependency packages/collaboration -> packages/canvas (@guildboard/canvas))
+PASS packages/collaboration -> packages/auth: allow
+PASS packages/collaboration -> packages/config: deny (packages/collaboration/src/index.ts:1: forbidden dependency packages/collaboration -> packages/config (@guildboard/config))
+PASS packages/config -> apps/activity: deny (packages/config/src/index.ts:1: forbidden dependency packages/config -> apps/activity (@guildboard/activity))
+PASS packages/config -> apps/api: deny (packages/config/src/index.ts:1: forbidden dependency packages/config -> apps/api (@guildboard/api))
+PASS packages/config -> apps/bot: deny (packages/config/src/index.ts:1: forbidden dependency packages/config -> apps/bot (@guildboard/bot))
+PASS packages/config -> packages/contracts: deny (packages/config/src/index.ts:1: forbidden dependency packages/config -> packages/contracts (@guildboard/contracts))
+PASS packages/config -> packages/canvas: deny (packages/config/src/index.ts:1: forbidden dependency packages/config -> packages/canvas (@guildboard/canvas))
+PASS packages/config -> packages/auth: deny (packages/config/src/index.ts:1: forbidden dependency packages/config -> packages/auth (@guildboard/auth))
+PASS packages/config -> packages/collaboration: deny (packages/config/src/index.ts:1: forbidden dependency packages/config -> packages/collaboration (@guildboard/collaboration))
+PASS type import allowed: allow
+PASS re-export denied: deny (packages/auth/src/index.ts:1: forbidden dependency packages/auth -> packages/canvas (@guildboard/canvas))
+PASS dynamic literal denied: deny (apps/activity/src/index.ts:1: forbidden dependency apps/activity -> packages/config (@guildboard/config))
+PASS require denied: deny (apps/bot/src/index.ts:1: forbidden dependency apps/bot -> apps/activity (@guildboard/activity))
+PASS alias denied: deny (apps/activity/src/index.ts:1: forbidden dependency apps/activity -> packages/auth (@alias/index))
+PASS alias allowed: allow
+PASS relative denied: deny (apps/activity/src/index.ts:1: forbidden dependency apps/activity -> packages/auth (../../../packages/auth/src/index))
+PASS server builtin allowed: allow
+PASS browser builtin denied: deny (packages/canvas/src/index.ts:1: server builtin node:fs)
+PASS unresolved relative denied: deny (apps/api/src/index.ts:1: unresolved local module: ./missing)
+PASS unknown workspace denied: deny (apps/api/src/index.ts:1: unknown workspace @guildboard/missing)
+PASS nonliteral denied: deny (apps/api/src/index.ts:1: nonliteral module specifier)
+PASS syntax denied: deny (apps/api/src/index.ts: syntax error: ',' expected.; apps/api/src/index.ts: syntax error: '}' expected.; apps/api/src/index.ts:1: nonliteral module specifier)
+PASS invalid tsconfig: deny (invalid tsconfig: apps/api: '}' expected.)
+PASS 70 independent scenarios
