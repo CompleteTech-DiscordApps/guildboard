@@ -1,133 +1,193 @@
 #!/usr/bin/env python3
-"""Check reviewed npm inputs and installed notice bytes; never publish an approval."""
+"""Validate the retained license inventory; assessment is not legal clearance."""
 import argparse
 import base64
 import hashlib
 import json
 import os
-from pathlib import Path
+import re
 import stat
 import sys
 
-LIMIT = 20_000_000
-class Invalid(Exception):
+MAX_FILE = 8 * 1024 * 1024
+MAX_TOTAL = 64 * 1024 * 1024
+HEX = re.compile(r'^[0-9a-f]{64}$')
+STATUS = {'interpreted', 'unresolved'}
+
+class Invalid(ValueError):
     pass
 
-def read(root, path):
-    p = Path(path)
-    if p.is_absolute() or not p.parts or any(x in ('.', '..') for x in p.parts):
-        raise Invalid('unsafe path')
-    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
-    fd = os.open(root, flags | os.O_DIRECTORY)
-    try:
-        for part in p.parts[:-1]:
-            next_fd = os.open(part, flags | os.O_DIRECTORY, dir_fd=fd)
-            os.close(fd)
-            fd = next_fd
-        file_fd = os.open(p.parts[-1], flags, dir_fd=fd)
+def require(condition, message):
+    if not condition:
+        raise Invalid(message)
+
+def path_parts(path):
+    require(isinstance(path, str) and path and not path.startswith('/') and '\\' not in path and '\x00' not in path, 'invalid relative path')
+    parts = path.split('/')
+    require(all(p not in ('', '.', '..') for p in parts), 'invalid relative path: ' + path[:200])
+    return parts
+
+def digest(data):
+    return hashlib.sha256(data).hexdigest()
+
+def pairs(items):
+    result = {}
+    for k, v in items:
+        require(k not in result, 'duplicate JSON key: ' + k[:200])
+        result[k] = v
+    return result
+
+class Reader:
+    def __init__(self, root):
+        self.fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        self.total = 0
+        self.hashes = {}
+    def close(self):
+        os.close(self.fd)
+    def read(self, path, limit=MAX_FILE):
+        parts = path_parts(path)
+        fd = os.dup(self.fd)
         try:
-            st = os.fstat(file_fd)
-            if not stat.S_ISREG(st.st_mode) or st.st_size > LIMIT:
-                raise Invalid('nonregular or oversized: ' + str(p))
-            with os.fdopen(file_fd, 'rb') as f:
-                file_fd = -1
-                data = f.read(LIMIT + 1)
-            if len(data) > LIMIT: raise Invalid('oversized: ' + str(p))
-            return data
-        finally:
-            if file_fd != -1: os.close(file_fd)
-    finally:
-        os.close(fd)
+            for part in parts[:-1]:
+                nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
+                os.close(fd); fd = nxt
+            f = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
+            try:
+                before = os.fstat(f)
+                require(stat.S_ISREG(before.st_mode) and before.st_size <= limit, 'unsafe or oversized file: ' + path)
+                chunks = []; size = 0
+                while True:
+                    chunk = os.read(f, min(65536, limit + 1 - size))
+                    if not chunk: break
+                    chunks.append(chunk); size += len(chunk)
+                    require(size <= limit and self.total + size <= MAX_TOTAL, 'read budget exceeded: ' + path)
+                after = os.fstat(f)
+                require((before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns,before.st_ctime_ns) == (after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns,after.st_ctime_ns) and size == before.st_size, 'file changed: ' + path)
+                data = b''.join(chunks); self.total += size
+                self.hashes[path] = digest(data)
+                return data
+            finally: os.close(f)
+        finally: os.close(fd)
+    def json(self, path, limit=MAX_FILE):
+        return json.loads(self.read(path, limit).decode('utf-8'), object_pairs_hook=pairs, parse_constant=lambda x: (_ for _ in ()).throw(Invalid('invalid JSON constant')))
 
-def obj(data):
-    def unique(pairs):
-        d = {}
-        for k, v in pairs:
-            if k in d: raise Invalid('duplicate JSON key')
-            d[k] = v
-        return d
-    return json.loads(data, object_pairs_hook=unique)
+def valid_status(obj):
+    require(isinstance(obj, dict) and obj.get('status') in STATUS and isinstance(obj.get('rationale'), str) and bool(obj['rationale'].strip()) and isinstance(obj.get('obligations'), list), 'malformed classification')
 
-def check(root, modules, artifacts):
-    inv = obj(read(root, 'docs/licenses/inventory.json'))
-    if not isinstance(inv, dict) or inv.get('schema') != 1 or not isinstance(inv.get('inputs'), dict) or not isinstance(inv.get('components'), list) or not inv.get('unresolved'):
-        raise Invalid('invalid inventory')
-    inputs = inv['inputs']
-    expected = {'package.json', 'package-lock.json'}
-    for parent in ('apps', 'packages'):
-        base = Path(root) / parent
-        if base.is_symlink() or not base.is_dir(): raise Invalid('missing workspace directory')
-        children = list(base.iterdir())
-        if len(children) > 1000: raise Invalid('too many workspaces')
-        for child in children:
-            if child.is_symlink(): raise Invalid('workspace symlink')
-            if child.is_dir() and (child / 'package.json').exists(): expected.add(parent + '/' + child.name + '/package.json')
-    if set(inputs) != expected: raise Invalid('workspace manifest inventory mismatch')
-    for path, digest in inputs.items():
-        if not isinstance(digest, str) or hashlib.sha256(read(root, path)).hexdigest() != digest: raise Invalid('changed input: ' + path)
-    lock = obj(read(root, 'package-lock.json'))
-    if lock.get('lockfileVersion') != 3 or not isinstance(lock.get('packages'), dict): raise Invalid('unsupported lock')
-    packages = {}
-    for k, v in lock['packages'].items():
-        if not isinstance(k, str) or not isinstance(v, dict): raise Invalid('invalid lock entry')
-        if k.startswith('node_modules/'):
-            if v.get('link') is True:
-                if set(v) - {'resolved', 'link'} or v.get('resolved', '') + '/package.json' not in expected: raise Invalid('invalid workspace link: ' + k)
-            else:
-                packages[k] = v
-        elif k != '' and k + '/package.json' not in expected:
-            raise Invalid('unknown lock entry: ' + k)
+def _validate(root):
+    r = Reader(root)
+    try:
+        inv = r.json('docs/licenses/inventory.json', 2 * 1024 * 1024)
+        require(isinstance(inv, dict) and inv.get('schema_version') == 3 and inv.get('status') in ('incomplete-not-clearance', 'complete-not-clearance'), 'invalid inventory schema or status')
+        pkg = r.json('package.json'); lock = r.json('package-lock.json')
+        packages = lock['packages']; require(isinstance(packages, dict), 'invalid lock packages')
+        workspaces = pkg.get('workspaces', [])
+        if isinstance(workspaces, dict): workspaces = workspaces.get('packages')
+        require(isinstance(workspaces, list) and all(isinstance(x,str) and re.fullmatch(r'[A-Za-z0-9_.-]+/\*', x) for x in workspaces), 'unsupported workspace configuration')
+        workspace_paths = {p for p in packages if p and any(p.startswith(w[:-1]) and '/' not in p[len(w)-1:] for w in workspaces)}
+        inputs = {'package.json', 'package-lock.json'} | {p + '/package.json' for p in workspace_paths}
+        anchors = inv['input_sha256']; require(isinstance(anchors,dict) and set(anchors) == inputs, 'input anchor set mismatch')
+        for p in sorted(inputs):
+            path_parts(p)
+            if p not in r.hashes: r.read(p)
+            require(anchors[p] == r.hashes[p], 'input hash mismatch: ' + p)
+        components = inv['components']; require(isinstance(components,dict), 'invalid components')
+        external = {p for p,v in packages.items() if 'node_modules/' in p and isinstance(v,dict) and not v.get('link',False)}
+        require(set(components) == external, 'lock component set mismatch')
+        selected = set()
+        for p,c in components.items():
+            path_parts(p); entry = packages[p]
+            require(isinstance(c,dict), 'invalid component: '+p)
+            name = p.rsplit('node_modules/',1)[-1]
+            require(c['actual_package_name'] == entry.get('name', name) and c['version'] == entry.get('version'), 'component identity mismatch: '+p)
+            a = c['artifact']; require(a['url'] == entry.get('resolved') and a['integrity'] == entry.get('integrity'), 'artifact mismatch: '+p)
+            sri = a['integrity'].split('-',1); require(len(sri)==2 and sri[0] in ('sha256','sha384','sha512'), 'invalid integrity: '+p)
+            raw = base64.b64decode(sri[1], validate=True); require(len(raw) == {'sha256':32,'sha384':48,'sha512':64}[sri[0]], 'invalid integrity length: '+p)
+            valid_status(c['classification']); effective = c.get('classification_overlay',c['classification']); valid_status(effective)
+            require(c.get('effective_classification') == effective, 'effective classification mismatch: '+p)
+            require(isinstance(c['notices'],list), 'invalid notices: '+p)
+            for n in c['notices']:
+                path_parts(n['installed_path']); path_parts(n['archive_path'])
+                require(HEX.fullmatch(n['sha256']) and type(n['bytes']) is int and n['bytes'] >= 0, 'invalid notice metadata')
+                selected.add((p,n['archive_path'],n['sha256'],n['bytes']))
+        retained = inv['retained_notices']; require(isinstance(retained,list), 'invalid retained notices')
+        seen = set(); bound = set(); retained_hashes = set()
+        for n in retained:
+            h=n['sha256']; p=n['path']; require(isinstance(h,str) and HEX.fullmatch(h) and p == 'docs/licenses/notices/'+h+'.txt' and h not in seen, 'invalid or duplicate retained notice')
+            seen.add(h); data=r.read(p); require(type(n['bytes']) is int and len(data)==n['bytes'] and digest(data)==h, 'retained notice mismatch: '+p)
+            retained_hashes.add(h); sources=n['sources']; require(isinstance(sources,list) and sources, 'missing notice sources')
+            matched=False
+            for s in sources:
+                kind=s['kind']
+                if kind == 'archive_member':
+                    lp=s['lock_path']; member=s['member']; path_parts(member); path_parts(s['archive_path'])
+                    require(lp in components, 'unknown notice source component')
+                    a=components[lp]['artifact']; require(s['url']==a['url'] and s['integrity']==a['integrity'] and s['archive_sha256']==a['archive_sha256'], 'notice source artifact mismatch')
+                    key=(lp,member,h,len(data)); require(key in selected, 'unknown archive notice binding'); bound.add(key); matched=True
+                elif kind == 'supplemental_notice':
+                    path_parts(s['path']); path_parts(s.get('member',s.get('source_path'))); require(s['sha256']==h and any(q.get('ordinal')==s['ordinal'] and q.get('notice_sha256')==h for q in inv['prettier_supplemental']['sections']), 'invalid supplemental binding'); matched=True
+                elif kind in ('supplemental_source','supplemental_path'):
+                    path_parts(s['path']); require(s['lock_path'] in components, 'unknown supplemental component')
+                    c=components[s['lock_path']]; refs=c['effective_classification'].get('supplemental_notice_sources',[])
+                    require(any(isinstance(ref,dict) and ref.get('sha256')==h for ref in refs), 'invalid supplemental source binding'); matched=True
+                else: raise Invalid('unknown notice source kind')
+            require(matched, 'unbound retained notice')
+        require(selected == bound, 'selected notice missing retained binding')
+        original=inv['prettier_original_sections']; effective=inv['effective_prettier_sections']; supp=inv['prettier_supplemental']['sections']
+        require(isinstance(original,list) and isinstance(effective,list) and isinstance(supp,list) and len(original)==len(effective), 'invalid section lists')
+        supplements={}
+        for s in supp:
+            i=s['ordinal']; require(type(i) is int and 1 <= i <= len(original) and i not in supplements and s['original_decision']==original[i-1] and s['name']==original[i-1]['name'] and s['current_status'] in STATUS, 'invalid supplemental decision')
+            require(s['notice_sha256'] in retained_hashes and digest(s['actual_full_notice'].encode())==s['notice_sha256'], 'supplemental notice missing')
+            supplements[i]=s
+        unresolved=[]
+        for i,(o,e) in enumerate(zip(original,effective),1):
+            require(o['ordinal']==i and e['ordinal']==i and o['status'] in STATUS and e['original_decision']==o, 'section identity mismatch')
+            text=o.get('full_notice_text',o.get('full_section_text',o.get('section_text'))).encode(); require(digest(text)==o.get('section_sha256',o.get('source_section_sha256')) and ('notice_byte_length' not in o or len(text)==o['notice_byte_length']), 'section text mismatch')
+            s=supplements.get(i); status=s['current_status'] if s else o['status']
+            require(e['effective_status']==status and (e.get('supplemental_decision')==s if s else 'supplemental_decision' not in e), 'effective section mismatch')
+            if status=='unresolved': unresolved.append(i)
+        require(inv['unresolved_section_ordinals']==unresolved and inv['remaining_unresolved_section_ordinals']==unresolved, 'unresolved section mismatch')
+        gaps=inv['notice_coverage_gaps']; require(isinstance(gaps,list) and all(isinstance(g,dict) and g.get('component') in components and g.get('status') in STATUS for g in gaps), 'invalid coverage gaps')
+        return {'counts':{'components':len(components),'sections':len(original),'notices':len(retained)}, 'hashes':dict(sorted(r.hashes.items()))}, inv
+    finally: r.close()
 
-    components = inv['components']
-    if len(components) > 1000 or any(not isinstance(c, dict) or not isinstance(c.get('name'), str) for c in components): raise Invalid('invalid components')
-    byname = {c['name']: c for c in components}
-    if len(byname) != len(components) or set(packages) != {'node_modules/' + n for n in byname}: raise Invalid('component inventory mismatch')
-    direct = set()
-    for path in expected - {'package-lock.json'}:
-        manifest = obj(read(root, path))
-        for field in ('dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'):
-            deps = manifest.get(field, {})
-            if not isinstance(deps, dict): raise Invalid('invalid dependencies')
-            if any(not isinstance(k, str) or not isinstance(v, str) for k, v in deps.items()): raise Invalid('invalid dependency entry')
-            direct.update(deps)
-    if not direct.issubset(set(byname) | {obj(read(root, p)).get('name') for p in expected if p.endswith('/package.json')}): raise Invalid('unresolved direct dependency')
-    for path, entry in packages.items():
-        for field in ('dependencies', 'optionalDependencies', 'peerDependencies'):
-            deps = entry.get(field, {})
-            if not isinstance(deps, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in deps.items()):
-                raise Invalid('invalid lock dependencies: ' + path)
-            for dep in deps:
-                if 'node_modules/' + dep not in packages:
-                    raise Invalid('unresolved lock dependency: ' + dep)
-    for name, c in byname.items():
-        p = packages['node_modules/' + name]
-        if not isinstance(p, dict): raise Invalid('invalid package')
-        if c.get('relationship') != ('direct' if name in direct else 'transitive') or c.get('use') != 'build' or c.get('runtime') != 'not established': raise Invalid('unreviewed classification: '+name)
-        if c.get('spdx') not in ('MIT', 'Apache-2.0') or any(c.get(a) != p.get(b) or not c.get(a) for a,b in [('version','version'),('source','resolved'),('integrity','integrity'),('spdx','license')]): raise Invalid('unreviewed metadata: '+name)
-        artifact = c.get('artifact')
-        if not isinstance(artifact, str) or '/' in artifact or not artifact.endswith('.tgz'): raise Invalid('invalid artifact path')
-        actual = 'sha512-' + base64.b64encode(hashlib.sha512(read(artifacts, artifact)).digest()).decode()
-        if actual != c.get('integrity'): raise Invalid('changed artifact: '+name)
-        notices = c.get('notices')
-        if not isinstance(notices, list) or not notices: raise Invalid('missing notices: '+name)
-        paths = set()
-        for notice in notices:
-            if not isinstance(notice, dict) or not isinstance(notice.get('path'), str) or not notice['path'].startswith(name + '/') or notice['path'] in paths: raise Invalid('invalid notice')
-            paths.add(notice['path'])
-            if hashlib.sha256(read(modules, notice['path'])).hexdigest() != notice.get('sha256'): raise Invalid('changed notice: '+notice['path'])
-        if name == 'typescript' and not {name + '/LICENSE.txt', name + '/ThirdPartyNoticeText.txt'}.issubset(paths): raise Invalid('missing TypeScript third-party notice')
-    return len(components)
+def validate_structure(root):
+    """Return structural evidence; raise ValueError for malformed or unsafe input."""
+    try: return _validate(root)[0]
+    except (OSError, KeyError, TypeError, UnicodeError, json.JSONDecodeError, ValueError) as e:
+        if isinstance(e,Invalid): raise
+        raise Invalid('invalid input: '+str(e)[:300]) from e
+
+def assess(root):
+    try: evidence, inv = _validate(root)
+    except (OSError, KeyError, TypeError, UnicodeError, ValueError) as e:
+        return {'structure_valid':False, 'diagnostics':[{'kind':'structure','detail':str(e)[:300]}], 'clearance_status':'unknown'}
+    diagnostics=[]
+    for p,c in inv['components'].items():
+        if c['effective_classification']['status']=='unresolved': diagnostics.append({'kind':'classification','component':p})
+    for i in inv['unresolved_section_ordinals']: diagnostics.append({'kind':'section','ordinal':i})
+    for gap in inv['notice_coverage_gaps']:
+        if gap['status']=='unresolved': diagnostics.append({'kind':'notice_coverage','component':gap['component'],'reference':str(gap.get('reference',''))[:200]})
+    # A development-only fixture may explicitly enumerate its complete coverage.
+    coverage = inv.get('distribution_coverage')
+    scope = inv.get('distribution_scope')
+    defined = (scope == 'development-only' and isinstance(coverage, dict)
+               and coverage.get('components') == sorted(inv['components'])
+               and coverage.get('section_ordinals') == list(range(1, len(inv['effective_prettier_sections']) + 1))
+               and coverage.get('notice_sha256') == sorted(n['sha256'] for n in inv['retained_notices']))
+    if not defined:
+        diagnostics.append({'kind':'distribution_scope','detail':'unknown; explicit supported scope and coverage required'})
+    return {'structure_valid':True, **evidence, 'clearance_status':'validated-development-only' if defined and not diagnostics else 'unknown', 'diagnostics':diagnostics}
 
 def main():
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--root', default='.')
-    p.add_argument('--node-modules', required=True)
-    p.add_argument('--artifacts', required=True, help='directory of exact npm tarballs named in inventory')
-    args = p.parse_args()
-    try:
-        n = check(args.root, args.node_modules, args.artifacts)
-    except (Invalid, OSError, ValueError, TypeError, AttributeError, KeyError, RecursionError) as e:
-        print('BLOCKED: ' + str(e), file=sys.stderr); return 1
-    print(f'CHECKED: {n} reviewed npm records and notice bytes; distribution remains blocked pending artifact review')
-    return 0
+    parser=argparse.ArgumentParser(description=__doc__); parser.add_argument('--root',default=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    args=parser.parse_args(); result=assess(args.root)
+    # Keep output bounded even for hostile input.
+    if len(result['diagnostics']) > 256:
+        result['diagnostics']=result['diagnostics'][:256]+[{'kind':'truncated'}]
+    if 'hashes' in result and len(result['hashes']) > 1024:
+        result['hashes']={}; result['diagnostics'].append({'kind':'output_limit'})
+    print(json.dumps(result,sort_keys=True)); return 1 if result['diagnostics'] else 0
+
 if __name__ == '__main__': sys.exit(main())
