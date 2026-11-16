@@ -136,3 +136,73 @@ test("actual boundary CLI rejects a forbidden import", () => {
     clean(dir);
   }
 });
+
+// Recreate npm's workspace links in the fixture rather than resolving packages
+// from the checkout's node_modules (which would hide stale or missing outputs).
+function linkDependencies(dir) {
+  const modules = path.join(dir, "node_modules");
+  fs.mkdirSync(path.join(modules, "@guildboard"), { recursive: true });
+  for (const name of ["typescript", "@types"]) {
+    fs.symlinkSync(path.join(root, "node_modules", name), path.join(modules, name), "dir");
+  }
+  for (const group of ["apps", "packages"]) {
+    for (const name of fs.readdirSync(path.join(dir, group))) {
+      const workspace = path.join(dir, group, name);
+      const pkg = JSON.parse(fs.readFileSync(path.join(workspace, "package.json")));
+      fs.symlinkSync(workspace, path.join(modules, pkg.name), "dir");
+    }
+  }
+}
+function typecheck(dir) {
+  return spawnSync(process.execPath, ["scripts/engineering/typecheck.mjs"], {
+    cwd: dir,
+    encoding: "utf8",
+  });
+}
+test("clean package consumers typecheck through fresh transitive declarations", () => {
+  const dir = copy();
+  try {
+    linkDependencies(dir);
+    fs.writeFileSync(
+      path.join(dir, "packages/canvas/src/index.ts"),
+      "import { CONTRACT_VERSION } from '@guildboard/contracts';\nexport const version: typeof CONTRACT_VERSION = CONTRACT_VERSION;\n",
+    );
+    fs.writeFileSync(
+      path.join(dir, "apps/activity/src/index.ts"),
+      "import { CONTRACT_VERSION } from '@guildboard/contracts';\nimport { version } from '@guildboard/canvas';\nconsole.log(CONTRACT_VERSION, version);\n",
+    );
+    assert.ok(!fs.existsSync(path.join(dir, "packages/contracts/dist")));
+    const result = typecheck(dir);
+    assert.equal(result.status, 0, result.stderr + result.stdout);
+    assert.ok(fs.existsSync(path.join(dir, "packages/contracts/dist/index.d.ts")));
+    assert.ok(fs.existsSync(path.join(dir, "packages/canvas/dist/index.d.ts")));
+    const build = run(dir);
+    assert.equal(build.status, 0, build.stderr + build.stdout);
+    assert.ok(fs.existsSync(path.join(dir, "engineering-build/manifest.json")));
+  } finally {
+    clean(dir);
+  }
+});
+test("invalid consumer fails despite stale declarations and invalidates build completion", () => {
+  const dir = copy();
+  try {
+    linkDependencies(dir);
+    fs.mkdirSync(path.join(dir, "packages/contracts/dist"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "packages/contracts/dist/index.d.ts"),
+      "export const MISSING: string;\n",
+    );
+    fs.mkdirSync(path.join(dir, "engineering-build"));
+    fs.writeFileSync(path.join(dir, "engineering-build/manifest.json"), "stale");
+    fs.writeFileSync(
+      path.join(dir, "apps/activity/src/index.ts"),
+      "import { MISSING } from '@guildboard/contracts';\nconsole.log(MISSING);\n",
+    );
+    const result = typecheck(dir);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stdout + result.stderr, /has no exported member 'MISSING'/);
+    assert.ok(!fs.existsSync(path.join(dir, "engineering-build/manifest.json")));
+  } finally {
+    clean(dir);
+  }
+});
