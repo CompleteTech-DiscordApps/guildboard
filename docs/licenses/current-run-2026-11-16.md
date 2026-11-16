@@ -123,3 +123,10 @@ The 24 named SHA-256 identities, 555 base identities, 22 exact copies, three ori
 ## Bounded Babel parser source retention
 
 [Parser source observations](babel-parser-source-observations.json) retain 20 exact evidence files, including the tagged parser sibling AUTHORS (586 bytes, 39 names) and full MIT LICENSE identical to the published parser 8.1.0 LICENSE. The Acorn 8.19 supplement does not automatically apply to Babel. The prior root lookup and progress are historical; the later parser tree positively identifies the sibling AUTHORS. Source and release manifests have eight dependency-value transformations. Retention does not adopt a license or close a finding. Prettier build/source applicability and the six policy unknowns remain unresolved. Fresh independent reviews of the assembled full SHA and native validation are required before publication; no runtime or PR approval is claimed.
+
+
+## Bounded Prettier build source retention
+
+[Prettier build source observations](prettier-build-source-observations.json) retain 27 exact source and receipt files, including the full tagged root MIT grant and collector's separate MIT grant. Tagged builder and collector inspection describes potential behavior only; neither the root grant nor the inspected code clears bundled terms or establishes the published build. The registry gitHead differs from the tagged source; the exact lookup returned 404, not proof of global absence. Archive verification is prior receipt evidence, not repeated here. The historical mapping progress remains a dated record.
+
+The six existing npm unknowns remain: Prettier classification, terms 5/6/180, bundled AUTHORS gap and distribution scope. The source archive project-overview image rights hold remains. Catalog, validator and native checks are not waived. Fresh independent provenance and semantic reviews and native CI are required for the integrated full SHA; no signature, attestation or published build was verified here.

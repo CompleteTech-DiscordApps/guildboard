@@ -1,0 +1,31 @@
+{
+  "url": "https://registry.npmjs.org/prettier/3.10.1",
+  "final_url": "https://registry.npmjs.org/prettier/3.10.1",
+  "status": 200,
+  "observed_at": 1794862737.0465896,
+  "bytes": 5872,
+  "sha256": "710e468523909df74f21a6222a9527c418415135dbc42b3890f05241061153b1",
+  "gitHead": "bd676aae6a3805672a21d02198e5d17c9cb1a97b",
+  "repository": {
+    "url": "git+https://github.com/prettier/prettier.git",
+    "type": "git"
+  },
+  "dist": {
+    "shasum": "00b1c1872f9650ec22093d5bdafdca0fe6760f77",
+    "tarball": "https://registry.npmjs.org/prettier/-/prettier-3.10.1.tgz",
+    "fileCount": 56,
+    "integrity": "sha512-70vp3ZUYoPlFbF9uiTdXHUUCGEIp7d4+6p+8DYbkm2jP7x/3i/paXVF6dopSI3zd/CEitrZN1rc4i85xWmmXlg==",
+    "signatures": [
+      {
+        "sig": "MEUCIQCsJ1ExpRBdcLDzXOEpfMtAOclFFLhX03Pe0TChoOuchwIgXa3CzH0dAZivwbpHbSDKQgyuMmJjF755G3VuQvqX+uc=",
+        "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+      },
+      {
+        "sig": "MEYCIQCODqhrMNwnIi7BSBUHm+O9+hPe+gfT+7YDoNBxPsN/qwIhALFlQWO+/LeSyEDQ4prpUCtdaIhTw4sB5VobBr0ZwlKG",
+        "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+      }
+    ],
+    "unpackedSize": 11442158
+  },
+  "limits": "Exact metadata observation, no signature/attestation or build/source authentication"
+}

@@ -1,0 +1,15 @@
+{
+  "observed_at": 1794862791.0795743,
+  "source_commit": "deda65fd47c285b974e2a4397f26a33cfc1746b8",
+  "metadata_gitHead": "bd676aae6a3805672a21d02198e5d17c9cb1a97b",
+  "gitHead_lookup": "Exact GitHub contents API returned404 no commit found; not proof commit never existed or cannot be bound by other evidence",
+  "source_package_bytes": 9210,
+  "source_package_sha256": "947e1ade2b44d12a3bd6b8e67c1fcd808fea792e1c00182f688188f298b0fec6",
+  "source_blob": "95a02b385cedd3e3ec6bd90e2a3bc2c91f63d347",
+  "version": "3.10.1",
+  "exact_dependency_versions": {
+    "@babel/parser": "8.1.0",
+    "acorn": "8.19.0"
+  },
+  "limits": "Tagged source package and published notice agree on parser8.1/acorn8.19 versions; does not authenticate build provenance or bridge metadata gitHead mismatch. Independent verification and source-retention candidate still outstanding."
+}

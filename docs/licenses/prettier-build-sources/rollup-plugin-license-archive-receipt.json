@@ -1,0 +1,43 @@
+{
+  "source_url": "https://registry.npmjs.org/rollup-plugin-license/-/rollup-plugin-license-3.7.2.tgz",
+  "observed_at": 1794865725.7040143,
+  "archive_bytes": 56428,
+  "archive_sha256": "ac1b8b111e502475094796eb969a375713477905fb84d16e1343627789049e6a",
+  "archive_sha512_sri": "sha512-xsEifZTR9xIFzgXqhNEoWmdM8mwLyEynXr50krGTCv/OhBAXS8+YFDWpD7pdT3Q1DZdt9T9yu7sACEfYiRdq8A==",
+  "sha1": "c18303ca5b29f2640be391280a97645b27a6ca18",
+  "expanded_bytes": 377856,
+  "member_names": [
+    "package/LICENSE",
+    "package/dist/index.js",
+    "package/package.json",
+    "package/CHANGELOG.md",
+    "package/README.md",
+    "package/dist/index.d.ts"
+  ],
+  "selected": {
+    "package/LICENSE": {
+      "file": "package__LICENSE.txt",
+      "bytes": 1087,
+      "sha256": "02b011f7a78fdfd416458ba93ec264efceb2594e5875594a6926baddb39db0c6"
+    },
+    "package/dist/index.js": {
+      "file": "package__dist__index.js.txt",
+      "bytes": 39448,
+      "sha256": "4b9b0a5b186701f7eb0e56edf993dcb337cd1aa2a3b671ebcd7859e9ea517e25"
+    },
+    "package/package.json": {
+      "file": "package__package.json.txt",
+      "bytes": 2373,
+      "sha256": "aef845393af5ff8f56f8269990842a37b13e999e21d692f30ae3325221c3194d"
+    },
+    "package/README.md": {
+      "file": "package__README.md.txt",
+      "bytes": 13954,
+      "sha256": "3da092252bbbac3ba68b45d8f2ddda5ff095610f1fbe5c85e2b1e8e801b0a64f"
+    }
+  },
+  "raw_scanner_sha256": "a64098dd7b4a731de35be81f66ec723e3b486dc783039296c19e18c76d3472ba",
+  "raw_scan_before_tarfile": true,
+  "no_extraction_or_execution": true,
+  "limits": "Exactcollectorpackage identity andselectedsource only; no npm signatures/attestation verification or actualPrettierbuildbridge"
+}

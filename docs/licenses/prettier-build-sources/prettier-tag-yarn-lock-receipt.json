@@ -1,0 +1,9 @@
+{
+  "bytes": 365212,
+  "sha256": "4b86e477bcca9e76220dcfe762bf78bb2f876c7608488859d59ba7777cbd611e",
+  "blob": "db19ca055c10ca5d22101f67f79fd4a4e8283b68",
+  "commit": "deda65fd47c285b974e2a4397f26a33cfc1746b8",
+  "observed_at": 1794865592.064864,
+  "delivery": "private primary-source input only",
+  "initial_storage_attempt": "Argument list too long rejected before process creation; bounded chunk storage corrected, complete JSON parsed and bytes/blob verified"
+}

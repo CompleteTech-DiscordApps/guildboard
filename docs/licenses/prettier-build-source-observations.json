@@ -1,0 +1,235 @@
+{
+  "scope": "Bounded source retention for #16 and #17; no source-to-published-build bridge or license clearance.",
+  "candidate_base": "90f32220c1dd7a39ee9facea9b6d1294d948b5a5",
+  "files": [
+    {
+      "file": "prettier-build-sources/prettier-root-license.txt",
+      "bytes": 1065,
+      "sha256": "b0f2417199889f1c0d28ec4e0244eacf1a15de5819d61f641dd7d8f45153ac9c"
+    },
+    {
+      "file": "prettier-build-sources/prettier-root-license.response.json",
+      "bytes": 1853,
+      "sha256": "9b057439989406fce292ae617840378b728bebea89fc7619d87942f3e07bad59"
+    },
+    {
+      "file": "prettier-build-sources/prettier-root-license-receipt.json",
+      "bytes": 400,
+      "sha256": "25f0b6841eadcc56732d490aea9b477c70575701ca4b0638c180fe796acc2b3a"
+    },
+    {
+      "file": "prettier-build-sources/prettier-license-builder.txt",
+      "bytes": 4238,
+      "sha256": "5a0e970db4f80619ce6f2c8b08b05f73eb4aa8ec19b7d1164a50f032c7fd75c5"
+    },
+    {
+      "file": "prettier-build-sources/prettier-license-builder.response.json",
+      "bytes": 6207,
+      "sha256": "ee6662d1daac6d627f640a5d25be583b59b81869d3d72e261b992b09a3416ee6"
+    },
+    {
+      "file": "prettier-build-sources/prettier-root-tree.json",
+      "bytes": 8793,
+      "sha256": "b30b39501f1def6499c9a3e2be4cde8e3d5861dd9e54633be29fdee77b82bded"
+    },
+    {
+      "file": "prettier-build-sources/prettier-scripts-tree.json",
+      "bytes": 6110,
+      "sha256": "fdac288be023f2a36706e71fff76c2797b88f51d281ef262eb1ea72dd50ce562"
+    },
+    {
+      "file": "prettier-build-sources/prettier-build-tree.json",
+      "bytes": 2298,
+      "sha256": "fd60f172f1215af3ae5327a6b43b965c96e3302354420787030fe9387775c1a2"
+    },
+    {
+      "file": "prettier-build-sources/prettier-builders-tree.json",
+      "bytes": 1305,
+      "sha256": "144e819c3044b5659f76af9e3c09faf000d353ea3e8f476140e9c9348b251d83"
+    },
+    {
+      "file": "prettier-build-sources/prettier-tag-yarn-lock.txt",
+      "bytes": 365212,
+      "sha256": "4b86e477bcca9e76220dcfe762bf78bb2f876c7608488859d59ba7777cbd611e"
+    },
+    {
+      "file": "prettier-build-sources/prettier-tag-yarn-lock.response.json",
+      "bytes": 503497,
+      "sha256": "c096b5da74450944fdc4b299a6fad18891f32721dfcb84f2493e9a25eaae6c6d"
+    },
+    {
+      "file": "prettier-build-sources/prettier-tag-yarn-lock-receipt.json",
+      "bytes": 466,
+      "sha256": "814702341f06166f97f94a76325195c705b7af3809ae3ff886978c20bdf89fd3"
+    },
+    {
+      "file": "prettier-build-sources/prettier-tag-package.txt",
+      "bytes": 9210,
+      "sha256": "947e1ade2b44d12a3bd6b8e67c1fcd808fea792e1c00182f688188f298b0fec6"
+    },
+    {
+      "file": "prettier-build-sources/prettier-tag-package.response.json",
+      "bytes": 13010,
+      "sha256": "2b27e0db3a50fd838bd4e7e138ae31cab9f93fb67ee1888d1952aa84b3c3c5d0"
+    },
+    {
+      "file": "prettier-build-sources/prettier-tag-ref.json",
+      "bytes": 337,
+      "sha256": "b0c6bc75affc8ce174ed0ec4ee4da9b2030cbcd187cf7db07110ab76e88696d8"
+    },
+    {
+      "file": "prettier-build-sources/prettier-tag-object.json",
+      "bytes": 656,
+      "sha256": "d62b0435fa0e0ad333905f00a40fcc45a0845542affe5f8cde7d15f0be75af1b"
+    },
+    {
+      "file": "prettier-build-sources/prettier-3.10.1-metadata.json",
+      "bytes": 5872,
+      "sha256": "710e468523909df74f21a6222a9527c418415135dbc42b3890f05241061153b1"
+    },
+    {
+      "file": "prettier-build-sources/prettier-metadata-receipt.json",
+      "bytes": 1273,
+      "sha256": "664922447d4b6a2e0f10e98a003cf7bed6e26d12d7b077dfc8e935a94b2cd198"
+    },
+    {
+      "file": "prettier-build-sources/prettier-githead-package-lookup.response.json",
+      "bytes": 681,
+      "sha256": "ead2157858ed8af079a878393a5b8c1a704205cbc29d1af4e15feafdcb2b89e5"
+    },
+    {
+      "file": "prettier-build-sources/prettier-build-mapping-progress.json",
+      "bytes": 864,
+      "sha256": "79a67ad1b4b0a33fd608adc03dd6f6aac7b013e28ed326987e960de987946754"
+    },
+    {
+      "file": "prettier-build-sources/rollup-plugin-license-3.7.2-metadata.json",
+      "bytes": 3565,
+      "sha256": "3fad2ecb742b97f44089efd95418dd6ccd59c5ed5dd196ddb2ceb8e5b04dfb71"
+    },
+    {
+      "file": "prettier-build-sources/rollup-plugin-license-metadata-receipt.json",
+      "bytes": 1396,
+      "sha256": "427c23969dff3a1631459e9b2cc35ec8827a5d93b4172f64971f30bdd492c800"
+    },
+    {
+      "file": "prettier-build-sources/rollup-plugin-license-archive-receipt.json",
+      "bytes": 1701,
+      "sha256": "54d15b803e1d711198a271084c0b4bb347dfb0e876ad4a13b80030dd9c3a3593"
+    },
+    {
+      "file": "prettier-build-sources/rollup-plugin-license-3.7.2-selected__package__package.json.txt",
+      "bytes": 2373,
+      "sha256": "aef845393af5ff8f56f8269990842a37b13e999e21d692f30ae3325221c3194d"
+    },
+    {
+      "file": "prettier-build-sources/rollup-plugin-license-3.7.2-selected__package__dist__index.js.txt",
+      "bytes": 39448,
+      "sha256": "4b9b0a5b186701f7eb0e56edf993dcb337cd1aa2a3b671ebcd7859e9ea517e25"
+    },
+    {
+      "file": "prettier-build-sources/rollup-plugin-license-3.7.2-selected__package__LICENSE.txt",
+      "bytes": 1087,
+      "sha256": "02b011f7a78fdfd416458ba93ec264efceb2594e5875594a6926baddb39db0c6"
+    },
+    {
+      "file": "prettier-build-sources/rollup-plugin-license-3.7.2-selected__package__README.md.txt",
+      "bytes": 13954,
+      "sha256": "3da092252bbbac3ba68b45d8f2ddda5ff095610f1fbe5c85e2b1e8e801b0a64f"
+    }
+  ],
+  "tagged_source": {
+    "commit": "deda65fd47c285b974e2a4397f26a33cfc1746b8",
+    "tag_ref": "prettier-build-sources/prettier-tag-ref.json",
+    "tag_object": "prettier-build-sources/prettier-tag-object.json",
+    "response_metadata": {
+      "prettier-root-license.response.json": {
+        "sha": "5767e34d30ab78796220f9492726dd2f677d4166"
+      },
+      "prettier-license-builder.response.json": {
+        "sha": "46c152c7784b766ba731d7629abd8838b90d8734"
+      },
+      "prettier-tag-package.response.json": {
+        "sha": "95a02b385cedd3e3ec6bd90e2a3bc2c91f63d347"
+      },
+      "prettier-tag-yarn-lock.response.json": {
+        "sha": "db19ca055c10ca5d22101f67f79fd4a4e8283b68"
+      }
+    },
+    "root_license": {
+      "file": "prettier-build-sources/prettier-root-license.txt",
+      "path": "LICENSE",
+      "blob": "5767e34d30ab78796220f9492726dd2f677d4166",
+      "grant": "Full root MIT grant for retained tagged source; does not clear bundle terms."
+    },
+    "builder": {
+      "file": "prettier-build-sources/prettier-license-builder.txt",
+      "path": "scripts/build/builders/dependencies-license.js",
+      "blob": "46c152c7784b766ba731d7629abd8838b90d8734"
+    },
+    "package": "prettier-build-sources/prettier-tag-package.txt",
+    "lock": "prettier-build-sources/prettier-tag-yarn-lock.txt",
+    "tree_observations": [
+      "prettier-build-sources/prettier-root-tree.json",
+      "prettier-build-sources/prettier-scripts-tree.json",
+      "prettier-build-sources/prettier-build-tree.json",
+      "prettier-build-sources/prettier-builders-tree.json"
+    ],
+    "qualification": "Partial root-tree API response is addressed by commit SHA, not independently authenticated Git tree or signature.",
+    "source_urls": {
+      "LICENSE": "https://api.github.com/repos/prettier/prettier/contents/LICENSE?ref=deda65fd47c285b974e2a4397f26a33cfc1746b8",
+      "scripts/build/builders/dependencies-license.js": "https://api.github.com/repos/prettier/prettier/contents/scripts/build/builders/dependencies-license.js?ref=deda65fd47c285b974e2a4397f26a33cfc1746b8",
+      "package.json": "https://api.github.com/repos/prettier/prettier/contents/package.json?ref=deda65fd47c285b974e2a4397f26a33cfc1746b8",
+      "yarn.lock": "https://api.github.com/repos/prettier/prettier/contents/yarn.lock?ref=deda65fd47c285b974e2a4397f26a33cfc1746b8"
+    }
+  },
+  "registry": {
+    "prettier_metadata": "prettier-build-sources/prettier-3.10.1-metadata.json",
+    "registry_gitHead": "bd676aae6a3805672a21d02198e5d17c9cb1a97b",
+    "exact_lookup": "prettier-build-sources/prettier-githead-package-lookup.response.json",
+    "lookup_limit": "Exact lookup returned 404; this does not prove global absence. Registry gitHead differs from tagged commit.",
+    "collector_metadata": "prettier-build-sources/rollup-plugin-license-3.7.2-metadata.json",
+    "collector_metadata_receipt": "prettier-build-sources/rollup-plugin-license-metadata-receipt.json",
+    "archive_receipt": "prettier-build-sources/rollup-plugin-license-archive-receipt.json",
+    "archive_url": "https://registry.npmjs.org/rollup-plugin-license/-/rollup-plugin-license-3.7.2.tgz",
+    "archive_bytes": 56428,
+    "archive_sha256": "ac1b8b111e502475094796eb969a375713477905fb84d16e1343627789049e6a",
+    "archive_sha512_sri": "sha512-xsEifZTR9xIFzgXqhNEoWmdM8mwLyEynXr50krGTCv/OhBAXS8+YFDWpD7pdT3Q1DZdt9T9yu7sACEfYiRdq8A==",
+    "archive_sha1": "c18303ca5b29f2640be391280a97645b27a6ca18",
+    "expanded_bytes": 377856,
+    "members": [
+      "package/LICENSE",
+      "package/dist/index.js",
+      "package/package.json",
+      "package/CHANGELOG.md",
+      "package/README.md",
+      "package/dist/index.d.ts"
+    ],
+    "selected_members": {
+      "package/LICENSE": "prettier-build-sources/rollup-plugin-license-3.7.2-selected__package__LICENSE.txt",
+      "package/dist/index.js": "prettier-build-sources/rollup-plugin-license-3.7.2-selected__package__dist__index.js.txt",
+      "package/package.json": "prettier-build-sources/rollup-plugin-license-3.7.2-selected__package__package.json.txt",
+      "package/README.md": "prettier-build-sources/rollup-plugin-license-3.7.2-selected__package__README.md.txt"
+    },
+    "collector_grant": {
+      "member": "package/LICENSE",
+      "file": "prettier-build-sources/rollup-plugin-license-3.7.2-selected__package__LICENSE.txt",
+      "grant": "Full collector MIT grant for selected collector source."
+    },
+    "archive_verification": "Prior receipt reports archive SRI, SHA-1, SHA-256 and members verified; raw archive not delivered or reverified here. Yarn checksum is not npm SRI.",
+    "prettier_metadata_url": "https://registry.npmjs.org/prettier/3.10.1",
+    "collector_metadata_url": "https://registry.npmjs.org/rollup-plugin-license/3.7.2",
+    "exact_lookup_url": "https://api.github.com/repos/prettier/prettier/contents/package.json?ref=bd676aae6a3805672a21d02198e5d17c9cb1a97b"
+  },
+  "inspection": [
+    "Tagged package declares and lock resolves rollup-plugin-license 3.7.2.",
+    "The builder uses esbuild metafile inputs in a fake Rollup chunk with the license collector and includePrivate; it deduplicates by name/version, sorts, and emits metadata and licenseText/author/contributor fields. It contains no explicit AUTHORS-copy logic and does not explicitly emit the separate collector noticeText field.",
+    "The collector reads license then licence and separately notice. Its filename predicate is a case-insensitive anchored prefix with allowed suffix, not a fixed extension list. Those root-name calls cannot select an AUTHORS filename. The first crawler finding is unsorted and gives no deterministic selection guarantee. Existing package licenseText or noticeText can remain when a file is empty. AUTHORS in MIT boilerplate is not filename handling."
+  ],
+  "evidence_boundaries": {
+    "performed": "Compared all 27 inputs to manifest and copied bytes; decoded four retained API responses and compared their contents; compared package/lock and collector metadata/receipt fields; inspected inert source text.",
+    "prior_only": "Archive identity and selected members are prior receipt observations; builder/collector prior independent verification unavailable here. Historical mapping progress remains unchanged, including its then-outstanding independent review.",
+    "not_run": "Published build, JS execution, installation, archive re-verification, signature or attestation verification, native checks, file-algorithm simulation, independent review.",
+    "open": "Six existing npm unknowns remain: Prettier classification, terms 5/6/180, bundled AUTHORS gap and distribution scope. Source archive project-overview image rights hold remains. Catalog, validator and native checks are not waived."
+  }
+}

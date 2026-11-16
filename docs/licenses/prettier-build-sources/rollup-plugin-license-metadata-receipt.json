@@ -1,0 +1,33 @@
+{
+  "url": "https://registry.npmjs.org/rollup-plugin-license/3.7.2",
+  "bytes": 3565,
+  "sha256": "3fad2ecb742b97f44089efd95418dd6ccd59c5ed5dd196ddb2ceb8e5b04dfb71",
+  "observed_at": 1794865691.7809052,
+  "name": "rollup-plugin-license",
+  "version": "3.7.2",
+  "gitHead": null,
+  "dist": {
+    "shasum": "c18303ca5b29f2640be391280a97645b27a6ca18",
+    "tarball": "https://registry.npmjs.org/rollup-plugin-license/-/rollup-plugin-license-3.7.2.tgz",
+    "fileCount": 6,
+    "integrity": "sha512-xsEifZTR9xIFzgXqhNEoWmdM8mwLyEynXr50krGTCv/OhBAXS8+YFDWpD7pdT3Q1DZdt9T9yu7sACEfYiRdq8A==",
+    "signatures": [
+      {
+        "sig": "MEUCIQDx/qF/y/FEOW4+6Besy/5PjSI0NwvViSEC49apfi78cwIga2ONxHjg4ljJALAWlm6LOu+JKxC7+ibc3iV5c19l5U8=",
+        "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+      },
+      {
+        "sig": "MEYCIQChMiVBN7D1nk/2WXIyCtjjtT3OK3HUjaZWoQG67Sge9wIhAKKcIKYtuWlBm8ASMzaQ+pyo38TA/WMWgbhT0cfs7njI",
+        "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+      }
+    ],
+    "attestations": {
+      "url": "https://registry.npmjs.org/-/npm/v1/attestations/rollup-plugin-license@3.7.2",
+      "provenance": {
+        "predicateType": "https://slsa.dev/provenance/v1"
+      }
+    },
+    "unpackedSize": 371719
+  },
+  "limit": "Registry metadata plus taggedlockfile identifies researchtarget, not actualpublishedPrettierbuild; Yarnchecksum not npmSRI"
+}
