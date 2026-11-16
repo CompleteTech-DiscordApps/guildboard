@@ -37,42 +37,87 @@ def pairs(items):
         result[k] = v
     return result
 
+def identity(st):
+    return (st.st_dev, st.st_ino, st.st_mode, st.st_size, st.st_mtime_ns, st.st_ctime_ns)
+
 class Reader:
+    """Descriptor traversal detects observable replacement, not hostile transient swaps.
+
+    A stable checkout is still required: an attacker can swap and restore entries
+    between observations, and filesystem snapshots are outside this API's scope.
+    """
     def __init__(self, root):
-        self.fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK)
-        self.total = 0
-        self.hashes = {}
+        root = os.fspath(root)
+        require(isinstance(root, str) and root and '\x00' not in root, 'invalid root')
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK
+        self.chain = []
+        fd = os.open('/' if os.path.isabs(root) else '.', flags)
+        self.chain.append((None, None, fd, None))
+        try:
+            for part in root.split('/'):
+                if part in ('', '.'): continue
+                require(part != '..', 'invalid root ancestor')
+                before = os.stat(part, dir_fd=fd, follow_symlinks=False)
+                require(stat.S_ISDIR(before.st_mode), 'unsafe root ancestor')
+                child = os.open(part, flags, dir_fd=fd)
+                self.chain.append((fd, part, child, identity(before)))
+                require(identity(os.fstat(child)) == identity(before), 'root changed')
+                fd = child
+            self.fd = fd
+            self.total = 0
+            self.hashes = {}
+            self._check_chain(self.chain)
+        except BaseException:
+            self.close()
+            raise
+    @staticmethod
+    def _check_chain(chain):
+        for parent, name, fd, expected in chain:
+            if parent is not None:
+                require(identity(os.stat(name, dir_fd=parent, follow_symlinks=False)) == expected
+                        and identity(os.fstat(fd)) == expected, 'directory changed')
     def close(self):
-        os.close(self.fd)
+        for _, _, fd, _ in reversed(self.chain): os.close(fd)
+        self.chain = []
     def read(self, path, limit=MAX_FILE):
         parts = path_parts(path)
-        fd = os.dup(self.fd)
+        chain = []
+        fd = self.fd
         try:
+            self._check_chain(self.chain)
             for part in parts[:-1]:
+                before = os.stat(part, dir_fd=fd, follow_symlinks=False)
+                require(stat.S_ISDIR(before.st_mode), 'unsafe directory: ' + path)
                 nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
-                os.close(fd); fd = nxt
+                chain.append((fd, part, nxt, identity(before)))
+                require(identity(os.fstat(nxt)) == identity(before), 'directory changed: ' + path)
+                fd = nxt
+            before = os.stat(parts[-1], dir_fd=fd, follow_symlinks=False)
+            require(stat.S_ISREG(before.st_mode) and before.st_size <= limit, 'unsafe or oversized file: ' + path)
             f = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
             try:
-                before = os.fstat(f)
-                require(stat.S_ISREG(before.st_mode) and before.st_size <= limit, 'unsafe or oversized file: ' + path)
+                require(identity(os.fstat(f)) == identity(before), 'file changed: ' + path)
                 chunks = []; size = 0
                 while True:
                     chunk = os.read(f, min(65536, limit + 1 - size))
                     if not chunk: break
                     chunks.append(chunk); size += len(chunk)
                     require(size <= limit and self.total + size <= MAX_TOTAL, 'read budget exceeded: ' + path)
-                after = os.fstat(f)
-                require((before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns,before.st_ctime_ns) == (after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns,after.st_ctime_ns) and size == before.st_size, 'file changed: ' + path)
+                require(identity(os.fstat(f)) == identity(before) and size == before.st_size
+                        and identity(os.stat(parts[-1], dir_fd=fd, follow_symlinks=False)) == identity(before), 'file changed: ' + path)
+                self._check_chain(chain)
+                self._check_chain(self.chain)
                 data = b''.join(chunks); self.total += size
                 self.hashes[path] = digest(data)
                 return data
             finally: os.close(f)
-        finally: os.close(fd)
+        finally:
+            for _, _, opened, _ in reversed(chain): os.close(opened)
     def json(self, path, limit=MAX_FILE):
         return json.loads(self.read(path, limit).decode('utf-8'), object_pairs_hook=pairs, parse_constant=lambda x: (_ for _ in ()).throw(Invalid('invalid JSON constant')))
 
 def valid_status(obj):
-    require(isinstance(obj, dict) and obj.get('status') in STATUS and isinstance(obj.get('rationale'), str) and bool(obj['rationale'].strip()) and isinstance(obj.get('obligations'), list), 'malformed classification')
+    require(isinstance(obj, dict) and obj.get('status') in STATUS and isinstance(obj.get('rationale'), str) and bool(obj['rationale'].strip()) and isinstance(obj.get('obligations'), list) and all(isinstance(x, str) and x.strip() for x in obj['obligations']), 'malformed classification')
 
 def _validate(root):
     r = Reader(root)
@@ -80,7 +125,7 @@ def _validate(root):
         inv = r.json('docs/licenses/inventory.json', 2 * 1024 * 1024)
         require(isinstance(inv, dict) and inv.get('schema_version') == 3 and inv.get('status') in ('incomplete-not-clearance', 'complete-not-clearance'), 'invalid inventory schema or status')
         pkg = r.json('package.json'); lock = r.json('package-lock.json')
-        packages = lock['packages']; require(isinstance(packages, dict), 'invalid lock packages')
+        packages = lock['packages']; require(isinstance(packages, dict) and all(isinstance(k, str) and isinstance(v, dict) and type(v.get('link', False)) is bool for k, v in packages.items()), 'invalid lock packages')
         workspaces = pkg.get('workspaces', [])
         if isinstance(workspaces, dict): workspaces = workspaces.get('packages')
         require(isinstance(workspaces, list) and all(isinstance(x,str) and re.fullmatch(r'[A-Za-z0-9_.-]+/\*', x) for x in workspaces), 'unsupported workspace configuration')
@@ -109,7 +154,7 @@ def _validate(root):
             for n in c['notices']:
                 path_parts(n['installed_path']); path_parts(n['archive_path'])
                 require(HEX.fullmatch(n['sha256']) and type(n['bytes']) is int and n['bytes'] >= 0, 'invalid notice metadata')
-                selected.add((p,n['archive_path'],n['sha256'],n['bytes']))
+                key = (p,n['archive_path'],n['sha256'],n['bytes']); require(key not in selected, 'duplicate selected notice'); selected.add(key)
         retained = inv['retained_notices']; require(isinstance(retained,list), 'invalid retained notices')
         seen = set(); bound = set(); retained_hashes = set()
         for n in retained:
@@ -134,6 +179,11 @@ def _validate(root):
             require(matched, 'unbound retained notice')
         require(selected == bound, 'selected notice missing retained binding')
         original=inv['prettier_original_sections']; effective=inv['effective_prettier_sections']; supp=inv['prettier_supplemental']['sections']
+        canonical_hash = '1adf328f64b26383979c603da48518620b766bd0c2044b7628640eb7d6b96bdc'
+        require(canonical_hash in retained_hashes, 'missing canonical Prettier notice')
+        canonical = r.read('docs/licenses/notices/' + canonical_hash + '.txt').replace(b'\r\n', b'\n')
+        headers = list(re.finditer(rb'(?m)^## ([^\n]+)\n', canonical))
+        require(len(headers) == 246 and len(original) == 246, 'canonical section count mismatch')
         require(isinstance(original,list) and isinstance(effective,list) and isinstance(supp,list) and len(original)==len(effective), 'invalid section lists')
         supplements={}
         for s in supp:
@@ -144,6 +194,9 @@ def _validate(root):
         for i,(o,e) in enumerate(zip(original,effective),1):
             require(o['ordinal']==i and e['ordinal']==i and o['status'] in STATUS and e['original_decision']==o, 'section identity mismatch')
             text=o.get('full_notice_text',o.get('full_section_text',o.get('section_text'))).encode(); require(digest(text)==o.get('section_sha256',o.get('source_section_sha256')) and ('notice_byte_length' not in o or len(text)==o['notice_byte_length']), 'section text mismatch')
+            header = headers[i-1]; end = headers[i].start() if i < len(headers) else len(canonical)
+            require(o['name'].encode() == header.group(1) and text.replace(b'\r\n', b'\n') == canonical[header.end():end], 'canonical section mismatch')
+            require(isinstance(o.get('rationale'), str) and o['rationale'].strip() and isinstance(o.get('obligations'), str) and o['obligations'].strip(), 'malformed section decision')
             s=supplements.get(i); status=s['current_status'] if s else o['status']
             require(e['effective_status']==status and (e.get('supplemental_decision')==s if s else 'supplemental_decision' not in e), 'effective section mismatch')
             if status=='unresolved': unresolved.append(i)
