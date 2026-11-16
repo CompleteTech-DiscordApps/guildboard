@@ -15,7 +15,7 @@ HEX = re.compile(r'^[0-9a-f]{64}$')
 STATUS = {'interpreted', 'unresolved'}
 # Section decision identity, subject to fresh independent review; not legal approval.
 # Changes to the catalog require an explicit code update and fresh review.
-DECISION_CATALOG_SHA256 = '849aa106bbf49ab635613cac7735262e081b830eb002ba8159d6892dc1eccab0'
+DECISION_CATALOG_SHA256 = '1692ab4ed92bc66117851dd29f28974dc4465b7b56b8006d9b9ea847f97a8974'
 
 def decision_catalog_digest(inventory):
     # Scope and coverage are assessed separately; every other field, including
@@ -235,6 +235,31 @@ def _validate(root):
             if status=='unresolved': unresolved.append(i)
         require(inv['unresolved_section_ordinals']==unresolved and inv['remaining_unresolved_section_ordinals']==unresolved, 'unresolved section mismatch')
         gaps=inv['notice_coverage_gaps']; require(isinstance(gaps,list) and all(isinstance(g,dict) and g.get('component') in components and g.get('status') in STATUS for g in gaps), 'invalid coverage gaps')
+        # Only the exact direct Acorn source can resolve this historic gap. This
+        # check is independent of the catalog digest, including during review.
+        acorn = components['node_modules/acorn']
+        acorn_hash = '509b2d8f739a34ab8cf91c5f75653af633b421ca8913162ccad5271277e68c38'
+        expected_ref = {'path':'AUTHORS', 'sha256':acorn_hash, 'bytes':1826,
+            'repository':'acornjs/acorn', 'git_head':'0e0ece7cc7202624d4aca531be4b515b0114b5d0',
+            'git_blob_sha1':'dc64dabef022eea06a9824f87b34feaa7634dede',
+            'package_manifest_sha256':'04d6fecaafb5e3d20a38fc3b64fed84bb3830a7759a8c00400ebcb87331fec00',
+            'license_sha256':'76a876cf886ff9be2a8b5e2e86514fed06223c8c9f0c1e9ee9606e93841e00b7'}
+        direct = [g for g in gaps if g.get('component') == 'node_modules/acorn']
+        require(len(direct)==1, 'missing direct Acorn coverage gap')
+        g=direct[0]
+        require(g.get('reference')=='LICENSE refers to AUTHORS' and g.get('status')=='interpreted'
+            and g.get('source_sha256')==acorn_hash and g.get('original_decision')=={
+                'component':'node_modules/acorn', 'reference':'LICENSE refers to AUTHORS',
+                'status':'unresolved', 'evidence':'SHA-512 verified acorn 8.19.0 npm archive has no AUTHORS member; installed acorn directory has no AUTHORS file. Attribution coverage remains unknown.'}, 'invalid Acorn gap history')
+        require(acorn['actual_package_name']=='acorn' and acorn['version']=='8.19.0'
+            and acorn['manifest_sha256']==expected_ref['package_manifest_sha256']
+            and acorn['effective_classification'].get('supplemental_notice_sources')==[expected_ref]
+            and any(n.get('sha256')==expected_ref['license_sha256'] and n.get('archive_path')=='package/LICENSE' and n.get('bytes')==1099 for n in acorn['notices']), 'invalid Acorn source identity')
+        require(any(n.get('sha256')==acorn_hash and n.get('bytes')==1826 and n.get('sources')==[
+            {'kind':'supplemental_source','lock_path':'node_modules/acorn','path':'AUTHORS','sha256':acorn_hash}]
+            for n in retained), 'missing Acorn AUTHORS binding')
+        prettier_gaps=[g for g in gaps if g.get('component')=='node_modules/prettier']
+        require(len(prettier_gaps)==1 and prettier_gaps[0].get('status')=='unresolved', 'Prettier AUTHORS coverage remains unresolved')
         return {'counts':{'components':len(components),'sections':len(original),'notices':len(retained)}, 'hashes':dict(sorted(r.hashes.items()))}, inv
     finally: r.close()
 

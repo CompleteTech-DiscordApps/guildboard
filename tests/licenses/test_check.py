@@ -32,14 +32,52 @@ class Contract(unittest.TestCase):
     def test_actual_assessment(self):
         result = check.assess(self.root)
         self.assertTrue(result['structure_valid'], result.get('diagnostics'))
-        self.assertEqual(result['counts'], {'components':100, 'sections':246, 'notices':66})
-        self.assertEqual(len(result['diagnostics']), 7)
+        self.assertEqual(result['counts'], {'components':100, 'sections':246, 'notices':67})
+        self.assertEqual(len(result['diagnostics']), 6)
         self.assertEqual([d['ordinal'] for d in result['diagnostics'] if d['kind']=='section'], [5, 6, 180])
         self.assertEqual(sum(d['kind']=='classification' for d in result['diagnostics']),1)
-        self.assertEqual(sum(d['kind']=='notice_coverage' for d in result['diagnostics']),2)
+        self.assertEqual(sum(d['kind']=='notice_coverage' for d in result['diagnostics']),1)
         self.assertEqual(sum(d['kind']=='distribution_scope' for d in result['diagnostics']),1)
         with patch('sys.argv', ['check', '--root', str(self.root)]), patch('sys.stdout'):
             self.assertEqual(check.main(), 1)
+    def test_acorn_exact_source_and_history(self):
+        h = '509b2d8f739a34ab8cf91c5f75653af633b421ca8913162ccad5271277e68c38'
+        data = (self.root / ('docs/licenses/notices/' + h + '.txt')).read_bytes()
+        self.assertEqual(len(data), 1826)
+        self.assertEqual(hashlib.sha256(data).hexdigest(), h)
+        g = self.inv['notice_coverage_gaps'][0]
+        self.assertEqual((g['status'], g['original_decision']['status']), ('interpreted', 'unresolved'))
+        self.assertEqual(self.inv['notice_coverage_gaps'][1]['status'], 'unresolved')
+        self.assertTrue(check.assess(self.root)['structure_valid'])
+
+    def test_acorn_authors_text_tampering_rejected(self):
+        h = '509b2d8f739a34ab8cf91c5f75653af633b421ca8913162ccad5271277e68c38'
+        (self.root / ('docs/licenses/notices/' + h + '.txt')).write_text('tampered')
+        self.invalid()
+
+    def test_acorn_source_tampering_rejected_even_with_catalog_recalculated(self):
+        ref = self.inv['components']['node_modules/acorn']['classification_overlay']['supplemental_notice_sources'][0]
+        for key, bad in (('sha256','0'*64), ('path','other/AUTHORS'), ('git_head','0'*40)):
+            old = ref[key]; ref[key] = bad
+            self.inv['components']['node_modules/acorn']['effective_classification'] = copy.deepcopy(self.inv['components']['node_modules/acorn']['classification_overlay'])
+            self.invalid(); ref[key] = old
+        self.inv['components']['node_modules/acorn']['effective_classification'] = copy.deepcopy(self.inv['components']['node_modules/acorn']['classification_overlay'])
+        n = next(n for n in self.inv['retained_notices'] if n['sha256'].startswith('509b2d8f'))
+        n['sources'][0]['lock_path'] = 'node_modules/prettier'
+        self.invalid()
+
+    def test_acorn_gap_without_bound_source_rejected(self):
+        self.inv['components']['node_modules/acorn']['classification_overlay']['supplemental_notice_sources'] = []
+        self.inv['components']['node_modules/acorn']['effective_classification'] = copy.deepcopy(self.inv['components']['node_modules/acorn']['classification_overlay'])
+        self.invalid()
+
+    def test_acorn_lock_version_tampering_rejected(self):
+        lock_path = self.root / 'package-lock.json'
+        lock = json.loads(lock_path.read_bytes()); lock['packages']['node_modules/acorn']['version'] = '8.18.0'
+        lock_path.write_text(json.dumps(lock)); self.anchor('package-lock.json')
+        self.inv['components']['node_modules/acorn']['version'] = '8.18.0'
+        self.invalid()
+
     def test_unsupported_distribution_scope_remains_unknown(self):
         self.inv['distribution_scope'] = 'unsupported'
         self.inv['distribution_coverage'] = {
@@ -96,9 +134,9 @@ class Contract(unittest.TestCase):
         self.save()
         result = check.assess(self.root)
         self.assertTrue(result['structure_valid'], result.get('diagnostics'))
-        self.assertEqual(result['counts'], {'components': 100, 'sections': 246, 'notices': 66})
+        self.assertEqual(result['counts'], {'components': 100, 'sections': 246, 'notices': 67})
         self.assertEqual(result['clearance_status'], 'unknown')
-        self.assertEqual(len(result['diagnostics']), 7)
+        self.assertEqual(len(result['diagnostics']), 6)
         self.assertEqual(sum(d['kind'] == 'distribution_scope' for d in result['diagnostics']), 1)
         with patch('sys.argv', ['check', '--root', str(self.root)]), patch('sys.stdout'):
             self.assertEqual(check.main(), 1)

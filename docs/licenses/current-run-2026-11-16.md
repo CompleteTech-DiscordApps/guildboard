@@ -79,3 +79,17 @@ The synthesis covers nine families, all 234 files, all 133 raw record entities a
 The preceding fbfb1dd inspection remains inconclusive: it passed 301 manifest hashes, 234 font byte identities, 133 retained name-record decodes and 1,761 references, but independently rerunning the parser and establishing Git-tree completeness were outside that reviewer’s scope. The manager submitted a separate exact-library runtime profile for trusted qualification; no engineering turn is claimed before qualification and actual execution. Original verdicts remain immutable.
 
 Root’s section decision records exact embedded declarations without granting adoption. Virgil’s copyright reservation and OFL permission are not by themselves contradictory; source authority and provenance are separate questions. Cascadia’s product-bound restrictions and broader OFL-based permission need specific reconciliation against authoritative release evidence; Liberation’s referenced agreement is still missing. Assistant and Lilita reserved-name statements remain explicit. Fresh changed-head review, independent parser evidence and actual source/usage follow-through remain required. The npm seven-diagnostic assessment and all release holds remain unchanged.
+
+
+The direct locked Acorn 8.19.0 AUTHORS supplement is retained from gitHead
+`0e0ece7cc7202624d4aca531be4b515b0114b5d0`, bound to the matching source
+package manifest and LICENSE. The original unresolved direct gap is retained
+in its history. The names are contributor attribution, not proof of legal
+ownership; the full MIT notice remains unchanged. The Prettier AUTHORS gap
+remains unresolved because the historical @babel/parser reference is not
+established by this source. Distribution scope and overall clearance remain
+unknown. This revision requires fresh independent review and native CI.
+
+Root verification after the worker result: all 45 fixture-backed tests passed with zero skips, including the 100-archive cache (11,636,214 bytes, four nested contexts). The assignment's broad-enumeration restriction prevented the worker from invoking fixture setup; the coordinator ran it in the root environment instead. Eight worker counterexamples exercised text/hash/path/gitHead, association, missing-source, lock-version and inappropriate Prettier-gap resolution, including recalculated-catalog cases. The source archive itself was prior evidence in the worker source review; root's fixture suite executed its actual-cache archive cases.
+
+The integrated inventory has 100 components, 246 sections and 67 retained notices, with unchanged original/intermediate section records. It is 2,075,913 bytes under the unchanged 2 MiB cap. Exact direct Acorn source identity and original-gap history are required independently of the catalog digest. The explicit catalog revision is 1692ab4ed92bc66117851dd29f28974dc4465b7b56b8006d9b9ea847f97a8974. Six diagnostics remain: Prettier classification, terms 5/6/180, the bundled AUTHORS gap and distribution scope. The final assessment stays unknown and exits 1. Fresh exact-head functional/security review and actual native CI remain required. No distribution or issue acceptance is claimed.
