@@ -3,7 +3,9 @@
 These instructions apply throughout this repository. Follow `CONTRIBUTING.md`,
 `GOVERNANCE.md`, `SECURITY.md`, the live issue and Project, and accepted contracts.
 This file adds implementation and review checks; it does not waive their gates,
-appoint reviewers, authorize agent delegation, or change issue readiness.
+appoint maintainers or reviewers, itself authorize delegation, or change issue
+readiness. Follow the actual owner authorization and runtime/model policy for
+each campaign; no standing delegation or default permissions are implied.
 
 ## Scope, ownership and architecture
 
@@ -39,7 +41,7 @@ appoint reviewers, authorize agent delegation, or change issue readiness.
 - Reverify the actual available capacity and live occupancy before spawning;
   use the current session limit rather than a prior campaign's recorded limit.
   Count the lead and every live directory orchestrator, worker and reviewer. Queue
-  work or reuse an available agent when full. Logical directory roles do not add slots or permit
+  work when full; never reuse a retired thread. Logical directory roles do not add slots or permit
   hidden parallel agents. Release completed leases and slots before assigning
   successors, and reserve capacity for independent review.
 
@@ -138,10 +140,12 @@ appoint reviewers, authorize agent delegation, or change issue readiness.
   the actual reviewer, reviewed SHA, available/reported effort and linked evidence;
   do not invent model/effort controls, relabel Lite or limited review as Balanced,
   or claim unperformed checks. Pending, stale or inadequate review does not pass.
-- On confirmed Copilot quota, access or service failure, or an inadequate completed
-  review, record the evidence and reason. A fresh, independent `gpt-6.1-sol`
-  reviewer at `max` reasoning effort may then review the full PR at its current
-  head SHA, including relevant integration. It must have no implementation role,
+- On confirmed Copilot quota, access or service failure, record the evidence and
+  reason. An inadequate completed review remains pending unless such a failure is
+  confirmed. A fresh, independent reviewer qualified under the actual owner-authorized
+  campaign role, runtime and model policy may then review the full PR at its current
+  head SHA, including relevant integration. An explicit Copilot-only STOP remains
+  in force; this fallback does not override it. It must have no implementation role,
   make no writes and perform no delegation. Record reviewer identity, model/effort,
   full reviewed SHA, scope, findings, checks and limitations in a durable receipt.
   If that qualified fallback is unavailable or incomplete, keep the technical gate

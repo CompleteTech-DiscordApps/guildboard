@@ -58,10 +58,12 @@ the actual reviewer, reviewed SHA, available/reported effort and linked evidence
 do not invent model/effort controls, relabel Lite or limited review as Balanced,
 or claim unperformed checks. Pending, stale or inadequate review does not pass.
 
-On confirmed Copilot quota, access or service failure, or an inadequate completed
-review, record the evidence and reason. A fresh, independent `gpt-6.1-sol`
-reviewer at `max` reasoning effort may then review the full PR at its current
-head SHA, including relevant integration. It must have no implementation role,
+On confirmed Copilot quota, access or service failure, record the evidence and
+reason. An inadequate completed review remains pending unless such a failure is
+confirmed. A fresh, independent reviewer qualified under the actual owner-authorized
+campaign role, runtime and model policy may then review the full PR at its current
+head SHA, including relevant integration. An explicit Copilot-only STOP remains
+in force; this fallback does not override it. It must have no implementation role,
 make no writes and perform no delegation. Record reviewer identity, model/effort,
 full reviewed SHA, scope, findings, checks and limitations in a durable receipt.
 If that qualified fallback is unavailable or incomplete, keep the technical gate
