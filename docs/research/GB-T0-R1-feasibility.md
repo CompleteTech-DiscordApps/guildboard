@@ -1,7 +1,7 @@
 # GB-T0.R1 — Editor, Activity and VPS feasibility
 
 Research issue: [#2](https://github.com/CompleteDotTech/guildboard/issues/2). Evaluated 2026-10-24 UTC.
-Status: recommendation submitted for review; this is not an accepted architecture ADR or production certification.
+Status: the owner accepted the controlled experiment and architecture direction in [ADR 0001](../adr/0001-editor-activity-vps-direction.md). Runtime feasibility, shipped-license clearance and the system specification remain open; this is not production certification.
 
 ## Recommendation and evidence boundary
 
@@ -37,7 +37,7 @@ Recommended ownership:
 - Server sequences and durably acknowledges accepted operations. Clients consume accepted operations with idempotency and reconnect recovery; they do not overwrite authoritative boards with arbitrary full-scene snapshots.
 - Adapter applies accepted remote scenes without causing an echo loop or polluting local undo history. Define rejection/rollback and compound-operation behavior before implementation.
 
-These are proposed constraints for [system specification #3](https://github.com/CompleteDotTech/guildboard/issues/3), not a finished protocol. [Canvas research #98](https://github.com/CompleteDotTech/guildboard/issues/98) must test the pinned editor in a browser: remote update echo suppression, rejected edits, undo/redo after remote edits, deleted elements, bindings/grouping, binary assets, read-only pointer/keyboard paths, touch/stylus, and extensions such as sticky notes. [Collaboration research #132](https://github.com/CompleteDotTech/guildboard/issues/132) owns operation granularity, same-object conflicts, compound atomicity and convergence. Do not assume the scene callback is an ordered, durable operation log.
+These are accepted direction and constraints to develop in [system specification #3](https://github.com/CompleteDotTech/guildboard/issues/3), not a finished protocol. [Canvas research #98](https://github.com/CompleteDotTech/guildboard/issues/98) must test the pinned editor in a browser: remote update echo suppression, rejected edits, undo/redo after remote edits, deleted elements, bindings/grouping, binary assets, read-only pointer/keyboard paths, touch/stylus, and extensions such as sticky notes. [Collaboration research #132](https://github.com/CompleteDotTech/guildboard/issues/132) owns operation granularity, same-object conflicts, compound atomicity and convergence. Do not assume the scene callback is an ordered, durable operation log.
 
 The editor is browser-side; the [integration guide](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/integration) describes client-only mounting and container sizing. This favors a React SPA adapter. Rendering, memory use and mobile performance remain unmeasured.
 
@@ -81,4 +81,4 @@ The first probe fetches pinned public tarballs/licenses with bounded reads; subs
 
 The [platform source ledger](evidence/platform-sources-2026-10-24.json) records dated raw fetches and byte hashes where available, including HTTP failures. Sources with denied raw requests were successfully inspected through the web tool. Hashes detect drift; they are not immutable documentation revisions or archived page contents. Source links are primary publisher pages. Refresh them before implementation and record any changed constraints.
 
-Acceptance coverage: licensing → pinned manifests/source notices plus explicit distribution-audit handoff; editor hooks → hashed declarations plus browser experiment handoff; Discord iframe/proxy → vendor guidance plus real-client handoff; VPS → vendor access/proxy guidance plus real-infrastructure handoff. Alternatives and uncertainties are recorded above. This focused research can support the next specification after review; all runtime and distribution gates remain open in their linked issues.
+Acceptance coverage: licensing → pinned manifests/source notices plus explicit distribution-audit handoff; editor hooks → hashed declarations plus browser experiment handoff; Discord iframe/proxy → vendor guidance plus real-client handoff; VPS → vendor access/proxy guidance plus real-infrastructure handoff. Alternatives and uncertainties are recorded above. This focused research supports the next specification under the accepted direction; all runtime and distribution gates remain open in their linked issues.
