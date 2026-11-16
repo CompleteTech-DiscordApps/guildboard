@@ -1,0 +1,89 @@
+{
+  "candidate": "f7728ea707b8227da71dab34dee40b1f76c93a50",
+  "refs": {
+    "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683": [
+      {
+        "file": ".github/workflows/architecture-acceptance.yml",
+        "line": 15
+      },
+      {
+        "file": ".github/workflows/architecture-acceptance.yml",
+        "line": 20
+      },
+      {
+        "file": ".github/workflows/editor-acceptance.yml",
+        "line": 12
+      },
+      {
+        "file": ".github/workflows/editor-feasibility.yml",
+        "line": 13
+      },
+      {
+        "file": ".github/workflows/editor-feasibility.yml",
+        "line": 18
+      },
+      {
+        "file": ".github/workflows/license-policy.yml",
+        "line": 10
+      }
+    ],
+    "actions/checkout@v4": [
+      {
+        "file": ".github/workflows/architecture-controls.yml",
+        "line": 12
+      },
+      {
+        "file": ".github/workflows/architecture-controls.yml",
+        "line": 18
+      },
+      {
+        "file": ".github/workflows/engineering.yml",
+        "line": 11
+      }
+    ],
+    "actions/checkout@11d5960a326750d5838078e36cf38b85af677262": [
+      {
+        "file": ".github/workflows/config.yml",
+        "line": 13
+      }
+    ],
+    "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38": [
+      {
+        "file": ".github/workflows/config.yml",
+        "line": 16
+      }
+    ],
+    "actions/setup-node@v4": [
+      {
+        "file": ".github/workflows/engineering.yml",
+        "line": 12
+      }
+    ],
+    "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1": [
+      {
+        "file": ".github/workflows/integrity.yml",
+        "line": 16
+      },
+      {
+        "file": ".github/workflows/planning.yml",
+        "line": 13
+      }
+    ],
+    "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0": [
+      {
+        "file": ".github/workflows/integrity.yml",
+        "line": 19
+      },
+      {
+        "file": ".github/workflows/planning.yml",
+        "line": 16
+      }
+    ],
+    "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9": [
+      {
+        "file": ".github/workflows/integrity.yml",
+        "line": 37
+      }
+    ]
+  }
+}

@@ -1,0 +1,222 @@
+{
+  "scope": "Seven observed exact revisions for8workflow referencegroups; root LICENSE only. Mutable tag resolution is dated observation, not guarantee of future execution or historical run identity. Bundled/runtime obligations remain unreviewed.",
+  "entries": [
+    {
+      "repository": "actions/checkout",
+      "commit": "11bd71901bbe5b1630ceea73d27597364c9af683",
+      "path": "LICENSE",
+      "file": "actions-checkout-11bd71901bbe5b1630ceea73d27597364c9af683-LICENSE.txt",
+      "bytes": 1097,
+      "sha256": "3e855ffa704114a51628ef8f0bf3aeb41728adf9d9070e263bf58aa5640b0eb5",
+      "git_blob_sha1": "a67dca8b4f65d6bd351f6b1e333ce2cd84d843a5",
+      "url": "https://github.com/actions/checkout/blob/11bd71901bbe5b1630ceea73d27597364c9af683/LICENSE"
+    },
+    {
+      "repository": "actions/checkout",
+      "commit": "11d5960a326750d5838078e36cf38b85af677262",
+      "path": "LICENSE",
+      "file": "actions-checkout-11d5960a326750d5838078e36cf38b85af677262-LICENSE.txt",
+      "bytes": 1097,
+      "sha256": "3e855ffa704114a51628ef8f0bf3aeb41728adf9d9070e263bf58aa5640b0eb5",
+      "git_blob_sha1": "a67dca8b4f65d6bd351f6b1e333ce2cd84d843a5",
+      "url": "https://github.com/actions/checkout/blob/11d5960a326750d5838078e36cf38b85af677262/LICENSE"
+    },
+    {
+      "repository": "actions/checkout",
+      "commit": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "path": "LICENSE",
+      "file": "actions-checkout-3d3c42e5aac5ba805825da76410c181273ba90b1-LICENSE.txt",
+      "bytes": 1097,
+      "sha256": "3e855ffa704114a51628ef8f0bf3aeb41728adf9d9070e263bf58aa5640b0eb5",
+      "git_blob_sha1": "a67dca8b4f65d6bd351f6b1e333ce2cd84d843a5",
+      "url": "https://github.com/actions/checkout/blob/3d3c42e5aac5ba805825da76410c181273ba90b1/LICENSE"
+    },
+    {
+      "repository": "actions/setup-node",
+      "commit": "249970729cb0ef3589644e2896645e5dc5ba9c38",
+      "path": "LICENSE",
+      "file": "actions-setup-node-249970729cb0ef3589644e2896645e5dc5ba9c38-LICENSE.txt",
+      "bytes": 1096,
+      "sha256": "7d070f6b64d9bcc530fe99cc21eaaa4b3c364e0b2d367d7735671fa202a03b32",
+      "git_blob_sha1": "a426ef259d6c5d705e9c1405075c3b318093c65e",
+      "url": "https://github.com/actions/setup-node/blob/249970729cb0ef3589644e2896645e5dc5ba9c38/LICENSE"
+    },
+    {
+      "repository": "actions/setup-python",
+      "commit": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "path": "LICENSE",
+      "file": "actions-setup-python-6d4fd22b20465ccc0f7354476588e8df7c9ca0e0-LICENSE.txt",
+      "bytes": 1096,
+      "sha256": "7d070f6b64d9bcc530fe99cc21eaaa4b3c364e0b2d367d7735671fa202a03b32",
+      "git_blob_sha1": "a426ef259d6c5d705e9c1405075c3b318093c65e",
+      "url": "https://github.com/actions/setup-python/blob/6d4fd22b20465ccc0f7354476588e8df7c9ca0e0/LICENSE"
+    },
+    {
+      "repository": "actions/upload-artifact",
+      "commit": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "path": "LICENSE",
+      "file": "actions-upload-artifact-cf430e030ddbb5b0abf93d22962f4752f3646cd9-LICENSE.txt",
+      "bytes": 1097,
+      "sha256": "3e855ffa704114a51628ef8f0bf3aeb41728adf9d9070e263bf58aa5640b0eb5",
+      "git_blob_sha1": "a67dca8b4f65d6bd351f6b1e333ce2cd84d843a5",
+      "url": "https://github.com/actions/upload-artifact/blob/cf430e030ddbb5b0abf93d22962f4752f3646cd9/LICENSE"
+    },
+    {
+      "repository": "actions/setup-node",
+      "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020",
+      "path": "LICENSE",
+      "file": "actions-setup-node-49933ea5288caeca8642d1e84afbd3f7d6820020-LICENSE.txt",
+      "bytes": 1096,
+      "sha256": "7d070f6b64d9bcc530fe99cc21eaaa4b3c364e0b2d367d7735671fa202a03b32",
+      "git_blob_sha1": "a426ef259d6c5d705e9c1405075c3b318093c65e",
+      "url": "https://github.com/actions/setup-node/blob/49933ea5288caeca8642d1e84afbd3f7d6820020/LICENSE"
+    }
+  ],
+  "mutable_ref_observations": {
+    "actions/checkout@v4": "11d5960a326750d5838078e36cf38b85af677262",
+    "actions/setup-node@v4": "49933ea5288caeca8642d1e84afbd3f7d6820020"
+  },
+  "observed_at": 1794856614.964363,
+  "manifest_sources": [
+    {
+      "repository": "actions/checkout",
+      "commit": "11bd71901bbe5b1630ceea73d27597364c9af683",
+      "path": "action.yml",
+      "file": "actions-checkout-11bd71901bbe5b1630ceea73d27597364c9af683-action.yml.txt",
+      "bytes": 4593,
+      "sha256": "5349b6eea0a1797a9a993c48db9d95b33d27ee1b6227ceced0c9cbf8e655c939",
+      "git_blob_sha1": "6842eb843b7258993656f41f9c358f5c5331fbe7",
+      "url": "https://github.com/actions/checkout/blob/11bd71901bbe5b1630ceea73d27597364c9af683/action.yml"
+    },
+    {
+      "repository": "actions/checkout",
+      "commit": "11bd71901bbe5b1630ceea73d27597364c9af683",
+      "path": "package.json",
+      "file": "actions-checkout-11bd71901bbe5b1630ceea73d27597364c9af683-package.json.txt",
+      "bytes": 1500,
+      "sha256": "a0b54a34b78a3e903dde426001d1018de085f00a2170653516010d5a868a2bc1",
+      "git_blob_sha1": "5661d700668413bb4b3dd76b1238c017681efec8",
+      "url": "https://github.com/actions/checkout/blob/11bd71901bbe5b1630ceea73d27597364c9af683/package.json"
+    },
+    {
+      "repository": "actions/checkout",
+      "commit": "11d5960a326750d5838078e36cf38b85af677262",
+      "path": "action.yml",
+      "file": "actions-checkout-11d5960a326750d5838078e36cf38b85af677262-action.yml.txt",
+      "bytes": 5144,
+      "sha256": "6188f6991491ed38977347cdaad0b0cd921a6d6232892363c91f433c22954f4f",
+      "git_blob_sha1": "24e73e5a12126edc2adb9e5cd1bf245ce85bde56",
+      "url": "https://github.com/actions/checkout/blob/11d5960a326750d5838078e36cf38b85af677262/action.yml"
+    },
+    {
+      "repository": "actions/checkout",
+      "commit": "11d5960a326750d5838078e36cf38b85af677262",
+      "path": "package.json",
+      "file": "actions-checkout-11d5960a326750d5838078e36cf38b85af677262-package.json.txt",
+      "bytes": 1500,
+      "sha256": "b327bb5eafeebf3f9cf2aa689103f34a254c7915956c2547274f3abe20184c64",
+      "git_blob_sha1": "dbbaabbae229c1c7404f819eefeec49a8b27d9f0",
+      "url": "https://github.com/actions/checkout/blob/11d5960a326750d5838078e36cf38b85af677262/package.json"
+    },
+    {
+      "repository": "actions/checkout",
+      "commit": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "path": "action.yml",
+      "file": "actions-checkout-3d3c42e5aac5ba805825da76410c181273ba90b1-action.yml.txt",
+      "bytes": 5144,
+      "sha256": "d59219cb79590abdb877deaa14e3b65a00c05318bf5a6f3b989b9162b5d08c35",
+      "git_blob_sha1": "5b0524f730db83f9513c18ab31a6c086c7239076",
+      "url": "https://github.com/actions/checkout/blob/3d3c42e5aac5ba805825da76410c181273ba90b1/action.yml"
+    },
+    {
+      "repository": "actions/checkout",
+      "commit": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "path": "package.json",
+      "file": "actions-checkout-3d3c42e5aac5ba805825da76410c181273ba90b1-package.json.txt",
+      "bytes": 1580,
+      "sha256": "8b1127cee8fbd48ed687737f631f6e49a767a8e9484a87a7fb8fe913118d52c4",
+      "git_blob_sha1": "9b02e96595db9e2d3a735a8adbda17a61e56fd5f",
+      "url": "https://github.com/actions/checkout/blob/3d3c42e5aac5ba805825da76410c181273ba90b1/package.json"
+    },
+    {
+      "repository": "actions/setup-node",
+      "commit": "249970729cb0ef3589644e2896645e5dc5ba9c38",
+      "path": "action.yml",
+      "file": "actions-setup-node-249970729cb0ef3589644e2896645e5dc5ba9c38-action.yml.txt",
+      "bytes": 2797,
+      "sha256": "ad45f1922115116fb4706651d0a9262332bc4e4f11eb2021e09789dd1af18085",
+      "git_blob_sha1": "79813721449fefd25fbf7008327b5d59735eeb89",
+      "url": "https://github.com/actions/setup-node/blob/249970729cb0ef3589644e2896645e5dc5ba9c38/action.yml"
+    },
+    {
+      "repository": "actions/setup-node",
+      "commit": "249970729cb0ef3589644e2896645e5dc5ba9c38",
+      "path": "package.json",
+      "file": "actions-setup-node-249970729cb0ef3589644e2896645e5dc5ba9c38-package.json.txt",
+      "bytes": 1921,
+      "sha256": "d2ade5c116fb6e4556954738a2b5e9fa8e2fa8dff1fb568f132f71a94764abba",
+      "git_blob_sha1": "fa35d934fdfa54cae58d8830b2f388134873f8eb",
+      "url": "https://github.com/actions/setup-node/blob/249970729cb0ef3589644e2896645e5dc5ba9c38/package.json"
+    },
+    {
+      "repository": "actions/setup-node",
+      "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020",
+      "path": "action.yml",
+      "file": "actions-setup-node-49933ea5288caeca8642d1e84afbd3f7d6820020-action.yml.txt",
+      "bytes": 2614,
+      "sha256": "8aee59063ebc272d850507febb30930de2684be1b1240cf5f3dff13179fcff0b",
+      "git_blob_sha1": "ef58e69919a94e6a823d333159fad95e2720c896",
+      "url": "https://github.com/actions/setup-node/blob/49933ea5288caeca8642d1e84afbd3f7d6820020/action.yml"
+    },
+    {
+      "repository": "actions/setup-node",
+      "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020",
+      "path": "package.json",
+      "file": "actions-setup-node-49933ea5288caeca8642d1e84afbd3f7d6820020-package.json.txt",
+      "bytes": 1825,
+      "sha256": "923a7a6a88841f2a4d89e4774bf5f0cbdb8a322fdd486f6b712bdbcba67554a1",
+      "git_blob_sha1": "0abcfe38175c65168c4c9c3e7d03849e718d5217",
+      "url": "https://github.com/actions/setup-node/blob/49933ea5288caeca8642d1e84afbd3f7d6820020/package.json"
+    },
+    {
+      "repository": "actions/setup-python",
+      "commit": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "path": "action.yml",
+      "file": "actions-setup-python-6d4fd22b20465ccc0f7354476588e8df7c9ca0e0-action.yml.txt",
+      "bytes": 3141,
+      "sha256": "0829b3f54d769f8b25cefd4d856c735bc8e097d6597835b838ebb4da497c838d",
+      "git_blob_sha1": "645de4f5108b28bcc7ed043ee171770b0754cc35",
+      "url": "https://github.com/actions/setup-python/blob/6d4fd22b20465ccc0f7354476588e8df7c9ca0e0/action.yml"
+    },
+    {
+      "repository": "actions/setup-python",
+      "commit": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "path": "package.json",
+      "file": "actions-setup-python-6d4fd22b20465ccc0f7354476588e8df7c9ca0e0-package.json.txt",
+      "bytes": 1932,
+      "sha256": "73d578934f56cf27fdc59ea9c18bcbf9a2e104fc9b8ce1a953b7effd9fcc8d51",
+      "git_blob_sha1": "5ef5b5fa0a4b332e10e4cb9ed5caa89def276f83",
+      "url": "https://github.com/actions/setup-python/blob/6d4fd22b20465ccc0f7354476588e8df7c9ca0e0/package.json"
+    },
+    {
+      "repository": "actions/upload-artifact",
+      "commit": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "path": "action.yml",
+      "file": "actions-upload-artifact-cf430e030ddbb5b0abf93d22962f4752f3646cd9-action.yml.txt",
+      "bytes": 3603,
+      "sha256": "c5979822866a72362e609844b6ebe77d4b7e759af68cc1c2c425dcf51481fab4",
+      "git_blob_sha1": "7cb4d1e81db55320b41217e1a78a1a46e3d2baef",
+      "url": "https://github.com/actions/upload-artifact/blob/cf430e030ddbb5b0abf93d22962f4752f3646cd9/action.yml"
+    },
+    {
+      "repository": "actions/upload-artifact",
+      "commit": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "path": "package.json",
+      "file": "actions-upload-artifact-cf430e030ddbb5b0abf93d22962f4752f3646cd9-package.json.txt",
+      "bytes": 1832,
+      "sha256": "6006e753abafb2519b884767c8a67abff6c0c6636e6c83eae1081501fbcda56e",
+      "git_blob_sha1": "2c96bdb1cbafd4beb37cbc65d96de2eac1bee638",
+      "url": "https://github.com/actions/upload-artifact/blob/cf430e030ddbb5b0abf93d22962f4752f3646cd9/package.json"
+    }
+  ]
+}
