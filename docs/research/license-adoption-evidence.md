@@ -2,7 +2,7 @@
 
 Observed 2026-10-24 UTC. Input to architecture [#3](https://github.com/CompleteTech-DiscordApps/guildboard/issues/3) and license implementation [#16](https://github.com/CompleteTech-DiscordApps/guildboard/issues/16)/verification [#17](https://github.com/CompleteTech-DiscordApps/guildboard/issues/17).
 
-**Not an accepted policy, dependency adoption, legal clearance or completed issue.** #16 is natively blocked by #3; #17 is blocked by #16. This report does not change those gates. Architecture and distribution-specific review must decide the implementation. No legal terms were accepted, packages installed, services deployed or platform tests performed.
+**Historical 2026-10-24 assessment:** at that time #16 was blocked by #3 and #17 by #16. #3 has since closed; #17 remains open on #16. This report does not confer legal clearance or complete either issue. No legal terms were accepted, packages installed, services deployed or platform tests performed.
 
 ## Separate the three inventories
 
@@ -12,7 +12,7 @@ Examined main `da811252acc975a0e5a1b087ab653b523443f3fa`. Its eight package mani
 
 Guildboard's own `LICENSE` contains MIT terms and contributor attribution. The only tracked file matching font/image suffixes `.woff`, `.woff2`, `.ttf`, `.otf`, `.svg`, `.png`, `.jpg`, `.jpeg`, `.webp` is `planning/audit/project-overview.jpg`. It is planning evidence, not a shipped app asset. This suffix scan does not establish its rights, capture all embedded/binary assets, or clear future user uploads.
 
-### Unmerged configuration tooling
+### Configuration tooling proposed at the time
 
 PR [#478](https://github.com/CompleteTech-DiscordApps/guildboard/pull/478), head `b1bdf8c87c0d4ff9b3ed1ccf0d3ca9cde3c3bfce`, and stacked [#479](https://github.com/CompleteTech-DiscordApps/guildboard/pull/479), head `e789f4b585dc380adfd5d017e55ab6a9cbbb9951`, introduce the same three external lockfile packages:
 
@@ -55,7 +55,7 @@ These are engineering review inputs, not a blanket compatibility opinion:
 
 ## Proposed implementation and verification handoff (not adopted)
 
-After #3 is accepted, #16 should define a machine-readable per-component record: exact version/source/hash, direct/transitive/build/runtime category, shipped paths, SPDX expression or unresolved status, complete notice source/hash, modification history, distribution modes, reviewer/evidence link and decision. Capture OS/container packages, fonts, icons, embedded assets and generated output as well as npm packages. User uploads must stay distinct from Guildboard-owned content; an upload is not a grant to relicense it MIT.
+At the time, the proposal was that after #3 acceptance #16 should define a machine-readable per-component record: exact version/source/hash, direct/transitive/build/runtime category, shipped paths, SPDX expression or unresolved status, complete notice source/hash, modification history, distribution modes, reviewer/evidence link and decision. Capture OS/container packages, fonts, icons, embedded assets and generated output as well as npm packages. User uploads must stay distinct from Guildboard-owned content; an upload is not a grant to relicense it MIT.
 
 For upgrades, regenerate the resolved graph, diff added/removed components and notices, inspect lifecycle scripts and provenance, revalidate packaging and retain the previous approved inventory for rollback. Keep exact lockfiles and reviewed SHA-pinned Actions; updates still require independent review. npm documents that `npm ci` requires a matching lockfile; GitHub recommends full-length commit pins and least-privilege workflow credentials. These controls aid reproducibility, not legal or malware clearance. [npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/) · [GitHub secure-use guidance](https://docs.github.com/en/actions/reference/security/secure-use).
 
@@ -73,10 +73,14 @@ No executable policy gate or packaging test exists in this report. Fresh archite
 
 From the repository clone, use `git show REV:path` for each exact revision above; `git ls-tree -r --name-only REV` enumerates tracked paths. Read all eight main package manifests and the proposed branch package-lock.json. The source font ledger was obtained from GitHub's recursive tree endpoint for the exact Excalidraw commit and the linked index files. Tarball sources and verified notice hashes are retained in the tooling ledger. This report contains a dated manual review, not an automated ongoing audit.
 
-## 2026-11-16 — delegated #16 policy disposition
+## 2026-11-16 — historical three-package delegated #16 policy disposition
 
-The earlier observations above retain their original dates and scope. Native prerequisite #3 has closed; the delegated section owner accepts the engineering policy in [docs/licenses/POLICY.md](../licenses/POLICY.md) for the current locked tooling graph. The 2026-10-24 tarball evidence corresponds to current lock versions; installed notice bytes independently match all four recorded hashes, including TypeScript's third-party notice. No fresh tarballs were available and no packaging was inspected. The inventory records unresolved distribution and image-rights gaps; new dependencies and runtime artifacts require their own review. This decision is not legal clearance or certification. #17 remains independent verification after #16 integration.
+The earlier observations above retain their original dates and scope. Native prerequisite #3 has closed; the delegated section owner accepts the engineering policy in [docs/licenses/POLICY.md](../licenses/POLICY.md) for the current locked tooling graph. At that historical decision, the 2026-10-24 tarball evidence corresponded to the then-current lock versions; installed notice bytes independently match all four recorded hashes, including TypeScript's third-party notice. No fresh tarballs were available and no packaging was inspected. The inventory records unresolved distribution and image-rights gaps; new dependencies and runtime artifacts require their own review. This decision is not legal clearance or certification. #17 remains independent verification after #16 integration.
 
-### Current follow-up, 2026-11-16
+### Historical three-package follow-up, 2026-11-16
 
 The original dated research and the later unavailable-tarball failure remain historical evidence. A subsequent offline run used the three separately fetched, lock-SHA-512-verified archives recorded in `license16-artifact-fetch-receipt.json` and matching installed notices. All three integrity checks and all four archive-to-installed notice comparisons passed. This is a consistency result, not approval of a distribution or a replacement for the historical failure. The local candidate remains unpublished and unapproved; #17 acceptance, fresh independent review, native CI, protected merge, and post-merge verification remain manager-owned.
+
+## Current candidate disposition, 2026-11-16
+
+The above research and decisions retain their original time and scope. #507's engineering graph merged as `8f75` and actual repository head is `2dcb`; the private draft #482 candidate `82ac8b2593864e885194d665d38da17b509ad3d4` has no inherited approval or issue acceptance. Current evidence and unresolved terms are in [the current record](../licenses/current-run-2026-11-16.md); the current policy and CLI are in [POLICY.md](../licenses/POLICY.md). Sections 13 and 14 historical observations are research and static evidence, not runtime verification. Fonts, icons and actions remain outside the npm inventory, and the project overview image has unknown rights; release remains blocked. No legal or distribution clearance follows.

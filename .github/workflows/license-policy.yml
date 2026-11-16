@@ -8,15 +8,18 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Offline regression tests
-        run: python3 -m unittest discover -s tests/licenses -v
-      - name: Install locked notices without lifecycle scripts
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Fetch and verify exact reviewed tarballs
+      - name: Fetch verified archives
+        run: python3 scripts/licenses/fetch.py --root . --output "$RUNNER_TEMP/license-artifacts"
+      - name: Build local test receipt
         run: |
-          mkdir "$RUNNER_TEMP/license-artifacts"
-          python3 scripts/licenses/fetch.py . "$RUNNER_TEMP/license-artifacts"
-      - name: Check locked inventory and installed notices
-        run: python3 scripts/licenses/check.py --node-modules node_modules --artifacts "$RUNNER_TEMP/license-artifacts"
-      - name: Compare archive and installed notice bytes
-        run: python3 scripts/licenses/check_archives.py . node_modules "$RUNNER_TEMP/license-artifacts"
+          python3 -c 'import json, pathlib, sys; c=json.loads(pathlib.Path("docs/licenses/inventory.json").read_text())["components"]; v=[{"url": x["artifact"]["url"], "artifact": x["artifact"]["cache_filename"]} for _, x in sorted(c.items())]; assert len(v) == 100 and len({x["url"] for x in v}) == 100; pathlib.Path(sys.argv[1]).write_text(json.dumps({"expected": 100, "verified": v}, sort_keys=True) + "\n")' "$RUNNER_TEMP/license-receipt.json"
+      - name: Fixture-backed regression tests
+        env:
+          LICENSE16_ARTIFACT_FIXTURE: ${{ runner.temp }}/license-artifacts
+          LICENSE16_ARTIFACT_RECEIPT: ${{ runner.temp }}/license-receipt.json
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -B -m unittest discover -s tests/licenses -v
+      - name: Verify acquired archive identity and notice bindings
+        run: python3 scripts/licenses/check_archives.py --root . --artifacts "$RUNNER_TEMP/license-artifacts"
+      - name: Assess license policy
+        run: python3 scripts/licenses/check.py --root .

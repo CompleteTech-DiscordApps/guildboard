@@ -1,4 +1,14 @@
-# Current local evidence — 2026-11-16
+# Current candidate evidence — 2026-11-16
+
+Private draft PR #482 candidate `82ac8b2593864e885194d665d38da17b509ad3d4` is unpublished and has no issue acceptance or inherited approval. Main #507 merged engineering graph as `8f75`; actual repository head is `2dcb`. #3 is closed; #17 remains open on #16. The following are supplied prior evidence, not tests executed for this documentation update: 35 root tests passed; a live fetch of 100 archives used an unchanged fetch file; current archive verification matched 100 components and 100 notice bindings. The assessment reports 100 components (four nested), 246 sections, 63 retained notices, five unresolved ordinals 5, 6, 119, 180 and 236, 99 interpreted components with Prettier unresolved, two AUTHORS gaps, unknown scope and nine diagnostics with exit 1. The initial 31-test run had a stale expected notice count failure and the corrected 35-test run passed; the original failure remains historical evidence. Grant 217 retains the exact 1,103-byte README notice without an added LF; the 190 history remains retained.
+
+The current interfaces and workflow are documented in [policy](POLICY.md). Native CI has not yet run. The workflow's fixture-backed test and archive identity gates precede an unwrapped assessment that is expected to fail while unknowns remain. A pass of the former is not license clearance. Manager follow-through includes actual CI, fresh independent review, publication and the remaining five terms, two AUTHORS gaps and scope evidence. No legal, distribution or whole-issue clearance follows.
+
+## Historical report retained
+
+The commands, results and three-package decision below describe the original revision and are not current commands or current approval.
+
+# Historical three-package local evidence — 2026-11-16
 
 Source candidate `3ac0830b6a506f59ae1ab96491aa147ec8702a1d`, base `6e219f930a12a372b6cbec8e81feb542a030fb65`; local changes are unpublished, unapproved, and not an issue acceptance. Work copy and commands run from the architecture-adoption directory, Python 3, `TMPDIR=$PWD/scratch PYTHONDONTWRITEBYTECODE=1`. Supplied read-only archive source: `license16-artifacts`; installed notice source: `engineering20-final-candidate/node_modules`; fetch provenance: `license16-artifact-fetch-receipt.json`. No local network, npm, Node, or package code was run.
 
