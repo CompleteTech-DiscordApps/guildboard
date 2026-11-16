@@ -115,4 +115,37 @@ class Acceptance(unittest.TestCase):
             self.assertEqual(v.main(['--root', str(self.root)]), 130)
         finally: v.verify = old
 
+class ControlsProjection(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location('controls_acceptance', ROOT / 'scripts/verification/verify_architecture_controls.py')
+        self.h = importlib.util.module_from_spec(spec); spec.loader.exec_module(self.h)
+        spec = importlib.util.spec_from_file_location('controls_gate', ROOT / 'scripts/architecture-controls/check.py')
+        self.h.g = importlib.util.module_from_spec(spec); spec.loader.exec_module(self.h.g)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.tree = Path(self.tmp.name) / 'tree'
+        self.h.copy_projection(ROOT, self.tree)
+    def tearDown(self): self.tmp.cleanup()
+    def test_generated_trees_are_ignored(self):
+        before = self.h.snapshot(self.tree)
+        for name in ('.git', 'node_modules', 'dist', 'apps/api/node_modules', 'apps/api/dist'):
+            p = self.tree / name; p.mkdir(parents=True); (p / 'junk').write_text('junk')
+        self.assertEqual(before, self.h.snapshot(self.tree))
+        self.h.copy_projection(self.tree, Path(self.tmp.name) / 'copy')
+        self.assertEqual(before, self.h.snapshot(Path(self.tmp.name) / 'copy'))
+    def test_unsafe_entries_rejected_without_source_writes(self):
+        before = self.h.snapshot(self.tree)
+        for kind in ('symlink', 'fifo'):
+            p = self.tree / 'apps/api/unsafe'
+            if kind == 'symlink': p.symlink_to('README.md')
+            else: os.mkfifo(p)
+            with self.assertRaises((ValueError, OSError, self.h.g.Invalid)):
+                self.h.copy_projection(self.tree, Path(self.tmp.name) / ('out-' + kind))
+            self.assertFalse((Path(self.tmp.name) / ('out-' + kind)).exists())
+            p.unlink()
+            self.assertEqual(before, self.h.snapshot(self.tree))
+    def test_revision_validation(self):
+        self.assertEqual(self.h.revision('a' * 40), 'a' * 40)
+        for value in ('abc', 'A' * 40, 'g' * 40, 'a' * 41):
+            with self.assertRaises(self.h.argparse.ArgumentTypeError): self.h.revision(value)
+
 if __name__ == '__main__': unittest.main()

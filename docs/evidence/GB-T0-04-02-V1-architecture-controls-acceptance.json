@@ -30,6 +30,19 @@
       "rationale": "Exercises offline fixed contract without Git, child processes, network, installation or source writes.",
       "validation": "19 cases passed; semantic inspection and gaps recorded separately.",
       "follow_through": "Root integrates and independently reviews; runtime requirements remain open."
+    },
+    {
+      "owner": "issue 31 CI repair worker",
+      "affected_items": [
+        "acceptance harness",
+        "architecture-acceptance workflow"
+      ],
+      "decision": "Use a bounded safe projection of gate inputs and separate pinned base checkout; report caller-supplied full revision and source hashes.",
+      "rationale": "Avoid recursive checkout outputs and misleading revision identification while preserving the gate contract and original scenarios.",
+      "requirements_evidence": "Gate FIXED and ROOTS, policy files, and trace and decision evidence references; original dated raw results remain historical.",
+      "validation": "Local repaired harness and focused projection tests recorded in external repair artifacts; native CI and independent review remain pending.",
+      "follow_through": "Root integrates, independently reviews, runs native CI and post-merge verification before issue 31 closure."
     }
-  ]
+  ],
+  "tested_revision_note": "Historical raw results apply only to revision 556dcf68a0d65c5e08fb4aeab2eaf0226f3c16a5, not later revisions or this repair."
 }

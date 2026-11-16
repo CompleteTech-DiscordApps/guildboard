@@ -4,7 +4,7 @@
 Run: python3 -B scripts/verification/verify_architecture_controls.py --base /path/to/engineering20 --tmp /writable/scratch
 The base must be the actual first-install 8f75 tree. Fixtures are disposable copies.
 """
-import argparse, contextlib, hashlib, importlib.util, io, json, os, platform, shutil, sys, tempfile
+import argparse, contextlib, hashlib, importlib.util, io, json, os, platform, re, shutil, stat, sys, tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,21 +13,70 @@ PIN = '8f75fdb398dfb48d577135ee08f295a4c4f634b6'
 POL = 'docs/architecture-controls/'
 
 def digest(p): return hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None
+# Projection deliberately omits checkout metadata, dependencies and generated output.
+EXCLUDE = {'.git', 'node_modules', 'dist', '__pycache__'}
+EXTRA = ('docs/architecture-controls/baseline.json', 'docs/architecture-controls/traceability.json',
+         'docs/architecture-controls/decisions.json', 'docs/architecture-controls/bootstrap.json',
+         'scripts/architecture-controls/check.py', 'scripts/verification/verify_architecture_controls.py',
+         'tests/architecture-controls/test_gate.py',
+         '.github/workflows/architecture-controls.yml')
+
+def projection(root):
+    names = set()
+    def walk(path):
+        if path.name in EXCLUDE: return
+        info = path.lstat()
+        if stat.S_ISDIR(info.st_mode):
+            entries = sorted(path.iterdir())
+            if len(entries) > g.MAX_FILES: raise ValueError('too many entries')
+            for entry in entries: walk(entry)
+        elif stat.S_ISREG(info.st_mode):
+            names.add(path.relative_to(root).as_posix())
+            if len(names) > g.MAX_FILES: raise ValueError('too many files')
+        else: raise ValueError('nonregular projection entry: '+str(path))
+    for name in g.ROOTS:
+        walk(root/name)
+    for name in (*g.FIXED, *EXTRA):
+        if os.path.lexists(root/name): names.add(name)
+    # Include all evidence named by the gate's trace and decision catalogs.
+    for name in ('docs/architecture-controls/traceability.json', 'docs/architecture-controls/decisions.json'):
+        if name not in names: continue
+        data = json.loads(g.read(root, name))
+        if name.endswith('traceability.json'):
+            for catalog in ('interfaces', 'controls'):
+                for entry in data[catalog].values(): names.update(entry['evidence'])
+        else:
+            for record in data['records']:
+                names.update(record['controls']); names.update(record['test_evidence'])
+    return {name: g.read(root, name) for name in sorted(names)}
+
 def snapshot(root):
-    return {str(p.relative_to(root)): digest(p) for p in root.rglob('*') if p.is_file() and not p.is_symlink()}
+    return {name: hashlib.sha256(data).hexdigest() for name, data in projection(root).items()}
+
+def copy_projection(root, target):
+    contents = projection(root)  # validate everything before writing the fixture
+    target.mkdir(parents=True)
+    for name, data in contents.items():
+        path = target/name; path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(data)
+
+def revision(value):
+    if not re.fullmatch(r'[0-9a-f]{40}', value): raise argparse.ArgumentTypeError('revision must be a lowercase full 40-character SHA')
+    return value
 def save(p, x): p.write_text(json.dumps(x, indent=2)+'\n')
 def main():
-    a=argparse.ArgumentParser(); a.add_argument('--base',type=Path,required=True); a.add_argument('--tmp',type=Path,required=True); args=a.parse_args()
+    a=argparse.ArgumentParser(); a.add_argument('--base',type=Path,required=True); a.add_argument('--tmp',type=Path,required=True); a.add_argument('--revision',type=revision,required=True); args=a.parse_args()
     sys.dont_write_bytecode=True
+    global g
     spec=importlib.util.spec_from_file_location('gate',ROOT/'scripts/architecture-controls/check.py'); g=importlib.util.module_from_spec(spec); spec.loader.exec_module(g)
     original=snapshot(ROOT); base_original=snapshot(args.base)
     failures=[]; count=0
-    print('revision=556dcf68a0d65c5e08fb4aeab2eaf0226f3c16a5; base='+PIN)
+    print('revision='+args.revision+'; base='+PIN+'; identity=caller-supplied, not independently Git verified')
+    print('harness_sha256='+digest(Path(__file__))+'; gate_sha256='+digest(ROOT/'scripts/architecture-controls/check.py'))
     print('platform='+platform.platform()+'; python='+sys.version.replace('\n',' '))
     with tempfile.TemporaryDirectory(dir=args.tmp, prefix='accept31-') as temp:
-        temp=Path(temp); head=temp/'head'; shutil.copytree(ROOT,head,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+        temp=Path(temp); head=temp/'head'; copy_projection(ROOT,head)
         def reset():
-            shutil.rmtree(head); shutil.copytree(ROOT,head,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+            shutil.rmtree(head); copy_projection(ROOT,head)
         def run(name, fn):
             nonlocal count
             count+=1
