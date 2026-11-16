@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('verifier', ROOT / 'scripts/verification/verify_architecture.py')
@@ -57,6 +58,54 @@ class Acceptance(unittest.TestCase):
         with self.assertRaises(v.VerificationError): v.verify(self.root)
         with self.assertRaises(v.VerificationError): v.verify(None)
         self.assertEqual(v.main(['--root', str(self.root / 'missing')]), 1)
+    def test_oversized_regular_file_and_growth_after_fstat(self):
+        p = self.root / next(iter(v.BASELINE))
+        p.write_bytes(b'x' * (v.SIZE_LIMIT + 1))
+        with self.assertRaisesRegex(v.VerificationError, 'input exceeds size limit'):
+            v.verify(self.root)
+        # A small reported size must not authorize an unrestricted read.
+        actual_fstat = v.os.fstat
+        def small_size(fd):
+            result = actual_fstat(fd)
+            values = list(result)
+            values[6] = 1
+            return os.stat_result(values)
+        with mock.patch.object(v.os, 'fstat', side_effect=small_size):
+            with self.assertRaisesRegex(v.VerificationError, 'input exceeds size limit'):
+                v.verify(self.root)
+
+    def test_directory_and_symlink_rejected(self):
+        p = self.root / next(iter(v.BASELINE))
+        p.unlink()
+        p.mkdir()
+        with self.assertRaises(v.VerificationError): v.verify(self.root)
+        p.rmdir()
+        try:
+            p.symlink_to(ROOT / next(iter(v.BASELINE)))
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest('symlinks unavailable: ' + str(exc))
+        with self.assertRaises(v.VerificationError): v.verify(self.root)
+
+    @unittest.skipUnless(hasattr(os, 'mkfifo') and hasattr(os, 'O_NONBLOCK'), 'POSIX FIFO required')
+    def test_fifo_without_writer_is_rejected(self):
+        p = self.root / next(iter(v.BASELINE))
+        p.unlink()
+        os.mkfifo(p)
+        # Assert the open itself is nonblocking; no writer or subprocess needed.
+        real_open = os.open
+        def checked_open(path, flags, *args, **kwargs):
+            self.assertTrue(flags & os.O_NONBLOCK)
+            return real_open(path, flags, *args, **kwargs)
+        with mock.patch.object(v.os, 'open', side_effect=checked_open):
+            with self.assertRaisesRegex(v.VerificationError, 'not a regular file'):
+                v.verify(self.root)
+
+    def test_missing_safe_open_flags_fails_closed(self):
+        with mock.patch.object(v.os, 'O_NOFOLLOW', create=True):
+            del v.os.O_NOFOLLOW
+            with self.assertRaisesRegex(v.VerificationError, 'unsupported'):
+                v.verify(self.root)
+
     def test_interruption_is_not_success(self):
         def stop(): raise KeyboardInterrupt()
         with self.assertRaises(KeyboardInterrupt): v.verify(self.root, stop)
