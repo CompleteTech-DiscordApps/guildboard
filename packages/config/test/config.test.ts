@@ -7,18 +7,24 @@ import type { ConfigKey } from "../src/index.js";
 
 test("failure snapshot has only the code and sorted canonical names", () => {
   const actual = createConfigFailure([
-    "SESSION_SECRET", "PORT", "DATABASE_URL", "NODE_ENV", "DISCORD_CLIENT_ID", "PORT",
+    "SESSION_SECRET",
+    "PORT",
+    "DATABASE_URL",
+    "NODE_ENV",
+    "DISCORD_CLIENT_ID",
+    "PORT",
   ]);
-  const expected: unknown = JSON.parse(readFileSync(
-    new URL("../../test/snapshots/config-invalid.json", import.meta.url), "utf8",
-  ));
+  const expected: unknown = JSON.parse(
+    readFileSync(new URL("../../test/snapshots/config-invalid.json", import.meta.url), "utf8"),
+  );
   assert.deepEqual(actual, expected);
 });
 
 test("partial failures are deduplicated without mutating the input", () => {
   const input = Object.freeze(["PORT", "DATABASE_URL", "PORT"] as const);
   assert.deepEqual(createConfigFailure(input), {
-    ok: false, error: { code: "CONFIG_INVALID", invalidKeys: ["DATABASE_URL", "PORT"] },
+    ok: false,
+    error: { code: "CONFIG_INVALID", invalidKeys: ["DATABASE_URL", "PORT"] },
   });
   assert.deepEqual(input, ["PORT", "DATABASE_URL", "PORT"]);
 });
@@ -38,11 +44,18 @@ test("runtime values and unrelated names cannot appear in diagnostics", () => {
 
 test("diagnostics never invoke conversion hooks on unexpected runtime values", () => {
   const hostile = {
-    toString() { throw new Error("unexpected coercion"); },
-    toJSON() { throw new Error("unexpected serialization"); },
+    toString() {
+      throw new Error("unexpected coercion");
+    },
+    toJSON() {
+      throw new Error("unexpected serialization");
+    },
   };
   const result = createConfigFailure([hostile, "SESSION_SECRET"] as unknown as ConfigKey[]);
-  assert.equal(JSON.stringify(result), '{"ok":false,"error":{"code":"CONFIG_INVALID","invalidKeys":["SESSION_SECRET"]}}');
+  assert.equal(
+    JSON.stringify(result),
+    '{"ok":false,"error":{"code":"CONFIG_INVALID","invalidKeys":["SESSION_SECRET"]}}',
+  );
 });
 
 test("results have no shared mutable diagnostic arrays", () => {
@@ -50,7 +63,8 @@ test("results have no shared mutable diagnostic arrays", () => {
   first.error.invalidKeys.push("SESSION_SECRET");
   assert.deepEqual(createConfigFailure(["PORT"]).error.invalidKeys, ["PORT"]);
   assert.deepEqual(createConfigFailure([]), {
-    ok: false, error: { code: "CONFIG_INVALID", invalidKeys: [] },
+    ok: false,
+    error: { code: "CONFIG_INVALID", invalidKeys: [] },
   });
 });
 
@@ -106,10 +120,17 @@ test("parseConfig returns only the contract fields, preserving strings and accep
 
 test("all missing or empty required values produce sorted names only", () => {
   const expected = createConfigFailure([
-    "PORT", "NODE_ENV", "DATABASE_URL", "DISCORD_CLIENT_ID", "SESSION_SECRET",
+    "PORT",
+    "NODE_ENV",
+    "DATABASE_URL",
+    "DISCORD_CLIENT_ID",
+    "SESSION_SECRET",
   ]);
-  for (const input of [{}, Object.fromEntries(Object.keys(validEnv).map(key => [key, undefined])),
-    Object.fromEntries(Object.keys(validEnv).map(key => [key, ""]))]) {
+  for (const input of [
+    {},
+    Object.fromEntries(Object.keys(validEnv).map((key) => [key, undefined])),
+    Object.fromEntries(Object.keys(validEnv).map((key) => [key, ""])),
+  ]) {
     assert.deepEqual(parseConfig(input), expected);
   }
 });
@@ -117,20 +138,55 @@ test("all missing or empty required values produce sorted names only", () => {
 test("facade rejects invalid fields with no coercion, defaults or normalization", () => {
   const invalid: Readonly<Record<ConfigKey, readonly (string | undefined)[]>> = {
     PORT: [undefined, "", "0", "65536", "-1", "+1", "1.5", "1e3", " 80", "80\n", "9".repeat(10000)],
-    DATABASE_URL: [undefined, "", "not a URL", "postgres://host/db", "mysql:///db", "mysql://host", "mysql://host/"],
+    DATABASE_URL: [
+      undefined,
+      "",
+      "not a URL",
+      "postgres://host/db",
+      "mysql:///db",
+      "mysql://host",
+      "mysql://host/",
+    ],
     NODE_ENV: [undefined, "", "Development", "PRODUCTION", "development ", "test\n", "staging"],
-    DISCORD_CLIENT_ID: [undefined, "", " ", "123\n", "+123", "-123", "1.0", "1e3", "0x12", "１２３", "١٢٣"],
-    SESSION_SECRET: [undefined, "", "x".repeat(31), " ".repeat(32), "\t\n".repeat(32), "\u00a0".repeat(32)],
+    DISCORD_CLIENT_ID: [
+      undefined,
+      "",
+      " ",
+      "123\n",
+      "+123",
+      "-123",
+      "1.0",
+      "1e3",
+      "0x12",
+      "１２３",
+      "١٢٣",
+    ],
+    SESSION_SECRET: [
+      undefined,
+      "",
+      "x".repeat(31),
+      " ".repeat(32),
+      "\t\n".repeat(32),
+      "\u00a0".repeat(32),
+    ],
   };
   for (const key of Object.keys(invalid) as ConfigKey[]) {
     for (const [index, value] of invalid[key].entries()) {
-      assert.deepEqual(parseConfig({ ...validEnv, [key]: value }), createConfigFailure([key]), `${key} case ${index}`);
+      assert.deepEqual(
+        parseConfig({ ...validEnv, [key]: value }),
+        createConfigFailure([key]),
+        `${key} case ${index}`,
+      );
     }
   }
 });
 
 test("facade accepts exact port and secret boundaries without modifying valid values", () => {
-  for (const [port, expected] of [["1", 1], ["65535", 65535], ["00042", 42]] as const) {
+  for (const [port, expected] of [
+    ["1", 1],
+    ["65535", 65535],
+    ["00042", 42],
+  ] as const) {
     const result = parseConfig({ ...validEnv, PORT: port, SESSION_SECRET: "x".repeat(32) });
     assert.equal(result.ok, true);
     if (result.ok) {
@@ -149,11 +205,17 @@ test("facade accepts exact port and secret boundaries without modifying valid va
 
 test("simultaneous failures are aggregated without credential-bearing values or exceptions", () => {
   const input = Object.freeze({
-    ...validEnv, PORT: "65536", NODE_ENV: "invalid", SESSION_SECRET: "SHORT_SENTINEL_SECRET",
+    ...validEnv,
+    PORT: "65536",
+    NODE_ENV: "invalid",
+    SESSION_SECRET: "SHORT_SENTINEL_SECRET",
     DATABASE_URL: "mysql://user:SENTINEL_DB_PASSWORD@[invalid/board",
   });
   const result = parseConfig(input);
-  assert.deepEqual(result, createConfigFailure(["PORT", "NODE_ENV", "SESSION_SECRET", "DATABASE_URL"]));
+  assert.deepEqual(
+    result,
+    createConfigFailure(["PORT", "NODE_ENV", "SESSION_SECRET", "DATABASE_URL"]),
+  );
   assert.equal(JSON.stringify(result).includes("SENTINEL"), false);
   assert.equal(JSON.stringify(result).includes("mysql:"), false);
 });
@@ -161,20 +223,33 @@ test("simultaneous failures are aggregated without credential-bearing values or 
 test("parser does not mutate input, enumerate unrelated keys or retain the input map", () => {
   const input = { ...validEnv };
   Object.defineProperty(input, "UNRELATED_TOKEN", {
-    enumerable: true, get() { throw new Error("unrelated value read"); },
+    enumerable: true,
+    get() {
+      throw new Error("unrelated value read");
+    },
   });
   Object.freeze(input);
   const result = parseConfig(input);
   assert.equal(result.ok, true);
   for (const key of Object.keys(validEnv) as ConfigKey[]) assert.equal(input[key], validEnv[key]);
   if (result.ok) {
-    assert.deepEqual(Object.keys(result.value).sort(), ["databaseUrl", "discordClientId", "nodeEnv", "port", "sessionSecret"]);
+    assert.deepEqual(Object.keys(result.value).sort(), [
+      "databaseUrl",
+      "discordClientId",
+      "nodeEnv",
+      "port",
+      "sessionSecret",
+    ]);
     assert.notEqual(result.value, input);
   }
 });
 
 test("unexpected JavaScript field types fail without invoking conversion hooks", () => {
-  const hostile = { toString() { throw new Error("coercion"); } };
+  const hostile = {
+    toString() {
+      throw new Error("coercion");
+    },
+  };
   for (const key of Object.keys(validEnv)) {
     for (const value of [null, 123, true, hostile]) {
       const input = { ...validEnv, [key]: value } as unknown as Record<string, string | undefined>;
@@ -201,7 +276,9 @@ test("full parser is independent of global environment, silent and does not exit
     process.stdout.write('CALLER_CONTINUES');
   `;
   const child = spawnSync(process.execPath, ["--input-type=module", "--eval", program], {
-    encoding: "utf8", env: {}, timeout: 5000,
+    encoding: "utf8",
+    env: {},
+    timeout: 5000,
   });
   assert.equal(child.error, undefined);
   assert.equal(child.status, 0);

@@ -56,10 +56,12 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
   const discordClientId = env.DISCORD_CLIENT_ID;
   const sessionSecret = env.SESSION_SECRET;
   const validNodeEnv = nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "production";
-  const validClientId = typeof discordClientId === "string"
-    && discordClientId.length > 0 && !/[^0-9]/.test(discordClientId);
-  const validSecret = typeof sessionSecret === "string"
-    && sessionSecret.length >= 32 && /\S/u.test(sessionSecret);
+  const validClientId =
+    typeof discordClientId === "string" &&
+    discordClientId.length > 0 &&
+    !/[^0-9]/.test(discordClientId);
+  const validSecret =
+    typeof sessionSecret === "string" && sessionSecret.length >= 32 && /\S/u.test(sessionSecret);
 
   const invalid: ConfigKey[] = [];
   if (port === undefined) invalid.push("PORT");
@@ -68,7 +70,13 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
   if (!validClientId) invalid.push("DISCORD_CLIENT_ID");
   if (!validSecret) invalid.push("SESSION_SECRET");
 
-  if (port === undefined || databaseUrl === undefined || !validNodeEnv || !validClientId || !validSecret) {
+  if (
+    port === undefined ||
+    databaseUrl === undefined ||
+    !validNodeEnv ||
+    !validClientId ||
+    !validSecret
+  ) {
     return createConfigFailure(invalid);
   }
   return { ok: true, value: { port, nodeEnv, databaseUrl, discordClientId, sessionSecret } };
