@@ -1,0 +1,213 @@
+{
+  "version": 1,
+  "status": "declarative-not-executed",
+  "requirements_document": "../GB-T0-01-01-requirements.md",
+  "cases": [
+    {
+      "id": "UC01",
+      "requirements": [
+        "R01",
+        "R03"
+      ],
+      "actor": "moderator",
+      "preconditions": "Verified guild session, board and current write authority.",
+      "action": "Join workshop and submit a bounded valid edit.",
+      "expected": "Board opens; one durable revision and receipt precede ACK; authorized participants receive update."
+    },
+    {
+      "id": "UC02",
+      "requirements": [
+        "R01"
+      ],
+      "actor": "two moderators",
+      "preconditions": "Both have current write authority on the same board.",
+      "action": "Submit valid distinct-element edits concurrently.",
+      "expected": "Each accepted operation has one durable ordered revision and receipt; both see accepted state."
+    },
+    {
+      "id": "UC03",
+      "requirements": [
+        "R02"
+      ],
+      "actor": "viewer",
+      "preconditions": "Verified session has read but no write authority.",
+      "action": "Join and observe a moderator edit.",
+      "expected": "Viewer receives authorized state and update; follow/presentation grants no write."
+    },
+    {
+      "id": "UC04",
+      "requirements": [
+        "R02",
+        "R04"
+      ],
+      "actor": "viewer",
+      "preconditions": "Viewer can read but cannot write.",
+      "action": "Forge a write and claim a moderator role.",
+      "expected": "Deny; no content mutation, new revision or accepted event."
+    },
+    {
+      "id": "UC05",
+      "requirements": [
+        "R03",
+        "R04"
+      ],
+      "actor": "foreign guild user",
+      "preconditions": "Session is verified for guild A; target belongs to guild B.",
+      "action": "Select foreign and unknown boards.",
+      "expected": "Both return the same public NOT_FOUND; no protected data or mutation."
+    },
+    {
+      "id": "UC06",
+      "requirements": [
+        "R04"
+      ],
+      "actor": "former member",
+      "preconditions": "Membership evidence is stale or unavailable.",
+      "action": "Attempt privileged write and protected delivery.",
+      "expected": "Fail closed; no new content mutation or protected response."
+    },
+    {
+      "id": "UC07",
+      "requirements": [
+        "R04"
+      ],
+      "actor": "former grantee",
+      "preconditions": "Grant expired or was revoked before the write fence.",
+      "action": "Attempt a new write using the old grant.",
+      "expected": "Deny without mutation, revision or accepted event; prior commits remain accepted."
+    },
+    {
+      "id": "UC08",
+      "requirements": [
+        "R04"
+      ],
+      "actor": "expired session",
+      "preconditions": "Session expiry or revocation precedes response release.",
+      "action": "Attempt write and release queued protected snapshot chunks.",
+      "expected": "Deny write and suppress later queued chunks; emitted bytes cannot be recalled."
+    },
+    {
+      "id": "UC09",
+      "requirements": [
+        "R04",
+        "R05"
+      ],
+      "actor": "revoked reader",
+      "preconditions": "A write committed but ACK release is ordered after read revocation.",
+      "action": "Deliver ACK or retry receipt lookup.",
+      "expected": "Suppress protected ACK and receipt result; committed write remains durable and denial cannot settle outcome."
+    },
+    {
+      "id": "UC10",
+      "requirements": [
+        "R05"
+      ],
+      "actor": "writer",
+      "preconditions": "Operation committed and ACK was lost; read authority remains current.",
+      "action": "Retry with identical identity, digest and preconditions.",
+      "expected": "Return original retained receipt; no second write, revision or event."
+    },
+    {
+      "id": "UC11",
+      "requirements": [
+        "R05"
+      ],
+      "actor": "writer",
+      "preconditions": "Restore created a new lineage and retained historical receipt; read authority current.",
+      "action": "Retry identical historical operation.",
+      "expected": "Return historical receipt only; do not replay payload or mark current document saved; rejoin and verify current state."
+    },
+    {
+      "id": "UC12",
+      "requirements": [
+        "R05"
+      ],
+      "actor": "writer",
+      "preconditions": "Restore created a new lineage; no committed receipt exists for old intent.",
+      "action": "Retry old-lineage intent.",
+      "expected": "Return LINEAGE_CHANGED without write; reconcile and deliberately discard or submit separately authorized new intent."
+    },
+    {
+      "id": "UC13",
+      "requirements": [
+        "R05"
+      ],
+      "actor": "reconnecting viewer",
+      "preconditions": "Authorized board has a snapshot and ordered tail.",
+      "action": "Interrupt snapshot transfer, then reconnect.",
+      "expected": "Do not promote partial snapshot; reauthorize and validate complete snapshot and tail or bounded replay."
+    },
+    {
+      "id": "UC14",
+      "requirements": [
+        "R06"
+      ],
+      "actor": "operator",
+      "preconditions": "Required configuration is invalid or absent.",
+      "action": "Start the service.",
+      "expected": "Fail closed with safe diagnostics; do not expose secrets or accept commands."
+    },
+    {
+      "id": "UC15",
+      "requirements": [
+        "R04",
+        "R06"
+      ],
+      "actor": "writer",
+      "preconditions": "Required policy, trusted time or durable storage is unavailable before commit.",
+      "action": "Submit a write.",
+      "expected": "Fail closed with safe error; no partial commit or durable success ACK."
+    },
+    {
+      "id": "UC16",
+      "requirements": [
+        "R05",
+        "R06"
+      ],
+      "actor": "writer",
+      "preconditions": "Execution is interrupted after possible commit but before ACK.",
+      "action": "Reconnect and retry the same operation.",
+      "expected": "Treat outcome as unknown; matching authorized retained receipt settles it without duplicate mutation; missing disaster evidence does not prove failure."
+    },
+    {
+      "id": "UC17",
+      "requirements": [
+        "R07"
+      ],
+      "actor": "release verifier",
+      "preconditions": "MVP matrix and release gates have recorded evidence or gaps.",
+      "action": "Compare integrated MVP scenarios with full v1.0 gates.",
+      "expected": "Report missing mandatory scenarios and gates as open; MVP demonstration does not establish production or v1.0."
+    },
+    {
+      "id": "UC18",
+      "requirements": [
+        "R08"
+      ],
+      "actor": "performance verifier",
+      "preconditions": "Documented environment and baseline workload are available.",
+      "action": "Run stated observation windows and count attempts and failures.",
+      "expected": "Publish denominators, environment, percentiles and pass/fail against each objective; no measurement is inferred from fixture."
+    },
+    {
+      "id": "UC19",
+      "requirements": [
+        "R04"
+      ],
+      "actor": "writer",
+      "preconditions": "Board is locked before write fence, despite a temporary grant.",
+      "action": "Submit an ordinary content write.",
+      "expected": "Deny with no mutation, revision or accepted event."
+    },
+    {
+      "id": "UC20",
+      "requirements": [
+        "R05"
+      ],
+      "actor": "writer",
+      "preconditions": "Retained operation identity exists and current read access is valid.",
+      "action": "Retry same identity with different digest.",
+      "expected": "Return IDEMPOTENCY_CONFLICT subject to release fence; no new write or event."
+    }
+  ]
+}

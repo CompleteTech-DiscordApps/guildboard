@@ -1,0 +1,69 @@
+{
+  "schema": "editor13-evaluated-matrix-v1",
+  "tested_revision": "6e219f930a12a372b6cbec8e81feb542a030fb65",
+  "owned_decisions": [
+    {
+      "owner": "issue13 section owner",
+      "items": [
+        "editor",
+        "stack",
+        "database"
+      ],
+      "action": "Excalidraw adapter, React/TypeScript/Fastify and MySQL first controlled experiment",
+      "rationale": "accepted ADR 0001 direction, declared peer compatibility and documented database JSON differences",
+      "validation": "offline byte and peer checks; runtime remains open",
+      "follow_through": "comparison.md downstream handoffs"
+    }
+  ],
+  "clauses": [
+    {
+      "clause": "hooks",
+      "evaluated_versions": "Excalidraw 0.18.1",
+      "evidence": "declarations/types.d.ts 405-465,603-635",
+      "result_and_limit": "reviewed static signatures; operation interception unproven",
+      "follow_through": "browser #98"
+    },
+    {
+      "clause": "read-only",
+      "evaluated_versions": "Excalidraw 0.18.1",
+      "evidence": "types.d.ts viewModeEnabled and updateFrameRendering comment",
+      "result_and_limit": "UI control only; server enforces current permissions",
+      "follow_through": "browser #98 and revocation #132"
+    },
+    {
+      "clause": "serialization",
+      "evaluated_versions": "Excalidraw 0.18.1",
+      "evidence": "index.d.ts serialize/restore exports",
+      "result_and_limit": "export presence only; bounded untrusted import, no scene authority",
+      "follow_through": "browser #98 and recovery #132"
+    },
+    {
+      "clause": "extensions",
+      "evaluated_versions": "Excalidraw 0.18.1",
+      "evidence": "types.d.ts children, renderEmbeddable, onDuplicate",
+      "result_and_limit": "limited public hooks inspected; native custom element support unproven",
+      "follow_through": "browser #98"
+    },
+    {
+      "clause": "web stack",
+      "evaluated_versions": "React/react-dom 19.1.0, TypeScript 5.9.3, Fastify 5.6.1",
+      "evidence": "npm metadata, source package.json, Fastify tagged docs",
+      "result_and_limit": "declared peer ranges compatible; runtime unproven",
+      "follow_through": "integration and security review"
+    },
+    {
+      "clause": "database",
+      "evaluated_versions": "MySQL 8.4.7, MariaDB 11.8.3",
+      "evidence": "coordinator primary web source notes",
+      "result_and_limit": "MySQL first experiment; JSON storage differs; raw fetch unavailable",
+      "follow_through": "SQL and VPS #324"
+    },
+    {
+      "clause": "deployment",
+      "evaluated_versions": "GoDaddy Linux VPS",
+      "evidence": "ADR 0001 and prior GB-T0.R1",
+      "result_and_limit": "mandatory target, no platform test",
+      "follow_through": "Discord #34 and VPS #324"
+    }
+  ]
+}

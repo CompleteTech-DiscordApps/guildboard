@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "limitations": "Mutable documentation; hashes are observations, not immutable revisions or archived contents. Raw HTTP access failures are preserved; interpreted claims derive from successful web-tool inspection.",
+  "sources": [
+    {
+      "url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/",
+      "accessed_at_utc": "2026-10-24T14:37:32.742519+00:00",
+      "content_review": "Publisher documentation inspected with web tool on 2026-10-24 UTC",
+      "served_url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/",
+      "http_status": 200,
+      "bytes": 75240,
+      "sha256": "c419b46f43f020cc6c8c92865a8ce606b6e3d4925f5b3dcc1dc3d054b179b0af",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/excalidraw-api",
+      "accessed_at_utc": "2026-10-24T14:37:32.868220+00:00",
+      "content_review": "Publisher documentation inspected with web tool on 2026-10-24 UTC",
+      "served_url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/excalidraw-api",
+      "http_status": 200,
+      "bytes": 148523,
+      "sha256": "1f87020592282d2166ced0ac268e234783378a1f134a3f4b6f94fd80cd804ac6",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/integration",
+      "accessed_at_utc": "2026-10-24T14:37:33.009986+00:00",
+      "content_review": "Publisher documentation inspected with web tool on 2026-10-24 UTC",
+      "served_url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/integration",
+      "http_status": 200,
+      "bytes": 108087,
+      "sha256": "3f21d5df40983019830ad9e0c8f8aa5c69124d9956071920e2e97b54241441fb",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://docs.discord.com/developers/activities/how-activities-work",
+      "accessed_at_utc": "2026-10-24T14:37:33.149963+00:00",
+      "content_review": "Publisher documentation inspected with web tool on 2026-10-24 UTC",
+      "raw_fetch_error": "HTTP Error 403: Forbidden",
+      "sha256": null
+    },
+    {
+      "url": "https://docs.discord.com/developers/activities/development-guides/networking",
+      "accessed_at_utc": "2026-10-24T14:37:33.266786+00:00",
+      "content_review": "Publisher documentation inspected with web tool on 2026-10-24 UTC",
+      "raw_fetch_error": "HTTP Error 403: Forbidden",
+      "sha256": null
+    },
+    {
+      "url": "https://www.godaddy.com/help/enable-root-or-admin-access-to-my-vps-hosting-24737",
+      "accessed_at_utc": "2026-10-24T14:37:33.355894+00:00",
+      "content_review": "Publisher documentation inspected with web tool on 2026-10-24 UTC",
+      "served_url": "https://www.godaddy.com/help/enable-root-or-admin-access-to-my-vps-hosting-24737",
+      "http_status": 200,
+      "bytes": 264683,
+      "sha256": "d0545c74e85d8f04eac5ad7058a5efad4dd81404434901b705911ea3d6aff410",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://nginx.org/en/docs/http/websocket.html",
+      "accessed_at_utc": "2026-10-24T14:37:34.120808+00:00",
+      "content_review": "Publisher documentation inspected with web tool on 2026-10-24 UTC",
+      "served_url": "https://nginx.org/en/docs/http/websocket.html",
+      "http_status": 200,
+      "bytes": 4767,
+      "sha256": "09750cebc18551f280f74096feda7873d90fd167d78db01dcc2cc0498e0b857d",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ]
+}
