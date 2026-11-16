@@ -20,3 +20,4 @@ jobs:
       - run: python3 -m unittest discover -s tests/research -v
       - run: python3 scripts/verification/verify_requirements.py
       - run: python3 -m unittest discover -s tests/verification -v
+      - run: python3 scripts/verification/verify_architecture.py
