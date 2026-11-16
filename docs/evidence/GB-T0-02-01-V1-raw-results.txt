@@ -1,0 +1,19 @@
+environment 3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0] Linux-7.0.0-38-generic-x86_64-with-glibc2.39
+source baseline (True, 187)
+positive {'status': 'pass', 'publisher_inputs': 10, 'sql_raw_sources': 4, 'scope': 'static checks only'}
+PASS reject mutated declaration ValueError publisher hash: excalidraw-0.18.1-declarations/dist--types--excalidraw--types.d.ts
+PASS reject mutated peer with updated ledger ValueError editor peer mismatch
+PASS reject missing prerequisite FileNotFoundError [Errno 2] No such file or directory: '/home/completetrain/.ct-session-transfer-20261114T023610Z-0498c2/projects/guildboard/.recovery/guildboard-20261114/owner-acceptance/architecture-adoption/scratch/verification14/tmp/public/fastify_5.6.1.json'
+PASS reject FIFO ValueError not regular: /home/completetrain/.ct-session-transfer-20261114T023610Z-0498c2/projects/guildboard/.recovery/guildboard-20261114/owner-acceptance/architecture-adoption/scratch/verification14/tmp/public/fastify_5.6.1.json
+PASS reject symlink OSError [Errno 40] Too many levels of symbolic links: '/home/completetrain/.ct-session-transfer-20261114T023610Z-0498c2/projects/guildboard/.recovery/guildboard-20261114/owner-acceptance/architecture-adoption/scratch/verification14/tmp/public/fastify_5.6.1.json'
+PASS reject matrix pin ValueError matrix pin hooks
+PASS reject unsupported runtime claim ValueError unsupported claim hooks
+PASS reject interrupted publication InterruptedError before replacement
+PASS prior output retained
+source after (True, 187)
+
+Commands (from architecture-adoption directory):
+TMPDIR="$PWD/scratch/verification14/tmp" PYTHONDONTWRITEBYTECODE=1 python3 scratch/verification14/work/scripts/verification/verify_editor_feasibility.py --root main-editor13-candidate --public editor13-public-inputs --sql editor13-sql-primary --ledger editor13-public-probe-result.json --output scratch/verification14/artifacts/result.json
+exit 0: PASS static identity and bounded checks
+TMPDIR="$PWD/scratch/verification14/tmp" PYTHONDONTWRITEBYTECODE=1 python3 scratch/verification14/tmp/checks.py
+exit 0: output above
