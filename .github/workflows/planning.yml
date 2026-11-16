@@ -18,3 +18,5 @@ jobs:
           python-version: '3.12'
       - run: python3 scripts/github-bootstrap/validate.py
       - run: python3 -m unittest discover -s tests/research -v
+      - run: python3 scripts/verification/verify_requirements.py
+      - run: python3 -m unittest discover -s tests/verification -v

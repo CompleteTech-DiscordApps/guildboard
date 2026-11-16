@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "issue": "GB-T0.01.01.V1",
+  "source_revision": "ae7aa92a76ff18522e643821df6840bf3bbabc4d",
+  "artifact_revision": null,
+  "environment": {
+    "python": "3.12.3",
+    "system": "Linux",
+    "execution": "offline local scratch copy"
+  },
+  "status": "local definition verification only; native CI and independent review pending",
+  "results": {
+    "definition_check": "pass",
+    "negative_tests": "pass: 9 in-process cases",
+    "planning_validator": "pass",
+    "platform_or_product_execution": "not performed"
+  },
+  "scope_mapping": {
+    "acceptance_scenarios": "R01-R08 and UC01-UC20 definition and trace checks; fixtures remain declarative",
+    "workshops_viewers_guild_abuse": "R01-R06 and critical actor/boundary checks; remaining case prose reviewed",
+    "mvp_v1": "R07, UC17, MVP matrix and milestone gates",
+    "objectives": "R08, UC18 and five definition checks; 10*5*5=250 operations/s and 10*20=200 reconnects; no measurement",
+    "raw_revision_environment_defects": "source revision and local results recorded; no definition defect observed; future artifact commit and native CI pending",
+    "discord_godaddy": "not executed or passed; real integration evidence required",
+    "invalid_configuration_unavailable_interruption": "controlled in-process verifier tests only"
+  },
+  "limitations": [
+    "These checks examine documents and fixtures, not service behavior.",
+    "No Discord, GoDaddy, VPS, database, browser, accessibility, license, security or production measurements were performed.",
+    "Actual native CI, independent review, protected merge and post-merge verification remain open.",
+    "Source requirements and prior accepted history are not modified."
+  ]
+}
