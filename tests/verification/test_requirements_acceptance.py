@@ -4,6 +4,8 @@ import importlib.util
 import io
 import json
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -45,6 +47,65 @@ class Acceptance(unittest.TestCase):
         path = self.root / v.DOC
         path.write_text(path.read_text().replace('foreign and unknown resources have the same public not-found outcome', 'foreign resources are handled'))
         self.assertEqual(v.check(self.root)['status'], 'fail')
+
+    def test_reviewed_case_fields_are_pinned(self):
+        for field in ('actor', 'preconditions', 'action', 'expected'):
+            with self.subTest(field=field):
+                path = self.root / v.FIX
+                original = path.read_text()
+                self.mutate_fixture(lambda d: d['cases'][8].update({field: 'Release protected ACK and receipt to revoked reader.'}))
+                self.assertEqual(v.check(self.root)['status'], 'fail')
+                path.write_text(original)
+
+    def test_review_mutations_and_objective_definitions(self):
+        path = self.root / v.DOC
+        original = path.read_text()
+        mutations = [
+            ('a prior revocation suppresses later releases', 'a prior revocation allows later releases'),
+            ('total scheduled minutes >=99.5%', 'total scheduled minutes <99.5%'),
+            ('all valid submitted attempts in the window', 'only successful attempts in the window'),
+            ('250 attempts/second aggregate', '251 attempts/second aggregate'),
+            ('all 200 reconnect attempts', 'all 199 reconnect attempts'),
+            ('p95 <=250 ms', 'p95 >=250 ms'),
+            ('An error, timeout, missing ACK', 'An error is ignored, timeout, missing ACK'),
+        ]
+        for old, new in mutations:
+            with self.subTest(old=old):
+                self.assertIn(old, original)
+                path.write_text(original.replace(old, new))
+                self.assertEqual(v.check(self.root)['status'], 'fail')
+        path.write_text(original)
+
+    def test_malformed_nested_types_cli_controlled(self):
+        script = self.root / 'scripts/verification/verify_requirements.py'
+        script.parent.mkdir(parents=True)
+        shutil.copyfile(ROOT / 'scripts/verification/verify_requirements.py', script)
+        path = self.root / v.FIX
+        original = path.read_text()
+        mutations = [lambda d: d['cases'][8].update(requirements=[{}]),
+                     lambda d: d['cases'][8].update(requirements=None),
+                     lambda d: d['cases'][8].update(requirements='R04'),
+                     lambda d: d['cases'][8].update(expected={}),
+                     lambda d: d['cases'].__setitem__(8, []),
+                     lambda d: d.update(cases={})]
+        for mutate in mutations:
+            with self.subTest(mutation=mutate):
+                path.write_text(original)
+                self.mutate_fixture(mutate)
+                run = subprocess.run([sys.executable, str(script)], text=True, capture_output=True)
+                self.assertEqual(run.returncode, 1)
+                self.assertIn(json.loads(run.stdout)['status'], ('fail', 'incomplete'))
+                self.assertNotIn('Traceback', run.stderr)
+
+    def test_cli_unavailable_input(self):
+        script = self.root / 'scripts/verification/verify_requirements.py'
+        script.parent.mkdir(parents=True)
+        shutil.copyfile(ROOT / 'scripts/verification/verify_requirements.py', script)
+        (self.root / v.FIX).unlink()
+        run = subprocess.run([sys.executable, str(script)], text=True, capture_output=True)
+        self.assertEqual(run.returncode, 1)
+        self.assertEqual(json.loads(run.stdout)['status'], 'incomplete')
+        self.assertNotIn('Traceback', run.stderr)
 
     def test_unavailable_input(self):
         (self.root / v.FIX).unlink()
