@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Independent offline acceptance of the installed architecture gate.
 
-Run: python3 -B scripts/verification/verify_architecture_controls.py --base /path/to/engineering20 --tmp /writable/scratch
+Run: python3 -B scripts/verification/verify_architecture_controls.py --base /path/to/engineering20 --tmp /writable/scratch --revision <full-caller-supplied-sha>
 The base must be the actual first-install 8f75 tree. Fixtures are disposable copies.
 """
 import argparse, contextlib, hashlib, importlib.util, io, json, os, platform, re, shutil, stat, sys, tempfile
@@ -13,51 +13,107 @@ PIN = '8f75fdb398dfb48d577135ee08f295a4c4f634b6'
 POL = 'docs/architecture-controls/'
 
 def digest(p): return hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None
-# Projection deliberately omits checkout metadata, dependencies and generated output.
-EXCLUDE = {'.git', 'node_modules', 'dist', '__pycache__'}
+# The protected inventory includes every basename, including generated-looking names.
+# Bounds apply globally, including empty directories; stable checkout is required.
+MAX_ENTRIES = 10000
+MAX_DIRS = 5000
+MAX_DEPTH = 64
+MAX_CONTENT = 128 * 1024 * 1024
 EXTRA = ('docs/architecture-controls/baseline.json', 'docs/architecture-controls/traceability.json',
          'docs/architecture-controls/decisions.json', 'docs/architecture-controls/bootstrap.json',
          'scripts/architecture-controls/check.py', 'scripts/verification/verify_architecture_controls.py',
-         'tests/architecture-controls/test_gate.py',
-         '.github/workflows/architecture-controls.yml')
+         'tests/architecture-controls/test_gate.py', '.github/workflows/architecture-controls.yml')
 
 def projection(root):
-    names = set()
-    def walk(path):
-        if path.name in EXCLUDE: return
-        info = path.lstat()
-        if stat.S_ISDIR(info.st_mode):
-            entries = sorted(path.iterdir())
-            if len(entries) > g.MAX_FILES: raise ValueError('too many entries')
-            for entry in entries: walk(entry)
-        elif stat.S_ISREG(info.st_mode):
-            names.add(path.relative_to(root).as_posix())
-            if len(names) > g.MAX_FILES: raise ValueError('too many files')
-        else: raise ValueError('nonregular projection entry: '+str(path))
-    for name in g.ROOTS:
-        walk(root/name)
-    for name in (*g.FIXED, *EXTRA):
-        if os.path.lexists(root/name): names.add(name)
-    # Include all evidence named by the gate's trace and decision catalogs.
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK
+    def stamp(st):
+        return (st.st_dev, st.st_ino, st.st_mode, st.st_size, st.st_mtime_ns, st.st_ctime_ns)
+    def scan():
+        files = {}; dirs = {}; entries = 0
+        rootfd = os.open(root, flags)
+        def walk(parent, name, path, depth):
+            nonlocal entries
+            if depth > MAX_DEPTH: raise ValueError('projection depth limit')
+            before = os.stat(name, dir_fd=parent, follow_symlinks=False)
+            fd = os.open(name, flags, dir_fd=parent)
+            try:
+                info = os.fstat(fd)
+                if not stat.S_ISDIR(info.st_mode) or stamp(info) != stamp(before): raise ValueError('unstable directory: '+path)
+                names = sorted(os.listdir(fd))
+                dirs[path] = (stamp(info), tuple(names))
+                if len(dirs) > MAX_DIRS: raise ValueError('projection directory limit')
+                entries += len(names)
+                if entries > MAX_ENTRIES: raise ValueError('projection entry limit')
+                for child in names:
+                    childpath = path+'/'+child
+                    st = os.stat(child, dir_fd=fd, follow_symlinks=False)
+                    if stat.S_ISDIR(st.st_mode): walk(fd, child, childpath, depth+1)
+                    elif stat.S_ISREG(st.st_mode): files[childpath] = stamp(st)
+                    else: raise ValueError('nonregular projection entry: '+childpath)
+                if (names != sorted(os.listdir(fd)) or stamp(os.fstat(fd)) != stamp(info) or
+                    stamp(os.stat(name, dir_fd=parent, follow_symlinks=False)) != stamp(info)):
+                    raise ValueError('directory changed: '+path)
+            finally: os.close(fd)
+        try:
+            for path in g.ROOTS:
+                parts = path.split('/'); parent = rootfd; opened = []
+                try:
+                    for part in parts[:-1]:
+                        before = os.stat(part, dir_fd=parent, follow_symlinks=False)
+                        fd = os.open(part, flags, dir_fd=parent); opened.append((parent, part, fd, stamp(before)))
+                        if stamp(os.fstat(fd)) != stamp(before): raise ValueError('unstable ancestor')
+                        parent = fd
+                    walk(parent, parts[-1], path, len(parts))
+                    for par, part, fd, before in opened:
+                        if stamp(os.fstat(fd)) != before or stamp(os.stat(part, dir_fd=par, follow_symlinks=False)) != before: raise ValueError('ancestor changed')
+                finally:
+                    for _, _, fd, _ in reversed(opened): os.close(fd)
+        finally: os.close(rootfd)
+        return files, dirs
+    files, before = scan()
+    names = set(files) | {name for name in (*g.FIXED, *EXTRA) if os.path.lexists(root/name)}
+    contents = {}; total = 0
+    def capture(name):
+        nonlocal total
+        if name not in contents:
+            data = g.read(root, name)
+            total += len(data)
+            if total > MAX_CONTENT: raise ValueError('projection content limit')
+            contents[name] = data
+    for name in sorted(names): capture(name)
     for name in ('docs/architecture-controls/traceability.json', 'docs/architecture-controls/decisions.json'):
-        if name not in names: continue
-        data = json.loads(g.read(root, name))
+        if name not in contents: continue
+        data = json.loads(contents[name])
         if name.endswith('traceability.json'):
             for catalog in ('interfaces', 'controls'):
-                for entry in data[catalog].values(): names.update(entry['evidence'])
+                for entry in data[catalog].values():
+                    for ref in entry['evidence']: capture(ref)
         else:
             for record in data['records']:
-                names.update(record['controls']); names.update(record['test_evidence'])
-    return {name: g.read(root, name) for name in sorted(names)}
+                for ref in (*record['controls'], *record['test_evidence']): capture(ref)
+    after_files, after = scan()
+    if files != after_files or before != after: raise ValueError('projection changed during capture')
+    # Re-read to detect changes between capture and the final membership scan.
+    for name, data in contents.items():
+        if g.read(root, name) != data: raise ValueError('projection file changed: '+name)
+    final_files, final = scan()
+    if files != final_files or before != final: raise ValueError('projection changed during validation')
+    return contents
 
 def snapshot(root):
     return {name: hashlib.sha256(data).hexdigest() for name, data in projection(root).items()}
 
 def copy_projection(root, target):
-    contents = projection(root)  # validate everything before writing the fixture
-    target.mkdir(parents=True)
-    for name, data in contents.items():
-        path = target/name; path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(data)
+    contents = projection(root)  # capture and validate everything before writing
+    target = Path(target)
+    if target.exists() or target.is_symlink(): raise FileExistsError(str(target))
+    staging = Path(tempfile.mkdtemp(prefix='.projection-', dir=target.parent))
+    try:
+        for name, data in contents.items():
+            path = staging/name; path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(data)
+        os.rename(staging, target)
+    finally:
+        if staging.exists(): shutil.rmtree(staging)
 
 def revision(value):
     if not re.fullmatch(r'[0-9a-f]{40}', value): raise argparse.ArgumentTypeError('revision must be a lowercase full 40-character SHA')

@@ -42,6 +42,19 @@
       "requirements_evidence": "Gate FIXED and ROOTS, policy files, and trace and decision evidence references; original dated raw results remain historical.",
       "validation": "Local repaired harness and focused projection tests recorded in external repair artifacts; native CI and independent review remain pending.",
       "follow_through": "Root integrates, independently reviews, runs native CI and post-merge verification before issue 31 closure."
+    },
+    {
+      "owner": "issue 31 projection repair worker",
+      "affected_items": [
+        "acceptance harness",
+        "projection tests",
+        "consumer command"
+      ],
+      "decision": "Preserve every gate ROOTS entry, including generated-looking names; use descriptor-relative bounded scans with membership and identity checks around captured reads.",
+      "rationale": "The 4457 independent review rejected silent protected-boundary omissions and unstable enumeration; outside-root checkout artifacts are not gate inventory.",
+      "requirements_evidence": "Issue 31 boundary detection; rejected review of 4457f010be3fc303df09b7a3216824ebcc207dfe; gate ROOTS and fixed paths.",
+      "validation": "Local repair results and exact file hashes are supplied in the separate repair artifacts; no successor commit identity or independent approval is asserted.",
+      "follow_through": "Fresh independent review of the successor, root integration into PR 511, native CI, protected merge and post-merge verification remain required. Stable checkout is required; no atomic snapshot is claimed."
     }
   ],
   "tested_revision_note": "Historical raw results apply only to revision 556dcf68a0d65c5e08fb4aeab2eaf0226f3c16a5, not later revisions or this repair."
