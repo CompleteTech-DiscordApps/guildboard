@@ -352,6 +352,81 @@ class ReportWriteTests(unittest.TestCase):
                 pinned.close()
 
     @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
+    def test_windows_target_identity_during_concurrent_replacement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / 'report.json'
+            report.write_text('previous')
+            pinned = validator.open_report_directory(root)
+            try:
+                self.assertFalse(pinned.is_case_sensitive())
+                original = pinned.open_relative
+                for sensitive in (False, True):
+                    with self.subTest(injected_sensitive=sensitive):
+                        before = pinned.target_identity(report.name)
+                        lookups = []
+
+                        def replace_after_open(name, access, disposition, insensitive=False):
+                            handle = original(name, access, disposition, insensitive)
+                            if name == report.name:
+                                lookups.append(insensitive)
+                                try:
+                                    validator.save_report(report, {'result': 'pass'}, pinned)
+                                except BaseException:
+                                    pinned.kernel.CloseHandle(handle)
+                                    raise
+                            return handle
+
+                        with mock.patch.object(pinned, 'is_case_sensitive',
+                                               return_value=sensitive), \
+                             mock.patch.object(pinned, 'open_relative',
+                                               side_effect=replace_after_open):
+                            if sensitive:
+                                # Preserve the conservative guard in that mode;
+                                # this injects a mode, not an NTFS mode change.
+                                with self.assertRaisesRegex(OSError, 'ambiguous case-sensitive'):
+                                    pinned.target_identity(report.name)
+                            else:
+                                self.assertEqual(pinned.target_identity(report.name), before)
+                        self.assertEqual(lookups, [False, True] if sensitive else [True])
+                        self.assertEqual(json.loads(report.read_text()), {'result': 'pass'})
+                        self.assertEqual(list(root.iterdir()), [report])
+            finally:
+                pinned.close()
+
+    @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
+    def test_windows_case_mode_query_failure_preserves_report_and_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / 'manifest.json'
+            schema = root / 'schema.json'
+            report = root / 'report.json'
+            manifest.write_text(json.dumps(MANIFEST))
+            schema.write_text(json.dumps(SCHEMA))
+            report.write_text('previous')
+            before = {p: p.read_bytes() for p in (manifest, schema, report)}
+            original = validator.open_report_directory
+
+            def deny_case_query(path):
+                pinned = original(path)
+                def denied(*args):
+                    pinned.ctypes.set_last_error(5)
+                    return 0
+                pinned.kernel.GetFileInformationByHandleEx = denied
+                return pinned
+
+            with mock.patch.object(validator, 'open_report_directory',
+                                   side_effect=deny_case_query), \
+                 contextlib.redirect_stdout(io.StringIO()) as output:
+                code = validator.main(['--manifest', str(manifest), '--schema', str(schema),
+                                       '--report', str(report)])
+            self.assertEqual(code, 1)
+            self.assertEqual(json.loads(output.getvalue())['result'], 'fail')
+            self.assertIn('report path:', json.loads(output.getvalue())['errors'][0])
+            self.assertEqual({p: p.read_bytes() for p in before}, before)
+            self.assertEqual(set(root.iterdir()), set(before))
+
+    @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
     def test_windows_native_rename_replaces_unicode_destination(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
