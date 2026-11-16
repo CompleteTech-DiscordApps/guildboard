@@ -156,10 +156,35 @@ def check_trace(root):
     expected = {f'R{i:02}' for i in range(1, 9)}
     require(type(t['requirements']) is dict and set(t['requirements']) == expected, 'missing or unknown requirement')
     require({c['id'] for c in cases} == {f'UC{i:02}' for i in range(1, 21)}, 'invalid canonical use cases')
+    # Reviewed semantic links supplement sparse fixture use_cases arrays. Update only
+    # with a corresponding contract review, not from the proposed trace itself.
+    semantic = {
+        'R01': {'I01'}, 'R02': {'I03'}, 'R03': {'I01', 'I02'},
+        'R04': {'I02', 'I03', 'I04', 'I05', 'I11', 'I13', 'I15'},
+        'R05': {'I05', 'I06', 'I07', 'I08', 'I09', 'I14'},
+        'R06': {'I06', 'I11', 'I12'}, 'R07': set(), 'R08': set(),
+    }
+    reviewed_interfaces = {
+        'R01': {'activity', 'session', 'collaboration', 'storage'},
+        'R02': {'activity', 'session', 'collaboration'},
+        'R03': {'session', 'bot', 'contracts'},
+        'R04': {'session', 'bot', 'collaboration', 'storage'},
+        'R05': {'collaboration', 'storage', 'contracts'},
+        'R06': {'session', 'collaboration', 'storage', 'deployment'},
+        'R07': {'session', 'bot', 'activity', 'collaboration', 'storage', 'deployment', 'contracts'},
+        'R08': {'collaboration', 'storage', 'deployment'},
+    }
+    reviewed_controls = {
+        'R01': {'authority', 'durability', 'bounded'}, 'R02': {'authority'},
+        'R03': {'authority', 'bounded'}, 'R04': {'authority', 'bounded'},
+        'R05': {'authority', 'durability', 'bounded'}, 'R06': {'bounded', 'durability'},
+        'R07': {'authority', 'durability', 'bounded', 'release'}, 'R08': {'durability', 'release'},
+    }
     for rid, entry in t['requirements'].items():
         exact(entry, ('use_cases', 'interfaces', 'controls', 'interactions', 'canonical_acceptance'), rid)
         expected_uc = {c['id'] for c in cases if rid in c['requirements']}
-        expected_i = {i['id'] for i in interactions if set(i['use_cases']) & expected_uc}
+        expected_i = semantic[rid]
+        require(expected_i <= {i['id'] for i in interactions}, rid + ' unknown interaction')
         expected_f = {f for i in interactions if i['id'] in expected_i for f in i['contract_scenarios']}
         for key, valid in [('use_cases', expected_uc), ('interactions', expected_i), ('canonical_acceptance', expected_f)]:
             v = entry[key]
@@ -167,7 +192,7 @@ def check_trace(root):
         require(expected_f <= all_f, 'unknown canonical acceptance')
         for key in ('interfaces', 'controls'):
             v = entry[key]
-            require(type(v) is list and v and len(v) == len(set(v)) and set(v) <= set(t[key]), rid + ' invalid ' + key)
+            require(type(v) is list and v and len(v) == len(set(v)) and set(v) <= set(t[key]) and set(v) == (reviewed_interfaces if key == 'interfaces' else reviewed_controls)[rid], rid + ' invalid ' + key)
 
 def check(base, current, old=None):
     old, new = baseline(base) if old is None else old, baseline(current)

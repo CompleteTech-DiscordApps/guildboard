@@ -155,12 +155,14 @@
         "F12",
         "F16",
         "F23",
+        "F24",
         "F25",
         "F26",
         "F27",
         "F28",
         "F29",
         "F31",
+        "F33",
         "F36"
       ],
       "controls": [
@@ -173,7 +175,8 @@
         "I04",
         "I05",
         "I11",
-        "I13"
+        "I13",
+        "I15"
       ],
       "interfaces": [
         "session",
@@ -196,14 +199,18 @@
       "canonical_acceptance": [
         "F05",
         "F06",
+        "F07",
+        "F10",
         "F17",
         "F18",
         "F19",
+        "F21",
         "F22",
         "F23",
         "F25",
         "F26",
         "F31",
+        "F32",
         "F36"
       ],
       "controls": [
@@ -215,7 +222,9 @@
         "I05",
         "I06",
         "I07",
-        "I08"
+        "I08",
+        "I09",
+        "I14"
       ],
       "interfaces": [
         "collaboration",
@@ -233,12 +242,22 @@
       ]
     },
     "R06": {
-      "canonical_acceptance": [],
+      "canonical_acceptance": [
+        "F05",
+        "F06",
+        "F12",
+        "F13",
+        "F29"
+      ],
       "controls": [
         "bounded",
         "durability"
       ],
-      "interactions": [],
+      "interactions": [
+        "I06",
+        "I11",
+        "I12"
+      ],
       "interfaces": [
         "session",
         "collaboration",
