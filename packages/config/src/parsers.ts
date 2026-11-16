@@ -17,7 +17,11 @@ export function parseDatabaseUrl(value: string | undefined): string | undefined 
   }
   try {
     const parsed = new URL(value);
-    if (parsed.protocol !== "mysql:" || parsed.hostname.length === 0 || parsed.pathname.length <= 1) {
+    if (
+      parsed.protocol !== "mysql:" ||
+      parsed.hostname.length === 0 ||
+      parsed.pathname.length <= 1
+    ) {
       return undefined;
     }
     return value;

@@ -12,13 +12,27 @@
     "planning:audit": "python3 scripts/github-bootstrap/audit.py",
     "build:config": "npm run build --workspace @guildboard/config",
     "test:config": "npm run test --workspace @guildboard/config",
-    "typecheck:config": "npm run typecheck --workspace @guildboard/config"
+    "typecheck:config": "npm run typecheck --workspace @guildboard/config",
+    "lint": "eslint apps packages scripts/engineering tests/engineering",
+    "typecheck": "node scripts/engineering/typecheck.mjs",
+    "format:check": "prettier --check \"apps/*/{package.json,tsconfig.json,src/**/*.ts}\" \"packages/*/{package.json,tsconfig.json,src/**/*.ts,test/**/*.ts}\" \"scripts/engineering/*.mjs\" \"tests/engineering/*.mjs\" eslint.config.mjs tsconfig.base.json .prettierrc.json",
+    "boundaries": "node scripts/engineering/boundaries.mjs",
+    "test:engineering": "node --test tests/engineering/*.test.mjs",
+    "build": "node scripts/engineering/build.mjs"
   },
   "engines": {
     "node": ">=24 <25"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "eslint": "10.15.0",
+    "typescript-eslint": "8.72.2",
+    "prettier": "3.10.1"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    }
   }
 }
