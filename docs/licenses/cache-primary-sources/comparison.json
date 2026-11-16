@@ -1,0 +1,78 @@
+{
+  "candidate_context": "3e2b2a63e93c6b0b1f11d5b09607205d961817de",
+  "not_in_candidate": true,
+  "observed_at": 1794859327.1672297,
+  "verification": [
+    {
+      "check": "Exact source/tree blob sizes and SHA1 identities",
+      "status": "passed",
+      "evidence": [
+        {
+          "file": "protoc-2.9.5-root-LICENSE.txt",
+          "tree_path": "LICENSE",
+          "bytes": 10140,
+          "sha256": "5e3400b93bbb099e83e52bab885e7441750673c21f97988ca3f1240639b63283",
+          "git_blob_sha1": "298f0e2665e512a7d5053faf2ce4793c281efe6a",
+          "tree_observation": "protoc-2.9.5-tree.json"
+        },
+        {
+          "file": "protoc-2.9.5-source-package.json.txt",
+          "tree_path": "packages/protoc/package.json",
+          "bytes": 589,
+          "sha256": "c5f7a298e967fa78b3e1b256178689e4b8368cf43d18324328784b33fbad5e96",
+          "git_blob_sha1": "9c70f976506385031489296b44a9f108b6ee0ea0",
+          "tree_observation": "protoc-2.9.5-tree.json"
+        },
+        {
+          "file": "entities-3.1.0-root-LICENSE.txt",
+          "tree_path": "LICENSE",
+          "bytes": 1064,
+          "sha256": "750cb3fb6362804957ef52caaf9b5c824015be44d494637330d7cd8834d31d40",
+          "git_blob_sha1": "561468f111a66df52cc0f1934642bb9fdd22a212",
+          "tree_observation": "entities-3.1.0-tree.json"
+        },
+        {
+          "file": "entities-3.1.0-source-package.json.txt",
+          "tree_path": "Entity/package.json",
+          "bytes": 1270,
+          "sha256": "548526ce0e1cad9ffe904fba19067013c9fea336eafd3cd52a337ec44406c9ed",
+          "git_blob_sha1": "a45f577462532b13ce4362d33c71d88787bee872",
+          "tree_observation": "entities-3.1.0-tree.json"
+        },
+        {
+          "file": "entities-3.1.0-source-README.md.txt",
+          "tree_path": "Entity/README.md",
+          "bytes": 3485,
+          "sha256": "7e3484a07c208b5c5813290a993244c6841efc3d4241c29a07ef948e8129a758",
+          "git_blob_sha1": "73717d6ea7d910b9b070ba89ede7cec0655c477f",
+          "tree_observation": "entities-3.1.0-tree.json"
+        }
+      ]
+    }
+  ],
+  "package_comparison": {
+    "protoc": "589byte manifest byte-identical to archive; exact declared2.9.5 source",
+    "entities": {
+      "manifest_delta": {
+        "version": {
+          "archive": "3.1.0",
+          "source": "3.0.0"
+        }
+      },
+      "README": "3485bytes identical",
+      "limit": "Registry gitHead association retained but source version differs; no silent assertion source manifest is3.1.0"
+    }
+  },
+  "root_inspection": {
+    "status": "inspection-only",
+    "protoc": "Full10140byte Apache2.0 root text read: complete copyright grant/Work definition/4(c), patent grant termination, license/changedfile/source/NOTICE duties, default contributions, restricted trademark, ASIS/liability and additional liability indemnity; ends after9 with no appendix. Generated cache omissions preserved separately; source association is not runtime/code inclusion proof. Package installs protoc; this wrapper root grant does not establish downloaded compiler grants.",
+    "entities": "Full1064byte MIT root grant read, copyright2026Nodable; retain copyright and permission in copies/substantial portions with ASIS warranty/liability text. Root-source association/version mismatch is retained; no release/runtime authority conclusion."
+  },
+  "limits": [
+    "No package code executed/extracted/installed",
+    "Root notices absent from selected archive root paths; no blanket claim absence elsewhere",
+    "Supplied API consistency/Gitblob hashes not independent Git authentication or signing",
+    "No whole Actions bundle, downloaded binaries, shipping or legal clearance"
+  ],
+  "next_action": "Independent bounded source observation verification and interpretation before preparing separate successor evidence candidate"
+}

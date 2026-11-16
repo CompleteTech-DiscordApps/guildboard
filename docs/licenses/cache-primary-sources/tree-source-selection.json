@@ -1,0 +1,50 @@
+[
+  {
+    "stem": "protoc-2.9.5",
+    "sha256": "1c672873997a5f7d310af14c51cd88e5bddac3921f219c5f85259879da91252c",
+    "api_reported_sha": "57a2430d4c035b1b40e875e4177f772a4f0df976",
+    "entries": 846,
+    "selected": [
+      {
+        "path": "LICENSE",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "298f0e2665e512a7d5053faf2ce4793c281efe6a",
+        "size": 10140,
+        "url": "https://api.github.com/repos/timostamm/protobuf-ts/git/blobs/298f0e2665e512a7d5053faf2ce4793c281efe6a"
+      },
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7177d2e8c13113f95c441a7cce55d65592770904",
+        "size": 202,
+        "url": "https://api.github.com/repos/timostamm/protobuf-ts/git/blobs/7177d2e8c13113f95c441a7cce55d65592770904"
+      },
+      {
+        "path": "packages/protoc/package.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9c70f976506385031489296b44a9f108b6ee0ea0",
+        "size": 589,
+        "url": "https://api.github.com/repos/timostamm/protobuf-ts/git/blobs/9c70f976506385031489296b44a9f108b6ee0ea0"
+      }
+    ]
+  },
+  {
+    "stem": "entities-3.1.0",
+    "sha256": "10c49f7c9010cabd1363e4a5dfa8499d8424c1b9e7ba5d7b80ca2f18f95bf0e2",
+    "api_reported_sha": "ac48e7ea591da372be023a481875c747535812b3",
+    "entries": 26,
+    "selected": [
+      {
+        "path": "LICENSE",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "561468f111a66df52cc0f1934642bb9fdd22a212",
+        "size": 1064,
+        "url": "https://api.github.com/repos/nodable/val-parsers/git/blobs/561468f111a66df52cc0f1934642bb9fdd22a212"
+      }
+    ]
+  }
+]

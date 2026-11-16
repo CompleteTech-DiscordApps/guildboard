@@ -1,0 +1,16 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "content": "ewogICJuYW1lIjogIkBwcm90b2J1Zi10cy9wcm90b2MiLAogICJ2ZXJzaW9u\nIjogIjIuOS41IiwKICAiZGVzY3JpcHRpb24iOiAiSW5zdGFsbHMgdGhlIHBy\nb3RvY29sIGJ1ZmZlciBjb21waWxlciBcInByb3RvY1wiIGZvciB5b3UuIiwK\nICAibGljZW5zZSI6ICJBcGFjaGUtMi4wIiwKICAiYXV0aG9yIjogIlRpbW8g\nU3RhbW0gPHRzQHRpbW9zdGFtbS5jb20+IiwKICAiaG9tZXBhZ2UiOiAiaHR0\ncHM6Ly9naXRodWIuY29tL3RpbW9zdGFtbS9wcm90b2J1Zi10cyIsCiAgImtl\neXdvcmRzIjogWwogICAgIlByb3RvY29sIEJ1ZmZlcnMiLAogICAgInByb3Rv\nYnVmIiwKICAgICJwcm90b2MiLAogICAgImluc3RhbGxhdGlvbiIKICBdLAog\nICJyZXBvc2l0b3J5IjogewogICAgInR5cGUiOiAiZ2l0IiwKICAgICJ1cmwi\nOiAiaHR0cHM6Ly9naXRodWIuY29tL3RpbW9zdGFtbS9wcm90b2J1Zi10cy5n\naXQiLAogICAgImRpcmVjdG9yeSI6ICJwYWNrYWdlcy9wcm90b2MiCiAgfSwK\nICAiYmluIjogewogICAgInByb3RvYyI6ICIuL3Byb3RvYy5qcyIKICB9LAog\nICJwdWJsaXNoQ29uZmlnIjogewogICAgImFjY2VzcyI6ICJwdWJsaWMiCiAg\nfQp9Cg==\n",
+    "encoding": "base64",
+    "sha": "9c70f976506385031489296b44a9f108b6ee0ea0",
+    "display_url": "https://github.com/timostamm/protobuf-ts/blob/57a2430d4c035b1b40e875e4177f772a4f0df976/packages/protoc/package.json",
+    "display_title": "package.json"
+  },
+  "isError": false
+}

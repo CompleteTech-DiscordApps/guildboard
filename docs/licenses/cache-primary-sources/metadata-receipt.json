@@ -1,0 +1,65 @@
+{
+  "observed_at": 1794858781.2792299,
+  "entries": [
+    {
+      "name": "@protobuf-ts/protoc",
+      "version": "2.9.5",
+      "metadata_url": "https://registry.npmjs.org/%40protobuf-ts%2Fprotoc/2.9.5",
+      "metadata_file": "protoc-2.9.5-metadata.json",
+      "metadata_bytes": 1470,
+      "metadata_sha256": "ab5f091f504f2e25c14a86e4ef39922424570a9d4963379c80a879e04d429453",
+      "dist": {
+        "shasum": "34afeb7bf9269e3831331b9d7010e7842ac1d291",
+        "tarball": "https://registry.npmjs.org/@protobuf-ts/protoc/-/protoc-2.9.5.tgz",
+        "fileCount": 5,
+        "integrity": "sha512-n6a7OHfr/Ubw483L6kNJB0wBCe/Ops0A652zB6J6nR2x1o+pjVFrMCeeQQsqxkYpQwQ8FCIETSxrMpfOBKTIvQ==",
+        "signatures": [
+          {
+            "sig": "MEYCIQDmhXPxV6kADcieunDRojFg0ECybDfnn3MUmdhPSn2tHQIhAPCn6mjJ146ebD/tKW0EkEFbrsKKrVp4NLibWvbfo1fc",
+            "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+          }
+        ],
+        "unpackedSize": 20738
+      },
+      "repository": {
+        "url": "git+https://github.com/timostamm/protobuf-ts.git",
+        "type": "git",
+        "directory": "packages/protoc"
+      },
+      "gitHead": "57a2430d4c035b1b40e875e4177f772a4f0df976",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "@nodable/entities",
+      "version": "3.1.0",
+      "metadata_url": "https://registry.npmjs.org/%40nodable%2Fentities/3.1.0",
+      "metadata_file": "entities-3.1.0-metadata.json",
+      "metadata_bytes": 2200,
+      "metadata_sha256": "cd4da47c204cb1f8e78e8e1d779df058edd1c079a3beac2d464e8ae37ad1ba8a",
+      "dist": {
+        "shasum": "2ab366e0e607fdef8d65c5d84c58d191812bbd4b",
+        "tarball": "https://registry.npmjs.org/@nodable/entities/-/entities-3.1.0.tgz",
+        "fileCount": 9,
+        "integrity": "sha512-LsS/DjHr+uDM647Gru/cA8+J3a3HfhttwCKLyuoyN7yXTFCxKBtSgMQBvrW9yNPa2/zDRUNuGPaH5QUFoa4arQ==",
+        "signatures": [
+          {
+            "sig": "MEUCIDrM2SkIGn7UJ69UN7jDdWnCew5vf/ig0f9qwerzeXErAiEA5j9Y/8tRwmprq9cdQbvtuy0QU1y+hXl8CPHSKehjSZg=",
+            "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+          },
+          {
+            "sig": "MEQCIAsectRrxcPJiDDEuMfQ3L8obRA9eqJjLQRpStYXut33AiBv3J+QPWqvI7FrcSwloldqpLntq/jAvDtxFpWUPgjhVQ==",
+            "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+          }
+        ],
+        "unpackedSize": 74539
+      },
+      "repository": {
+        "url": "git+https://github.com/nodable/val-parsers.git",
+        "type": "git"
+      },
+      "gitHead": "ac48e7ea591da372be023a481875c747535812b3",
+      "license": "MIT"
+    }
+  ],
+  "meaning": "Exact version registry metadata observations only; not package grant, signature/attestation or Actions bundle proof"
+}

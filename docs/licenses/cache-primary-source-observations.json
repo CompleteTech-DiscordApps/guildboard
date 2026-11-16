@@ -1,0 +1,240 @@
+{
+  "schema_version": 1,
+  "repository": "CompleteTech-DiscordApps/guildboard",
+  "source_context": {
+    "base_sha": "3cff449d442821ff73c9d329e3f6beacc6286ab2",
+    "base_snapshot": "editor14-source-refresh-candidate",
+    "base_manifest": "editor14-source-refresh-provenance.json",
+    "input_manifest": "license16-cache-grant-gap-sources/sha256-manifest.json",
+    "input_manifest_sha256": "bbb4f8cf23596fb6e57710384436f12e961b3adf1ee1e827f249fe6f8efa4aa4",
+    "note": "The source comparison receipt names an earlier candidate context; retained unchanged as historical observation."
+  },
+  "raw_text_files": [
+    {
+      "path": "docs/licenses/cache-primary-sources/archive-receipt.json",
+      "sha256": "c745ee55794650e9e1e26d867372366210c520741247de0b55bd75d59be3083a",
+      "bytes": 3401
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/comparison.json",
+      "sha256": "6208a45cde2780adc08d3f4cc3b95daba6837eaaa748689a2d1edbe7b88f61bd",
+      "bytes": 3834
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/entities-3.1.0-README.md.txt",
+      "sha256": "7e3484a07c208b5c5813290a993244c6841efc3d4241c29a07ef948e8129a758",
+      "bytes": 3485
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/entities-3.1.0-metadata.json",
+      "sha256": "cd4da47c204cb1f8e78e8e1d779df058edd1c079a3beac2d464e8ae37ad1ba8a",
+      "bytes": 2200
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/entities-3.1.0-package.json.txt",
+      "sha256": "81fc13661f9431f9f72ae5a1723482a1bcb473af463b93ca0b27c42461a6c6c9",
+      "bytes": 1271
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/entities-3.1.0-root-LICENSE.txt",
+      "sha256": "750cb3fb6362804957ef52caaf9b5c824015be44d494637330d7cd8834d31d40",
+      "bytes": 1064
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/entities-3.1.0-root-LICENSE.txt.response.json",
+      "sha256": "e00c598e70465103dfede305e04dfa2066eb4ca3f32784322dd931268137b1e9",
+      "bytes": 1855
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/entities-3.1.0-source-README.md.txt",
+      "sha256": "7e3484a07c208b5c5813290a993244c6841efc3d4241c29a07ef948e8129a758",
+      "bytes": 3485
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/entities-3.1.0-source-README.md.txt.response.json",
+      "sha256": "b3d9e3ba75bd7f205bad5a8959739af963aed036ce937d8dac08c367998faf7e",
+      "bytes": 5202
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/entities-3.1.0-source-package.json.txt",
+      "sha256": "548526ce0e1cad9ffe904fba19067013c9fea336eafd3cd52a337ec44406c9ed",
+      "bytes": 1270
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/entities-3.1.0-source-package.json.txt.response.json",
+      "sha256": "5d7f7086f86ec29850e6b389c4a09827874fc35b0003731c06fcea309919689f",
+      "bytes": 2158
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/entities-3.1.0-tree.json",
+      "sha256": "10c49f7c9010cabd1363e4a5dfa8499d8424c1b9e7ba5d7b80ca2f18f95bf0e2",
+      "bytes": 6121
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/metadata-receipt.json",
+      "sha256": "75f4c2b69818f2b54fed6584cd82f537eeffcd0d9c0720c7cbf57a92fbc3e91f",
+      "bytes": 2730
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/protoc-2.9.5-README.md.txt",
+      "sha256": "90821bb0840c3b5ad9c1df73a7c1468eabf44cec2aacdb80c5c905739dd8c6b8",
+      "bytes": 1475
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/protoc-2.9.5-metadata.json",
+      "sha256": "ab5f091f504f2e25c14a86e4ef39922424570a9d4963379c80a879e04d429453",
+      "bytes": 1470
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/protoc-2.9.5-package.json.txt",
+      "sha256": "c5f7a298e967fa78b3e1b256178689e4b8368cf43d18324328784b33fbad5e96",
+      "bytes": 589
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/protoc-2.9.5-root-LICENSE.txt",
+      "sha256": "5e3400b93bbb099e83e52bab885e7441750673c21f97988ca3f1240639b63283",
+      "bytes": 10140
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/protoc-2.9.5-root-LICENSE.txt.response.json",
+      "sha256": "187e1aff03734a4360acfc44218fc47e9826181a6964a8cf82c15e74f18def31",
+      "bytes": 14361
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/protoc-2.9.5-source-package.json.txt",
+      "sha256": "c5f7a298e967fa78b3e1b256178689e4b8368cf43d18324328784b33fbad5e96",
+      "bytes": 589
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/protoc-2.9.5-source-package.json.txt.response.json",
+      "sha256": "83d1585d8b658ceae960559075728e88c3f0fe9934e597e218678f9286ee69e1",
+      "bytes": 1231
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/protoc-2.9.5-tree.json",
+      "sha256": "1c672873997a5f7d310af14c51cd88e5bddac3921f219c5f85259879da91252c",
+      "bytes": 218837
+    },
+    {
+      "path": "docs/licenses/cache-primary-sources/tree-source-selection.json",
+      "sha256": "5ff3cc60c318ec56063626edc56da5e41b4675ea4302be9246aa46c514fa54bb",
+      "bytes": 1663
+    }
+  ],
+  "private_archives": [
+    {
+      "package": "@protobuf-ts/protoc",
+      "version": "2.9.5",
+      "private_archive_filename": "protoc-2.9.5.tgz",
+      "delivered": false,
+      "sha256": "7b4f15c30f6eed732ced38f7a3257f3e62b7375287be2756a2cceb1218078040",
+      "bytes": 5955,
+      "sha512_sri": "sha512-n6a7OHfr/Ubw483L6kNJB0wBCe/Ops0A652zB6J6nR2x1o+pjVFrMCeeQQsqxkYpQwQ8FCIETSxrMpfOBKTIvQ==",
+      "sha512_sri_recomputed": true,
+      "prior_receipt_observations": {
+        "expanded_bytes": 25600,
+        "regular_member_count": 5,
+        "regular_member_paths": [
+          "package/installed/.gitignore",
+          "package/protoc.js",
+          "package/util.js",
+          "package/package.json",
+          "package/README.md"
+        ],
+        "selected_root_LICENSE_or_NOTICE": false,
+        "archive_inspection_repeated": false
+      }
+    },
+    {
+      "package": "@nodable/entities",
+      "version": "3.1.0",
+      "private_archive_filename": "entities-3.1.0.tgz",
+      "delivered": false,
+      "sha256": "3b7cbfe696f570ada57df3eb6981f6c668737a2158ec88a53134f243f9f1db8e",
+      "bytes": 22363,
+      "sha512_sri": "sha512-LsS/DjHr+uDM647Gru/cA8+J3a3HfhttwCKLyuoyN7yXTFCxKBtSgMQBvrW9yNPa2/zDRUNuGPaH5QUFoa4arQ==",
+      "sha512_sri_recomputed": true,
+      "prior_receipt_observations": {
+        "expanded_bytes": 82432,
+        "regular_member_count": 9,
+        "regular_member_paths": [
+          "package/src/all-entities.js",
+          "package/src/entities.js",
+          "package/src/EntityDecoder.js",
+          "package/src/EntityEncoder.js",
+          "package/src/entityTries.js",
+          "package/src/index.js",
+          "package/package.json",
+          "package/README.md",
+          "package/src/index.d.ts"
+        ],
+        "selected_root_LICENSE_or_NOTICE": false,
+        "archive_inspection_repeated": false
+      }
+    }
+  ],
+  "provenance": {
+    "metadata_receipt": "docs/licenses/cache-primary-sources/metadata-receipt.json",
+    "archive_receipt": "docs/licenses/cache-primary-sources/archive-receipt.json",
+    "tree_selection": "docs/licenses/cache-primary-sources/tree-source-selection.json",
+    "comparison": "docs/licenses/cache-primary-sources/comparison.json",
+    "limits": [
+      "Previously acquired material; no new download, extraction, execution, installation, or fresh archive inspection.",
+      "Archive hashes and SRI recomputed on private bytes; prior archive member and expanded byte counts are observations, not fresh verification.",
+      "Metadata gitHead, API tree and blob identities are observations, not independent Git commit authentication or signature proof."
+    ]
+  },
+  "packages": [
+    {
+      "name": "@protobuf-ts/protoc",
+      "version": "2.9.5",
+      "metadata_gitHead": "57a2430d4c035b1b40e875e4177f772a4f0df976",
+      "root_license": "docs/licenses/cache-primary-sources/protoc-2.9.5-root-LICENSE.txt",
+      "root_license_bytes": 10140,
+      "root_license_sha256": "5e3400b93bbb099e83e52bab885e7441750673c21f97988ca3f1240639b63283",
+      "observation": "Full Apache 2.0 root grant supplies the three phrases missing from generated cache text; the original omission finding remains open. Release wrapper package manifest equals pinned source package manifest byte-for-byte. Prior archive receipt reports no selected root LICENSE or NOTICE.",
+      "unresolved": [
+        "Downloaded compiler licensing",
+        "Applicability to actual bundle",
+        "Original generated cache omissions and holder findings"
+      ],
+      "cache_review": {
+        "path": "docs/licenses/action-cache-text-reviews.json",
+        "record_key": "97ac6d352db28102714718a6df6d0a94510d0e327ee8e2fc0132a8d3f1c5fe85"
+      },
+      "cache_catalog": {
+        "path": "docs/licenses/action-cache-source-evidence.json",
+        "membership_path": ".licenses/npm/@protobuf-ts/protoc.dep.yml",
+        "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020"
+      }
+    },
+    {
+      "name": "@nodable/entities",
+      "version": "3.1.0",
+      "metadata_gitHead": "ac48e7ea591da372be023a481875c747535812b3",
+      "root_license": "docs/licenses/cache-primary-sources/entities-3.1.0-root-LICENSE.txt",
+      "root_license_bytes": 1064,
+      "root_license_sha256": "750cb3fb6362804957ef52caaf9b5c824015be44d494637330d7cd8834d31d40",
+      "observation": "Full MIT root grant names 2026 Nodable. Source Entity/package.json declares 3.0.0 while release declares 3.1.0; parsed manifests differ only in version. Source and release READMEs are byte-identical. Prior archive receipt reports no selected root LICENSE or NOTICE.",
+      "unresolved": [
+        "Source/release association",
+        "Copyright and grant applicability",
+        "Original reference-only cache and holder findings"
+      ],
+      "cache_review": {
+        "path": "docs/licenses/action-cache-text-reviews.json",
+        "record_key": "adc37366f403835c1470ab2df93d3837d4719372fc1ef8593d922e06f033f8b2"
+      },
+      "cache_catalog": {
+        "path": "docs/licenses/action-cache-source-evidence.json",
+        "membership_path": ".licenses/npm/@nodable/entities.dep.yml",
+        "commit": "249970729cb0ef3589644e2896645e5dc5ba9c38"
+      }
+    }
+  ],
+  "limits": [
+    "This is retained evidence, not legal, shipping, runtime, issue or release approval.",
+    "The six npm unknowns remain: Prettier classification, terms 5/6/180, bundled AUTHORS gap, and distribution scope.",
+    "Prior source review does not approve this candidate; fresh independent candidate reviews are required."
+  ]
+}
