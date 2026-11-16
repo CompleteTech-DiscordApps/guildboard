@@ -73,3 +73,71 @@ test("invalid config and symlink rejected", () =>
     assert.match(errors, /invalid tsconfig/);
     assert.match(errors, /symlink forbidden/);
   }));
+
+test("builtin aliases follow inherited paths and workspace graph for type and value imports", () =>
+  fixture((root) => {
+    const api = path.join(root, "apps/api");
+    fs.writeFileSync(
+      path.join(root, "base.json"),
+      JSON.stringify({
+        compilerOptions: {
+          baseUrl: ".",
+          paths: {
+            fs: ["apps/bot/src/index.ts"],
+            "node:f*": ["apps/bot/src/index.ts"],
+            "path/*": ["packages/auth/src/*"],
+          },
+        },
+      }),
+    );
+    fs.writeFileSync(
+      path.join(api, "tsconfig.json"),
+      JSON.stringify({ extends: "../../base.json" }),
+    );
+    const file = path.join(api, "src/index.ts");
+    for (const source of [
+      "import type { X } from 'fs';",
+      "import { X } from 'fs';",
+      "import type { X } from 'node:fs';",
+      "import { X } from 'node:fs';",
+    ]) {
+      fs.writeFileSync(file, source);
+      assert.match(checkBoundaries(root).join("\n"), /forbidden dependency apps\/api -> apps\/bot/);
+    }
+    fs.writeFileSync(file, "import { X } from 'path/index';");
+    assert.deepEqual(checkBoundaries(root), []);
+  }));
+
+test("unshadowed builtins work on server and are forbidden in browser", () =>
+  fixture((root) => {
+    for (const name of ["fs", "node:fs"]) {
+      for (const form of ["import type { X }", "import { X }"]) {
+        const source = `${form} from '${name}';`;
+        const server = path.join(root, "apps/api/src/index.ts");
+        const client = path.join(root, "apps/activity/src/index.ts");
+        fs.writeFileSync(server, source);
+        assert.deepEqual(checkBoundaries(root), []);
+        fs.writeFileSync(client, source);
+        assert.match(checkBoundaries(root).join("\n"), /server builtin/);
+        fs.writeFileSync(client, "export {};\n");
+      }
+    }
+  }));
+
+test("matching unresolved builtin paths are rejected and wildcard suffixes match precisely", () =>
+  fixture((root) => {
+    const api = path.join(root, "apps/api");
+    fs.writeFileSync(
+      path.join(api, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: { baseUrl: ".", paths: { "f*": ["missing/*"], "node:*s": ["missing/*"] } },
+      }),
+    );
+    const file = path.join(api, "src/index.ts");
+    for (const name of ["fs", "node:fs"]) {
+      fs.writeFileSync(file, `import '${name}';`);
+      assert.match(checkBoundaries(root).join("\n"), /unresolved local module/);
+    }
+    fs.writeFileSync(file, "import 'node:path';");
+    assert.deepEqual(checkBoundaries(root), []);
+  }));

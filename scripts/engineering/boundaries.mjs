@@ -93,10 +93,20 @@ export function checkBoundaries(root) {
             return;
           }
           const name = specifier.text;
-          if (builtins.has(name.replace(/^node:/, "")) || name.startsWith("node:")) {
-            if (browser.has(key)) fail(node, `server builtin ${name}`);
+          const builtin = builtins.has(name.replace(/^node:/, "")) || name.startsWith("node:");
+          const matchingPath = Object.keys(parsed.options.paths || {}).some((pattern) => {
+            const star = pattern.indexOf("*");
+            return star < 0
+              ? name === pattern
+              : name.startsWith(pattern.slice(0, star)) &&
+                  name.endsWith(pattern.slice(star + 1)) &&
+                  name.length >= pattern.length - 1;
+          });
+          if (builtin && browser.has(key)) {
+            fail(node, `server builtin ${name}`);
             return;
           }
+          if (builtin && !matchingPath) return;
           let target;
           if (name.startsWith("@guildboard/")) {
             target = keys.find((item) => item.split("/")[1] === name.split("/")[1]);
@@ -116,11 +126,12 @@ export function checkBoundaries(root) {
                 return;
               }
               target = resolvedOwner;
-            } else if (!real.includes(`${path.sep}node_modules${path.sep}`)) {
+            } else if (builtin || !real.includes(`${path.sep}node_modules${path.sep}`)) {
               fail(node, `module outside known workspace: ${name}`);
               return;
             }
           } else if (
+            (builtin && matchingPath) ||
             name.startsWith(".") ||
             name.startsWith("/") ||
             name.startsWith("#") ||
