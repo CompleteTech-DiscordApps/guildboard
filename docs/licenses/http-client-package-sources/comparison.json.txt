@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "version": "3.0.2",
+      "cache_declared_license": "other",
+      "registry_and_package_declared_license": "MIT",
+      "exact_full_license_bytes_match": true,
+      "bytes": 1119,
+      "sha256": "a338a09e00418402e779e3ff372a2bca3be66259d6192e0a9fe2949969d648f3",
+      "conditional_observation": "Release LICENSE is exact MIT-form text preserved in generated cache; retain copyright/permission notices and warranty/liability disclaimer. Classification discrepancy reconciled with exact registry archive, preserving original cache declaration. Actual Actions bundle/execution membership remains unproven."
+    },
+    {
+      "version": "4.0.1",
+      "cache_declared_license": "other",
+      "registry_and_package_declared_license": "MIT",
+      "exact_full_license_bytes_match": true,
+      "bytes": 1119,
+      "sha256": "a338a09e00418402e779e3ff372a2bca3be66259d6192e0a9fe2949969d648f3",
+      "conditional_observation": "Release LICENSE is exact MIT-form text preserved in generated cache; retain copyright/permission notices and warranty/liability disclaimer. Classification discrepancy reconciled with exact registry archive, preserving original cache declaration. Actual Actions bundle/execution membership remains unproven."
+    }
+  ],
+  "owner": "01a1d2c4-663a-7181-824d-febb00e1dd4a",
+  "next_action": "Fresh independent package source verification and interpretation before integration; original cache records immutable"
+}

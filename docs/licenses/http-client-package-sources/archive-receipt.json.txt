@@ -1,0 +1,61 @@
+{
+  "observed_at": 1794857782.9156134,
+  "entries": [
+    {
+      "version": "3.0.2",
+      "metadata_sha256": "40c1e46bbf2d2c08765907f2a588e8f41ee258155df5fd47aa782d4e44980ec4",
+      "url": "https://registry.npmjs.org/@actions/http-client/-/http-client-3.0.2.tgz",
+      "archive_file": "3.0.2.tgz",
+      "archive_bytes": 18485,
+      "archive_sha256": "aacdf3c8dbed7f41af60d1a6496bdd47e1ac9820ebc287c849c508d19862ca79",
+      "integrity_verified": true,
+      "registry_sha1_verified": true,
+      "expanded_bytes": 91136,
+      "selected": [
+        {
+          "path": "package/LICENSE",
+          "file": "3.0.2-LICENSE.txt",
+          "bytes": 1119,
+          "sha256": "a338a09e00418402e779e3ff372a2bca3be66259d6192e0a9fe2949969d648f3"
+        },
+        {
+          "path": "package/package.json",
+          "file": "3.0.2-package.json.txt",
+          "bytes": 1267,
+          "sha256": "8a9ff7508123953d0d5ee681d71a9df058ef806233108e51aebf81ce7f6b6214"
+        }
+      ],
+      "declared_package_license": "MIT",
+      "limits": "No redirect;8MiB compressed cap; production raw tar scanner header/metadata/path/type bounds before selected bytes; no extraction or package code execution"
+    },
+    {
+      "version": "4.0.1",
+      "metadata_sha256": "121ae1122a1ee3e1a2e8b0f5de112e3fa853a38a8e70a1fb0d56edae0ea755f8",
+      "url": "https://registry.npmjs.org/@actions/http-client/-/http-client-4.0.1.tgz",
+      "archive_file": "4.0.1.tgz",
+      "archive_bytes": 17834,
+      "archive_sha256": "7f4b0466ca81b3cf0f48fc5091fd3aa138d576fc6f43cb6ddce00c37644bec34",
+      "integrity_verified": true,
+      "registry_sha1_verified": true,
+      "expanded_bytes": 90624,
+      "selected": [
+        {
+          "path": "package/LICENSE",
+          "file": "4.0.1-LICENSE.txt",
+          "bytes": 1119,
+          "sha256": "a338a09e00418402e779e3ff372a2bca3be66259d6192e0a9fe2949969d648f3"
+        },
+        {
+          "path": "package/package.json",
+          "file": "4.0.1-package.json.txt",
+          "bytes": 1700,
+          "sha256": "4f94a1593b926907dae7801656c5fc6a99db884d3bc929d1ea7d3b3487c0004a"
+        }
+      ],
+      "declared_package_license": "MIT",
+      "limits": "No redirect;8MiB compressed cap; production raw tar scanner header/metadata/path/type bounds before selected bytes; no extraction or package code execution"
+    }
+  ],
+  "scanner_sha256": "a64098dd7b4a731de35be81f66ec723e3b486dc783039296c19e18c76d3472ba",
+  "meaning": "Registry release notice bytes only; signatures/attestations not verified; no complete Actions bundle/execution/shipping proof"
+}

@@ -1,0 +1,72 @@
+{
+  "observed_at": 1794857759.49867,
+  "entries": [
+    {
+      "version": "3.0.2",
+      "url": "https://registry.npmjs.org/@actions%2fhttp-client/3.0.2",
+      "file": "3.0.2-metadata.json",
+      "bytes": 2671,
+      "sha256": "40c1e46bbf2d2c08765907f2a588e8f41ee258155df5fd47aa782d4e44980ec4",
+      "dist": {
+        "shasum": "3db9c83af9d29d51ac8c30b45bc17f7014beb1b2",
+        "tarball": "https://registry.npmjs.org/@actions/http-client/-/http-client-3.0.2.tgz",
+        "fileCount": 15,
+        "integrity": "sha512-JP38FYYpyqvUsz+Igqlc/JG6YO9PaKuvqjM3iGvaLqFnJ7TFmcLyy2IDrY0bI0qCQug8E9K+elv5ZNfw62ZJzA==",
+        "signatures": [
+          {
+            "sig": "MEQCID2i8dcQA24iWDftUf4ddHNhjls5E5ABcUxDLjBZ0TA3AiByC3VxB279vZS+ljTUhG5QysHmXKFOMCeEtONfStHqHQ==",
+            "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+          }
+        ],
+        "attestations": {
+          "url": "https://registry.npmjs.org/-/npm/v1/attestations/@actions%2fhttp-client@3.0.2",
+          "provenance": {
+            "predicateType": "https://slsa.dev/provenance/v1"
+          }
+        },
+        "unpackedSize": 78134
+      },
+      "repository": {
+        "url": "git+https://github.com/actions/toolkit.git",
+        "type": "git",
+        "directory": "packages/http-client"
+      },
+      "gitHead": null,
+      "license": "MIT"
+    },
+    {
+      "version": "4.0.1",
+      "url": "https://registry.npmjs.org/@actions%2fhttp-client/4.0.1",
+      "file": "4.0.1-metadata.json",
+      "bytes": 2815,
+      "sha256": "121ae1122a1ee3e1a2e8b0f5de112e3fa853a38a8e70a1fb0d56edae0ea755f8",
+      "dist": {
+        "shasum": "22a23a7625ba1326d9ba154012ca8301a27f88a3",
+        "tarball": "https://registry.npmjs.org/@actions/http-client/-/http-client-4.0.1.tgz",
+        "fileCount": 15,
+        "integrity": "sha512-+Nvd1ImaOZBSoPbsUtEhv+1z99H12xzncCkz0a3RuehINE81FZSe2QTj3uvAPTcJX/SCzUQHQ0D1GrPMbrPitg==",
+        "signatures": [
+          {
+            "sig": "MEYCIQC+qI3RAT2BO+LpYMGGzUhbVUotOi8cygeyOw6f8Ubf2wIhAK4xvb1tZYi7jDQfBbpafupjc4qRIlKZORGK38bw4kMr",
+            "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+          }
+        ],
+        "attestations": {
+          "url": "https://registry.npmjs.org/-/npm/v1/attestations/@actions%2fhttp-client@4.0.1",
+          "provenance": {
+            "predicateType": "https://slsa.dev/provenance/v1"
+          }
+        },
+        "unpackedSize": 76194
+      },
+      "repository": {
+        "url": "git+https://github.com/actions/toolkit.git",
+        "type": "git",
+        "directory": "packages/http-client"
+      },
+      "gitHead": null,
+      "license": "MIT"
+    }
+  ],
+  "scope": "Exact registry metadata only; no package code execution or archive/license conclusions"
+}
