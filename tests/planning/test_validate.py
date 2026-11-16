@@ -264,6 +264,45 @@ class ReportWriteTests(unittest.TestCase):
             self.assertEqual(list(root.iterdir()), [report])
 
     @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
+    def test_windows_failed_stage_deletion_is_reported_and_handle_closed(self):
+        import ctypes
+        import errno
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / 'report.json'
+            report.write_bytes(b'previous')
+            pinned = validator.open_report_directory(root)
+            try:
+                def deny_delete(*args):
+                    ctypes.set_last_error(5)
+                    return 0
+
+                with mock.patch.object(pinned.nt, 'NtSetInformationFile',
+                                       return_value=-1073741811), \
+                     mock.patch.object(pinned.kernel, 'SetFileInformationByHandle',
+                                       side_effect=deny_delete), \
+                     mock.patch.object(validator.os, 'close', wraps=os.close) as close:
+                    with self.assertRaisesRegex(
+                            OSError, 'cannot clean up report stage: Windows error 5') as caught:
+                        validator.save_report(report, {'result': 'pass'}, pinned)
+                close.assert_called_once()
+                closed_fd = close.call_args.args[0]
+                with self.assertRaises(OSError) as closed:
+                    os.fstat(closed_fd)
+                self.assertEqual(closed.exception.errno, errno.EBADF)
+                self.assertIsInstance(caught.exception.__context__, OSError)
+                self.assertIn('cannot rename report stage', str(caught.exception.__context__))
+            finally:
+                pinned.close()
+            self.assertEqual(report.read_bytes(), b'previous')
+            stages = list(root.glob('.roadmap-*.tmp'))
+            self.assertEqual(len(stages), 1)
+            self.assertRegex(stages[0].name, r'^\.roadmap-[0-9a-f]{32}\.tmp$')
+            # Remove the residual stage after verifying its owning descriptor is closed.
+            stages[0].unlink()
+            self.assertEqual(list(root.iterdir()), [report])
+
+    @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
     def test_windows_native_rename_replaces_unicode_destination(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

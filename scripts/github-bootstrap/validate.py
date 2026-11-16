@@ -368,13 +368,22 @@ class WindowsDirectory:
                 raise OSError(f'cannot rename report stage: {error}') from error
             published = True
         finally:
-            if not published:
-                delete = w.BOOL(True)
-                self.kernel.SetFileInformationByHandle(handle, 4, c.byref(delete), c.sizeof(delete))
-            if fd is None:
-                self.kernel.CloseHandle(handle)
-            else:
-                os.close(fd)
+            try:
+                if not published:
+                    delete = w.BOOL(True)
+                    try:
+                        deleted = self.kernel.SetFileInformationByHandle(
+                            handle, 4, c.byref(delete), c.sizeof(delete))
+                    except Exception as exc:
+                        raise OSError('cannot clean up report stage') from exc
+                    if not deleted:
+                        error = c.get_last_error()
+                        raise OSError(f'cannot clean up report stage: Windows error {error}')
+            finally:
+                if fd is None:
+                    self.kernel.CloseHandle(handle)
+                else:
+                    os.close(fd)
 
 
 def open_report_directory(path):
