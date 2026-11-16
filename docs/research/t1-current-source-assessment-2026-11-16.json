@@ -250,9 +250,9 @@
       "id": "O1",
       "exact_scoped_claim": "RFC 9700 CSRF, code injection, PKCE and redirect binding; not Discord SDK proof",
       "assessment_status": "supported",
-      "context_paraphrase": "For redirect flows clients must prevent CSRF; reliance on PKCE requires established server support, otherwise securely user-agent-bound state is specified. Public clients must use PKCE; confidential clients are recommended to use it. Challenges must be transaction-specific and bound to client and user agent; server verifier enforcement and redirect validation are normative guidance, not evidence of Discord implementation.",
+      "context_paraphrase": "Authorization servers MUST use exact string matching for pre-registered redirect URIs, except for localhost port numbers in native apps. Clients MUST prevent CSRF; they MAY rely on PKCE for CSRF protection when authorization server support is established, and in OpenID Connect flows nonce provides CSRF protection. Otherwise, one-time state CSRF tokens securely bound to the user agent MUST be used. To prevent authorization code injection and misuse, public clients MUST use PKCE and confidential clients are RECOMMENDED to use it; confidential OpenID Connect clients MAY instead use nonce and the respective ID Token claim with additional precautions. The PKCE challenge or OpenID Connect nonce MUST be transaction-specific and securely bound to the client and initiating user agent. Authorization servers MUST support PKCE, enforce correct verifier use at the token endpoint when a valid challenge was sent, and mitigate downgrade by accepting a token request containing a verifier only if a challenge was present in the authorization request. These RFC requirements do not establish Discord implementation or provider enforcement.",
       "heading": "2.1 Protecting Redirect-Based Flows; 2.1.1 Authorization Code Grant; 4.1 Insufficient Redirection URI Validation",
-      "html_line_offsets_1_based": "1746,1780-1813,2146",
+      "html_line_offsets_1_based": "1736-1755,1780-1816",
       "residual_questions": "Verify provider enforcement and SDK response binding in the actual flow."
     }
   ],
