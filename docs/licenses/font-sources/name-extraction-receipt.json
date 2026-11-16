@@ -1,0 +1,17 @@
+{
+  "task": "Issue16 exactfontbinaryname evidence",
+  "assignee": "01a1d2c4-663a-7181-824d-febb00e1dd4a",
+  "candidate_context": "5b0db5a767594e9a4f3a5cee63143f48330dbc13",
+  "script_sha256": "4ed45191e33e03933fa5c2414bd26064ea8cd8be139d19cdac4077cf8ffb5277",
+  "evidence_sha256": "e8cc93c1394c40eb9728b63a14c8054dc16068fb8ae789dc6ecda0dcb538fd3b",
+  "freetype_version": "2.13.2",
+  "libraries": {
+    "/usr/lib/x86_64-linux-gnu/libfreetype.so.6.20.1": "992dac80abe3a3854f3eb2668da4207c029664ceca5f122ddb46e2a8169e9499"
+  },
+  "fonts": 234,
+  "failures": [],
+  "unique_records": 133,
+  "validation": "Actual bounded FreeType2.13.2 name-table extraction all234sources; no glyph rendering or fontprogramexecution; rawnamebytes retained; root fullcopyright/license output reviewed",
+  "limits": "Embedded declarations do not independently establish authorship, exactupstream release/transformationchain or actualshipping. Currentproductsource remains5b0db5a and priornointernaldecodeclaims historical, notcurrentnewextraction.",
+  "source_snapshot": "Installed root verification environment; recorded extractor source is a non-executable provenance copy with its original workspace-relative layout. No font software is added to product source."
+}

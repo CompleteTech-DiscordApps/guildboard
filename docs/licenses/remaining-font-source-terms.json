@@ -1,0 +1,396 @@
+{
+  "scope": "Standalone evidence for six font families, issue 16 draft PR 482; no adoption or distribution approval",
+  "repository": "CompleteTech-DiscordApps/guildboard",
+  "published_commit_context": "5b0db5a767594e9a4f3a5cee63143f48330dbc13",
+  "upstream_repository": "excalidraw/excalidraw",
+  "upstream_commit": "a2ec2889babf7d2295469c6d90ebe77fae57df84",
+  "source_evidence": {
+    "inventory": "docs/research/evidence/license-source-inventory-2026-10-24.json",
+    "indexes": "docs/licenses/font-sources/source-receipt.json",
+    "binary_receipt": "docs/licenses/font-sources/remaining-font-bytes-receipt.json"
+  },
+  "families": [
+    {
+      "family": "Assistant",
+      "file_count": 4,
+      "files": [
+        {
+          "path": "packages/excalidraw/fonts/Assistant/Assistant-Bold.woff2",
+          "bytes": 20380,
+          "sha256": "e0cdd332ce039770e93ec44336b6db65f931940f42b0342aad35a06e7f991d29",
+          "git_blob_sha1": "751ba1ceb5883ebce6c67d21c572ae2dfb78f24c"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Assistant/Assistant-Medium.woff2",
+          "bytes": 20320,
+          "sha256": "81a9f280ce6a790f20ca8cd521183caa430f1f7fdc0752c36ef1cc6dc828ac57",
+          "git_blob_sha1": "d5d809abee5216c1b07421dabb43f9575c0bebe5"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Assistant/Assistant-Regular.woff2",
+          "bytes": 20232,
+          "sha256": "76945f09225aae65bdbd204cb4ac40d4caa4ff67150e5074bab1a04d1b778fc3",
+          "git_blob_sha1": "e17d6eccaa7e85cb2a516565fa415ebb46d0e57a"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Assistant/Assistant-SemiBold.woff2",
+          "bytes": 20212,
+          "sha256": "bba47a7d1b185a4a2e0d265ec82aeac5dbc2dc9cb0f482a2ff57cbdfe4e5045d",
+          "git_blob_sha1": "d17aa74bba428f3dbb386ed8fe12e1526b955f37"
+        }
+      ],
+      "index": null,
+      "import_mapping": {
+        "status": "unknown: Assistant index not provided in source receipt"
+      },
+      "spdx": null,
+      "copyright": null,
+      "grant": null,
+      "attribution": null,
+      "obligations": null,
+      "reserved_font_names": null,
+      "modification_terms": null,
+      "source_build_provenance": null,
+      "shipping_export_status": null,
+      "mit_compatibility": "undetermined: no authoritative font grant established for these exact bytes",
+      "specific_gap": "Obtain authoritative upstream license, complete copyright notices, exact version and lineage applicable to these files; establish any reserved names and modification/redistribution conditions, provenance of generated/subset binaries and source/build, and actual shipping/export usage."
+    },
+    {
+      "family": "Cascadia",
+      "file_count": 1,
+      "files": [
+        {
+          "path": "packages/excalidraw/fonts/Cascadia/CascadiaCode-Regular.woff2",
+          "bytes": 65732,
+          "sha256": "5bce041e0fcce617e35efbc335b1372d27a84acb65fb464c65ff80ab3424a885",
+          "git_blob_sha1": "ed0335c2c1d1dbdf52330e628d33c3bbb67f4a37"
+        }
+      ],
+      "index": {
+        "path": "packages/excalidraw/fonts/Cascadia/index.ts",
+        "sha256": "fd5005c2b41c1534f68f61024fcdb109ea8eb98a737821e96dfaa3dadc9e949b",
+        "git_blob_sha1": "ecd111644430139543c8a00b1bf66d7eb53753dc",
+        "bytes": 237,
+        "full_source": "import CascadiaCodeRegular from \"./CascadiaCode-Regular.woff2\";\n\nimport { type ExcalidrawFontFaceDescriptor } from \"../Fonts\";\n\nexport const CascadiaFontFaces: ExcalidrawFontFaceDescriptor[] = [\n  {\n    uri: CascadiaCodeRegular,\n  },\n];\n",
+        "license_or_copyright_blocks": [],
+        "observation": "Full supplied index inspected; no comments, license or copyright declarations."
+      },
+      "import_mapping": {
+        "font_imports": [
+          {
+            "binding": "CascadiaCodeRegular",
+            "import": "./CascadiaCode-Regular.woff2",
+            "resolved_path": "packages/excalidraw/fonts/Cascadia/CascadiaCode-Regular.woff2",
+            "in_receipt": true
+          }
+        ],
+        "other_imports": [],
+        "dynamic_import_observed": false
+      },
+      "spdx": null,
+      "copyright": null,
+      "grant": null,
+      "attribution": null,
+      "obligations": null,
+      "reserved_font_names": null,
+      "modification_terms": null,
+      "source_build_provenance": null,
+      "shipping_export_status": null,
+      "mit_compatibility": "undetermined: no authoritative font grant established for these exact bytes",
+      "specific_gap": "Obtain authoritative upstream license, complete copyright notices, exact version and lineage applicable to these files; establish any reserved names and modification/redistribution conditions, provenance of generated/subset binaries and source/build, and actual shipping/export usage."
+    },
+    {
+      "family": "Liberation",
+      "file_count": 1,
+      "files": [
+        {
+          "path": "packages/excalidraw/fonts/Liberation/LiberationSans-Regular.woff2",
+          "bytes": 70668,
+          "sha256": "006a2b28cbbeeaec937d1b367d0949f5f48ef4b2e7b4e1d8dc7a799d2d639be8",
+          "git_blob_sha1": "86ed395a2eea183902454f8f99936dfe688965a2"
+        }
+      ],
+      "index": {
+        "path": "packages/excalidraw/fonts/Liberation/index.ts",
+        "sha256": "e414bc5461b571e99abdee36253674c04b264cace349aa6c9b563f35f1619f9c",
+        "git_blob_sha1": "5bc964815c8bdc7ed18640baf66802e9a5dd603f",
+        "bytes": 245,
+        "full_source": "import LiberationSansRegular from \"./LiberationSans-Regular.woff2\";\n\nimport { type ExcalidrawFontFaceDescriptor } from \"../Fonts\";\n\nexport const LiberationFontFaces: ExcalidrawFontFaceDescriptor[] = [\n  {\n    uri: LiberationSansRegular,\n  },\n];\n",
+        "license_or_copyright_blocks": [],
+        "observation": "Full supplied index inspected; no comments, license or copyright declarations."
+      },
+      "import_mapping": {
+        "font_imports": [
+          {
+            "binding": "LiberationSansRegular",
+            "import": "./LiberationSans-Regular.woff2",
+            "resolved_path": "packages/excalidraw/fonts/Liberation/LiberationSans-Regular.woff2",
+            "in_receipt": true
+          }
+        ],
+        "other_imports": [],
+        "dynamic_import_observed": false
+      },
+      "spdx": null,
+      "copyright": null,
+      "grant": null,
+      "attribution": null,
+      "obligations": null,
+      "reserved_font_names": null,
+      "modification_terms": null,
+      "source_build_provenance": null,
+      "shipping_export_status": null,
+      "mit_compatibility": "undetermined: no authoritative font grant established for these exact bytes",
+      "specific_gap": "Obtain authoritative upstream license, complete copyright notices, exact version and lineage applicable to these files; establish any reserved names and modification/redistribution conditions, provenance of generated/subset binaries and source/build, and actual shipping/export usage."
+    },
+    {
+      "family": "Lilita",
+      "file_count": 2,
+      "files": [
+        {
+          "path": "packages/excalidraw/fonts/Lilita/Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYE98RXi4EwSsbg.woff2",
+          "bytes": 1416,
+          "sha256": "2b6568c7a0f16300bc6c8d292bd426c361fcdb40699c2cbfab2bd3e9e6993dea",
+          "git_blob_sha1": "51e6f53a8989c7ad2d1659fe7374ab37d3f2b405"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Lilita/Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYEF8RXi4EwQ.woff2",
+          "bytes": 10676,
+          "sha256": "8d6cd0f298738a92ca9bf6e13f54a9191afd06ce04ea00ebbf24499c017191b7",
+          "git_blob_sha1": "1fe1443ba8a66f402d73af7ec12c307f0f5f55c1"
+        }
+      ],
+      "index": {
+        "path": "packages/excalidraw/fonts/Lilita/index.ts",
+        "sha256": "812b532e303a10bc1a33a6cba241d39d71d7905feecdc84d00bed360ff3216f4",
+        "git_blob_sha1": "d5ea82e58de909367a95cb78a8895120a002a302",
+        "bytes": 551,
+        "full_source": "import LilitaLatin from \"./Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYEF8RXi4EwQ.woff2\";\nimport LilitaLatinExt from \"./Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYE98RXi4EwSsbg.woff2\";\n\nimport { GOOGLE_FONTS_RANGES } from \"../FontMetadata\";\n\nimport { type ExcalidrawFontFaceDescriptor } from \"../Fonts\";\n\nexport const LilitaFontFaces: ExcalidrawFontFaceDescriptor[] = [\n  {\n    uri: LilitaLatinExt,\n    descriptors: { unicodeRange: GOOGLE_FONTS_RANGES.LATIN_EXT },\n  },\n  {\n    uri: LilitaLatin,\n    descriptors: { unicodeRange: GOOGLE_FONTS_RANGES.LATIN },\n  },\n];\n",
+        "license_or_copyright_blocks": [],
+        "observation": "Full supplied index inspected; no comments, license or copyright declarations."
+      },
+      "import_mapping": {
+        "font_imports": [
+          {
+            "binding": "LilitaLatin",
+            "import": "./Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYEF8RXi4EwQ.woff2",
+            "resolved_path": "packages/excalidraw/fonts/Lilita/Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYEF8RXi4EwQ.woff2",
+            "in_receipt": true
+          },
+          {
+            "binding": "LilitaLatinExt",
+            "import": "./Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYE98RXi4EwSsbg.woff2",
+            "resolved_path": "packages/excalidraw/fonts/Lilita/Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYE98RXi4EwSsbg.woff2",
+            "in_receipt": true
+          }
+        ],
+        "other_imports": [],
+        "dynamic_import_observed": false
+      },
+      "spdx": null,
+      "copyright": null,
+      "grant": null,
+      "attribution": null,
+      "obligations": null,
+      "reserved_font_names": null,
+      "modification_terms": null,
+      "source_build_provenance": null,
+      "shipping_export_status": null,
+      "mit_compatibility": "undetermined: no authoritative font grant established for these exact bytes",
+      "specific_gap": "Obtain authoritative upstream license, complete copyright notices, exact version and lineage applicable to these files; establish any reserved names and modification/redistribution conditions, provenance of generated/subset binaries and source/build, and actual shipping/export usage."
+    },
+    {
+      "family": "Nunito",
+      "file_count": 5,
+      "files": [
+        {
+          "path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTA3j6zbXWjgevT5.woff2",
+          "bytes": 8392,
+          "sha256": "e512f2d7c9fe062b1acf8f6ea64d4bfd89a77d26728150977627e445c7b6e937",
+          "git_blob_sha1": "b9b1c20c0f8087d3365db045a77c2a985c830c87"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2",
+          "bytes": 16476,
+          "sha256": "6d1626aac658786e37e78e0adce3ffffddbd75abc923d72e45a7168bd80053da",
+          "git_blob_sha1": "c9f8bb01755447ec5a47c6af758c80c094f083fa"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTk3j6zbXWjgevT5.woff2",
+          "bytes": 11104,
+          "sha256": "3e7f76fcc8798b8bba4d6bcc06bdb0d788f6e89706c1d6e64ac81d65ca683c14",
+          "git_blob_sha1": "6b06971404d8ec80ce520f9306e7095bdf461b98"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTo3j6zbXWjgevT5.woff2",
+          "bytes": 15476,
+          "sha256": "7928f47b21192cb6fdb2f46b71a474a3bd2fd608945c5ad7d7ed6bde8b0ae24c",
+          "git_blob_sha1": "c21a6ed084822b3dd76be36de8f0ee169d24c276"
+        },
+        {
+          "path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTs3j6zbXWjgevT5.woff2",
+          "bytes": 6116,
+          "sha256": "5117398298dd0dba3c95a406ff12fbeb88289fa4e913e3a5cf482cafe7f7071a",
+          "git_blob_sha1": "bd56dc50d72819f92f09344cfb50fe3180785dec"
+        }
+      ],
+      "index": {
+        "path": "packages/excalidraw/fonts/Nunito/index.ts",
+        "sha256": "c94f269e5747d376137019b3dc32af42ac6511bd1fea9c70a7e0ffbe2956907c",
+        "git_blob_sha1": "4db432d07c8fef46812a48ae6516277b69e3e21f",
+        "bytes": 1242,
+        "full_source": "import Latin from \"./Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2\";\nimport LatinExt from \"./Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTo3j6zbXWjgevT5.woff2\";\nimport Cyrilic from \"./Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTA3j6zbXWjgevT5.woff2\";\nimport CyrilicExt from \"./Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTk3j6zbXWjgevT5.woff2\";\nimport Vietnamese from \"./Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTs3j6zbXWjgevT5.woff2\";\n\nimport { GOOGLE_FONTS_RANGES } from \"../FontMetadata\";\n\nimport { type ExcalidrawFontFaceDescriptor } from \"../Fonts\";\n\nexport const NunitoFontFaces: ExcalidrawFontFaceDescriptor[] = [\n  {\n    uri: CyrilicExt,\n    descriptors: {\n      unicodeRange: GOOGLE_FONTS_RANGES.CYRILIC_EXT,\n      weight: \"500\",\n    },\n  },\n  {\n    uri: Cyrilic,\n    descriptors: { unicodeRange: GOOGLE_FONTS_RANGES.CYRILIC, weight: \"500\" },\n  },\n  {\n    uri: Vietnamese,\n    descriptors: {\n      unicodeRange: GOOGLE_FONTS_RANGES.VIETNAMESE,\n      weight: \"500\",\n    },\n  },\n  {\n    uri: LatinExt,\n    descriptors: { unicodeRange: GOOGLE_FONTS_RANGES.LATIN_EXT, weight: \"500\" },\n  },\n  {\n    uri: Latin,\n    descriptors: { unicodeRange: GOOGLE_FONTS_RANGES.LATIN, weight: \"500\" },\n  },\n];\n",
+        "license_or_copyright_blocks": [],
+        "observation": "Full supplied index inspected; no comments, license or copyright declarations."
+      },
+      "import_mapping": {
+        "font_imports": [
+          {
+            "binding": "Latin",
+            "import": "./Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2",
+            "resolved_path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2",
+            "in_receipt": true
+          },
+          {
+            "binding": "LatinExt",
+            "import": "./Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTo3j6zbXWjgevT5.woff2",
+            "resolved_path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTo3j6zbXWjgevT5.woff2",
+            "in_receipt": true
+          },
+          {
+            "binding": "Cyrilic",
+            "import": "./Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTA3j6zbXWjgevT5.woff2",
+            "resolved_path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTA3j6zbXWjgevT5.woff2",
+            "in_receipt": true
+          },
+          {
+            "binding": "CyrilicExt",
+            "import": "./Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTk3j6zbXWjgevT5.woff2",
+            "resolved_path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTk3j6zbXWjgevT5.woff2",
+            "in_receipt": true
+          },
+          {
+            "binding": "Vietnamese",
+            "import": "./Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTs3j6zbXWjgevT5.woff2",
+            "resolved_path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTs3j6zbXWjgevT5.woff2",
+            "in_receipt": true
+          }
+        ],
+        "other_imports": [],
+        "dynamic_import_observed": false
+      },
+      "spdx": null,
+      "copyright": null,
+      "grant": null,
+      "attribution": null,
+      "obligations": null,
+      "reserved_font_names": null,
+      "modification_terms": null,
+      "source_build_provenance": null,
+      "shipping_export_status": null,
+      "mit_compatibility": "undetermined: no authoritative font grant established for these exact bytes",
+      "specific_gap": "Obtain authoritative upstream license, complete copyright notices, exact version and lineage applicable to these files; establish any reserved names and modification/redistribution conditions, provenance of generated/subset binaries and source/build, and actual shipping/export usage."
+    },
+    {
+      "family": "Virgil",
+      "file_count": 1,
+      "files": [
+        {
+          "path": "packages/excalidraw/fonts/Virgil/Virgil-Regular.woff2",
+          "bytes": 56156,
+          "sha256": "2279cf7daf1c42a3a53b2c1437ad72f0050efb67ac263e0245f67612fd766714",
+          "git_blob_sha1": "bf5d08ce8ab8f55695297036d826b9d0555d9f86"
+        }
+      ],
+      "index": {
+        "path": "packages/excalidraw/fonts/Virgil/index.ts",
+        "sha256": "b62db4947c999610491b4826f029a11266719dfc120f851eeb2358dbe9be005a",
+        "git_blob_sha1": "fdd5ffcfce67db82777e6134416a04381187112a",
+        "bytes": 203,
+        "full_source": "import Virgil from \"./Virgil-Regular.woff2\";\n\nimport { type ExcalidrawFontFaceDescriptor } from \"../Fonts\";\n\nexport const VirgilFontFaces: ExcalidrawFontFaceDescriptor[] = [\n  {\n    uri: Virgil,\n  },\n];\n",
+        "license_or_copyright_blocks": [],
+        "observation": "Full supplied index inspected; no comments, license or copyright declarations."
+      },
+      "import_mapping": {
+        "font_imports": [
+          {
+            "binding": "Virgil",
+            "import": "./Virgil-Regular.woff2",
+            "resolved_path": "packages/excalidraw/fonts/Virgil/Virgil-Regular.woff2",
+            "in_receipt": true
+          }
+        ],
+        "other_imports": [],
+        "dynamic_import_observed": false
+      },
+      "spdx": null,
+      "copyright": null,
+      "grant": null,
+      "attribution": null,
+      "obligations": null,
+      "reserved_font_names": null,
+      "modification_terms": null,
+      "source_build_provenance": null,
+      "shipping_export_status": null,
+      "mit_compatibility": "undetermined: no authoritative font grant established for these exact bytes",
+      "specific_gap": "Obtain authoritative upstream license, complete copyright notices, exact version and lineage applicable to these files; establish any reserved names and modification/redistribution conditions, provenance of generated/subset binaries and source/build, and actual shipping/export usage."
+    }
+  ],
+  "interpretation": [
+    "The available five complete index sources have no license or copyright declarations; that observation does not establish license absence in upstream or in the binary files.",
+    "Assistant has no entry in the supplied index receipt; this is not evidence that an upstream index or license does not exist.",
+    "Checksums and Git blob IDs establish matching source-byte identities against supplied receipts, not ownership, grant, transformation history, runtime shipping or rights. No internal font table was decoded and no font format parser was executed.",
+    "The Excalidraw root MIT notice is not applied to the font binaries. MIT compatibility, SPDX, attribution, reserved names and obligations remain undetermined until authoritative terms tied to these exact versions are obtained.",
+    "If authoritative grants establish conditions, review those exact conditions and compatibility with the intended MIT project distribution, preserve required notices, and satisfy applicable modification, reserved-name and distribution terms before adoption. This conditional instruction is not a finding that any particular font license applies."
+  ],
+  "next_actions_for_manager_01a1d2c4-663a-7181-824d-febb00e1dd4a": [
+    "Collect authoritative family and version-specific grants and full notices, plus Assistant index if available, from traceable sources; link each to these exact binary versions.",
+    "Determine any reserved font names, transformation/subsetting history, build sources and modification requirements; confirm actual shipped assets, export paths and corresponding notices.",
+    "Review established SPDX identifiers, attribution, obligations and compatibility with intended MIT distribution; keep missing evidence open and route full collection for fresh independent review before integration."
+  ],
+  "owned_decisions": [
+    {
+      "affected": "six families / 14 font files",
+      "decision_owner": "assigned source-evidence worker",
+      "decision": "Record unknown license and compatibility rather than infer from names, source hashes, absent index declarations or repository root notice.",
+      "rationale": "No authoritative grant for these exact font binaries in supplied index sources or receipts.",
+      "validation": "14 receipt byte identities and inventory paths plus five complete index identities/import mappings independently recomputed by ownverify.py.",
+      "follow_through": "Manager obtains authoritative grants and usage/build evidence; root integrates only after full collection and fresh review."
+    }
+  ],
+  "source_delivery_sha256": "65ff7a53a40efefa64d6b8a7123ab95e2e70727aabe06f1bdc9f318244b4ab0d",
+  "evidence_basis": "Index-only source observations; subsequent actual binary name-table data is retained separately in font-name-evidence.json. Unknown declarations here must not be interpreted as absence of binary metadata.",
+  "embedded_name_evidence": "docs/licenses/font-name-evidence.json",
+  "retained_sources": [
+    {
+      "path": "docs/licenses/font-sources/Cascadia-index.ts.txt",
+      "sha256": "fd5005c2b41c1534f68f61024fcdb109ea8eb98a737821e96dfaa3dadc9e949b",
+      "bytes": 237
+    },
+    {
+      "path": "docs/licenses/font-sources/Liberation-index.ts.txt",
+      "sha256": "e414bc5461b571e99abdee36253674c04b264cace349aa6c9b563f35f1619f9c",
+      "bytes": 245
+    },
+    {
+      "path": "docs/licenses/font-sources/Lilita-index.ts.txt",
+      "sha256": "812b532e303a10bc1a33a6cba241d39d71d7905feecdc84d00bed360ff3216f4",
+      "bytes": 551
+    },
+    {
+      "path": "docs/licenses/font-sources/Nunito-index.ts.txt",
+      "sha256": "c94f269e5747d376137019b3dc32af42ac6511bd1fea9c70a7e0ffbe2956907c",
+      "bytes": 1242
+    },
+    {
+      "path": "docs/licenses/font-sources/Virgil-index.ts.txt",
+      "sha256": "b62db4947c999610491b4826f029a11266719dfc120f851eeb2358dbe9be005a",
+      "bytes": 203
+    },
+    {
+      "path": "docs/licenses/font-sources/remaining-font-bytes-receipt.json",
+      "sha256": "af4b2fc714e06737bb105afd9e2876ab3c25b7f0e19e485ab4c4879d93095dfc",
+      "bytes": 7818
+    }
+  ]
+}

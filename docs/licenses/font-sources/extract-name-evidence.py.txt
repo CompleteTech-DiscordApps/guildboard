@@ -1,0 +1,36 @@
+import pathlib,json,ctypes,ctypes.util,hashlib,base64,resource
+resource.setrlimit(resource.RLIMIT_AS,(384*1024*1024,384*1024*1024));resource.setrlimit(resource.RLIMIT_CPU,(30,30))
+O=pathlib.Path(__file__).resolve().parent;C=O/'architecture-adoption';S=C/'license16-font-sources';sha=lambda b:hashlib.sha256(b).hexdigest()
+receipts=[json.loads((S/n).read_text()) for n in ['font-bytes-receipt.json','xiaolai-font-bytes-receipt.json','remaining-font-bytes-receipt.json']];entries=[e for r in receipts for e in r['entries']];assert len(entries)==len({e['path'] for e in entries})==234
+inv=json.loads((C/'license16-xiaolai-candidate/docs/research/evidence/license-source-inventory-2026-10-24.json').read_text());assert {e['path']:e['git_blob_sha1'] for e in entries}=={e['path']:e['git_blob_sha1'] for e in inv['font_files']}
+f=ctypes.CDLL(ctypes.util.find_library('freetype'));ptr=ctypes.c_void_p;u=ctypes.c_uint;i=ctypes.c_int
+class Name(ctypes.Structure):_fields_=[('platform_id',ctypes.c_ushort),('encoding_id',ctypes.c_ushort),('language_id',ctypes.c_ushort),('name_id',ctypes.c_ushort),('string',ptr),('string_len',u)]
+f.FT_Init_FreeType.argtypes=[ctypes.POINTER(ptr)];f.FT_Init_FreeType.restype=i
+f.FT_New_Memory_Face.argtypes=[ptr,ptr,ctypes.c_long,ctypes.c_long,ctypes.POINTER(ptr)];f.FT_New_Memory_Face.restype=i
+f.FT_Get_Sfnt_Name_Count.argtypes=[ptr];f.FT_Get_Sfnt_Name_Count.restype=u
+f.FT_Get_Sfnt_Name.argtypes=[ptr,u,ctypes.POINTER(Name)];f.FT_Get_Sfnt_Name.restype=i
+f.FT_Done_Face.argtypes=[ptr];f.FT_Done_Face.restype=i
+f.FT_Done_FreeType.argtypes=[ptr];f.FT_Done_FreeType.restype=i
+f.FT_Library_Version.argtypes=[ptr,ctypes.POINTER(i),ctypes.POINTER(i),ctypes.POINTER(i)];f.FT_Library_Version.restype=None
+lib=ptr();assert f.FT_Init_FreeType(ctypes.byref(lib))==0
+v=[i(),i(),i()];f.FT_Library_Version(lib,*[ctypes.byref(x) for x in v]);records={};fonts=[];failures=[]
+try:
+ for e in entries:
+  data=(S/e['file']).read_bytes();assert len(data)<=2*1024*1024 and len(data)==e['bytes'] and sha(data)==e['sha256'];assert hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()==e['git_blob_sha1'];buf=ctypes.create_string_buffer(data);face=ptr();err=f.FT_New_Memory_Face(lib,buf,len(data),0,ctypes.byref(face))
+  if err:failures.append({'path':e['path'],'stage':'FT_New_Memory_Face','error':err});continue
+  keys=[];total=0
+  try:
+   count=f.FT_Get_Sfnt_Name_Count(face);assert count<=4096
+   for idx in range(count):
+    n=Name();assert f.FT_Get_Sfnt_Name(face,idx,ctypes.byref(n))==0;assert n.string_len<=65536;total+=n.string_len;assert total<=1024*1024
+    raw=ctypes.string_at(n.string,n.string_len);d={k:int(getattr(n,k)) for k in ['platform_id','encoding_id','language_id','name_id']};d.update(bytes=len(raw),sha256=sha(raw),raw_base64=base64.b64encode(raw).decode());codec='utf-16-be' if n.platform_id in [0,3] else 'mac_roman' if n.platform_id==1 and n.encoding_id==0 else None
+    try:d['text']=raw.decode(codec) if codec else None;d['decoder']=codec
+    except UnicodeError:d['text']=None;d['decoder']='undecodable; raw bytes retained'
+    key=sha(json.dumps(d,sort_keys=True,ensure_ascii=False).encode());records[key]=d;keys.append(key)
+   fonts.append({'path':e['path'],'file':e['file'],'sha256':e['sha256'],'git_blob_sha1':e['git_blob_sha1'],'bytes':len(data),'name_count':count,'records':keys})
+  finally:assert f.FT_Done_Face(face)==0
+finally:assert f.FT_Done_FreeType(lib)==0
+maps=[line.split()[-1] for line in pathlib.Path('/proc/self/maps').read_text().splitlines() if '/libfreetype.so.' in line];libs={p:sha(pathlib.Path(p).read_bytes()) for p in set(maps)}
+out={'method':'Actual FreeType SFNT name-table extraction from all234 identity-verified pinned WOFF2 source files, face0 only; no glyph rendering or font program execution. Embedded metadata is a declaration, not independent ownership/transformation/shipping proof.','api_reference':'https://freetype.org/freetype2/docs/reference/ft2-sfnt_names.html','freetype_version':'.'.join(str(x.value) for x in v),'libraries':libs,'upstream_commit':inv['upstream_commit'],'fonts':fonts,'records':records,'failures':failures,'limits':{'input_bytes_per_font':2097152,'names_per_font':4096,'bytes_per_name':65536,'name_bytes_per_font':1048576,'address_space':384*1024*1024,'cpu_seconds':30,'face_index':0}};(C/'license16-font-name-evidence.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n');print(json.dumps({'fonts':len(fonts),'failures':failures,'unique_name_records':len(records),'freetype_version':out['freetype_version'],'evidence_bytes':(C/'license16-font-name-evidence.json').stat().st_size},indent=2))
+for fam in inv['font_family_counts']:
+ unique={rid for x in fonts if '/'+fam+'/' in x['path'] for rid in x['records'] if records[rid]['name_id'] in [0,13,14]};print(fam,[(records[rid]['name_id'],records[rid]['text']) for rid in sorted(unique)])

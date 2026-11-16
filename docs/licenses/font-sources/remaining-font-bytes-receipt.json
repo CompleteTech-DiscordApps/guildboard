@@ -1,0 +1,122 @@
+{
+  "repository": "excalidraw/excalidraw",
+  "commit": "a2ec2889babf7d2295469c6d90ebe77fae57df84",
+  "expected": 14,
+  "entries": [
+    {
+      "path": "packages/excalidraw/fonts/Assistant/Assistant-Bold.woff2",
+      "git_blob_sha1": "751ba1ceb5883ebce6c67d21c572ae2dfb78f24c",
+      "sha256": "e0cdd332ce039770e93ec44336b6db65f931940f42b0342aad35a06e7f991d29",
+      "bytes": 20380,
+      "file": "751ba1ceb5883ebce6c67d21c572ae2dfb78f24c.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Assistant/Assistant-Bold.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Assistant/Assistant-Medium.woff2",
+      "git_blob_sha1": "d5d809abee5216c1b07421dabb43f9575c0bebe5",
+      "sha256": "81a9f280ce6a790f20ca8cd521183caa430f1f7fdc0752c36ef1cc6dc828ac57",
+      "bytes": 20320,
+      "file": "d5d809abee5216c1b07421dabb43f9575c0bebe5.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Assistant/Assistant-Medium.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Assistant/Assistant-Regular.woff2",
+      "git_blob_sha1": "e17d6eccaa7e85cb2a516565fa415ebb46d0e57a",
+      "sha256": "76945f09225aae65bdbd204cb4ac40d4caa4ff67150e5074bab1a04d1b778fc3",
+      "bytes": 20232,
+      "file": "e17d6eccaa7e85cb2a516565fa415ebb46d0e57a.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Assistant/Assistant-Regular.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Assistant/Assistant-SemiBold.woff2",
+      "git_blob_sha1": "d17aa74bba428f3dbb386ed8fe12e1526b955f37",
+      "sha256": "bba47a7d1b185a4a2e0d265ec82aeac5dbc2dc9cb0f482a2ff57cbdfe4e5045d",
+      "bytes": 20212,
+      "file": "d17aa74bba428f3dbb386ed8fe12e1526b955f37.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Assistant/Assistant-SemiBold.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Cascadia/CascadiaCode-Regular.woff2",
+      "git_blob_sha1": "ed0335c2c1d1dbdf52330e628d33c3bbb67f4a37",
+      "sha256": "5bce041e0fcce617e35efbc335b1372d27a84acb65fb464c65ff80ab3424a885",
+      "bytes": 65732,
+      "file": "ed0335c2c1d1dbdf52330e628d33c3bbb67f4a37.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Cascadia/CascadiaCode-Regular.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Liberation/LiberationSans-Regular.woff2",
+      "git_blob_sha1": "86ed395a2eea183902454f8f99936dfe688965a2",
+      "sha256": "006a2b28cbbeeaec937d1b367d0949f5f48ef4b2e7b4e1d8dc7a799d2d639be8",
+      "bytes": 70668,
+      "file": "86ed395a2eea183902454f8f99936dfe688965a2.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Liberation/LiberationSans-Regular.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Lilita/Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYE98RXi4EwSsbg.woff2",
+      "git_blob_sha1": "51e6f53a8989c7ad2d1659fe7374ab37d3f2b405",
+      "sha256": "2b6568c7a0f16300bc6c8d292bd426c361fcdb40699c2cbfab2bd3e9e6993dea",
+      "bytes": 1416,
+      "file": "51e6f53a8989c7ad2d1659fe7374ab37d3f2b405.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Lilita/Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYE98RXi4EwSsbg.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Lilita/Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYEF8RXi4EwQ.woff2",
+      "git_blob_sha1": "1fe1443ba8a66f402d73af7ec12c307f0f5f55c1",
+      "sha256": "8d6cd0f298738a92ca9bf6e13f54a9191afd06ce04ea00ebbf24499c017191b7",
+      "bytes": 10676,
+      "file": "1fe1443ba8a66f402d73af7ec12c307f0f5f55c1.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Lilita/Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYEF8RXi4EwQ.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTA3j6zbXWjgevT5.woff2",
+      "git_blob_sha1": "b9b1c20c0f8087d3365db045a77c2a985c830c87",
+      "sha256": "e512f2d7c9fe062b1acf8f6ea64d4bfd89a77d26728150977627e445c7b6e937",
+      "bytes": 8392,
+      "file": "b9b1c20c0f8087d3365db045a77c2a985c830c87.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTA3j6zbXWjgevT5.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2",
+      "git_blob_sha1": "c9f8bb01755447ec5a47c6af758c80c094f083fa",
+      "sha256": "6d1626aac658786e37e78e0adce3ffffddbd75abc923d72e45a7168bd80053da",
+      "bytes": 16476,
+      "file": "c9f8bb01755447ec5a47c6af758c80c094f083fa.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTk3j6zbXWjgevT5.woff2",
+      "git_blob_sha1": "6b06971404d8ec80ce520f9306e7095bdf461b98",
+      "sha256": "3e7f76fcc8798b8bba4d6bcc06bdb0d788f6e89706c1d6e64ac81d65ca683c14",
+      "bytes": 11104,
+      "file": "6b06971404d8ec80ce520f9306e7095bdf461b98.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTk3j6zbXWjgevT5.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTo3j6zbXWjgevT5.woff2",
+      "git_blob_sha1": "c21a6ed084822b3dd76be36de8f0ee169d24c276",
+      "sha256": "7928f47b21192cb6fdb2f46b71a474a3bd2fd608945c5ad7d7ed6bde8b0ae24c",
+      "bytes": 15476,
+      "file": "c21a6ed084822b3dd76be36de8f0ee169d24c276.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTo3j6zbXWjgevT5.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTs3j6zbXWjgevT5.woff2",
+      "git_blob_sha1": "bd56dc50d72819f92f09344cfb50fe3180785dec",
+      "sha256": "5117398298dd0dba3c95a406ff12fbeb88289fa4e913e3a5cf482cafe7f7071a",
+      "bytes": 6116,
+      "file": "bd56dc50d72819f92f09344cfb50fe3180785dec.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTs3j6zbXWjgevT5.woff2"
+    },
+    {
+      "path": "packages/excalidraw/fonts/Virgil/Virgil-Regular.woff2",
+      "git_blob_sha1": "bf5d08ce8ab8f55695297036d826b9d0555d9f86",
+      "sha256": "2279cf7daf1c42a3a53b2c1437ad72f0050efb67ac263e0245f67612fd766714",
+      "bytes": 56156,
+      "file": "bf5d08ce8ab8f55695297036d826b9d0555d9f86.woff2",
+      "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/fonts/Virgil/Virgil-Regular.woff2"
+    }
+  ],
+  "bytes": 343356,
+  "observed_at": 1794854648.9917119,
+  "limits": "Source byte identities only; no internal font decode or rights/transformation/shipping proof"
+}
