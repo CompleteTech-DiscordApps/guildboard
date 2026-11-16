@@ -4,18 +4,88 @@
   "scope": "Independent bounded research verification; not product or runtime acceptance",
   "environment": "Python 3.12.3, Linux x86_64 glibc 2.39; offline, no package execution",
   "clauses": [
-    {"clause":"integration hooks", "status":"inspection-only", "evidence":"10 publisher input hashes checked; types.d.ts callbacks, imperative API and comparison inspected", "limit":"callbacks expose scene/files, not a durable authorized operation log; interception, order and rollback require browser work #98 and collaboration #132"},
-    {"clause":"read-only", "status":"inspection-only", "evidence":"viewModeEnabled declaration and comparison", "limit":"UI mode is not authorization; server must enforce current permissions"},
-    {"clause":"serialization", "status":"inspection-only", "evidence":"serializeAsJSON exported in index.d.ts", "limit":"export declaration alone does not establish signatures, runtime behavior or trusted state"},
-    {"clause":"extensions", "status":"inspection-only", "evidence":"renderEmbeddable and onDuplicate declarations", "limit":"arbitrary native element types and safe embeds not established"},
-    {"clause":"React TypeScript Fastify", "status":"inspection-only", "evidence":"React/react-dom 19.1.0 and Fastify 5.6.1 publisher metadata and tagged docs; TypeScript 5.9.3 and Node >=24 <25 repository configuration; declared peer ranges inspected", "limit":"no installation, build, graph, browser or runtime compatibility test"},
-    {"clause":"MySQL MariaDB", "status":"inspection-only", "evidence":"four SQL publisher raw files checked against source receipts, MariaDB JSON LONGTEXT text, MySQL binary JSON source and short trusted web excerpts for native JSON validation and 8.4.7 release", "limit":"MySQL 8.4.7 and MariaDB 11.8.3 are non-interchangeable experiment candidates; SQL server execution, transaction/recovery and actual VPS remain outstanding in consuming database/infrastructure work"},
-    {"clause":"pins and limitations", "status":"test-passed", "evidence":"matrix pins checked against scoped expectations, declarations against research pins and ten byte hashes against supplied acquisition result", "limit":"historical pins do not establish latest versions, installed graph, license clearance, security or runtime compatibility"},
-    {"clause":"failure scenarios", "status":"test-passed", "evidence":"actual-byte mutations, missing file, FIFO, symlink, invalid matrix pin, unsupported runtime claim and simulated interruption; raw results retained", "limit":"interruption injected before atomic replace, not process kill or power loss"},
-    {"clause":"prior hosted evidence", "status":"prior-evidence", "evidence":"assignment reports issue 13 closed, hosted run 43910646916 with synthetic and public checks", "limit":"not independently queried in this offline verification; synthetic unit fixtures do not establish independent acceptance"},
-    {"clause":"Discord and GoDaddy", "status":"not-run", "evidence":"no real platform access", "limit":"no pass claim from mocks; downstream #34 and #324"}
+    {
+      "clause": "integration hooks",
+      "status": "inspection-only",
+      "evidence": "10 publisher input hashes checked; types.d.ts callbacks, imperative API and comparison inspected",
+      "limit": "callbacks expose scene/files, not a durable authorized operation log; interception, order and rollback require browser work #98 and collaboration #132"
+    },
+    {
+      "clause": "read-only",
+      "status": "inspection-only",
+      "evidence": "viewModeEnabled declaration and comparison",
+      "limit": "UI mode is not authorization; server must enforce current permissions"
+    },
+    {
+      "clause": "serialization",
+      "status": "inspection-only",
+      "evidence": "serializeAsJSON exported in index.d.ts",
+      "limit": "export declaration alone does not establish signatures, runtime behavior or trusted state"
+    },
+    {
+      "clause": "extensions",
+      "status": "inspection-only",
+      "evidence": "renderEmbeddable and onDuplicate declarations",
+      "limit": "arbitrary native element types and safe embeds not established"
+    },
+    {
+      "clause": "React TypeScript Fastify",
+      "status": "inspection-only",
+      "evidence": "React/react-dom 19.1.0 and Fastify 5.6.1 publisher metadata and tagged docs; TypeScript 5.9.3 and Node >=24 <25 repository configuration; declared peer ranges inspected",
+      "limit": "no installation, build, graph, browser or runtime compatibility test"
+    },
+    {
+      "clause": "MySQL MariaDB",
+      "status": "inspection-only",
+      "evidence": "four SQL publisher raw files checked against source receipts, MariaDB JSON LONGTEXT text, MySQL binary JSON source and short trusted web excerpts for native JSON validation and 8.4.7 release",
+      "limit": "MySQL 8.4.7 and MariaDB 11.8.3 are non-interchangeable experiment candidates; SQL server execution, transaction/recovery and actual VPS remain outstanding in consuming database/infrastructure work"
+    },
+    {
+      "clause": "pins and limitations",
+      "status": "test-passed",
+      "evidence": "matrix pins checked against scoped expectations, declarations against research pins and ten byte hashes against supplied acquisition result",
+      "limit": "historical pins do not establish latest versions, installed graph, license clearance, security or runtime compatibility"
+    },
+    {
+      "clause": "failure scenarios",
+      "status": "test-passed",
+      "evidence": "actual-byte mutations, missing file, FIFO, symlink, invalid matrix pin, unsupported runtime claim and simulated interruption; raw results retained",
+      "limit": "interruption injected before atomic replace, not process kill or power loss"
+    },
+    {
+      "clause": "prior hosted evidence",
+      "status": "prior-evidence",
+      "evidence": "assignment reports issue 13 closed, hosted run 43910646916 with synthetic and public checks",
+      "limit": "not independently queried in this offline verification; synthetic unit fixtures do not establish independent acceptance"
+    },
+    {
+      "clause": "Discord and GoDaddy",
+      "status": "not-run",
+      "evidence": "no real platform access",
+      "limit": "no pass claim from mocks; downstream #34 and #324"
+    }
   ],
-  "owned_decisions": [{"affected_items":"GB-T0.02.01.V1 and database comparison", "decision_owner":"independent verification section owner", "decision":"accept source semantics as bounded research comparison while leaving SQL server runtime acceptance to consuming database work", "rationale":"actual publisher bytes, source receipts and bounded trusted web excerpts support differing JSON semantics but do not exercise a server", "requirements_evidence":"issue 14 comparison and limitation clauses; ADR 0004 and editor13 comparison", "validation":"independent source/hash checks and failure counterexamples", "follow_through":"coordinator integration, fresh independent review, native CI and post-merge checks; consuming database task must test runtime"}],
+  "owned_decisions": [
+    {
+      "affected_items": "GB-T0.02.01.V1 and database comparison",
+      "decision_owner": "independent verification section owner",
+      "decision": "accept source semantics as bounded research comparison while leaving SQL server runtime acceptance to consuming database work",
+      "rationale": "actual publisher bytes, source receipts and bounded trusted web excerpts support differing JSON semantics but do not exercise a server",
+      "requirements_evidence": "issue 14 comparison and limitation clauses; ADR 0004 and editor13 comparison",
+      "validation": "independent source/hash checks and failure counterexamples",
+      "follow_through": "coordinator integration, fresh independent review, native CI and post-merge checks; consuming database task must test runtime"
+    },
+    {
+      "affected_items": "Issue 14 verifier CI prerequisites",
+      "decision_owner": "verification implementation worker",
+      "decision": "Use fixed 14-source identities and a public fetch; treat comparison semantics as inspection-only",
+      "rationale": "Hash identity and source inspection do not establish runtime behavior; the MySQL manual returned HTTP 403",
+      "requirements_evidence": "accepted candidate and supplied public and SQL receipts",
+      "validation": "offline in-process counterexamples on supplied bytes; native fetch not run",
+      "follow_through": "coordinator must verify URLs and run fresh independent review and native CI"
+    }
+  ],
   "defects": [],
-  "closure": "Not closed; coordinator must integrate, assign fresh independent review and native CI, and obtain post-merge evidence. Runtime and license work remains separately open."
+  "closure": "Coordinator integration, independent review, native CI and post-merge evidence remain outstanding; runtime and license work remain open.",
+  "harness_revision_note": "Historical results above concern revision 79a3185accf34792dffa369a11c9d6142e86cb35 only. The current harness reports its caller-supplied revision and input hashes; a caller must independently establish checkout identity. Native CI and public fetch remain unverified until run."
 }

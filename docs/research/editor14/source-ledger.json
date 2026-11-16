@@ -1,0 +1,61 @@
+{
+  "sources": {
+    "public/react_19.1.0.json": {
+      "sha256": "f93e69ad3ae948242a4ca5c8c0171c49025ab0920f682e83c1cb74352051b2e5",
+      "url": "https://registry.npmjs.org/react/19.1.0"
+    },
+    "public/react-dom_19.1.0.json": {
+      "sha256": "1f93b2f67602e72d5b20306a10b3bbf8c0bf7f0163a55a54f502a91479e68f88",
+      "url": "https://registry.npmjs.org/react-dom/19.1.0"
+    },
+    "public/fastify_5.6.1.json": {
+      "sha256": "37a0c494bddaabefad5600d9218b455e40a17c2e9812742f94fba2243c3e0b15",
+      "url": "https://registry.npmjs.org/fastify/5.6.1"
+    },
+    "public/_excalidraw-excalidraw_0.18.1.json": {
+      "sha256": "70bd551ab5451d46b533692f28c659de9d364bc2c4872131ac95fb8b0b4412f2",
+      "url": "https://registry.npmjs.org/@excalidraw%2fexcalidraw/0.18.1"
+    },
+    "public/excalidraw-0.18.1-declarations/package.json": {
+      "sha256": "402f54fc7de128b25d22bd4d905fb46dbcdbe2ce6efee567d4da0fc79a29aab1",
+      "url": "https://registry.npmjs.org/@excalidraw/excalidraw/-/excalidraw-0.18.1.tgz"
+    },
+    "public/excalidraw-0.18.1-declarations/dist--types--excalidraw--index.d.ts": {
+      "sha256": "90729dab4b90b24477773dd263aa8b51bbd62afa45f003795d084828a1e1e8e6",
+      "url": "https://registry.npmjs.org/@excalidraw/excalidraw/-/excalidraw-0.18.1.tgz"
+    },
+    "public/excalidraw-0.18.1-declarations/dist--types--excalidraw--types.d.ts": {
+      "sha256": "61681bd17da86a0b811242e83cd8e1f6c7f168a14806c8ca587390e24815486a",
+      "url": "https://registry.npmjs.org/@excalidraw/excalidraw/-/excalidraw-0.18.1.tgz"
+    },
+    "public/fastify-v5.6.1-migration.md": {
+      "sha256": "429f4425dfd0fcff3137d3dc8effb4bb783bc93d9baf602532243dbb234a8836",
+      "url": "https://raw.githubusercontent.com/fastify/fastify/v5.6.1/docs/Guides/Migration-Guide-V5.md"
+    },
+    "public/fastify-v5.6.1-typescript.md": {
+      "sha256": "25436f3a03044b3cbfeb6af4bc5032fd43e996789961a01c8703afeb3898b363",
+      "url": "https://raw.githubusercontent.com/fastify/fastify/v5.6.1/docs/Reference/TypeScript.md"
+    },
+    "public/fastify-v5.6.1-validation.md": {
+      "sha256": "f7b980759f4b2f93c4a2f3ebbd7aef80d254dfc758246eee2e36ee4460505d8d",
+      "url": "https://raw.githubusercontent.com/fastify/fastify/v5.6.1/docs/Reference/Validation-and-Serialization.md"
+    },
+    "sql/mariadb-json.md": {
+      "sha256": "6fc6eb741053654bddd0048613576132174d36bf703c4aea6a883353ff4d1a05",
+      "url": "https://mariadb.com/docs/server/reference/data-types/string-data-types/json.md"
+    },
+    "sql/mariadb-11.8.3.md": {
+      "sha256": "59784451a924ba4d91961829181fe90a3787de16c355b3d5352796a64fa9efad",
+      "url": "https://mariadb.com/docs/release-notes/community-server/11.8/11.8.3.md"
+    },
+    "sql/mysql-json_binary.h": {
+      "sha256": "3530a084dd02113cc21e28e11bb0b339237582de0767ae28d9e9c4de388211ef",
+      "url": "https://raw.githubusercontent.com/mysql/mysql-server/mysql-8.4.7/sql-common/json_binary.h"
+    },
+    "sql/mysql-version": {
+      "sha256": "57cae9a5de0371789fad603f90c5fb9391245ccb10655e3d689ce138134f690a",
+      "url": "https://raw.githubusercontent.com/mysql/mysql-server/mysql-8.4.7/MYSQL_VERSION"
+    }
+  },
+  "mysql_manual_http": "403 Forbidden; trusted short excerpts are separate and not raw HTTP bytes"
+}
