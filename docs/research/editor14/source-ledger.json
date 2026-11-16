@@ -45,7 +45,7 @@
       "url": "https://mariadb.com/docs/server/reference/data-types/string-data-types/json.md"
     },
     "sql/mariadb-11.8.3.md": {
-      "sha256": "59784451a924ba4d91961829181fe90a3787de16c355b3d5352796a64fa9efad",
+      "sha256": "b0f3e0a083528b1c8459cd973172fc52cce14c7b4605a2880a53ae2f5a3329e1",
       "url": "https://mariadb.com/docs/release-notes/community-server/11.8/11.8.3.md"
     },
     "sql/mysql-json_binary.h": {
@@ -57,5 +57,28 @@
       "url": "https://raw.githubusercontent.com/mysql/mysql-server/mysql-8.4.7/MYSQL_VERSION"
     }
   },
-  "mysql_manual_http": "403 Forbidden; trusted short excerpts are separate and not raw HTTP bytes"
+  "mysql_manual_http": "403 Forbidden; trusted short excerpts are separate and not raw HTTP bytes",
+  "historical_observations": [
+    {
+      "source": "sql/mariadb-11.8.3.md",
+      "url": "https://mariadb.com/docs/release-notes/community-server/11.8/11.8.3.md",
+      "previous_sha256": "59784451a924ba4d91961829181fe90a3787de16c355b3d5352796a64fa9efad",
+      "previous_bytes": 12913,
+      "observed_sha256": "b0f3e0a083528b1c8459cd973172fc52cce14c7b4605a2880a53ae2f5a3329e1",
+      "observed_bytes": 12917,
+      "diff_summary": "Three latest-release banner lines changed from 11.8.9 to 11.8.10; all remaining full-source bytes, including evaluated 11.8.3 release content, are identical.",
+      "verification_provenance": {
+        "historical_source": "editor13-sql-primary/mariadb-11.8.3.md",
+        "current_source": "editor14-source-diagnostic/mariadb-11.8.3.current.md",
+        "receipt": "editor14-source-diagnostic/receipt.json",
+        "diff": "editor14-source-diagnostic/source.diff",
+        "observed_at_unix": 1794859974.3254375,
+        "http_status": 200,
+        "final_url": "https://mariadb.com/docs/release-notes/community-server/11.8/11.8.3.md",
+        "comparison": "full raw byte hashes and line-by-line comparison of complete retained sources"
+      },
+      "scope": "Inspection-only source identity observation; no SQL runtime or license claim.",
+      "limitation": "The exact URL is mutable. Future byte drift must fail closed and requires a new review."
+    }
+  ]
 }
