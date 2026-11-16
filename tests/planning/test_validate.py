@@ -314,8 +314,8 @@ class ReportWriteTests(unittest.TestCase):
             handle = None
             try:
                 # Match an earlier publisher's DELETE/write handle and retain
-                # read access so the old file's survival is observable.
-                handle = pinned.open_relative(report.name, 0x00010003, 1)
+                # read/data-attribute access so its survival is observable.
+                handle = pinned.open_relative(report.name, 0x00010083, 1)
                 fd = msvcrt.open_osfhandle(handle, os.O_RDWR | os.O_BINARY)
                 handle = None  # the descriptor owns the native handle now
                 original = pinned.nt.NtSetInformationFile
