@@ -1,0 +1,55 @@
+{
+  "issue": "GB-T0.03.01.V1",
+  "date": "2026-11-16",
+  "status": "candidate; independent review and native CI pending",
+  "source_revision": "8f75fdb398dfb48d577135ee08f295a4c4f634b6",
+  "environment": {
+    "node": "v24.22.1",
+    "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+    "dependencies": "read-only engineering20-final-candidate/node_modules linked into copy"
+  },
+  "direct": {
+    "command": "ENGINEERING_ACCEPTANCE_TMP=../tmp node scripts/verification/verify_engineering.mjs",
+    "exit": 0,
+    "result": "70 scenarios passed; 56 directed workspace pairs plus 14 import/error scenarios; repeated diagnostics stable",
+    "raw": "GB-T0-03-01-V1-raw-results.txt"
+  },
+  "prior_hosted": {
+    "run": 43904898973,
+    "revision": "8f75fdb398dfb48d577135ee08f295a4c4f634b6",
+    "receipt": "engineering20-postmerge-native-receipt.json",
+    "log": "engineering20-postmerge-native.log",
+    "log_sha256": "f00522eeb3f3da56f5feba808fda789031ef1fe2946d7da85fb385314f5e6dff",
+    "result": "26 engineering and 20 configuration tests passed; npm ci, lint, typecheck, format, boundaries and build succeeded",
+    "failure_scenarios": "invalid version, missing compiler and interruption before publication passed; deterministic builds, clean consumer and stale consumer checks passed",
+    "limitations": "Observed prerequisite hosted evidence; not executed locally and not CI for issue 21. Interruption tests manifest publication, not deployment."
+  },
+  "clauses": {
+    "graph": "direct 56 cross-workspace pairs, contract from docs/development.md; same-workspace excluded",
+    "imports_and_errors": "direct type, re-export, dynamic, require, alias, relative, builtin, unresolved, malformed and repeated error cases",
+    "reproducible_tooling": "prior hosted install, lint, typecheck, format, versioned build and determinism; fresh issue 21 CI pending",
+    "failures": "direct invalid tsconfig; other failure paths prior hosted only",
+    "raw_revision_environment": "this record, raw output and coordinator manifest",
+    "external_platforms": "Discord and GoDaddy runtime N/A to tooling-only scope; no integration or product pass asserted"
+  },
+  "defects_and_limitations": [
+    "Original issue 20 functional review rejected two configuration coverage gaps; repaired in prerequisite successor and retained as history.",
+    "Earlier local configuration child tests failed EPERM; subsequent hosted prerequisite tests passed.",
+    "This checker tests repository import conventions, not hostile code containment or authorization/tenant isolation."
+  ],
+  "owned_decisions": [
+    {
+      "section": "issue 21 engineering acceptance",
+      "decision_owner": "assigned acceptance implementer",
+      "decision": "Use independent graph matrix and in-process fixture scenarios; cite hosted prerequisite tests separately",
+      "rationale": "Accepted development contract defines graph; prohibited child execution prevents locally repeating native build failure fixtures",
+      "validation": "70 direct cases; native log and receipt inspected",
+      "follow_through": "Coordinator obtains independent issue 21 review, native CI, protected merge and post-merge evidence; do not close issue 21 or parent 19 prematurely."
+    }
+  ],
+  "outstanding": [
+    "Fresh independent functional review and applicable security review for issue 21",
+    "Native CI of issue 21 candidate and post-merge evidence",
+    "Coordinator integration, protected merge and issue/parent disposition"
+  ]
+}
