@@ -1,0 +1,26 @@
+name: Architecture controls
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  boundary-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout trusted base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - name: Checkout proposed head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          persist-credentials: false
+      - name: Check using base policy and baseline
+        run: |
+          test -f base/scripts/architecture-controls/check.py || { echo 'Bootstrap requires explicit native integration review'; exit 1; }
+          python3 base/scripts/architecture-controls/check.py --base base --current head
