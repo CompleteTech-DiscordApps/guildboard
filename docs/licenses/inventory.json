@@ -21917,6 +21917,20 @@
           "member": "package/LICENSE"
         }
       ]
+    },
+    {
+      "path": "docs/licenses/notices/9a97891a8e69da238853b1a512ae6ea8797072e9aad5bb25449b798deaab986e.txt",
+      "sha256": "9a97891a8e69da238853b1a512ae6ea8797072e9aad5bb25449b798deaab986e",
+      "bytes": 3326,
+      "sources": [
+        {
+          "kind": "supplemental_path",
+          "lock_path": "node_modules/natural-compare",
+          "path": "license16-upstream/natural-README.md",
+          "url": "https://raw.githubusercontent.com/litejs/natural-compare-lite/eec83eee67cfac84d6db30cdd65363f155673770/README.md",
+          "commit": "eec83eee67cfac84d6db30cdd65363f155673770"
+        }
+      ]
     }
   ],
   "owned_decisions": [
@@ -21928,6 +21942,29 @@
       "requirements_evidence": "Draft and overlays hashed; archive members and candidate inputs verified",
       "validation": "100 non-link lock entries, 246 ordinals, 9 unresolved and byte-identical retained notices",
       "follow_through": "Root integration and independent checker must assess the normalized inventory; distribution scope and unresolved sections remain open."
+    },
+    {
+      "affected_items": "Issue 16 notice follow-through",
+      "decision_owner": "scoped checker owner",
+      "chosen_action": "Retain pinned natural-compare README and record unresolved AUTHORS references",
+      "rationale": "Preserve exact attribution bytes; do not infer missing authors or bundled versions",
+      "requirements_evidence": "Pinned README SHA-256 and acorn archive SHA-512 verified; archive and installed directory contain no AUTHORS",
+      "validation": "Bounded archive examination and explicit-reference text scan",
+      "follow_through": "Resolve remaining attribution and terms before clearance."
+    }
+  ],
+  "notice_coverage_gaps": [
+    {
+      "component": "node_modules/acorn",
+      "reference": "LICENSE refers to AUTHORS",
+      "status": "unresolved",
+      "evidence": "SHA-512 verified acorn 8.19.0 npm archive has no AUTHORS member; installed acorn directory has no AUTHORS file. Attribution coverage remains unknown."
+    },
+    {
+      "component": "node_modules/prettier",
+      "reference": "Bundled notice contains two acorn copyright references to AUTHORS",
+      "status": "unresolved",
+      "evidence": "The bundled notice references AUTHORS; the separately inspected installed and archived acorn 8.19.0 cannot establish AUTHORS for bundled versions. Attribution coverage remains unknown."
     }
   ]
 }
