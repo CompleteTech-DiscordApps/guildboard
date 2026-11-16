@@ -13576,35 +13576,13 @@
         "required_action": "Preserve the full actual published notice with copies or substantial portions; carry forward any independently identified applicable actual copyright notice. Complete overall scope assessment and independent review before any clearance."
       },
       {
+        "candidate": "3b63c9e9feb38e7bcd07bfc34f67ca7611f7cb83",
         "ordinal": 190,
         "name": "remark-math@v3.0.1",
-        "original_decision": {
-          "ordinal": 190,
-          "name": "remark-math@v3.0.1",
-          "status": "unresolved",
-          "license_family": "MIT",
-          "source_section_sha256": "2fb4235f19a39b4e059e02450c5b84097f9a48335b1db37a17c30da640b8116f",
-          "section_text": "\n> remark plugin to parse and stringify math\n\nLicense: MIT  \nAuthor: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  \nContributors:\n - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)\n - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)\n\n----------------------------------------\n\n",
-          "attribution_and_provenance_lines": [
-            "Author: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  ",
-            "Contributors:",
-            " - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)",
-            " - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
-          ],
-          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
-          "obligations": "Unknown until exact-version original notice is inspected; preserve the complete bundled section meanwhile.",
-          "specific_gap": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
-          "reproduction": "Inspect section_text for ordinal 190 and compare with exact-version source notice.",
-          "required_action": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
-          "source_match": "exact byte substring of original notice"
-        },
-        "current_status": "unresolved",
-        "license_family": "MIT candidate",
+        "current_status": "interpreted",
+        "license_family": "MIT",
         "actual_full_notice": "(The MIT License)\n\nCopyright (c) 2017 Junyoung Choi <fluke8259@gmail.com>\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n",
         "notice_sha256": "cb992262f361a5359e6771c28740d33c7041e15332ae8537fae40538992591a9",
-        "interpretation_and_version_applicability": "The separately resolved 3.0.1 tag has a root MIT notice; its retrieved root package.json is private and has no version and is not packages/remark-math/package.json. The exact npm manifest says 3.0.1 MIT, but this evidence does not verify the tagged package manifest or exclude a contrary subnotice. Root attribution cannot be assumed applicable without that link.",
-        "obligations": "Preserve the full copyright and permission notice in copies or substantial portions; retain the warranty and liability disclaimer with the notice.",
-        "required_action": "M manager: obtain the tagged packages/remark-math/package.json and applicable package/subdirectory notices, establish the release relation and preserve the applicable full notice.",
         "source_evidence": {
           "npm_archive": {
             "path": "license16-bundled-sources/c4b65759cc02b6f6133015c287f2c1a5a9aa22aa5801a17e47f93b01af8ca5ed.tgz",
@@ -13654,8 +13632,196 @@
               "declared_license": null,
               "byte_equal_to_published_manifest": false
             }
-          ]
-        }
+          ],
+          "new_package_receipt": {
+            "path": "license16-bundled-sources/remark-math190-package-receipt.json",
+            "sha256": "3b0698e051440947658036e20682a75508e243090d6f8c18c937eacc352183e9",
+            "data": {
+              "observed_at": 1794850868.8888521,
+              "candidate": "3b63c9e9feb38e7bcd07bfc34f67ca7611f7cb83",
+              "ordinal": 190,
+              "commit": "a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13",
+              "manifest": {
+                "path": "license16-bundled-sources/remark-math-package-3.0.1-pinned.json",
+                "source_path": "packages/remark-math/package.json",
+                "url": "https://github.com/remarkjs/remark-math/blob/a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13/packages/remark-math/package.json",
+                "git_blob_sha": "0e546ab439deb2660bd0f27052e8850e9c6f0736",
+                "sha256": "669f6670b69c1620796f602c8bdb15e55e68dd623afefa056c6f0c1ca8e974aa",
+                "bytes": 1008,
+                "name": "remark-math",
+                "version": "3.0.1",
+                "declared_license": "MIT",
+                "byte_identical_to_recorded_published_manifest": true
+              },
+              "tree": {
+                "path": "license16-bundled-sources/remark-math-3.0.1-full-tree.json",
+                "url": "https://api.github.com/repos/remarkjs/remark-math/git/trees/a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13?recursive=1",
+                "sha256": "e6621eb4c913205e1e24e1e7c1624c2d666ec257a16c67e32e6f451813b9524f",
+                "truncated": false,
+                "entries": 82,
+                "notice_paths": [
+                  "license"
+                ]
+              },
+              "next_action": "Independent bounded technical interpretation of190 using actual packageversionmanifest androotnotice; no automaticresolution/clearance"
+            }
+          },
+          "independent_checks": {
+            "published_manifest_byte_equal": true,
+            "archive_sha256_and_sha512_verified": true,
+            "archive_notice_paths": [],
+            "tree_sha256_verified": true,
+            "tree_commit_matches": true,
+            "tree_not_truncated": true,
+            "tree_entry_count": 82,
+            "notice_paths": [
+              "license"
+            ],
+            "package_manifest_git_blob_verified": true,
+            "root_notice_git_blob_verified": true,
+            "notice_bytes_equal_prior_full_notice": true
+          }
+        },
+        "technical_rationale": "The pinned packages/remark-math/package.json identifies remark-math 3.0.1 and declares MIT; its bytes match the package/package.json in the integrity-verified published archive. The pinned root license is an ancestor of that package directory. The complete recursive tree at the resolved commit identifies no competing license, copying, or notice path within that package or elsewhere, supporting application of the root MIT grant to this exact package. The published archive contains no separately named notice. This conclusion is limited to this package and does not extend to other repository packages or bundled material.",
+        "conditions": "Include the copyright and permission notice in copies or substantial portions of the software; retain the full notice and its warranty and liability disclaimer.",
+        "remaining_uncertainty": "This is a bounded technical interpretation of the available pinned tree and package metadata, not legal certification or distribution clearance; the evidence does not establish terms for other bundled material. Filename screening cannot rule out terms embedded under unrelated filenames.",
+        "required_action": "Root coordinator to review and integrate the full applicable notice and this interpretation, explicitly update decision identity if accepted, and obtain fresh independent review of any successor candidate; other seven gaps remain unchanged.",
+        "history": {
+          "original_decision": {
+            "ordinal": 190,
+            "name": "remark-math@v3.0.1",
+            "status": "unresolved",
+            "license_family": "MIT",
+            "source_section_sha256": "2fb4235f19a39b4e059e02450c5b84097f9a48335b1db37a17c30da640b8116f",
+            "section_text": "\n> remark plugin to parse and stringify math\n\nLicense: MIT  \nAuthor: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  \nContributors:\n - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)\n - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)\n\n----------------------------------------\n\n",
+            "attribution_and_provenance_lines": [
+              "Author: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  ",
+              "Contributors:",
+              " - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)",
+              " - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
+            ],
+            "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+            "obligations": "Unknown until exact-version original notice is inspected; preserve the complete bundled section meanwhile.",
+            "specific_gap": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+            "reproduction": "Inspect section_text for ordinal 190 and compare with exact-version source notice.",
+            "required_action": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+            "source_match": "exact byte substring of original notice"
+          },
+          "intermediate_unresolved_section": {
+            "ordinal": 190,
+            "name": "remark-math@v3.0.1",
+            "original_decision": {
+              "ordinal": 190,
+              "name": "remark-math@v3.0.1",
+              "status": "unresolved",
+              "license_family": "MIT",
+              "source_section_sha256": "2fb4235f19a39b4e059e02450c5b84097f9a48335b1db37a17c30da640b8116f",
+              "section_text": "\n> remark plugin to parse and stringify math\n\nLicense: MIT  \nAuthor: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  \nContributors:\n - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)\n - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)\n\n----------------------------------------\n\n",
+              "attribution_and_provenance_lines": [
+                "Author: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  ",
+                "Contributors:",
+                " - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)",
+                " - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
+              ],
+              "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+              "obligations": "Unknown until exact-version original notice is inspected; preserve the complete bundled section meanwhile.",
+              "specific_gap": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+              "reproduction": "Inspect section_text for ordinal 190 and compare with exact-version source notice.",
+              "required_action": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+              "source_match": "exact byte substring of original notice"
+            },
+            "current_status": "unresolved",
+            "license_family": "MIT candidate",
+            "actual_full_notice": "(The MIT License)\n\nCopyright (c) 2017 Junyoung Choi <fluke8259@gmail.com>\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n",
+            "notice_sha256": "cb992262f361a5359e6771c28740d33c7041e15332ae8537fae40538992591a9",
+            "interpretation_and_version_applicability": "The separately resolved 3.0.1 tag has a root MIT notice; its retrieved root package.json is private and has no version and is not packages/remark-math/package.json. The exact npm manifest says 3.0.1 MIT, but this evidence does not verify the tagged package manifest or exclude a contrary subnotice. Root attribution cannot be assumed applicable without that link.",
+            "obligations": "Preserve the full copyright and permission notice in copies or substantial portions; retain the warranty and liability disclaimer with the notice.",
+            "required_action": "M manager: obtain the tagged packages/remark-math/package.json and applicable package/subdirectory notices, establish the release relation and preserve the applicable full notice.",
+            "source_evidence": {
+              "npm_archive": {
+                "path": "license16-bundled-sources/c4b65759cc02b6f6133015c287f2c1a5a9aa22aa5801a17e47f93b01af8ca5ed.tgz",
+                "sha256": "7ce5adece0298f8c52fe299a0a6a054c79f9abce6ace4970cd7bf7c10b752c80",
+                "sha512_integrity": "sha512-epT77R/HK0x7NqrWHdSV75uNLwn8g9qTyMqCRCDujL0vj/6T6+yhdrR7mjELWtkse+Fw02kijAaBuVcHBor1+Q==",
+                "integrity_verified": true,
+                "url": "https://registry.npmjs.org/remark-math/-/remark-math-3.0.1.tgz"
+              },
+              "metadata": {
+                "path": "license16-bundled-sources/c4b65759cc02b6f6133015c287f2c1a5a9aa22aa5801a17e47f93b01af8ca5ed.metadata.json",
+                "sha256": "aedd9dea6b213395ba7889fbaa408c4c7e0e259ec2cb2796f9620c786ff089f5",
+                "url": "https://registry.npmjs.org/remark-math/3.0.1"
+              },
+              "published_manifest": {
+                "member": "package/package.json",
+                "sha256": "669f6670b69c1620796f602c8bdb15e55e68dd623afefa056c6f0c1ca8e974aa",
+                "name": "remark-math",
+                "version": "3.0.1",
+                "declared_license": "MIT"
+              },
+              "notice_paths_in_archive": [],
+              "selected_members": [],
+              "tag_resolution": [
+                {
+                  "name": "remark-math",
+                  "ref": "3.0.1",
+                  "resolved_commit": "a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13",
+                  "commit_api": "https://api.github.com/repos/remarkjs/remark-math/commits/3.0.1"
+                }
+              ],
+              "pinned_files": [
+                {
+                  "path": "license16-bundled-sources/remark-math-640eb6bd5992e71d61218277f943a99b384865f5d54e4f40b81e1e51f06af445.pinned",
+                  "source_path": "license",
+                  "url": "https://raw.githubusercontent.com/remarkjs/remark-math/a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13/license",
+                  "commit": "a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13",
+                  "sha256": "cb992262f361a5359e6771c28740d33c7041e15332ae8537fae40538992591a9"
+                },
+                {
+                  "path": "license16-bundled-sources/remark-math-4665120bbf448897c548c446a1992a04356d97eeeaf2d77d2c8c876c53c3bc1c.pinned",
+                  "source_path": "package.json",
+                  "url": "https://raw.githubusercontent.com/remarkjs/remark-math/a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13/package.json",
+                  "commit": "a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13",
+                  "sha256": "45d4de2d1ffeff4f35a66d5ce78e78c5bb1f249db14da46e73a86299b7aa78ae",
+                  "name": "remark-math",
+                  "version": null,
+                  "declared_license": null,
+                  "byte_equal_to_published_manifest": false
+                }
+              ]
+            }
+          }
+        },
+        "owned_decisions": [
+          {
+            "affected_item": "section 190 remark-math@v3.0.1",
+            "decision_owner": "assigned bounded technical interpreter",
+            "chosen_action": "interpreted",
+            "rationale": "Exact package manifest matches published bytes and declares MIT; root notice is ancestral, and complete pinned tree has no competing named notice.",
+            "requirements_evidence": "Pinned commit, package and notice blob checks, archive integrity and complete tree checks recorded in source_evidence.",
+            "validation": "See verification checks and artifact hash manifest.",
+            "follow_through": "Coordinator integration and fresh independent successor review remain required."
+          }
+        ],
+        "original_decision": {
+          "ordinal": 190,
+          "name": "remark-math@v3.0.1",
+          "status": "unresolved",
+          "license_family": "MIT",
+          "source_section_sha256": "2fb4235f19a39b4e059e02450c5b84097f9a48335b1db37a17c30da640b8116f",
+          "section_text": "\n> remark plugin to parse and stringify math\n\nLicense: MIT  \nAuthor: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  \nContributors:\n - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)\n - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)\n\n----------------------------------------\n\n",
+          "attribution_and_provenance_lines": [
+            "Author: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  ",
+            "Contributors:",
+            " - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)",
+            " - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
+          ],
+          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+          "obligations": "Unknown until exact-version original notice is inspected; preserve the complete bundled section meanwhile.",
+          "specific_gap": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+          "reproduction": "Inspect section_text for ordinal 190 and compare with exact-version source notice.",
+          "required_action": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+          "source_match": "exact byte substring of original notice"
+        },
+        "scope": "Bounded technical190 interpretation; not distribution clearance"
       },
       {
         "ordinal": 191,
@@ -14067,6 +14233,92 @@
           }
         },
         "successor_overlay_sha256": "816751cad05e38955bbc17b41a7cdd783be2122660f0cfa3dccd10c5dcaff47c"
+      },
+      {
+        "ordinal": 190,
+        "prior_decision": {
+          "ordinal": 190,
+          "name": "remark-math@v3.0.1",
+          "original_decision": {
+            "ordinal": 190,
+            "name": "remark-math@v3.0.1",
+            "status": "unresolved",
+            "license_family": "MIT",
+            "source_section_sha256": "2fb4235f19a39b4e059e02450c5b84097f9a48335b1db37a17c30da640b8116f",
+            "section_text": "\n> remark plugin to parse and stringify math\n\nLicense: MIT  \nAuthor: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  \nContributors:\n - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)\n - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)\n\n----------------------------------------\n\n",
+            "attribution_and_provenance_lines": [
+              "Author: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  ",
+              "Contributors:",
+              " - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)",
+              " - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
+            ],
+            "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+            "obligations": "Unknown until exact-version original notice is inspected; preserve the complete bundled section meanwhile.",
+            "specific_gap": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+            "reproduction": "Inspect section_text for ordinal 190 and compare with exact-version source notice.",
+            "required_action": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+            "source_match": "exact byte substring of original notice"
+          },
+          "current_status": "unresolved",
+          "license_family": "MIT candidate",
+          "actual_full_notice": "(The MIT License)\n\nCopyright (c) 2017 Junyoung Choi <fluke8259@gmail.com>\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n",
+          "notice_sha256": "cb992262f361a5359e6771c28740d33c7041e15332ae8537fae40538992591a9",
+          "interpretation_and_version_applicability": "The separately resolved 3.0.1 tag has a root MIT notice; its retrieved root package.json is private and has no version and is not packages/remark-math/package.json. The exact npm manifest says 3.0.1 MIT, but this evidence does not verify the tagged package manifest or exclude a contrary subnotice. Root attribution cannot be assumed applicable without that link.",
+          "obligations": "Preserve the full copyright and permission notice in copies or substantial portions; retain the warranty and liability disclaimer with the notice.",
+          "required_action": "M manager: obtain the tagged packages/remark-math/package.json and applicable package/subdirectory notices, establish the release relation and preserve the applicable full notice.",
+          "source_evidence": {
+            "npm_archive": {
+              "path": "license16-bundled-sources/c4b65759cc02b6f6133015c287f2c1a5a9aa22aa5801a17e47f93b01af8ca5ed.tgz",
+              "sha256": "7ce5adece0298f8c52fe299a0a6a054c79f9abce6ace4970cd7bf7c10b752c80",
+              "sha512_integrity": "sha512-epT77R/HK0x7NqrWHdSV75uNLwn8g9qTyMqCRCDujL0vj/6T6+yhdrR7mjELWtkse+Fw02kijAaBuVcHBor1+Q==",
+              "integrity_verified": true,
+              "url": "https://registry.npmjs.org/remark-math/-/remark-math-3.0.1.tgz"
+            },
+            "metadata": {
+              "path": "license16-bundled-sources/c4b65759cc02b6f6133015c287f2c1a5a9aa22aa5801a17e47f93b01af8ca5ed.metadata.json",
+              "sha256": "aedd9dea6b213395ba7889fbaa408c4c7e0e259ec2cb2796f9620c786ff089f5",
+              "url": "https://registry.npmjs.org/remark-math/3.0.1"
+            },
+            "published_manifest": {
+              "member": "package/package.json",
+              "sha256": "669f6670b69c1620796f602c8bdb15e55e68dd623afefa056c6f0c1ca8e974aa",
+              "name": "remark-math",
+              "version": "3.0.1",
+              "declared_license": "MIT"
+            },
+            "notice_paths_in_archive": [],
+            "selected_members": [],
+            "tag_resolution": [
+              {
+                "name": "remark-math",
+                "ref": "3.0.1",
+                "resolved_commit": "a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13",
+                "commit_api": "https://api.github.com/repos/remarkjs/remark-math/commits/3.0.1"
+              }
+            ],
+            "pinned_files": [
+              {
+                "path": "license16-bundled-sources/remark-math-640eb6bd5992e71d61218277f943a99b384865f5d54e4f40b81e1e51f06af445.pinned",
+                "source_path": "license",
+                "url": "https://raw.githubusercontent.com/remarkjs/remark-math/a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13/license",
+                "commit": "a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13",
+                "sha256": "cb992262f361a5359e6771c28740d33c7041e15332ae8537fae40538992591a9"
+              },
+              {
+                "path": "license16-bundled-sources/remark-math-4665120bbf448897c548c446a1992a04356d97eeeaf2d77d2c8c876c53c3bc1c.pinned",
+                "source_path": "package.json",
+                "url": "https://raw.githubusercontent.com/remarkjs/remark-math/a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13/package.json",
+                "commit": "a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13",
+                "sha256": "45d4de2d1ffeff4f35a66d5ce78e78c5bb1f249db14da46e73a86299b7aa78ae",
+                "name": "remark-math",
+                "version": null,
+                "declared_license": null,
+                "byte_equal_to_published_manifest": false
+              }
+            ]
+          }
+        },
+        "successor_overlay_sha256": "6866bd370427aa20c38fc10b7bbf6956dad0b42bc22b45ec7c7e3b7c1d0f5bb6"
       }
     ]
   },
@@ -14075,7 +14327,6 @@
     6,
     119,
     180,
-    190,
     217,
     236
   ],
@@ -19022,37 +19273,15 @@
         "required_action": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
         "source_match": "exact byte substring of original notice"
       },
-      "effective_status": "unresolved",
+      "effective_status": "interpreted",
       "supplemental_decision": {
+        "candidate": "3b63c9e9feb38e7bcd07bfc34f67ca7611f7cb83",
         "ordinal": 190,
         "name": "remark-math@v3.0.1",
-        "original_decision": {
-          "ordinal": 190,
-          "name": "remark-math@v3.0.1",
-          "status": "unresolved",
-          "license_family": "MIT",
-          "source_section_sha256": "2fb4235f19a39b4e059e02450c5b84097f9a48335b1db37a17c30da640b8116f",
-          "section_text": "\n> remark plugin to parse and stringify math\n\nLicense: MIT  \nAuthor: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  \nContributors:\n - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)\n - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)\n\n----------------------------------------\n\n",
-          "attribution_and_provenance_lines": [
-            "Author: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  ",
-            "Contributors:",
-            " - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)",
-            " - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
-          ],
-          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
-          "obligations": "Unknown until exact-version original notice is inspected; preserve the complete bundled section meanwhile.",
-          "specific_gap": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
-          "reproduction": "Inspect section_text for ordinal 190 and compare with exact-version source notice.",
-          "required_action": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
-          "source_match": "exact byte substring of original notice"
-        },
-        "current_status": "unresolved",
-        "license_family": "MIT candidate",
+        "current_status": "interpreted",
+        "license_family": "MIT",
         "actual_full_notice": "(The MIT License)\n\nCopyright (c) 2017 Junyoung Choi <fluke8259@gmail.com>\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n",
         "notice_sha256": "cb992262f361a5359e6771c28740d33c7041e15332ae8537fae40538992591a9",
-        "interpretation_and_version_applicability": "The separately resolved 3.0.1 tag has a root MIT notice; its retrieved root package.json is private and has no version and is not packages/remark-math/package.json. The exact npm manifest says 3.0.1 MIT, but this evidence does not verify the tagged package manifest or exclude a contrary subnotice. Root attribution cannot be assumed applicable without that link.",
-        "obligations": "Preserve the full copyright and permission notice in copies or substantial portions; retain the warranty and liability disclaimer with the notice.",
-        "required_action": "M manager: obtain the tagged packages/remark-math/package.json and applicable package/subdirectory notices, establish the release relation and preserve the applicable full notice.",
         "source_evidence": {
           "npm_archive": {
             "path": "license16-bundled-sources/c4b65759cc02b6f6133015c287f2c1a5a9aa22aa5801a17e47f93b01af8ca5ed.tgz",
@@ -19102,8 +19331,196 @@
               "declared_license": null,
               "byte_equal_to_published_manifest": false
             }
-          ]
-        }
+          ],
+          "new_package_receipt": {
+            "path": "license16-bundled-sources/remark-math190-package-receipt.json",
+            "sha256": "3b0698e051440947658036e20682a75508e243090d6f8c18c937eacc352183e9",
+            "data": {
+              "observed_at": 1794850868.8888521,
+              "candidate": "3b63c9e9feb38e7bcd07bfc34f67ca7611f7cb83",
+              "ordinal": 190,
+              "commit": "a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13",
+              "manifest": {
+                "path": "license16-bundled-sources/remark-math-package-3.0.1-pinned.json",
+                "source_path": "packages/remark-math/package.json",
+                "url": "https://github.com/remarkjs/remark-math/blob/a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13/packages/remark-math/package.json",
+                "git_blob_sha": "0e546ab439deb2660bd0f27052e8850e9c6f0736",
+                "sha256": "669f6670b69c1620796f602c8bdb15e55e68dd623afefa056c6f0c1ca8e974aa",
+                "bytes": 1008,
+                "name": "remark-math",
+                "version": "3.0.1",
+                "declared_license": "MIT",
+                "byte_identical_to_recorded_published_manifest": true
+              },
+              "tree": {
+                "path": "license16-bundled-sources/remark-math-3.0.1-full-tree.json",
+                "url": "https://api.github.com/repos/remarkjs/remark-math/git/trees/a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13?recursive=1",
+                "sha256": "e6621eb4c913205e1e24e1e7c1624c2d666ec257a16c67e32e6f451813b9524f",
+                "truncated": false,
+                "entries": 82,
+                "notice_paths": [
+                  "license"
+                ]
+              },
+              "next_action": "Independent bounded technical interpretation of190 using actual packageversionmanifest androotnotice; no automaticresolution/clearance"
+            }
+          },
+          "independent_checks": {
+            "published_manifest_byte_equal": true,
+            "archive_sha256_and_sha512_verified": true,
+            "archive_notice_paths": [],
+            "tree_sha256_verified": true,
+            "tree_commit_matches": true,
+            "tree_not_truncated": true,
+            "tree_entry_count": 82,
+            "notice_paths": [
+              "license"
+            ],
+            "package_manifest_git_blob_verified": true,
+            "root_notice_git_blob_verified": true,
+            "notice_bytes_equal_prior_full_notice": true
+          }
+        },
+        "technical_rationale": "The pinned packages/remark-math/package.json identifies remark-math 3.0.1 and declares MIT; its bytes match the package/package.json in the integrity-verified published archive. The pinned root license is an ancestor of that package directory. The complete recursive tree at the resolved commit identifies no competing license, copying, or notice path within that package or elsewhere, supporting application of the root MIT grant to this exact package. The published archive contains no separately named notice. This conclusion is limited to this package and does not extend to other repository packages or bundled material.",
+        "conditions": "Include the copyright and permission notice in copies or substantial portions of the software; retain the full notice and its warranty and liability disclaimer.",
+        "remaining_uncertainty": "This is a bounded technical interpretation of the available pinned tree and package metadata, not legal certification or distribution clearance; the evidence does not establish terms for other bundled material. Filename screening cannot rule out terms embedded under unrelated filenames.",
+        "required_action": "Root coordinator to review and integrate the full applicable notice and this interpretation, explicitly update decision identity if accepted, and obtain fresh independent review of any successor candidate; other seven gaps remain unchanged.",
+        "history": {
+          "original_decision": {
+            "ordinal": 190,
+            "name": "remark-math@v3.0.1",
+            "status": "unresolved",
+            "license_family": "MIT",
+            "source_section_sha256": "2fb4235f19a39b4e059e02450c5b84097f9a48335b1db37a17c30da640b8116f",
+            "section_text": "\n> remark plugin to parse and stringify math\n\nLicense: MIT  \nAuthor: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  \nContributors:\n - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)\n - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)\n\n----------------------------------------\n\n",
+            "attribution_and_provenance_lines": [
+              "Author: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  ",
+              "Contributors:",
+              " - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)",
+              " - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
+            ],
+            "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+            "obligations": "Unknown until exact-version original notice is inspected; preserve the complete bundled section meanwhile.",
+            "specific_gap": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+            "reproduction": "Inspect section_text for ordinal 190 and compare with exact-version source notice.",
+            "required_action": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+            "source_match": "exact byte substring of original notice"
+          },
+          "intermediate_unresolved_section": {
+            "ordinal": 190,
+            "name": "remark-math@v3.0.1",
+            "original_decision": {
+              "ordinal": 190,
+              "name": "remark-math@v3.0.1",
+              "status": "unresolved",
+              "license_family": "MIT",
+              "source_section_sha256": "2fb4235f19a39b4e059e02450c5b84097f9a48335b1db37a17c30da640b8116f",
+              "section_text": "\n> remark plugin to parse and stringify math\n\nLicense: MIT  \nAuthor: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  \nContributors:\n - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)\n - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)\n\n----------------------------------------\n\n",
+              "attribution_and_provenance_lines": [
+                "Author: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  ",
+                "Contributors:",
+                " - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)",
+                " - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
+              ],
+              "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+              "obligations": "Unknown until exact-version original notice is inspected; preserve the complete bundled section meanwhile.",
+              "specific_gap": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+              "reproduction": "Inspect section_text for ordinal 190 and compare with exact-version source notice.",
+              "required_action": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+              "source_match": "exact byte substring of original notice"
+            },
+            "current_status": "unresolved",
+            "license_family": "MIT candidate",
+            "actual_full_notice": "(The MIT License)\n\nCopyright (c) 2017 Junyoung Choi <fluke8259@gmail.com>\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n",
+            "notice_sha256": "cb992262f361a5359e6771c28740d33c7041e15332ae8537fae40538992591a9",
+            "interpretation_and_version_applicability": "The separately resolved 3.0.1 tag has a root MIT notice; its retrieved root package.json is private and has no version and is not packages/remark-math/package.json. The exact npm manifest says 3.0.1 MIT, but this evidence does not verify the tagged package manifest or exclude a contrary subnotice. Root attribution cannot be assumed applicable without that link.",
+            "obligations": "Preserve the full copyright and permission notice in copies or substantial portions; retain the warranty and liability disclaimer with the notice.",
+            "required_action": "M manager: obtain the tagged packages/remark-math/package.json and applicable package/subdirectory notices, establish the release relation and preserve the applicable full notice.",
+            "source_evidence": {
+              "npm_archive": {
+                "path": "license16-bundled-sources/c4b65759cc02b6f6133015c287f2c1a5a9aa22aa5801a17e47f93b01af8ca5ed.tgz",
+                "sha256": "7ce5adece0298f8c52fe299a0a6a054c79f9abce6ace4970cd7bf7c10b752c80",
+                "sha512_integrity": "sha512-epT77R/HK0x7NqrWHdSV75uNLwn8g9qTyMqCRCDujL0vj/6T6+yhdrR7mjELWtkse+Fw02kijAaBuVcHBor1+Q==",
+                "integrity_verified": true,
+                "url": "https://registry.npmjs.org/remark-math/-/remark-math-3.0.1.tgz"
+              },
+              "metadata": {
+                "path": "license16-bundled-sources/c4b65759cc02b6f6133015c287f2c1a5a9aa22aa5801a17e47f93b01af8ca5ed.metadata.json",
+                "sha256": "aedd9dea6b213395ba7889fbaa408c4c7e0e259ec2cb2796f9620c786ff089f5",
+                "url": "https://registry.npmjs.org/remark-math/3.0.1"
+              },
+              "published_manifest": {
+                "member": "package/package.json",
+                "sha256": "669f6670b69c1620796f602c8bdb15e55e68dd623afefa056c6f0c1ca8e974aa",
+                "name": "remark-math",
+                "version": "3.0.1",
+                "declared_license": "MIT"
+              },
+              "notice_paths_in_archive": [],
+              "selected_members": [],
+              "tag_resolution": [
+                {
+                  "name": "remark-math",
+                  "ref": "3.0.1",
+                  "resolved_commit": "a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13",
+                  "commit_api": "https://api.github.com/repos/remarkjs/remark-math/commits/3.0.1"
+                }
+              ],
+              "pinned_files": [
+                {
+                  "path": "license16-bundled-sources/remark-math-640eb6bd5992e71d61218277f943a99b384865f5d54e4f40b81e1e51f06af445.pinned",
+                  "source_path": "license",
+                  "url": "https://raw.githubusercontent.com/remarkjs/remark-math/a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13/license",
+                  "commit": "a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13",
+                  "sha256": "cb992262f361a5359e6771c28740d33c7041e15332ae8537fae40538992591a9"
+                },
+                {
+                  "path": "license16-bundled-sources/remark-math-4665120bbf448897c548c446a1992a04356d97eeeaf2d77d2c8c876c53c3bc1c.pinned",
+                  "source_path": "package.json",
+                  "url": "https://raw.githubusercontent.com/remarkjs/remark-math/a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13/package.json",
+                  "commit": "a6dbb935fb5de54f2d6fb22c29d4b8c7185e6e13",
+                  "sha256": "45d4de2d1ffeff4f35a66d5ce78e78c5bb1f249db14da46e73a86299b7aa78ae",
+                  "name": "remark-math",
+                  "version": null,
+                  "declared_license": null,
+                  "byte_equal_to_published_manifest": false
+                }
+              ]
+            }
+          }
+        },
+        "owned_decisions": [
+          {
+            "affected_item": "section 190 remark-math@v3.0.1",
+            "decision_owner": "assigned bounded technical interpreter",
+            "chosen_action": "interpreted",
+            "rationale": "Exact package manifest matches published bytes and declares MIT; root notice is ancestral, and complete pinned tree has no competing named notice.",
+            "requirements_evidence": "Pinned commit, package and notice blob checks, archive integrity and complete tree checks recorded in source_evidence.",
+            "validation": "See verification checks and artifact hash manifest.",
+            "follow_through": "Coordinator integration and fresh independent successor review remain required."
+          }
+        ],
+        "original_decision": {
+          "ordinal": 190,
+          "name": "remark-math@v3.0.1",
+          "status": "unresolved",
+          "license_family": "MIT",
+          "source_section_sha256": "2fb4235f19a39b4e059e02450c5b84097f9a48335b1db37a17c30da640b8116f",
+          "section_text": "\n> remark plugin to parse and stringify math\n\nLicense: MIT  \nAuthor: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  \nContributors:\n - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)\n - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)\n\n----------------------------------------\n\n",
+          "attribution_and_provenance_lines": [
+            "Author: Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)  ",
+            "Contributors:",
+            " - Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)",
+            " - Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
+          ],
+          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+          "obligations": "Unknown until exact-version original notice is inspected; preserve the complete bundled section meanwhile.",
+          "specific_gap": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+          "reproduction": "Inspect section_text for ordinal 190 and compare with exact-version source notice.",
+          "required_action": "Bundled section has an MIT metadata label but no license body or copyright notice; obtain and inspect the original notice from the exact package version, verifying tag or commit and provenance.",
+          "source_match": "exact byte substring of original notice"
+        },
+        "scope": "Bounded technical190 interpretation; not distribution clearance"
       }
     },
     {
@@ -20651,7 +21068,6 @@
     6,
     119,
     180,
-    190,
     217,
     236
   ],
@@ -22147,5 +22563,10 @@
       221
     ],
     "scope": "Publishedgrantinterpreted;missingcopyrightownershipuncertainty preserved;notdistributionclearance"
+  },
+  "remark_math190_overlay": {
+    "sha256": "6866bd370427aa20c38fc10b7bbf6956dad0b42bc22b45ec7c7e3b7c1d0f5bb6",
+    "ordinal": 190,
+    "scope": "Exact manifest and ancestral full MIT notice interpreted; unknown distribution scope and other gaps preserved"
   }
 }

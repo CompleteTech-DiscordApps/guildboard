@@ -15,7 +15,7 @@ HEX = re.compile(r'^[0-9a-f]{64}$')
 STATUS = {'interpreted', 'unresolved'}
 # Section decision identity, subject to fresh independent review; not legal approval.
 # Changes to the catalog require an explicit code update and fresh review.
-DECISION_CATALOG_SHA256 = '7d9b90505b214a3991c910f0cf0ee424fdc055232e12873da41c5b1852586c67'
+DECISION_CATALOG_SHA256 = '462025adc40459385adf50df0be7b647ec0669af09d0b4ec2ac6ed20302bc1bc'
 
 def decision_catalog_digest(inventory):
     # Scope and coverage are assessed separately; every other field, including
