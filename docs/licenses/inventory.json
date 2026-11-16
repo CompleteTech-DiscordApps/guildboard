@@ -13496,33 +13496,10 @@
       {
         "ordinal": 168,
         "name": "minimist@v1.2.8",
-        "original_decision": {
-          "ordinal": 168,
-          "name": "minimist@v1.2.8",
-          "status": "unresolved",
-          "license_family": "MIT",
-          "source_section_sha256": "2fd029860a0d04dc40721e9e76548a0737867d7fa05fd03051b92a54ae460f78",
-          "section_text": "\n> parse argument options\n\nLicense: MIT  \nHomepage: <https://github.com/minimistjs/minimist>  \nRepository: <git://github.com/minimistjs/minimist.git>  \nAuthor: James Halliday <mail@substack.net> (http://substack.net)  \n\n> This software is released under the MIT license:\n>\n> Permission is hereby granted, free of charge, to any person obtaining a copy of\n> this software and associated documentation files (the \"Software\"), to deal in\n> the Software without restriction, including without limitation the rights to\n> use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of\n> the Software, and to permit persons to whom the Software is furnished to do so,\n> subject to the following conditions:\n>\n> The above copyright notice and this permission notice shall be included in all\n> copies or substantial portions of the Software.\n>\n> THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS\n> FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR\n> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER\n> IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN\n> CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\n----------------------------------------\n\n",
-          "attribution_and_provenance_lines": [
-            "Homepage: <https://github.com/minimistjs/minimist>  ",
-            "Repository: <git://github.com/minimistjs/minimist.git>  ",
-            "Author: James Halliday <mail@substack.net> (http://substack.net)  ",
-            "> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER"
-          ],
-          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
-          "obligations": "Retain the copyright and permission notice in all copies or substantial portions; preserve the warranty and liability disclaimer.",
-          "specific_gap": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
-          "reproduction": "Inspect section_text for ordinal 168 and compare with exact-version source notice.",
-          "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
-          "source_match": "exact byte substring of original notice"
-        },
-        "current_status": "unresolved",
+        "current_status": "interpreted",
         "license_family": "MIT",
         "actual_full_notice": "This software is released under the MIT license:\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of\nthis software and associated documentation files (the \"Software\"), to deal in\nthe Software without restriction, including without limitation the rights to\nuse, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software is furnished to do so,\nsubject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS\nFOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR\nCOPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER\nIN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN\nCONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n",
         "notice_sha256": "435a6722c786b0a56fbe7387028f1d9d3f3a2d0fb615bb8fee118727c3f59b7b",
-        "interpretation_and_version_applicability": "Exact npm package LICENSE is the same grant as the bundled section and itself has no copyright line although it refers to one. README and index were inspected; author metadata is not a copyright notice.",
-        "obligations": "Preserve the full copyright and permission notice in copies or substantial portions; retain the warranty and liability disclaimer with the notice.",
-        "required_action": "M manager: establish any applicable actual copyright notice from authoritative exact-version provenance; preserve the published grant and disclaimer meanwhile without inventing attribution.",
         "source_evidence": {
           "npm_archive": {
             "path": "license16-bundled-sources/8162d302efd0533ce00fc8a52dd6703dbb4205435af84e72b7694c608a729de4.tgz",
@@ -13568,7 +13545,35 @@
               "sha256": "a56e078a4586bb86dd00ffad4347bc2b027c7dcbd445f7f681b57fb7fd1583fb"
             }
           ]
-        }
+        },
+        "recorded_gitHead": "6901ee286bc4c16da6830b48b46ce1574703cea1",
+        "original_decision": {
+          "ordinal": 168,
+          "name": "minimist@v1.2.8",
+          "status": "unresolved",
+          "license_family": "MIT",
+          "source_section_sha256": "2fd029860a0d04dc40721e9e76548a0737867d7fa05fd03051b92a54ae460f78",
+          "section_text": "\n> parse argument options\n\nLicense: MIT  \nHomepage: <https://github.com/minimistjs/minimist>  \nRepository: <git://github.com/minimistjs/minimist.git>  \nAuthor: James Halliday <mail@substack.net> (http://substack.net)  \n\n> This software is released under the MIT license:\n>\n> Permission is hereby granted, free of charge, to any person obtaining a copy of\n> this software and associated documentation files (the \"Software\"), to deal in\n> the Software without restriction, including without limitation the rights to\n> use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of\n> the Software, and to permit persons to whom the Software is furnished to do so,\n> subject to the following conditions:\n>\n> The above copyright notice and this permission notice shall be included in all\n> copies or substantial portions of the Software.\n>\n> THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS\n> FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR\n> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER\n> IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN\n> CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\n----------------------------------------\n\n",
+          "attribution_and_provenance_lines": [
+            "Homepage: <https://github.com/minimistjs/minimist>  ",
+            "Repository: <git://github.com/minimistjs/minimist.git>  ",
+            "Author: James Halliday <mail@substack.net> (http://substack.net)  ",
+            "> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER"
+          ],
+          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+          "obligations": "Retain the copyright and permission notice in all copies or substantial portions; preserve the warranty and liability disclaimer.",
+          "specific_gap": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+          "reproduction": "Inspect section_text for ordinal 168 and compare with exact-version source notice.",
+          "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+          "source_match": "exact byte substring of original notice"
+        },
+        "conditions": [
+          "Include the published permission notice in copies or substantial portions; preserve the complete published notice including its disclaimer.",
+          "Retain any applicable actual copyright notice if identified; do not invent a copyright line or infer ownership from author metadata."
+        ],
+        "rationale": "The exact published notice supplies an MIT-style permission grant, condition and disclaimer; its reference to an above copyright notice does not itself supply one. The examined published notice lacks that line, so the available terms can be interpreted while documenting the absence. The bundled quoted notice maps byte-for-byte after removal of Markdown quote prefixes.",
+        "remaining_gaps": "The owner of copyright and existence or applicability of any separate notice beyond the examined published material remain unestablished; broader distribution scope and other terms are outside this bounded review. Recorded npm gitHead is metadata, not independently verified Git provenance.",
+        "required_action": "Preserve the full actual published notice with copies or substantial portions; carry forward any independently identified applicable actual copyright notice. Complete overall scope assessment and independent review before any clearance."
       },
       {
         "ordinal": 190,
@@ -13741,31 +13746,10 @@
       {
         "ordinal": 221,
         "name": "ts-api-utils@v2.5.0",
-        "original_decision": {
-          "ordinal": 221,
-          "name": "ts-api-utils@v2.5.0",
-          "status": "unresolved",
-          "license_family": "MIT",
-          "source_section_sha256": "52c1e0c60e83011a605bd63c2a67f75520a5fb7945fca9ec6abead652b773ff2",
-          "section_text": "\n> Utility functions for working with TypeScript's API. Successor to the wonderful tsutils. 🛠️️\n\nLicense: MIT  \nRepository: <https://github.com/JoshuaKGoldberg/ts-api-utils>  \nAuthor: JoshuaKGoldberg <npm@joshuakgoldberg.com>  \n\n> # MIT License\n>\n> Permission is hereby granted, free of charge, to any person obtaining\n> a copy of this software and associated documentation files (the\n> 'Software'), to deal in the Software without restriction, including\n> without limitation the rights to use, copy, modify, merge, publish,\n> distribute, sublicense, and/or sell copies of the Software, and to\n> permit persons to whom the Software is furnished to do so, subject to\n> the following conditions:\n>\n> The above copyright notice and this permission notice shall be\n> included in all copies or substantial portions of the Software.\n>\n> THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,\n> EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n> MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n> IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\n> CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\n> TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n> SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\n----------------------------------------\n\n",
-          "attribution_and_provenance_lines": [
-            "Repository: <https://github.com/JoshuaKGoldberg/ts-api-utils>  ",
-            "Author: JoshuaKGoldberg <npm@joshuakgoldberg.com>  "
-          ],
-          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
-          "obligations": "Retain the copyright and permission notice in all copies or substantial portions; preserve the warranty and liability disclaimer.",
-          "specific_gap": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
-          "reproduction": "Inspect section_text for ordinal 221 and compare with exact-version source notice.",
-          "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
-          "source_match": "exact byte substring of original notice"
-        },
-        "current_status": "unresolved",
+        "current_status": "interpreted",
         "license_family": "MIT",
         "actual_full_notice": "# MIT License\n\nPermission is hereby granted, free of charge, to any person obtaining\na copy of this software and associated documentation files (the\n'Software'), to deal in the Software without restriction, including\nwithout limitation the rights to use, copy, modify, merge, publish,\ndistribute, sublicense, and/or sell copies of the Software, and to\npermit persons to whom the Software is furnished to do so, subject to\nthe following conditions:\n\nThe above copyright notice and this permission notice shall be\nincluded in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,\nEXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\nMERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\nIN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\nTORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\nSOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n",
         "notice_sha256": "76c9d5f5ea942054715c026f33f8717c9e24603196a3737b8899afa216bcbdab",
-        "interpretation_and_version_applicability": "Exact npm package LICENSE.md contains the same MIT grant and disclaimer and no copyright line although it refers to one. Author metadata is not proof of a copyright notice.",
-        "obligations": "Preserve the full copyright and permission notice in copies or substantial portions; retain the warranty and liability disclaimer with the notice.",
-        "required_action": "M manager: establish any applicable actual copyright notice from authoritative exact-version provenance; preserve the published grant and disclaimer meanwhile without inventing attribution.",
         "source_evidence": {
           "npm_archive": {
             "path": "license16-bundled-sources/3b8eb31d252afb70ed9efc10bb10ac971a4aaa354df0e4cb14593b5d5825ec1a.tgz",
@@ -13806,7 +13790,33 @@
               "sha256": "28cc88e38493bc5a2f6baca84430f3642e0265807783b811cbe4271f4b5bd96c"
             }
           ]
-        }
+        },
+        "recorded_gitHead": "157a18693cbbc54d72dbd61776a6665c04fb8712",
+        "original_decision": {
+          "ordinal": 221,
+          "name": "ts-api-utils@v2.5.0",
+          "status": "unresolved",
+          "license_family": "MIT",
+          "source_section_sha256": "52c1e0c60e83011a605bd63c2a67f75520a5fb7945fca9ec6abead652b773ff2",
+          "section_text": "\n> Utility functions for working with TypeScript's API. Successor to the wonderful tsutils. 🛠️️\n\nLicense: MIT  \nRepository: <https://github.com/JoshuaKGoldberg/ts-api-utils>  \nAuthor: JoshuaKGoldberg <npm@joshuakgoldberg.com>  \n\n> # MIT License\n>\n> Permission is hereby granted, free of charge, to any person obtaining\n> a copy of this software and associated documentation files (the\n> 'Software'), to deal in the Software without restriction, including\n> without limitation the rights to use, copy, modify, merge, publish,\n> distribute, sublicense, and/or sell copies of the Software, and to\n> permit persons to whom the Software is furnished to do so, subject to\n> the following conditions:\n>\n> The above copyright notice and this permission notice shall be\n> included in all copies or substantial portions of the Software.\n>\n> THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,\n> EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n> MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n> IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\n> CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\n> TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n> SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\n----------------------------------------\n\n",
+          "attribution_and_provenance_lines": [
+            "Repository: <https://github.com/JoshuaKGoldberg/ts-api-utils>  ",
+            "Author: JoshuaKGoldberg <npm@joshuakgoldberg.com>  "
+          ],
+          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+          "obligations": "Retain the copyright and permission notice in all copies or substantial portions; preserve the warranty and liability disclaimer.",
+          "specific_gap": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+          "reproduction": "Inspect section_text for ordinal 221 and compare with exact-version source notice.",
+          "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+          "source_match": "exact byte substring of original notice"
+        },
+        "conditions": [
+          "Include the published permission notice in copies or substantial portions; preserve the complete published notice including its disclaimer.",
+          "Retain any applicable actual copyright notice if identified; do not invent a copyright line or infer ownership from author metadata."
+        ],
+        "rationale": "The exact published notice supplies an MIT-style permission grant, condition and disclaimer; its reference to an above copyright notice does not itself supply one. The examined published notice lacks that line, so the available terms can be interpreted while documenting the absence. The bundled quoted notice maps byte-for-byte after removal of Markdown quote prefixes.",
+        "remaining_gaps": "The owner of copyright and existence or applicability of any separate notice beyond the examined published material remain unestablished; broader distribution scope and other terms are outside this bounded review. Recorded npm gitHead is metadata, not independently verified Git provenance.",
+        "required_action": "Preserve the full actual published notice with copies or substantial portions; carry forward any independently identified applicable actual copyright notice. Complete overall scope assessment and independent review before any clearance."
       },
       {
         "ordinal": 236,
@@ -13901,17 +13911,172 @@
         "exit": 0,
         "result": "All four exact notices read in full."
       }
+    ],
+    "decision_history": [
+      {
+        "ordinal": 168,
+        "prior_decision": {
+          "ordinal": 168,
+          "name": "minimist@v1.2.8",
+          "original_decision": {
+            "ordinal": 168,
+            "name": "minimist@v1.2.8",
+            "status": "unresolved",
+            "license_family": "MIT",
+            "source_section_sha256": "2fd029860a0d04dc40721e9e76548a0737867d7fa05fd03051b92a54ae460f78",
+            "section_text": "\n> parse argument options\n\nLicense: MIT  \nHomepage: <https://github.com/minimistjs/minimist>  \nRepository: <git://github.com/minimistjs/minimist.git>  \nAuthor: James Halliday <mail@substack.net> (http://substack.net)  \n\n> This software is released under the MIT license:\n>\n> Permission is hereby granted, free of charge, to any person obtaining a copy of\n> this software and associated documentation files (the \"Software\"), to deal in\n> the Software without restriction, including without limitation the rights to\n> use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of\n> the Software, and to permit persons to whom the Software is furnished to do so,\n> subject to the following conditions:\n>\n> The above copyright notice and this permission notice shall be included in all\n> copies or substantial portions of the Software.\n>\n> THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS\n> FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR\n> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER\n> IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN\n> CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\n----------------------------------------\n\n",
+            "attribution_and_provenance_lines": [
+              "Homepage: <https://github.com/minimistjs/minimist>  ",
+              "Repository: <git://github.com/minimistjs/minimist.git>  ",
+              "Author: James Halliday <mail@substack.net> (http://substack.net)  ",
+              "> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER"
+            ],
+            "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+            "obligations": "Retain the copyright and permission notice in all copies or substantial portions; preserve the warranty and liability disclaimer.",
+            "specific_gap": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+            "reproduction": "Inspect section_text for ordinal 168 and compare with exact-version source notice.",
+            "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+            "source_match": "exact byte substring of original notice"
+          },
+          "current_status": "unresolved",
+          "license_family": "MIT",
+          "actual_full_notice": "This software is released under the MIT license:\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of\nthis software and associated documentation files (the \"Software\"), to deal in\nthe Software without restriction, including without limitation the rights to\nuse, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software is furnished to do so,\nsubject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS\nFOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR\nCOPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER\nIN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN\nCONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n",
+          "notice_sha256": "435a6722c786b0a56fbe7387028f1d9d3f3a2d0fb615bb8fee118727c3f59b7b",
+          "interpretation_and_version_applicability": "Exact npm package LICENSE is the same grant as the bundled section and itself has no copyright line although it refers to one. README and index were inspected; author metadata is not a copyright notice.",
+          "obligations": "Preserve the full copyright and permission notice in copies or substantial portions; retain the warranty and liability disclaimer with the notice.",
+          "required_action": "M manager: establish any applicable actual copyright notice from authoritative exact-version provenance; preserve the published grant and disclaimer meanwhile without inventing attribution.",
+          "source_evidence": {
+            "npm_archive": {
+              "path": "license16-bundled-sources/8162d302efd0533ce00fc8a52dd6703dbb4205435af84e72b7694c608a729de4.tgz",
+              "sha256": "350a76c115b393c19d24654834261e5dc9f0e8cc5e08f3937fa80140f3e4ce83",
+              "sha512_integrity": "sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==",
+              "integrity_verified": true,
+              "url": "https://registry.npmjs.org/minimist/-/minimist-1.2.8.tgz"
+            },
+            "metadata": {
+              "path": "license16-bundled-sources/8162d302efd0533ce00fc8a52dd6703dbb4205435af84e72b7694c608a729de4.metadata.json",
+              "sha256": "dc08770ea3dc9e8efb9e3592a1c705ee560f0765d0f6887d54499dafb3a08cb1",
+              "url": "https://registry.npmjs.org/minimist/1.2.8"
+            },
+            "published_manifest": {
+              "member": "package/package.json",
+              "sha256": "252881f6a068a3e70386706d88a694b5e8e9e053b6d9f309fd9a329e651bbf81",
+              "name": "minimist",
+              "version": "1.2.8",
+              "declared_license": "MIT"
+            },
+            "notice_paths_in_archive": [
+              "package/LICENSE"
+            ],
+            "selected_members": [
+              {
+                "member": "package/LICENSE",
+                "path": "license16-bundled-sources/8162d302efd0533ce00fc8a52dd6703dbb4205435af84e72b7694c608a729de4-4c9655af812eacdb157922b473ee42e2226943e1d31a2a6088090054055227b9.member",
+                "sha256": "435a6722c786b0a56fbe7387028f1d9d3f3a2d0fb615bb8fee118727c3f59b7b"
+              },
+              {
+                "member": "package/index.js",
+                "path": "license16-bundled-sources/8162d302efd0533ce00fc8a52dd6703dbb4205435af84e72b7694c608a729de4-c997443dafc49a2d07f1082bea5a2b79f28c5c5b60d9592e2e65fb2c846531bc.member",
+                "sha256": "9cf5e83d36697a92d8af11e000f513ac30a3464bbb024850f9ffdeb1edf59848"
+              },
+              {
+                "member": "package/package.json",
+                "path": "license16-bundled-sources/8162d302efd0533ce00fc8a52dd6703dbb4205435af84e72b7694c608a729de4-5205bfc4f58dc7ca1e3a58905757b4332c9e784666f28cadea2b4a1dd4b1e41d.member",
+                "sha256": "252881f6a068a3e70386706d88a694b5e8e9e053b6d9f309fd9a329e651bbf81"
+              },
+              {
+                "member": "package/README.md",
+                "path": "license16-bundled-sources/8162d302efd0533ce00fc8a52dd6703dbb4205435af84e72b7694c608a729de4-037d15dcf3a9c89e66b49efacc634941743ba94a147dc1428f18c9814e8814d4.member",
+                "sha256": "a56e078a4586bb86dd00ffad4347bc2b027c7dcbd445f7f681b57fb7fd1583fb"
+              }
+            ]
+          }
+        },
+        "successor_overlay_sha256": "816751cad05e38955bbc17b41a7cdd783be2122660f0cfa3dccd10c5dcaff47c"
+      },
+      {
+        "ordinal": 221,
+        "prior_decision": {
+          "ordinal": 221,
+          "name": "ts-api-utils@v2.5.0",
+          "original_decision": {
+            "ordinal": 221,
+            "name": "ts-api-utils@v2.5.0",
+            "status": "unresolved",
+            "license_family": "MIT",
+            "source_section_sha256": "52c1e0c60e83011a605bd63c2a67f75520a5fb7945fca9ec6abead652b773ff2",
+            "section_text": "\n> Utility functions for working with TypeScript's API. Successor to the wonderful tsutils. 🛠️️\n\nLicense: MIT  \nRepository: <https://github.com/JoshuaKGoldberg/ts-api-utils>  \nAuthor: JoshuaKGoldberg <npm@joshuakgoldberg.com>  \n\n> # MIT License\n>\n> Permission is hereby granted, free of charge, to any person obtaining\n> a copy of this software and associated documentation files (the\n> 'Software'), to deal in the Software without restriction, including\n> without limitation the rights to use, copy, modify, merge, publish,\n> distribute, sublicense, and/or sell copies of the Software, and to\n> permit persons to whom the Software is furnished to do so, subject to\n> the following conditions:\n>\n> The above copyright notice and this permission notice shall be\n> included in all copies or substantial portions of the Software.\n>\n> THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,\n> EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n> MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n> IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\n> CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\n> TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n> SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\n----------------------------------------\n\n",
+            "attribution_and_provenance_lines": [
+              "Repository: <https://github.com/JoshuaKGoldberg/ts-api-utils>  ",
+              "Author: JoshuaKGoldberg <npm@joshuakgoldberg.com>  "
+            ],
+            "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+            "obligations": "Retain the copyright and permission notice in all copies or substantial portions; preserve the warranty and liability disclaimer.",
+            "specific_gap": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+            "reproduction": "Inspect section_text for ordinal 221 and compare with exact-version source notice.",
+            "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+            "source_match": "exact byte substring of original notice"
+          },
+          "current_status": "unresolved",
+          "license_family": "MIT",
+          "actual_full_notice": "# MIT License\n\nPermission is hereby granted, free of charge, to any person obtaining\na copy of this software and associated documentation files (the\n'Software'), to deal in the Software without restriction, including\nwithout limitation the rights to use, copy, modify, merge, publish,\ndistribute, sublicense, and/or sell copies of the Software, and to\npermit persons to whom the Software is furnished to do so, subject to\nthe following conditions:\n\nThe above copyright notice and this permission notice shall be\nincluded in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,\nEXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\nMERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\nIN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\nTORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\nSOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n",
+          "notice_sha256": "76c9d5f5ea942054715c026f33f8717c9e24603196a3737b8899afa216bcbdab",
+          "interpretation_and_version_applicability": "Exact npm package LICENSE.md contains the same MIT grant and disclaimer and no copyright line although it refers to one. Author metadata is not proof of a copyright notice.",
+          "obligations": "Preserve the full copyright and permission notice in copies or substantial portions; retain the warranty and liability disclaimer with the notice.",
+          "required_action": "M manager: establish any applicable actual copyright notice from authoritative exact-version provenance; preserve the published grant and disclaimer meanwhile without inventing attribution.",
+          "source_evidence": {
+            "npm_archive": {
+              "path": "license16-bundled-sources/3b8eb31d252afb70ed9efc10bb10ac971a4aaa354df0e4cb14593b5d5825ec1a.tgz",
+              "sha256": "9fd0819602af4103a593d6def4a09a26446ec4c644246a511dc1cb3513d87994",
+              "sha512_integrity": "sha512-OJ/ibxhPlqrMM0UiNHJ/0CKQkoKF243/AEmplt3qpRgkW8VG7IfOS41h7V8TjITqdByHzrjcS/2si+y4lIh8NA==",
+              "integrity_verified": true,
+              "url": "https://registry.npmjs.org/ts-api-utils/-/ts-api-utils-2.5.0.tgz"
+            },
+            "metadata": {
+              "path": "license16-bundled-sources/3b8eb31d252afb70ed9efc10bb10ac971a4aaa354df0e4cb14593b5d5825ec1a.metadata.json",
+              "sha256": "3cb10beab653b1272251f6ad14577e0739635795cac7fa7538953afa6abe3154",
+              "url": "https://registry.npmjs.org/ts-api-utils/2.5.0"
+            },
+            "published_manifest": {
+              "member": "package/package.json",
+              "sha256": "2c4e0f9e0ea7a0813a9f6ac4967d69f00a1d857f3fd9ce41f5eeba97a6ed72c4",
+              "name": "ts-api-utils",
+              "version": "2.5.0",
+              "declared_license": "MIT"
+            },
+            "notice_paths_in_archive": [
+              "package/LICENSE.md"
+            ],
+            "selected_members": [
+              {
+                "member": "package/package.json",
+                "path": "license16-bundled-sources/3b8eb31d252afb70ed9efc10bb10ac971a4aaa354df0e4cb14593b5d5825ec1a-5205bfc4f58dc7ca1e3a58905757b4332c9e784666f28cadea2b4a1dd4b1e41d.member",
+                "sha256": "2c4e0f9e0ea7a0813a9f6ac4967d69f00a1d857f3fd9ce41f5eeba97a6ed72c4"
+              },
+              {
+                "member": "package/LICENSE.md",
+                "path": "license16-bundled-sources/3b8eb31d252afb70ed9efc10bb10ac971a4aaa354df0e4cb14593b5d5825ec1a-e802aa120ce70aaf86d0948492ebeb70aa2a9bba5bfb4448826057853823e78d.member",
+                "sha256": "76c9d5f5ea942054715c026f33f8717c9e24603196a3737b8899afa216bcbdab"
+              },
+              {
+                "member": "package/README.md",
+                "path": "license16-bundled-sources/3b8eb31d252afb70ed9efc10bb10ac971a4aaa354df0e4cb14593b5d5825ec1a-037d15dcf3a9c89e66b49efacc634941743ba94a147dc1428f18c9814e8814d4.member",
+                "sha256": "28cc88e38493bc5a2f6baca84430f3642e0265807783b811cbe4271f4b5bd96c"
+              }
+            ]
+          }
+        },
+        "successor_overlay_sha256": "816751cad05e38955bbc17b41a7cdd783be2122660f0cfa3dccd10c5dcaff47c"
+      }
     ]
   },
   "remaining_unresolved_section_ordinals": [
     5,
     6,
     119,
-    168,
     180,
     190,
     217,
-    221,
     236
   ],
   "overlay_sha256": {
@@ -18269,37 +18434,14 @@
         "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
         "source_match": "exact byte substring of original notice"
       },
-      "effective_status": "unresolved",
+      "effective_status": "interpreted",
       "supplemental_decision": {
         "ordinal": 168,
         "name": "minimist@v1.2.8",
-        "original_decision": {
-          "ordinal": 168,
-          "name": "minimist@v1.2.8",
-          "status": "unresolved",
-          "license_family": "MIT",
-          "source_section_sha256": "2fd029860a0d04dc40721e9e76548a0737867d7fa05fd03051b92a54ae460f78",
-          "section_text": "\n> parse argument options\n\nLicense: MIT  \nHomepage: <https://github.com/minimistjs/minimist>  \nRepository: <git://github.com/minimistjs/minimist.git>  \nAuthor: James Halliday <mail@substack.net> (http://substack.net)  \n\n> This software is released under the MIT license:\n>\n> Permission is hereby granted, free of charge, to any person obtaining a copy of\n> this software and associated documentation files (the \"Software\"), to deal in\n> the Software without restriction, including without limitation the rights to\n> use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of\n> the Software, and to permit persons to whom the Software is furnished to do so,\n> subject to the following conditions:\n>\n> The above copyright notice and this permission notice shall be included in all\n> copies or substantial portions of the Software.\n>\n> THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS\n> FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR\n> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER\n> IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN\n> CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\n----------------------------------------\n\n",
-          "attribution_and_provenance_lines": [
-            "Homepage: <https://github.com/minimistjs/minimist>  ",
-            "Repository: <git://github.com/minimistjs/minimist.git>  ",
-            "Author: James Halliday <mail@substack.net> (http://substack.net)  ",
-            "> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER"
-          ],
-          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
-          "obligations": "Retain the copyright and permission notice in all copies or substantial portions; preserve the warranty and liability disclaimer.",
-          "specific_gap": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
-          "reproduction": "Inspect section_text for ordinal 168 and compare with exact-version source notice.",
-          "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
-          "source_match": "exact byte substring of original notice"
-        },
-        "current_status": "unresolved",
+        "current_status": "interpreted",
         "license_family": "MIT",
         "actual_full_notice": "This software is released under the MIT license:\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of\nthis software and associated documentation files (the \"Software\"), to deal in\nthe Software without restriction, including without limitation the rights to\nuse, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software is furnished to do so,\nsubject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS\nFOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR\nCOPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER\nIN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN\nCONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n",
         "notice_sha256": "435a6722c786b0a56fbe7387028f1d9d3f3a2d0fb615bb8fee118727c3f59b7b",
-        "interpretation_and_version_applicability": "Exact npm package LICENSE is the same grant as the bundled section and itself has no copyright line although it refers to one. README and index were inspected; author metadata is not a copyright notice.",
-        "obligations": "Preserve the full copyright and permission notice in copies or substantial portions; retain the warranty and liability disclaimer with the notice.",
-        "required_action": "M manager: establish any applicable actual copyright notice from authoritative exact-version provenance; preserve the published grant and disclaimer meanwhile without inventing attribution.",
         "source_evidence": {
           "npm_archive": {
             "path": "license16-bundled-sources/8162d302efd0533ce00fc8a52dd6703dbb4205435af84e72b7694c608a729de4.tgz",
@@ -18345,7 +18487,35 @@
               "sha256": "a56e078a4586bb86dd00ffad4347bc2b027c7dcbd445f7f681b57fb7fd1583fb"
             }
           ]
-        }
+        },
+        "recorded_gitHead": "6901ee286bc4c16da6830b48b46ce1574703cea1",
+        "original_decision": {
+          "ordinal": 168,
+          "name": "minimist@v1.2.8",
+          "status": "unresolved",
+          "license_family": "MIT",
+          "source_section_sha256": "2fd029860a0d04dc40721e9e76548a0737867d7fa05fd03051b92a54ae460f78",
+          "section_text": "\n> parse argument options\n\nLicense: MIT  \nHomepage: <https://github.com/minimistjs/minimist>  \nRepository: <git://github.com/minimistjs/minimist.git>  \nAuthor: James Halliday <mail@substack.net> (http://substack.net)  \n\n> This software is released under the MIT license:\n>\n> Permission is hereby granted, free of charge, to any person obtaining a copy of\n> this software and associated documentation files (the \"Software\"), to deal in\n> the Software without restriction, including without limitation the rights to\n> use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of\n> the Software, and to permit persons to whom the Software is furnished to do so,\n> subject to the following conditions:\n>\n> The above copyright notice and this permission notice shall be included in all\n> copies or substantial portions of the Software.\n>\n> THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS\n> FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR\n> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER\n> IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN\n> CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\n----------------------------------------\n\n",
+          "attribution_and_provenance_lines": [
+            "Homepage: <https://github.com/minimistjs/minimist>  ",
+            "Repository: <git://github.com/minimistjs/minimist.git>  ",
+            "Author: James Halliday <mail@substack.net> (http://substack.net)  ",
+            "> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER"
+          ],
+          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+          "obligations": "Retain the copyright and permission notice in all copies or substantial portions; preserve the warranty and liability disclaimer.",
+          "specific_gap": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+          "reproduction": "Inspect section_text for ordinal 168 and compare with exact-version source notice.",
+          "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+          "source_match": "exact byte substring of original notice"
+        },
+        "conditions": [
+          "Include the published permission notice in copies or substantial portions; preserve the complete published notice including its disclaimer.",
+          "Retain any applicable actual copyright notice if identified; do not invent a copyright line or infer ownership from author metadata."
+        ],
+        "rationale": "The exact published notice supplies an MIT-style permission grant, condition and disclaimer; its reference to an above copyright notice does not itself supply one. The examined published notice lacks that line, so the available terms can be interpreted while documenting the absence. The bundled quoted notice maps byte-for-byte after removal of Markdown quote prefixes.",
+        "remaining_gaps": "The owner of copyright and existence or applicability of any separate notice beyond the examined published material remain unestablished; broader distribution scope and other terms are outside this bounded review. Recorded npm gitHead is metadata, not independently verified Git provenance.",
+        "required_action": "Preserve the full actual published notice with copies or substantial portions; carry forward any independently identified applicable actual copyright notice. Complete overall scope assessment and independent review before any clearance."
       }
     },
     {
@@ -19719,35 +19889,14 @@
         "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
         "source_match": "exact byte substring of original notice"
       },
-      "effective_status": "unresolved",
+      "effective_status": "interpreted",
       "supplemental_decision": {
         "ordinal": 221,
         "name": "ts-api-utils@v2.5.0",
-        "original_decision": {
-          "ordinal": 221,
-          "name": "ts-api-utils@v2.5.0",
-          "status": "unresolved",
-          "license_family": "MIT",
-          "source_section_sha256": "52c1e0c60e83011a605bd63c2a67f75520a5fb7945fca9ec6abead652b773ff2",
-          "section_text": "\n> Utility functions for working with TypeScript's API. Successor to the wonderful tsutils. 🛠️️\n\nLicense: MIT  \nRepository: <https://github.com/JoshuaKGoldberg/ts-api-utils>  \nAuthor: JoshuaKGoldberg <npm@joshuakgoldberg.com>  \n\n> # MIT License\n>\n> Permission is hereby granted, free of charge, to any person obtaining\n> a copy of this software and associated documentation files (the\n> 'Software'), to deal in the Software without restriction, including\n> without limitation the rights to use, copy, modify, merge, publish,\n> distribute, sublicense, and/or sell copies of the Software, and to\n> permit persons to whom the Software is furnished to do so, subject to\n> the following conditions:\n>\n> The above copyright notice and this permission notice shall be\n> included in all copies or substantial portions of the Software.\n>\n> THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,\n> EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n> MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n> IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\n> CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\n> TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n> SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\n----------------------------------------\n\n",
-          "attribution_and_provenance_lines": [
-            "Repository: <https://github.com/JoshuaKGoldberg/ts-api-utils>  ",
-            "Author: JoshuaKGoldberg <npm@joshuakgoldberg.com>  "
-          ],
-          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
-          "obligations": "Retain the copyright and permission notice in all copies or substantial portions; preserve the warranty and liability disclaimer.",
-          "specific_gap": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
-          "reproduction": "Inspect section_text for ordinal 221 and compare with exact-version source notice.",
-          "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
-          "source_match": "exact byte substring of original notice"
-        },
-        "current_status": "unresolved",
+        "current_status": "interpreted",
         "license_family": "MIT",
         "actual_full_notice": "# MIT License\n\nPermission is hereby granted, free of charge, to any person obtaining\na copy of this software and associated documentation files (the\n'Software'), to deal in the Software without restriction, including\nwithout limitation the rights to use, copy, modify, merge, publish,\ndistribute, sublicense, and/or sell copies of the Software, and to\npermit persons to whom the Software is furnished to do so, subject to\nthe following conditions:\n\nThe above copyright notice and this permission notice shall be\nincluded in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,\nEXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\nMERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\nIN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\nTORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\nSOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n",
         "notice_sha256": "76c9d5f5ea942054715c026f33f8717c9e24603196a3737b8899afa216bcbdab",
-        "interpretation_and_version_applicability": "Exact npm package LICENSE.md contains the same MIT grant and disclaimer and no copyright line although it refers to one. Author metadata is not proof of a copyright notice.",
-        "obligations": "Preserve the full copyright and permission notice in copies or substantial portions; retain the warranty and liability disclaimer with the notice.",
-        "required_action": "M manager: establish any applicable actual copyright notice from authoritative exact-version provenance; preserve the published grant and disclaimer meanwhile without inventing attribution.",
         "source_evidence": {
           "npm_archive": {
             "path": "license16-bundled-sources/3b8eb31d252afb70ed9efc10bb10ac971a4aaa354df0e4cb14593b5d5825ec1a.tgz",
@@ -19788,7 +19937,33 @@
               "sha256": "28cc88e38493bc5a2f6baca84430f3642e0265807783b811cbe4271f4b5bd96c"
             }
           ]
-        }
+        },
+        "recorded_gitHead": "157a18693cbbc54d72dbd61776a6665c04fb8712",
+        "original_decision": {
+          "ordinal": 221,
+          "name": "ts-api-utils@v2.5.0",
+          "status": "unresolved",
+          "license_family": "MIT",
+          "source_section_sha256": "52c1e0c60e83011a605bd63c2a67f75520a5fb7945fca9ec6abead652b773ff2",
+          "section_text": "\n> Utility functions for working with TypeScript's API. Successor to the wonderful tsutils. 🛠️️\n\nLicense: MIT  \nRepository: <https://github.com/JoshuaKGoldberg/ts-api-utils>  \nAuthor: JoshuaKGoldberg <npm@joshuakgoldberg.com>  \n\n> # MIT License\n>\n> Permission is hereby granted, free of charge, to any person obtaining\n> a copy of this software and associated documentation files (the\n> 'Software'), to deal in the Software without restriction, including\n> without limitation the rights to use, copy, modify, merge, publish,\n> distribute, sublicense, and/or sell copies of the Software, and to\n> permit persons to whom the Software is furnished to do so, subject to\n> the following conditions:\n>\n> The above copyright notice and this permission notice shall be\n> included in all copies or substantial portions of the Software.\n>\n> THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,\n> EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n> MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n> IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\n> CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\n> TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n> SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\n----------------------------------------\n\n",
+          "attribution_and_provenance_lines": [
+            "Repository: <https://github.com/JoshuaKGoldberg/ts-api-utils>  ",
+            "Author: JoshuaKGoldberg <npm@joshuakgoldberg.com>  "
+          ],
+          "rationale": "The actual bundled section is incomplete for the stated reason; metadata alone does not establish all applicable terms.",
+          "obligations": "Retain the copyright and permission notice in all copies or substantial portions; preserve the warranty and liability disclaimer.",
+          "specific_gap": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+          "reproduction": "Inspect section_text for ordinal 221 and compare with exact-version source notice.",
+          "required_action": "Bundled MIT permission and disclaimer text refers to an above copyright notice, but no copyright notice appears in this section; obtain and inspect the exact-version original notice and verify provenance.",
+          "source_match": "exact byte substring of original notice"
+        },
+        "conditions": [
+          "Include the published permission notice in copies or substantial portions; preserve the complete published notice including its disclaimer.",
+          "Retain any applicable actual copyright notice if identified; do not invent a copyright line or infer ownership from author metadata."
+        ],
+        "rationale": "The exact published notice supplies an MIT-style permission grant, condition and disclaimer; its reference to an above copyright notice does not itself supply one. The examined published notice lacks that line, so the available terms can be interpreted while documenting the absence. The bundled quoted notice maps byte-for-byte after removal of Markdown quote prefixes.",
+        "remaining_gaps": "The owner of copyright and existence or applicability of any separate notice beyond the examined published material remain unestablished; broader distribution scope and other terms are outside this bounded review. Recorded npm gitHead is metadata, not independently verified Git provenance.",
+        "required_action": "Preserve the full actual published notice with copies or substantial portions; carry forward any independently identified applicable actual copyright notice. Complete overall scope assessment and independent review before any clearance."
       }
     },
     {
@@ -20475,11 +20650,9 @@
     5,
     6,
     119,
-    168,
     180,
     190,
     217,
-    221,
     236
   ],
   "retained_notices": [
@@ -21966,5 +22139,13 @@
       "status": "unresolved",
       "evidence": "The bundled notice references AUTHORS; the separately inspected installed and archived acorn 8.19.0 cannot establish AUTHORS for bundled versions. Attribution coverage remains unknown."
     }
-  ]
+  ],
+  "published_grants_overlay": {
+    "sha256": "816751cad05e38955bbc17b41a7cdd783be2122660f0cfa3dccd10c5dcaff47c",
+    "ordinals": [
+      168,
+      221
+    ],
+    "scope": "Publishedgrantinterpreted;missingcopyrightownershipuncertainty preserved;notdistributionclearance"
+  }
 }
