@@ -1,0 +1,35 @@
+{
+  "issue": 31,
+  "tested_revision": "556dcf68a0d65c5e08fb4aeab2eaf0226f3c16a5",
+  "first_install_base": "8f75fdb398dfb48d577135ee08f295a4c4f634b6",
+  "date_utc": "2026-11-16T16:41:04Z",
+  "scope": "Offline structural acceptance; semantic design inspection, not product execution or security certification.",
+  "results": {
+    "final": "19/19 passed",
+    "initial": "17/19; two fixture mistakes: removed required trace evidence; corrected to package.json",
+    "raw": "docs/evidence/GB-T0-04-02-V1-raw-results.txt"
+  },
+  "semantic_design_inspection": {
+    "method": "Read requirements R01-R08, threat model, ADR 0003 and trace-review; compare roles and stated gaps. These are documented design associations, not tested product behavior.",
+    "R01": "I01 covers scoped join/commit; concurrent edits lack a dedicated interaction.",
+    "R02": "I03 covers forged write; authorized observation/updates lack a dedicated interaction.",
+    "R03": "I01 and I02 cover scoped join and foreign selection.",
+    "R04": "I02/I03/I04/I05/I11/I13/I15 cover selected authority and release cases; storage unavailability and lock-before-write lack dedicated interactions.",
+    "R05": "I05-I09 and I14 cover receipt, recovery and interruption cases; missing disaster evidence not proving non-commit lacks standalone interaction.",
+    "R06": "I06/I11/I12 cover interruption, policy/time and configuration; storage unavailability, safe logging and disaster evidence lack dedicated interactions.",
+    "R07": "No canonical interaction for full release matrix; release remains unproven.",
+    "R08": "No canonical interaction or measurements for operational objectives."
+  },
+  "defect_history": "9d4 and 7b semantic mappings were incomplete; f6c repaired trace semantics; three fresh reviews were reported clear on the repaired implementation. This acceptance does not independently reproduce those historical reviews. Initial harness fixture errors are recorded in raw results.",
+  "platform_limits": "Database, Discord and GoDaddy VPS are not applicable to offline repository tooling; actual application, security, platform and operational verification remain open.",
+  "follow_through": "Root owns independent final review, native CI, protected merge, post-merge verification, issue 30 closure and issue 31 PR creation. Native post-merge/root closure remain pending.",
+  "owned_decisions": [
+    {
+      "owner": "issue 31 acceptance worker",
+      "decision": "Use in-process gate calls against immutable copied source and actual pinned first-install base, with disposable independently hashed mutations.",
+      "rationale": "Exercises offline fixed contract without Git, child processes, network, installation or source writes.",
+      "validation": "19 cases passed; semantic inspection and gaps recorded separately.",
+      "follow_through": "Root integrates and independently reviews; runtime requirements remain open."
+    }
+  ]
+}
