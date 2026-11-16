@@ -205,7 +205,12 @@
       "cache_catalog": {
         "path": "docs/licenses/action-cache-source-evidence.json",
         "membership_path": ".licenses/npm/@protobuf-ts/protoc.dep.yml",
-        "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020"
+        "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020",
+        "repository": "actions/setup-node",
+        "git_blob_sha1": "dddaf18aa7b2c7478846064a608ecd13a6d4c485",
+        "source_sha256": "f201bb032bdc4307ba7903d3074eca08102bbe323afb6fe56d00c5e1cd3df62d",
+        "retained_source": "docs/licenses/action-cache-sources/dddaf18aa7b2c7478846064a608ecd13a6d4c485.dep.yml.txt",
+        "declared_version": "2.9.5"
       }
     },
     {
@@ -228,7 +233,12 @@
       "cache_catalog": {
         "path": "docs/licenses/action-cache-source-evidence.json",
         "membership_path": ".licenses/npm/@nodable/entities.dep.yml",
-        "commit": "249970729cb0ef3589644e2896645e5dc5ba9c38"
+        "commit": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+        "repository": "actions/setup-python",
+        "git_blob_sha1": "bebf9b9030b377611282bb1ec59fd29ec8021ca6",
+        "source_sha256": "980465f6f6ff6aaf61208b10af6b617b9eeeaa4075dae44133a5923e5703fea5",
+        "retained_source": "docs/licenses/action-cache-sources/bebf9b9030b377611282bb1ec59fd29ec8021ca6.dep.yml.txt",
+        "declared_version": "3.1.0"
       }
     }
   ],
