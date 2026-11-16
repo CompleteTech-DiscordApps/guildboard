@@ -115,4 +115,110 @@ class Acceptance(unittest.TestCase):
             self.assertEqual(v.main(['--root', str(self.root)]), 130)
         finally: v.verify = old
 
+class ControlsProjection(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location('controls_acceptance', ROOT / 'scripts/verification/verify_architecture_controls.py')
+        self.h = importlib.util.module_from_spec(spec); spec.loader.exec_module(self.h)
+        spec = importlib.util.spec_from_file_location('controls_gate', ROOT / 'scripts/architecture-controls/check.py')
+        self.h.g = importlib.util.module_from_spec(spec); spec.loader.exec_module(self.h.g)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.tree = Path(self.tmp.name) / 'tree'
+        self.h.copy_projection(ROOT, self.tree)
+    def tearDown(self): self.tmp.cleanup()
+    def test_protected_generated_names_preserved_and_rejected_by_gate(self):
+        for name in ('dist', 'node_modules', '.git', '__pycache__'):
+            p = self.tree / 'apps/api' / name
+            p.mkdir(); (p / 'hidden').write_text('unrecorded')
+            with self.assertRaises(self.h.g.Invalid): self.h.g.check(ROOT, self.tree)
+            out = Path(self.tmp.name) / ('copy-' + name)
+            self.h.copy_projection(self.tree, out)
+            self.assertEqual((out / 'apps/api' / name / 'hidden').read_text(), 'unrecorded')
+            with self.assertRaises(self.h.g.Invalid): self.h.g.check(ROOT, out)
+            shutil.rmtree(p)
+        before = self.h.snapshot(self.tree)
+        for name in ('.git', 'node_modules', 'dist'):
+            p = self.tree / name; p.mkdir(); (p / 'junk').write_text('outside roots')
+        self.assertEqual(before, self.h.snapshot(self.tree))
+
+    def test_global_limits_and_race_fail_closed(self):
+        p = self.tree / 'apps/api'
+        for i in range(4): (p / ('empty'+str(i))).mkdir()
+        with mock.patch.object(self.h, 'MAX_DIRS', 3):
+            with self.assertRaises(ValueError): self.h.projection(self.tree)
+        with mock.patch.object(self.h, 'MAX_ENTRIES', 3):
+            with self.assertRaises(ValueError): self.h.projection(self.tree)
+        deep = p
+        for i in range(6):
+            deep = deep / ('depth'+str(i)); deep.mkdir()
+        with mock.patch.object(self.h, 'MAX_DEPTH', 5):
+            with self.assertRaises(ValueError): self.h.projection(self.tree)
+        with mock.patch.object(self.h, 'MAX_CONTENT', 1):
+            with self.assertRaises(ValueError): self.h.projection(self.tree)
+        real_read = self.h.g.read
+        def add(root, name):
+            data = real_read(root, name)
+            (p / 'raced').touch()
+            return data
+        out = Path(self.tmp.name) / 'race-output'
+        with mock.patch.object(self.h.g, 'read', side_effect=add):
+            with self.assertRaises(ValueError): self.h.copy_projection(self.tree, out)
+        self.assertFalse(out.exists())
+
+    def test_enumeration_addition_and_replacement(self):
+        real_listdir = self.h.os.listdir
+        for action in ('add', 'replace'):
+            target = self.tree / 'apps/api'
+            identity = os.stat(target).st_ino
+            fired = [False]
+            def race(fd):
+                names = real_listdir(fd)
+                if not fired[0] and os.fstat(fd).st_ino == identity:
+                    fired[0] = True
+                    if action == 'add': (target / 'late').touch()
+                    else:
+                        target.rename(target.parent / 'api-old')
+                        target.mkdir()
+                return names
+            out = Path(self.tmp.name) / ('enum-' + action)
+            with mock.patch.object(self.h.os, 'listdir', side_effect=race):
+                with self.assertRaises((ValueError, OSError, self.h.g.Invalid)):
+                    self.h.copy_projection(self.tree, out)
+            self.assertTrue(fired[0]); self.assertFalse(out.exists())
+            if action == 'add': (target / 'late').unlink()
+            else:
+                target.rmdir(); (target.parent / 'api-old').rename(target)
+
+    def test_catalog_traversal_rejected_before_fixture_write(self):
+        path = self.tree / 'docs/architecture-controls/traceability.json'
+        obj = json.loads(path.read_text())
+        next(iter(obj['interfaces'].values()))['evidence'].append('../escape')
+        path.write_text(json.dumps(obj))
+        out = Path(self.tmp.name) / 'bad-catalog'
+        with self.assertRaises((ValueError, OSError, self.h.g.Invalid)):
+            self.h.copy_projection(self.tree, out)
+        self.assertFalse(out.exists())
+
+    def test_unsafe_entries_rejected_without_source_writes(self):
+        before = self.h.snapshot(self.tree)
+        for kind in ('symlink', 'fifo'):
+            p = self.tree / ('apps/api/dist' if kind == 'symlink' else 'apps/api/node_modules')
+            if kind == 'symlink': p.symlink_to('README.md')
+            else: os.mkfifo(p)
+            with self.assertRaises((ValueError, OSError, self.h.g.Invalid)):
+                self.h.copy_projection(self.tree, Path(self.tmp.name) / ('out-' + kind))
+            self.assertFalse((Path(self.tmp.name) / ('out-' + kind)).exists())
+            p.unlink()
+            self.assertEqual(before, self.h.snapshot(self.tree))
+    def test_write_failure_cleans_staging(self):
+        out = Path(self.tmp.name) / 'write-failure'
+        with mock.patch.object(Path, 'write_bytes', side_effect=OSError('simulated write failure')):
+            with self.assertRaises(OSError): self.h.copy_projection(self.tree, out)
+        self.assertFalse(out.exists())
+        self.assertFalse(list(Path(self.tmp.name).glob('.projection-*')))
+
+    def test_revision_validation(self):
+        self.assertEqual(self.h.revision('a' * 40), 'a' * 40)
+        for value in ('abc', 'A' * 40, 'g' * 40, 'a' * 41):
+            with self.assertRaises(self.h.argparse.ArgumentTypeError): self.h.revision(value)
+
 if __name__ == '__main__': unittest.main()
