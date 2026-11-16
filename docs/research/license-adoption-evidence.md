@@ -76,3 +76,7 @@ From the repository clone, use `git show REV:path` for each exact revision above
 ## 2026-11-16 — delegated #16 policy disposition
 
 The earlier observations above retain their original dates and scope. Native prerequisite #3 has closed; the delegated section owner accepts the engineering policy in [docs/licenses/POLICY.md](../licenses/POLICY.md) for the current locked tooling graph. The 2026-10-24 tarball evidence corresponds to current lock versions; installed notice bytes independently match all four recorded hashes, including TypeScript's third-party notice. No fresh tarballs were available and no packaging was inspected. The inventory records unresolved distribution and image-rights gaps; new dependencies and runtime artifacts require their own review. This decision is not legal clearance or certification. #17 remains independent verification after #16 integration.
+
+### Current follow-up, 2026-11-16
+
+The original dated research and the later unavailable-tarball failure remain historical evidence. A subsequent offline run used the three separately fetched, lock-SHA-512-verified archives recorded in `license16-artifact-fetch-receipt.json` and matching installed notices. All three integrity checks and all four archive-to-installed notice comparisons passed. This is a consistency result, not approval of a distribution or a replacement for the historical failure. The local candidate remains unpublished and unapproved; #17 acceptance, fresh independent review, native CI, protected merge, and post-merge verification remain manager-owned.

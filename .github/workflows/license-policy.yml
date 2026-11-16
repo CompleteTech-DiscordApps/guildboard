@@ -1,0 +1,22 @@
+name: License policy
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  license-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Offline regression tests
+        run: python3 -m unittest discover -s tests/licenses -v
+      - name: Install locked notices without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Fetch and verify exact reviewed tarballs
+        run: |
+          mkdir "$RUNNER_TEMP/license-artifacts"
+          python3 scripts/licenses/fetch.py . "$RUNNER_TEMP/license-artifacts"
+      - name: Check locked inventory and installed notices
+        run: python3 scripts/licenses/check.py --node-modules node_modules --artifacts "$RUNNER_TEMP/license-artifacts"
+      - name: Compare archive and installed notice bytes
+        run: python3 scripts/licenses/check_archives.py . node_modules "$RUNNER_TEMP/license-artifacts"

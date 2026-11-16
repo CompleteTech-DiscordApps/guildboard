@@ -17,19 +17,27 @@ def read(root, path):
     p = Path(path)
     if p.is_absolute() or not p.parts or any(x in ('.', '..') for x in p.parts):
         raise Invalid('unsafe path')
-    current = Path(root)
-    for part in p.parts:
-        current = current / part
-        st = current.lstat()
-        if stat.S_ISLNK(st.st_mode):
-            raise Invalid('symlink: ' + str(p))
-    if not stat.S_ISREG(st.st_mode) or st.st_size > LIMIT:
-        raise Invalid('nonregular or oversized: ' + str(p))
-    with current.open('rb') as f:
-        data = f.read(LIMIT + 1)
-    if len(data) > LIMIT:
-        raise Invalid('oversized: ' + str(p))
-    return data
+    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+    fd = os.open(root, flags | os.O_DIRECTORY)
+    try:
+        for part in p.parts[:-1]:
+            next_fd = os.open(part, flags | os.O_DIRECTORY, dir_fd=fd)
+            os.close(fd)
+            fd = next_fd
+        file_fd = os.open(p.parts[-1], flags, dir_fd=fd)
+        try:
+            st = os.fstat(file_fd)
+            if not stat.S_ISREG(st.st_mode) or st.st_size > LIMIT:
+                raise Invalid('nonregular or oversized: ' + str(p))
+            with os.fdopen(file_fd, 'rb') as f:
+                file_fd = -1
+                data = f.read(LIMIT + 1)
+            if len(data) > LIMIT: raise Invalid('oversized: ' + str(p))
+            return data
+        finally:
+            if file_fd != -1: os.close(file_fd)
+    finally:
+        os.close(fd)
 
 def obj(data):
     def unique(pairs):
@@ -59,7 +67,17 @@ def check(root, modules, artifacts):
         if not isinstance(digest, str) or hashlib.sha256(read(root, path)).hexdigest() != digest: raise Invalid('changed input: ' + path)
     lock = obj(read(root, 'package-lock.json'))
     if lock.get('lockfileVersion') != 3 or not isinstance(lock.get('packages'), dict): raise Invalid('unsupported lock')
-    packages = {k: v for k, v in lock['packages'].items() if k.startswith('node_modules/') and not (isinstance(v, dict) and v.get('link') is True)}
+    packages = {}
+    for k, v in lock['packages'].items():
+        if not isinstance(k, str) or not isinstance(v, dict): raise Invalid('invalid lock entry')
+        if k.startswith('node_modules/'):
+            if v.get('link') is True:
+                if set(v) - {'resolved', 'link'} or v.get('resolved', '') + '/package.json' not in expected: raise Invalid('invalid workspace link: ' + k)
+            else:
+                packages[k] = v
+        elif k != '' and k + '/package.json' not in expected:
+            raise Invalid('unknown lock entry: ' + k)
+
     components = inv['components']
     if len(components) > 1000 or any(not isinstance(c, dict) or not isinstance(c.get('name'), str) for c in components): raise Invalid('invalid components')
     byname = {c['name']: c for c in components}
@@ -70,7 +88,17 @@ def check(root, modules, artifacts):
         for field in ('dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'):
             deps = manifest.get(field, {})
             if not isinstance(deps, dict): raise Invalid('invalid dependencies')
+            if any(not isinstance(k, str) or not isinstance(v, str) for k, v in deps.items()): raise Invalid('invalid dependency entry')
             direct.update(deps)
+    if not direct.issubset(set(byname) | {obj(read(root, p)).get('name') for p in expected if p.endswith('/package.json')}): raise Invalid('unresolved direct dependency')
+    for path, entry in packages.items():
+        for field in ('dependencies', 'optionalDependencies', 'peerDependencies'):
+            deps = entry.get(field, {})
+            if not isinstance(deps, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in deps.items()):
+                raise Invalid('invalid lock dependencies: ' + path)
+            for dep in deps:
+                if 'node_modules/' + dep not in packages:
+                    raise Invalid('unresolved lock dependency: ' + dep)
     for name, c in byname.items():
         p = packages['node_modules/' + name]
         if not isinstance(p, dict): raise Invalid('invalid package')
@@ -87,7 +115,7 @@ def check(root, modules, artifacts):
             if not isinstance(notice, dict) or not isinstance(notice.get('path'), str) or not notice['path'].startswith(name + '/') or notice['path'] in paths: raise Invalid('invalid notice')
             paths.add(notice['path'])
             if hashlib.sha256(read(modules, notice['path'])).hexdigest() != notice.get('sha256'): raise Invalid('changed notice: '+notice['path'])
-        if name == 'typescript' and name + '/ThirdPartyNoticeText.txt' not in paths: raise Invalid('missing TypeScript third-party notice')
+        if name == 'typescript' and not {name + '/LICENSE.txt', name + '/ThirdPartyNoticeText.txt'}.issubset(paths): raise Invalid('missing TypeScript third-party notice')
     return len(components)
 
 def main():
