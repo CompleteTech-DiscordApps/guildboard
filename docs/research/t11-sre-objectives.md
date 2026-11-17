@@ -66,7 +66,7 @@ with stakeholders; it does not prescribe these Guildboard numbers. [S1]
 | Objective | Proposed initial value | Measurement and acceptance boundary |
 | --- | --- | --- |
 | Availability: board-open journey | >=99.5% good eligible attempts, rolling 30 days | Separate indicator from edits. Eligible means authorized, supported client, within accepted input/workload bounds. Good means a usable current board and required assets within 5 seconds; timeouts/5xx/dependency failures count bad. Establish trusted sampling/aggregation in #357; missing data is unknown, never success. |
-| Availability: edit journey | >=99.5% good eligible submissions, rolling 30 days | Good means the accepted operation is durably acknowledged and observed by a connected peer within 1 second. Count in-profile overload rejections and failed reconnect attempts bad; deduplicate retries by the eventual accepted T4/T5 identity rules. Never discard slow successes from the denominator. |
+| Availability: edit journey | >=99.5% good eligible logical edits, rolling 30 days | Count each edit once from its first in-profile admission attempt. Good means durable acknowledgement at the sender within 1 second, plus peer observation by the same deadline for collaborative edits. Report solo and collaborative cohorts separately as well as the combined indicator. |
 | Availability: external synthetic | >=99.5% successful scheduled 1-minute probes, rolling 30 days | Separate controlled-tenant board-open/write/read probe through actual HTTPS/WSS; planned maintenance counts. Probe missing/failed is bad for this indicator. 43,200 scheduled samples imply 216 allowed bad samples in exactly 30 days; this is not an outage-minute allowance for the request-based indicators. |
 | Latency: durable acknowledgement | p95 <=100 ms; p99 <=250 ms at 100 operations/second | Measure authorized server ingress to durable receipt using one server monotonic clock; report failed attempts and throughput alongside histogram. No client animation/prediction is a durable acknowledgement. |
 | Latency: peer visibility | p95 <=250 ms; p99 <=500 ms at baseline | Sender round trip via peer echo on the sender's monotonic clock, so no unsynchronized cross-client subtraction. Report network/Discord proxy path and rendering separately. |
@@ -84,6 +84,44 @@ for an otherwise valid user is not an abuse exclusion. A flood must not create
 successful synthetic journeys or inflate denominators with invented attempts.
 Real-client dependency outages count in the end-to-end indicator; a separate
 server-only view aids diagnosis without hiding user impact.
+
+For edits, determine eligibility at the first submission for admission using
+the supported client, authorization, input and offered-workload criteria.
+Admission outcome, including overload rejection, does not change eligibility.
+Use that first submission's timestamp to place the logical edit in the window
+and start the sender's 1-second monotonic deadline. Correlate retries with the
+same accepted T4/T5 logical identity, including attempts rejected before
+admission. Finalize after the deadline; a retry can satisfy the original
+deadline, but cannot reset it or add a sample. An incomplete eligible edit at
+the deadline is bad even if it succeeds later.
+
+For collaborative edits, select one measurement peer at the first attempt
+from other connected, synchronized sessions authorized to receive updates on
+that board. #357 must define repeatable peer selection and how the sender
+records the peer's correlated observation (for example, a peer echo measured
+on the sender clock). Keep the peer and cohort fixed through the deadline.
+A selected peer that disconnects before observation leaves the peer condition
+unmet unless its observation is confirmed by the deadline, including after
+reconnect. If there was no eligible peer at the first attempt, use the solo
+cohort and require only the durable acknowledgement. If peer eligibility
+cannot be established because telemetry is missing, record unknown coverage
+rather than assuming the edit was solo or good. #357 must define bounded,
+privacy-reviewed correlation and coverage reporting, including when an
+overload response fails to reach the sender. Standalone reconnects belong to
+a separate recovery indicator starting at disconnect and ending at authorized
+resume with current board state. Their outcomes do not add edit samples. A
+reconnect during an edit counts only through its effect on that edit's
+original acknowledgement and peer deadline.
+
+Example accounting (times from first submission):
+
+| Scenario | Edit indicator |
+| --- | --- |
+| In-profile overload at 0 ms, retry accepted, durable acknowledgement at 650 ms, peer observed at 900 ms | One good collaborative edit; the initial rejection remains visible in admission metrics. |
+| Same sequence with peer observation at 1,100 ms | One bad collaborative edit. |
+| Selected peer disconnects before observation; durable acknowledgement at 200 ms, peer unconfirmed at 1 second | One bad collaborative edit even if another peer joins. |
+| No eligible peer initially; durable acknowledgement at 200 ms | One good solo edit. |
+| Reconnect fails with no edit in flight | Zero edit samples; record the outcome in the standalone recovery indicator. |
 
 Proposed error-budget policy: measure for a 30-day pilot before calling the
 targets validated; freeze risky releases when the budget is exhausted, allow
