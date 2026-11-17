@@ -364,6 +364,80 @@ class PolicyCases(CheckerCase):
         self.assertIn('file absent, so no exceptions or verified overrides apply', out)
 
 
+class InstallPathAndIntegrityCases(CheckerCase):
+    def test_workspace_patterns_cannot_cover_node_modules_or_match_everything(self):
+        for patterns in (['node_modules/*'], ['apps/*', 'node_modules/*'], ['node_modules/**'],
+                         ['*'], ['**'], ['../*'], ['apps/../node_modules/*'], ['/abs/*'], ['node_modules\\*']):
+            with self.subTest(patterns=patterns):
+                data = lockfile({'node_modules/evil': pkg('1.0.0', 'GPL-3.0-only')})
+                data['packages']['']['workspaces'] = patterns
+                name = self.write('package-lock.json', data)
+                code, out, err = self.run_checker([name])
+                self.assertEqual(code, 2, out + err)
+                self.assertIn('unsafe workspaces pattern', err)
+
+    def test_integrity_format_is_checked_for_lockfile_entries(self):
+        self.assertTrue(check.valid_integrity(INTEGRITY))
+        self.assertTrue(check.valid_integrity('sha384-' + 'A' * 64))
+        self.assertTrue(check.valid_integrity('sha256-' + 'A' * 43 + '='))
+        malformed = ['md5-' + 'A' * 22 + '==', 'sha1-' + 'A' * 27 + '=', 'sha512-', 'sha512-' + 'A' * 88,
+                     'sha256-' + 'A' * 44, 'sha384-' + 'A' * 60, 'sha512-' + '!' * 86 + '==',
+                     INTEGRITY + 'x', 'not an integrity value', '   ', INTEGRITY + ' bogus']
+        for value in malformed:
+            with self.subTest(integrity=value):
+                self.assertFalse(check.valid_integrity(value))
+                name = self.write('package-lock.json', lockfile({'node_modules/n': pkg('1.0.0', 'MIT', integrity=value)}))
+                code, out, _ = self.run_checker([name])
+                self.assertEqual(code, 1, out)
+                self.assertIn('malformed integrity', out)
+                self.assertNotIn('missing integrity', out)
+
+    def test_backslash_install_path_is_unexpected_even_when_prohibited(self):
+        for key in ('node_modules/..\\evil', 'node_modules/a\\b'):
+            with self.subTest(key=key):
+                name = self.write('package-lock.json', lockfile({key: pkg('1.0.0', 'GPL-3.0-only')}))
+                code, out, _ = self.run_checker([name])
+                self.assertEqual(code, 1, out)
+                self.assertIn('unexpected install path', out)
+                self.assertNotIn('prohibited license', out)
+
+    def test_workspace_local_install_is_third_party_by_real_name(self):
+        name = self.write('package-lock.json', lockfile({'apps/api/node_modules/x': pkg('1.0.0', 'MIT')}))
+        code, out, _ = self.run_checker([name])
+        self.assertEqual(code, 0, out)
+        self.assertIn('third-party=1', out)
+        self.assertNotIn('unexpected install path', out)
+        name = self.write('package-lock.json', lockfile({'apps/api/node_modules/@s/y': pkg('2.0.0', 'GPL-3.0-only')}))
+        code, out, _ = self.run_checker([name])
+        self.assertEqual(code, 1, out)
+        self.assertIn('apps/api/node_modules/@s/y [@s/y@2.0.0] prohibited license', out)
+        self.assertNotIn('unexpected install path', out)
+
+    def test_nested_install_under_unknown_prefix_stays_unexpected(self):
+        for key in ('vendor/api/node_modules/x', 'tools/api/node_modules/x', 'apps/node_modules/x',
+                    'apps/api/node_modules/../x', 'apps/../node_modules/x'):
+            with self.subTest(key=key):
+                name = self.write('package-lock.json', lockfile({key: pkg('1.0.0', 'MIT')}))
+                code, out, _ = self.run_checker([name])
+                self.assertEqual(code, 1, out)
+                self.assertIn('unexpected install path', out)
+
+
+class DocumentWordingCases(unittest.TestCase):
+    def test_missing_exceptions_wording_matches_the_real_output(self):
+        phrase = 'file absent, so no exceptions or verified overrides apply'
+        policy = POLICY_DOC.read_text(encoding='utf-8')
+        for label, text in (('policy doc', policy), ('checker docstring', check.__doc__)):
+            with self.subTest(label=label):
+                self.assertNotIn('prints a NOTE', text)
+                self.assertIn(phrase, text)
+
+    def test_policy_documents_the_lockfile_defaults_and_filter_rule(self):
+        text = POLICY_DOC.read_text(encoding='utf-8')
+        self.assertIn('DEFAULT_LOCKFILES', text)
+        self.assertIn('`paths` filters', text)
+
+
 class SpdxExpressionCases(unittest.TestCase):
     def rank(self, text):
         return check.classify_expression(text)
@@ -525,12 +599,25 @@ class PolicyDocumentCases(unittest.TestCase):
         self.assertIn('fails', text)
 
 
+USES_LINE = re.compile(r'^\s*(?:-\s+)?uses:\s*(\S+)', re.MULTILINE)
+FULL_SHA_REF = re.compile(r'[^@\s]+@[0-9a-f]{40}')
+WORKFLOW_PATH_ITEM = re.compile(r"(?m)^\s+- '([^']+)'\s*$")
+
+
+def uses_refs(text):
+    return USES_LINE.findall(text)
+
+
+def unpinned_refs(refs):
+    return [ref for ref in refs if not FULL_SHA_REF.fullmatch(ref)]
+
+
 class WorkflowCases(unittest.TestCase):
     def setUp(self):
         self.text = WORKFLOW.read_text(encoding='utf-8')
 
     def test_triggers_cover_lockfiles_checker_exceptions_and_workflow(self):
-        for needle in ('pull_request:', 'push:', 'branches: [main]', "'**/package-lock.json'",
+        for needle in ('pull_request:', 'push:', 'branches: [main]', "'package-lock.json'", "'research-fixtures/canvas/package-lock.json'",
                        'scripts/verification/check_licenses.py',
                        'docs/evidence/license-exceptions.json',
                        '.github/workflows/license-policy.yml'):
@@ -546,7 +633,19 @@ class WorkflowCases(unittest.TestCase):
     def test_checkout_is_pinned_without_persisted_credentials(self):
         self.assertIn('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1', self.text)
         self.assertIn('persist-credentials: false', self.text)
-        self.assertRegex(self.text, r'uses: actions/[a-z-]+@[0-9a-f]{40}')
+
+    def test_every_uses_line_is_pinned_to_a_full_sha(self):
+        refs = uses_refs(self.text)
+        self.assertTrue(refs, 'no uses: lines were found to check')
+        self.assertEqual(unpinned_refs(refs), [])
+
+    def test_an_unpinned_uses_line_anywhere_in_the_workflow_is_detected(self):
+        mutated = self.text + '\n      - uses: actions/setup-python@v5\n'
+        self.assertEqual(unpinned_refs(uses_refs(mutated)), ['actions/setup-python@v5'])
+
+    def test_path_filters_name_exactly_the_checker_default_lockfiles(self):
+        lockfiles = {item for item in WORKFLOW_PATH_ITEM.findall(self.text) if item.endswith('package-lock.json')}
+        self.assertEqual(lockfiles, set(check.DEFAULT_LOCKFILES))
 
     def test_runs_gate_on_ubuntu_with_timeout(self):
         self.assertIn('runs-on: ubuntu-latest', self.text)

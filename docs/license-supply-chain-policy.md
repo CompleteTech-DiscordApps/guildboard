@@ -8,6 +8,8 @@ Gate: `python3 scripts/verification/check_licenses.py` (stdlib only; run from th
 
 The policy applies to every package recorded in a lockfile the project commits, to fonts, icons and imported assets, and to notices shipped with any distribution. The gate reads `package-lock.json` and `research-fixtures/canvas/package-lock.json` by default. It does not read installed package files, so declared SPDX metadata is trusted only as far as the lockfile states it.
 
+A new committed lockfile must be added to `DEFAULT_LOCKFILES` in `scripts/verification/check_licenses.py` and to the `paths` filters in `.github/workflows/license-policy.yml` in the same change. The workflow test fails if the filters name a lockfile that is not a default, or omit a default.
+
 ## Allowed SPDX identifiers
 
 A third-party package is allowed only when its entire license expression resolves to these identifiers:
@@ -83,6 +85,8 @@ The `verified_license_overrides` list in `docs/evidence/license-exceptions.json`
 - A third-party entry must sit at an exact `node_modules/...` install path. Path segments `.` and `..`, absolute paths, backslashes and any other shape (for example `vendor/node_modules/x`) fail as an unexpected install path, whatever their license.
 - A first-party workspace entry is skipped only when its key is `<dir>/<name>` where `<dir>/*` appears in the root entry's `workspaces` list, and it carries neither `resolved` nor `integrity`. Any other `apps/...` or `packages/...` entry is an unexpected install path.
 - A `link: true` entry is skipped only when it sits at a `node_modules` path and its `resolved` target is a known workspace present in the same lockfile. Any other link fails.
+- A third-party package installed under a workspace, `<dir>/<name>/node_modules/...` where `<dir>/*` is in `workspaces`, is classified by its real package name like any other third-party entry. A prefix that matches no declared workspace pattern stays an unexpected install path.
+- A `workspaces` pattern that contains `node_modules` or `..`, is absolute, contains a backslash or is wildcard-only (`*`, `**`) is an input error (exit 2). Only `dir/*` with a literal first segment is recognised; other shapes are not workspaces, so their entries fail as unexpected install paths.
 - An npm alias is classified by the real package name in the entry's `name` field, not by the install path. Exceptions and overrides match that real name.
 
 ## Attribution and distribution obligations
@@ -120,7 +124,7 @@ An asset without a recorded license and source URL is not adoptable. Assets may 
 
 ## Input handling
 
-- A missing exceptions file is read as no exceptions and no verified overrides. This only makes the gate stricter, and the run prints a NOTE that says so.
+- A missing exceptions file is read as no exceptions and no verified overrides. This only makes the gate stricter, and the run's `exceptions:` summary line says so (`file absent, so no exceptions or verified overrides apply`).
 - A missing, unreadable, larger-than-16-MiB, malformed, duplicate-keyed, non-finite-number or deeply nested lockfile or exceptions file is an input error (exit 2) with a message, not a traceback.
 
 ## Limits
@@ -131,6 +135,6 @@ Not verified by this policy or the gate:
 - Transitive license texts are not read. Installed package files are not inspected.
 - The two packages with no license field in the canvas research lockfile (`fuzzy` 0.1.3 and `khroma` 2.1.0) are covered by verified overrides. Their evidence came from registry tarball files checked outside this offline gate; the gate does not re-fetch or re-hash them. The overrides are evidence, not legal sign-off.
 - The research fixture is not the application. Whether its dependencies ship is not decided here.
-- Integrity values are checked for presence and format, not cryptographically checked against the registry.
+- Integrity values must be present and well-formed: one or more whitespace-separated `sha512-`, `sha384-` or `sha256-` tokens whose base64 decodes to 64, 48 or 32 bytes. A malformed value fails as `malformed integrity`. Values are checked for format, not cryptographically checked against the registry.
 - The CI step exists but its result is not recorded in this policy. No independent review, protected merge or post-merge check is claimed. A PASS is not owner approval of any license or exception.
 - Discord, GoDaddy VPS and legal sign-off are out of scope.

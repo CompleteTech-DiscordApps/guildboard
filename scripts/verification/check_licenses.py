@@ -11,7 +11,7 @@ Policy: docs/license-supply-chain-policy.md. Run from the repository root.
 
 Input handling: a missing exceptions file is not an error. It is read as no
 exceptions and no verified overrides, which only makes the gate stricter; the run
-prints a NOTE saying so. A missing, unreadable, larger-than-16-MiB, malformed or
+says so on its `exceptions:` summary line, which reads `file absent, so no exceptions or verified overrides apply`. A missing, unreadable, larger-than-16-MiB, malformed or
 deeply nested lockfile or exceptions file is an input error.
 
 Exit status: 0 pass; 1 policy findings (prohibited, missing or unknown license,
@@ -25,6 +25,7 @@ expression).
 """
 
 import argparse
+import base64
 import datetime
 import json
 import os
@@ -58,7 +59,8 @@ _EXCEPTION_KEYS = {'name', 'version', 'license', 'reason'}
 OVERRIDES_KEY = 'verified_license_overrides'
 _OVERRIDE_KEYS = {'name', 'version', 'integrity', 'license', 'evidence', 'reason'}
 _EVIDENCE_KEYS = {'kind', 'source', 'file', 'sha256', 'verified_at'}
-_INTEGRITY = re.compile(r'(sha512|sha384|sha256)-[A-Za-z0-9+/]+={0,2}')
+_SRI_TOKEN = re.compile(r'(sha512|sha384|sha256)-(\S+)')
+_SRI_DECODED_BYTES = {'sha512': 64, 'sha384': 48, 'sha256': 32}
 _SHA256_HEX = re.compile(r'[0-9a-f]{64}')
 _ISO_DATE = re.compile(r'\d{4}-\d{2}-\d{2}')
 # Install paths: node_modules/<name> with optional nested node_modules/<name> segments.
@@ -66,6 +68,7 @@ _INSTALL_KEY = re.compile(r'node_modules/(?:@[^/]+/)?[^/]+(?:/node_modules/(?:@[
 _PACKAGE_NAME = re.compile(r'(?:@[^/\s]+/)?[^/\s]+')
 _WORKSPACE_GLOB = re.compile(r'([A-Za-z0-9][A-Za-z0-9._-]*)/\*')
 _WORKSPACE_SEGMENT = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]*')
+_WORKSPACE_UNSAFE = ('node_modules', '..')
 
 
 class InputError(Exception):
@@ -267,7 +270,7 @@ def load_overrides(path):
             raise InputError(f'{where}: evidence must have exactly {sorted(_EVIDENCE_KEYS)}')
         evidence = {field: _string_field(evidence_raw[field], where, f'evidence.{field}')
                     for field in sorted(_EVIDENCE_KEYS)}
-        if not _INTEGRITY.fullmatch(values['integrity']):
+        if not valid_integrity(values['integrity']):
             raise InputError(f'{where}: integrity must be an sha512-, sha384- or sha256- SRI value')
         if not _SHA256_HEX.fullmatch(evidence['sha256']):
             raise InputError(f'{where}: evidence.sha256 must be 64 lowercase hex digits')
@@ -312,6 +315,40 @@ def license_status(entry):
     return rank, text, RANK_LABEL[rank]
 
 
+def _sri_token_ok(token):
+    match = _SRI_TOKEN.fullmatch(token)
+    if not match:
+        return False
+    algorithm, digest = match.groups()
+    try:
+        raw = base64.b64decode(digest, validate=True)
+    except ValueError:
+        return False
+    return len(raw) == _SRI_DECODED_BYTES[algorithm]
+
+
+def valid_integrity(value):
+    """True when value is one or more whitespace-separated sha512-, sha384- or sha256- SRI tokens
+    whose base64 decodes to that algorithm's digest length."""
+    if not isinstance(value, str):
+        return False
+    tokens = value.split()
+    return bool(tokens) and all(_sri_token_ok(token) for token in tokens)
+
+
+def nested_install_name(key, dirs):
+    """Package name for a workspace-local install `<dir>/<name>/node_modules/...`, or None.
+
+    The prefix must be a declared workspace dir followed by one plain segment; the rest of
+    the path is judged by install_name exactly like a root-level install path.
+    """
+    parts = key.split('/')
+    if (len(parts) < 4 or parts[0] not in dirs or parts[2] != 'node_modules'
+            or parts[1] == 'node_modules' or not _WORKSPACE_SEGMENT.fullmatch(parts[1])):
+        return None
+    return install_name('/'.join(parts[2:]))
+
+
 def install_name(key):
     """Package name for an exact node_modules install path, or None for any other path."""
     if '\\' in key or not _INSTALL_KEY.fullmatch(key):
@@ -323,13 +360,23 @@ def install_name(key):
 
 
 def workspace_dirs(root_entry):
-    """Directories named by the root entry's workspaces globs (exactly `dir/*`)."""
+    """Directories named by the root entry's workspaces globs (exactly `dir/*`).
+
+    A pattern that could reach node_modules, climb out of the tree, be absolute, use a
+    backslash or match everything is an input error, not an ignored pattern.
+    """
     patterns = root_entry.get('workspaces', [])
     if not isinstance(patterns, list):
         return set()
     dirs = set()
     for pattern in patterns:
-        match = _WORKSPACE_GLOB.fullmatch(pattern) if isinstance(pattern, str) else None
+        if not isinstance(pattern, str):
+            continue
+        if (any(bad in pattern for bad in _WORKSPACE_UNSAFE) or '\\' in pattern
+                or pattern.startswith(('/', '*')) or not pattern.strip('*')):
+            raise InputError(f'unsafe workspaces pattern {pattern!r} in the root entry: node_modules, '
+                             'parent segments, absolute paths, backslashes and wildcard-only patterns are not allowed')
+        match = _WORKSPACE_GLOB.fullmatch(pattern)
         if match:
             dirs.add(match.group(1))
     return dirs
@@ -388,7 +435,7 @@ class LockfileReport:
         self.overridden = 0
         self.counts = {'allowed': 0, 'excepted': 0, 'review-required': 0,
                        'prohibited': 0, 'missing-license': 0, 'malformed-license': 0,
-                       'missing-integrity': 0, 'unexpected-path': 0}
+                       'missing-integrity': 0, 'malformed-integrity': 0, 'unexpected-path': 0}
         self.lines = []
         self.failures = 0
 
@@ -440,6 +487,8 @@ def scan_lockfile(path, exceptions, used, index):
             continue
         path_name = install_name(key)
         if path_name is None:
+            path_name = nested_install_name(key, dirs)
+        if path_name is None:
             report.unexpected(key, 'entry is not an exact node_modules install path and is not a known workspace')
             continue
         version_text = entry.get('version')
@@ -458,6 +507,10 @@ def scan_lockfile(path, exceptions, used, index):
             report.counts['missing-integrity'] += 1
             report.add('FAIL', key, label, 'missing integrity',
                        'third-party package has no integrity value; every registry package must pin one')
+        elif not valid_integrity(integrity):
+            report.counts['malformed-integrity'] += 1
+            report.add('FAIL', key, label, 'malformed integrity',
+                       'integrity must be sha512-, sha384- or sha256- SRI tokens whose base64 decodes to the digest length')
         declared = _has_license(entry)
         index.record(name, version_text, integrity if has_integrity else None, declared)
         if declared:

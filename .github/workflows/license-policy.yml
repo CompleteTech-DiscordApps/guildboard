@@ -2,14 +2,16 @@ name: License policy
 on:
   pull_request:
     paths:
-      - '**/package-lock.json'
+      - 'package-lock.json'
+      - 'research-fixtures/canvas/package-lock.json'
       - 'scripts/verification/check_licenses.py'
       - 'docs/evidence/license-exceptions.json'
       - '.github/workflows/license-policy.yml'
   push:
     branches: [main]
     paths:
-      - '**/package-lock.json'
+      - 'package-lock.json'
+      - 'research-fixtures/canvas/package-lock.json'
       - 'scripts/verification/check_licenses.py'
       - 'docs/evidence/license-exceptions.json'
       - '.github/workflows/license-policy.yml'
