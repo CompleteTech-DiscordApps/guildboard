@@ -119,8 +119,8 @@
       "id": "audit_integrity",
       "research": "A11",
       "verificationIssues": [314, 318],
-      "inputs": "Compare permitted append, denied access, redaction sentinels, changed records and truncation of checkpointed history or accepted active tail. Vary independently anchored accepted high-water.",
-      "requiredObservations": "Only scoped rights succeed. Independent checkpoints flag alteration and truncation. Sensitive sentinel absent from audit, diagnostics and exported evidence."
+      "inputs": "Compare permitted append, denied access, redaction sentinels, changed records and truncation of checkpointed history or accepted active tail. Vary independently anchored accepted high-water and append a suffix beyond it.",
+      "requiredObservations": "Only scoped rights succeed. Independent checkpoints flag alteration and truncation. An unavailable anchor blocks verification. An unanchored suffix contributes no accepted history. Sensitive sentinel absent from audit, diagnostics and exported evidence."
     },
     {
       "id": "release_gate",
@@ -227,13 +227,13 @@
     "commit": {
       "FORBIDDEN": ["fresh_scoped_read_only"],
       "POLICY_STALE": ["proven_generation_mismatch"],
-      "DEPENDENCY_UNAVAILABLE": ["policy_stale", "policy_unavailable", "time_stale", "time_unavailable"]
+      "DEPENDENCY_UNAVAILABLE": ["policy_stale", "policy_unavailable", "time_stale", "time_unavailable", "fence_unavailable"]
     },
     "commitAcceptedEffects": false,
     "egressProtectedOutput": false,
     "egress": {
       "FORBIDDEN": ["read_denied_after_lookup"],
-      "DEPENDENCY_UNAVAILABLE": ["policy_stale", "policy_unavailable", "time_stale", "time_unavailable"]
+      "DEPENDENCY_UNAVAILABLE": ["policy_stale", "policy_unavailable", "time_stale", "time_unavailable", "fence_unavailable"]
     }
   },
   "postLookupDenial": {
@@ -271,6 +271,7 @@
   },
   "recovery": {
     "restoreExposes": {"current_complete_reconciled": true, "missing": false, "stale": false, "gapped": false, "later_deletion_unapplied": false},
-    "auditVerifies": {"anchored_complete": true, "anchor_missing": false, "anchor_stale": false, "checkpointed_truncation": false, "accepted_active_tail_truncation": false}
+    "auditVerifies": {"anchored_complete": true, "anchor_missing": false, "anchor_unavailable": false, "anchor_stale": false, "checkpointed_truncation": false, "accepted_active_tail_truncation": false},
+    "auditAcceptsUnanchoredAppendedSuffix": false
   }
 }

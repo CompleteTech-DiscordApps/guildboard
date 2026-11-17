@@ -1,9 +1,11 @@
 """Offline checks of the GB-T9.S1 declarative handoff and fixture expectations."""
 
+from copy import deepcopy
 import itertools
 import json
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -144,9 +146,23 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
             with self.subTest(observation=field):
                 self.assertIs(receipt[field], expected)
 
+    def assertExactJSON(self, expected, actual, path='$'):
+        self.assertIs(type(actual), type(expected), path)
+        if isinstance(expected, dict):
+            self.assertEqual(expected.keys(), actual.keys(), path)
+            for key, value in expected.items():
+                self.assertExactJSON(value, actual[key], f'{path}.{key}')
+        elif isinstance(expected, list):
+            self.assertEqual(len(expected), len(actual), path)
+            for index, (value, observed) in enumerate(zip(expected, actual)):
+                self.assertExactJSON(value, observed, f'{path}[{index}]')
+        else:
+            self.assertEqual(expected, actual, path)
+
     def test_commit_and_egress_have_separate_typed_denials(self):
-        unavailable = ['policy_stale', 'policy_unavailable', 'time_stale', 'time_unavailable']
-        self.assertEqual({
+        unavailable = ['policy_stale', 'policy_unavailable', 'time_stale', 'time_unavailable',
+                       'fence_unavailable']
+        self.assertExactJSON({
             'commit': {
                 'FORBIDDEN': ['fresh_scoped_read_only'],
                 'POLICY_STALE': ['proven_generation_mismatch'],
@@ -163,7 +179,7 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
     def test_post_lookup_denial_covers_all_prepared_branches(self):
         matrix = self.fixture['postLookupDenial']
         self.assertEqual(set(self.fixture['receiptLookupMatrix']['storedStates']), matrix['prepared'].keys())
-        self.assertEqual({
+        self.assertExactJSON({
             'prepared': {
                 'absent': 'LINEAGE_CHANGED', 'matching': 'receipt',
                 'mismatching': 'IDEMPOTENCY_CONFLICT',
@@ -178,7 +194,7 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
         }, matrix)
 
     def test_malformed_command_rejects_before_lookup_or_effects(self):
-        self.assertEqual({
+        self.assertExactJSON({
             'INVALID_MESSAGE': {
                 'unknown_field': {'add': {'unknownFixtureField': False}},
                 'duplicate_field': {'repeat': 'operationId'},
@@ -193,7 +209,7 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
         }, self.fixture['malformedCommand'])
 
     def test_closed_records_fail_with_typed_results(self):
-        self.assertEqual({
+        self.assertExactJSON({
             'kinds': ['deletion_job', 'audit_event', 'release_evidence', 'exception',
                       'retention_exception'],
             'INVALID_RECORD': ['missing_field', 'unknown_field', 'duplicate_field',
@@ -205,13 +221,50 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
         }, self.fixture['internalRecords'])
 
     def test_restore_and_audit_have_independent_coverage_checks(self):
-        self.assertEqual({
+        self.assertExactJSON({
             'restoreExposes': {'current_complete_reconciled': True, 'missing': False,
                                'stale': False, 'gapped': False, 'later_deletion_unapplied': False},
             'auditVerifies': {'anchored_complete': True, 'anchor_missing': False,
-                              'anchor_stale': False, 'checkpointed_truncation': False,
+                              'anchor_unavailable': False, 'anchor_stale': False,
+                              'checkpointed_truncation': False,
                               'accepted_active_tail_truncation': False},
+            'auditAcceptsUnanchoredAppendedSuffix': False,
         }, self.fixture['recovery'])
+
+    def test_contract_checks_reject_scalar_type_mutations(self):
+        def boolean_paths(record, prefix=()):
+            for key, value in record.items():
+                path = (*prefix, key)
+                if isinstance(value, dict):
+                    yield from boolean_paths(value, path)
+                elif type(value) is bool:
+                    yield path, int(value)
+
+        checks = {
+            'stageNegatives': self.test_commit_and_egress_have_separate_typed_denials,
+            'postLookupDenial': self.test_post_lookup_denial_covers_all_prepared_branches,
+            'malformedCommand': self.test_malformed_command_rejects_before_lookup_or_effects,
+            'internalRecords': self.test_closed_records_fail_with_typed_results,
+            'recovery': self.test_restore_and_audit_have_independent_coverage_checks,
+        }
+        for section, check in checks.items():
+            mutations = list(boolean_paths(self.fixture[section]))
+            if section == 'malformedCommand':
+                mutations.extend([
+                    (('UNSUPPORTED_VERSION', 'unsupported_version', 'set', 'version'), 2.0),
+                    (('INVALID_MESSAGE', 'noncanonical_counter', 'set', 'baseRevision'), 1),
+                    (('INVALID_MESSAGE', 'counter_above_uint64', 'set', 'baseRevision'), 1 << 64),
+                ])
+            for path, replacement in mutations:
+                with self.subTest(section=section, path=path, replacement=replacement):
+                    mutated = deepcopy(self.fixture)
+                    record = mutated[section]
+                    for key in path[:-1]:
+                        record = record[key]
+                    record[path[-1]] = replacement
+                    with patch.object(self, 'fixture', mutated), self.assertRaises(AssertionError) as failure:
+                        check()
+                    self.assertIn('$.' + '.'.join(path), str(failure.exception))
 
     def test_refined_cases_trace_to_native_verifiers(self):
         by_id = {case['id']: case for case in self.fixture['scenarios']}

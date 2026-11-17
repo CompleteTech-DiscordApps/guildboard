@@ -69,8 +69,9 @@ put it in URLs, logs, support evidence or exports.
 4. Serialize each transport release with session revocation, expiry, membership
    invalidation and scoped read policy changes. Recheck current session, fresh
    required evidence, applicable policy and trusted time at that boundary. Stale or unavailable
-   policy or trusted time returns egress-stage `DEPENDENCY_UNAVAILABLE` and
-   suppresses protected output. This cannot change the commit result.
+   policy or trusted time, or an unavailable release fence, returns egress-stage
+   `DEPENDENCY_UNAVAILABLE` and suppresses protected output. This cannot change
+   the commit result.
    Include live/replay events, ACKs, retained receipts, receipt/digest-dependent
    errors (including `LINEAGE_CHANGED`), snapshots, asset/export metadata and each queued chunk. For assets
    and exports check board and each included asset. A first-ordered valid
