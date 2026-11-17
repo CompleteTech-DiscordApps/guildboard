@@ -303,6 +303,132 @@ class ReportWriteTests(unittest.TestCase):
             self.assertEqual(list(root.iterdir()), [report])
 
     @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
+    def test_windows_replace_with_previous_publisher_handle_still_open(self):
+        import msvcrt
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / 'report.json'
+            report.write_bytes(b'previous')
+            pinned = validator.open_report_directory(root)
+            fd = None
+            handle = None
+            try:
+                # Match an earlier publisher's DELETE/write handle and retain
+                # read/data-attribute access so its survival is observable.
+                handle = pinned.open_relative(report.name, 0x00010083, 1)
+                fd = msvcrt.open_osfhandle(handle, os.O_RDWR | os.O_BINARY)
+                handle = None  # the descriptor owns the native handle now
+                original = pinned.nt.NtSetInformationFile
+
+                def legacy_rename(file, ios, buffer, size, information_class):
+                    # Negative control: the former BOOLEAN replace operation
+                    # cannot replace the destination while this handle is open.
+                    flags = pinned.ctypes.cast(
+                        buffer, pinned.ctypes.POINTER(pinned.wintypes.ULONG))
+                    flags[0] = 1
+                    return original(file, ios, buffer, size, 10)
+
+                with mock.patch.object(pinned.nt, 'NtSetInformationFile',
+                                       side_effect=legacy_rename):
+                    with self.assertRaisesRegex(OSError, 'cannot rename report stage'):
+                        validator.save_report(report, {'result': 'pass'}, pinned)
+                # Python's ordinary open does not share DELETE access; inspect
+                # the still-open native file and its directory-relative identity.
+                self.assertEqual(pinned.target_identity(report.name),
+                                 pinned.identity(msvcrt.get_osfhandle(fd)))
+                self.assertEqual(os.read(fd, 100), b'previous')
+                os.lseek(fd, 0, os.SEEK_SET)
+                self.assertEqual(list(root.glob('.roadmap-*.tmp')), [])
+                validator.save_report(report, {'result': 'pass', 'new': True}, pinned)
+                self.assertEqual(json.loads(report.read_text()),
+                                 {'result': 'pass', 'new': True})
+                self.assertEqual(os.read(fd, 100), b'previous')
+                self.assertEqual(list(root.iterdir()), [report])
+            finally:
+                if fd is not None:
+                    os.close(fd)
+                elif handle is not None:
+                    pinned.kernel.CloseHandle(handle)
+                pinned.close()
+
+    @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
+    def test_windows_target_identity_during_concurrent_replacement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / 'report.json'
+            report.write_text('previous')
+            pinned = validator.open_report_directory(root)
+            try:
+                self.assertFalse(pinned.is_case_sensitive())
+                original = pinned.open_relative
+                for sensitive in (False, True):
+                    with self.subTest(injected_sensitive=sensitive):
+                        before = pinned.target_identity(report.name)
+                        lookups = []
+
+                        def replace_after_open(name, access, disposition, insensitive=False):
+                            handle = original(name, access, disposition, insensitive)
+                            if name == report.name:
+                                lookups.append(insensitive)
+                                try:
+                                    validator.save_report(report, {'result': 'pass'}, pinned)
+                                except BaseException:
+                                    pinned.kernel.CloseHandle(handle)
+                                    raise
+                            return handle
+
+                        with mock.patch.object(pinned, 'is_case_sensitive',
+                                               return_value=sensitive), \
+                             mock.patch.object(pinned, 'open_relative',
+                                               side_effect=replace_after_open):
+                            if sensitive:
+                                # Preserve the conservative guard in that mode;
+                                # this injects a mode, not an NTFS mode change.
+                                with self.assertRaisesRegex(OSError, 'ambiguous case-sensitive'):
+                                    pinned.target_identity(report.name)
+                            else:
+                                self.assertEqual(pinned.target_identity(report.name), before)
+                        self.assertEqual(lookups, [False, True] if sensitive else [True])
+                        self.assertEqual(json.loads(report.read_text()), {'result': 'pass'})
+                        self.assertEqual(list(root.iterdir()), [report])
+            finally:
+                pinned.close()
+
+    @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
+    def test_windows_case_mode_query_failure_preserves_report_and_inputs(self):
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / 'manifest.json'
+            schema = root / 'schema.json'
+            report = root / 'report.json'
+            manifest.write_text(json.dumps(MANIFEST))
+            schema.write_text(json.dumps(SCHEMA))
+            report.write_text('previous')
+            before = {p: p.read_bytes() for p in (manifest, schema, report)}
+            original = validator.open_report_directory
+
+            def deny_case_query(path):
+                pinned = original(path)
+                def denied(*args):
+                    pinned.ctypes.set_last_error(5)
+                    return 0
+                pinned.kernel.GetFileInformationByHandleEx = denied
+                return pinned
+
+            with mock.patch.object(validator, 'open_report_directory',
+                                   side_effect=deny_case_query), \
+                 contextlib.redirect_stdout(io.StringIO()) as output:
+                code = validator.main(['--manifest', str(manifest), '--schema', str(schema),
+                                       '--report', str(report)])
+            self.assertEqual(code, 1)
+            self.assertEqual(json.loads(output.getvalue())['result'], 'fail')
+            self.assertIn('report path:', json.loads(output.getvalue())['errors'][0])
+            self.assertEqual({p: p.read_bytes() for p in before}, before)
+            self.assertEqual(set(root.iterdir()), set(before))
+
+    @unittest.skipUnless(os.name == 'nt', 'requires Windows native handles')
     def test_windows_native_rename_replaces_unicode_destination(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -517,7 +643,7 @@ class CliTests(unittest.TestCase):
             outputs = []
             for writer in writers:
                 stdout, stderr = writer.communicate(timeout=30)
-                self.assertEqual(writer.returncode, 0, stderr)
+                self.assertEqual(writer.returncode, 0, stdout + stderr)
                 outputs.append(json.loads(stdout))
             self.assertIn(json.loads(report.read_text()), outputs)
             self.assertTrue(all(output['result'] == 'pass' for output in outputs))

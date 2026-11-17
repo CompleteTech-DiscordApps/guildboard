@@ -1,0 +1,511 @@
+{
+  "aggregate_note": "This historically named artifact aggregates the initial 2026-10-24 attempt and later refreshes. Top-level observed_date_utc/observed_at_utc describe the latest run; initial_observation and refresh_history preserve earlier dated runs without renaming or dropping their history.",
+  "observed_date_utc": "2026-10-26",
+  "base_commit": "da811252acc975a0e5a1b087ab653b523443f3fa",
+  "source_commit": "a2ec2889babf7d2295469c6d90ebe77fae57df84",
+  "node": "24.18.0",
+  "npm": "12.2.0",
+  "chromium": "156.0.8078.4",
+  "excalidraw": {
+    "version": "0.18.1",
+    "integrity": "sha512-6i5Gt7IDTOH//qa0Z315Ly5iVRhjWpu2whrlQFqkuwrkKUWgRsMk0P5qdE7bpyDpai7jeLeWYkyj1eVAfni1lw==",
+    "resolved": "https://registry.npmjs.org/@excalidraw/excalidraw/-/excalidraw-0.18.1.tgz"
+  },
+  "fixture_files_sha256": {
+    "dependency-security.test.mjs": "2913b7020573bd418cb2f1bac6af4fc771c424f9e079a6552c4540b3ba58fe0f",
+    "fixture-runtime.mjs": "ac746257380c0cea9aeb5c507b6e14eb2ce9109c1126bbc7d52ad38898f66f72",
+    "fixture-runtime.test.mjs": "02c3087b87c439dabbf120237397177fe783c914b454e07c3195a10087a90a66",
+    "index.html": "55c4a7fa16834ff7da3e4364b5ee6909d776ce4cf4d2a52788655ced2330cc00",
+    "network-probe.mjs": "ad481d3d4c1176433cdd476a29e2cfe2d3d2a5c4fc685c6e8e8eb7213cd0c0d3",
+    "package-lock.json": "32fb212e1a50493ad2346fb22722d9351d1d9e8ab902ce0afefbfbfa22ae5cdf",
+    "package.json": "6e6c2b86cb7778d061b4147b039351574fb845439038c992dcddff1a53fdc07f",
+    "preserve-ids.mjs": "3fd7f597f13ee84cc9fc25075a63232018c1984db436c59f84f034e858dea828",
+    "preserve-ids.test.mjs": "5132285e144f04a5137e5e6e9749f23964d4740d815b97ed2e3c8a83ffcb65d0",
+    "probe.mjs": "473405f80b33d5be8e4c553696760c17c2f7a69e266c812bfcadb2e8a11378ed",
+    "record-change.mjs": "e5df6d8637e5a655e8733f34fd748c7bb9b3471a108ecd57f6e956713bcb592b",
+    "record-change.test.mjs": "f7661439244e97b9a0d9a2bddacf3472aa99a2877826d558899178cb8ab76fa1",
+    "src.jsx": "a36b983d4f2156f9f479843630542f4256a73ebf740d0094efa9a1b6f5fd3678"
+  },
+  "checks": {
+    "registry_install_ignore_scripts": "passed in prior refresh; exact dependency lock unchanged in this review remediation",
+    "full_dependency_audit": "passed; zero reported vulnerabilities",
+    "production_condition_bundle": "passed",
+    "probe_syntax": "passed for editor and network probes",
+    "planning_validation": "passed; 471 items",
+    "browser_launch": "passed; chromiumSandbox=true; cached executable supplied via CHROMIUM_PATH",
+    "browser_assertions_executed": 7,
+    "wrapper_contract_unit_test": "1 passed; unit does not execute editor converter",
+    "dependency_security_regressions": "5 passed; all 5 failed against the original lockfile",
+    "unit_tests_total": 14,
+    "fixture_server_regressions": "4 passed; actual Windows junction escape changes HTTP 200 to 404, inside-root junction remains 200",
+    "browser_launch_selection": "managed-browser default and explicit path options pass unit controls; live probes use existing explicit cached Chromium",
+    "callback_recording": "2 passed; original event shape and fixed 200-entry cap preserved",
+    "browser_smoke_checks_passed": 6,
+    "network_assertions_executed": 6,
+    "network_smoke_checks_passed": 4
+  },
+  "limitations": [
+    "Excalidraw 0.18.1 identity, dependency lock and four fixture overrides are unchanged by this review remediation",
+    "Nano ID 4 to 5 and KaTeX 0.16 to 0.18 overrides remain fixture-only with bounded compatibility evidence",
+    "Zero-advisory npm registry observation is dated and not exhaustive security or license clearance",
+    "Managed-browser option selection is unit-verified; live probes use Playwright 1.56.1 with supplied cached Chromium 156.0.8078.4",
+    "Not yet tested in Discord",
+    "No server permission checks",
+    "No touch/stylus or accessibility acceptance",
+    "No concurrent remote overwrite/rollback coverage",
+    "Selection is supplied through the editor API; paste/drop/text/context-menu controls remain untested",
+    "Synthetic Chromium routing controls, not a universal browser-scheme or CSP assessment",
+    "Loopback fixture filesystem controls are not a production server or authorization implementation",
+    "Original blocked launch and earlier successful refresh remain preserved in the aggregate",
+    "No production implementation, accepted specification, deployment or issue completion"
+  ],
+  "initial_observation": {
+    "observed_date_utc": "2026-10-24",
+    "base_commit": "da811252acc975a0e5a1b087ab653b523443f3fa",
+    "source_commit": "a2ec2889babf7d2295469c6d90ebe77fae57df84",
+    "node": "24.22.1",
+    "npm": "11.9.0",
+    "chromium": "155.0.8059.79",
+    "excalidraw": {
+      "version": "0.18.1",
+      "integrity": "sha512-6i5Gt7IDTOH//qa0Z315Ly5iVRhjWpu2whrlQFqkuwrkKUWgRsMk0P5qdE7bpyDpai7jeLeWYkyj1eVAfni1lw==",
+      "resolved": "https://registry.npmjs.org/@excalidraw/excalidraw/-/excalidraw-0.18.1.tgz"
+    },
+    "fixture_files_sha256": {
+      "package.json": "8644cdcb9350cf0cfdeba10162a5949b78ea203485c6bbf10fba33ddd9367f87",
+      "package-lock.json": "9391dbbc382a07f6368c6c7878e8d2e1768e786b1986f45b3a7ee490881f077f",
+      "src.jsx": "4b8b7377969cc53852e0cbf51e1483441f73ff4f6011e0850e778dc4d9a146da",
+      "probe.mjs": "6d652d5e7a8ac6a1d946342814c41a2249da8b4e693b6b0b68ff3fb0e6f9732f",
+      "index.html": "55c4a7fa16834ff7da3e4364b5ee6909d776ce4cf4d2a52788655ced2330cc00",
+      "preserve-ids.mjs": "3fd7f597f13ee84cc9fc25075a63232018c1984db436c59f84f034e858dea828",
+      "preserve-ids.test.mjs": "5132285e144f04a5137e5e6e9749f23964d4740d815b97ed2e3c8a83ffcb65d0"
+    },
+    "checks": {
+      "registry_install_ignore_scripts": "passed",
+      "production_condition_bundle": "passed",
+      "probe_syntax": "passed",
+      "planning_validation": "passed",
+      "browser_launch": "blocked-before-page-load",
+      "browser_assertions_executed": 0,
+      "wrapper_contract_unit_test": "1 passed; does not execute editor converter"
+    },
+    "launch_error": "process_singleton_posix.cc: socket() failed: Operation not permitted; crashpad directory errors",
+    "limitations": [
+      "No sandbox/security changes or alternate executor retry",
+      "Behavioral probe prepared but unvalidated",
+      "No Discord/VPS, server authorization, accessibility, touch/stylus or distribution-license acceptance"
+    ]
+  },
+  "observed_at_utc": "2026-10-26T00:27:35.909029+00:00",
+  "remediation_base_commit": "0f9ab82a17ed133f0564f7391c440765e3ee6576",
+  "platform": "Windows",
+  "browser_probe": {
+    "result": "local-fixture-passed",
+    "browser": "156.0.8078.4",
+    "remoteCallbacks": 1,
+    "checks": [
+      "remote ID preserved",
+      "NEVER remote baseline survives local undo",
+      "view-mode Delete with selected content leaves scene unchanged",
+      "view-mode undo with retained local history leaves scene unchanged",
+      "view-mode pointer smoke leaves scene unchanged",
+      "re-enabled undo removes the prepared local-history edit"
+    ],
+    "blockedRequests": [],
+    "limitations": [
+      "Not yet tested in Discord",
+      "No server permission checks",
+      "No touch/stylus or accessibility acceptance",
+      "No concurrent remote overwrite/rollback coverage",
+      "Selection is supplied through the editor API; paste/drop/text/context-menu controls remain untested"
+    ]
+  },
+  "browser_executable": "Windows Playwright cache chromium-1248/chrome-win64/chrome.exe",
+  "audit": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {},
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 260,
+        "dev": 29,
+        "optional": 28,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 290
+      }
+    }
+  },
+  "original_lock_audit": {
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 2,
+        "moderate": 7,
+        "high": 2,
+        "critical": 0,
+        "total": 11
+      },
+      "dependencies": {
+        "prod": 260,
+        "dev": 29,
+        "optional": 28,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 290
+      }
+    },
+    "provided_capture_sha256": "29137cf27109f2bae147021b243b1d33629a4b7f7f3b76d74026da6c6981a9ee"
+  },
+  "pre_remediation_browser_observation": {
+    "source_commit": "3edbe00a2264dd7878062eaceb511c51e84c04e5",
+    "provenance": "Supervisor supplied exact-source captured probe output; artifact contains no timestamp",
+    "provided_capture_sha256": "e3745ac9b0ce2893e5478542f22c9feb46737bfa213e2d8dc97a90f41e77891a",
+    "result": {
+      "result": "local-fixture-passed",
+      "browser": "156.0.8078.4",
+      "remoteCallbacks": 1,
+      "checks": [
+        "remote ID preserved",
+        "NEVER remote baseline survives local undo",
+        "view-mode pointer/unselected shortcut smoke leaves content unchanged"
+      ],
+      "blockedRequests": [],
+      "limitations": [
+        "Not yet tested in Discord",
+        "No server permission checks",
+        "No touch/stylus or accessibility acceptance",
+        "No concurrent remote overwrite/rollback coverage",
+        "Delete and undo smoke lack selection/history preconditions"
+      ]
+    }
+  },
+  "fixture_overrides": {
+    "nanoid@3.3.3": "3.3.18",
+    "nanoid@4.0.2": "5.1.16",
+    "lodash-es": "4.18.1",
+    "mermaid": {
+      "katex": "0.18.2"
+    }
+  },
+  "publisher_declarations_and_fixture_runtime": [
+    {
+      "consumer": "@excalidraw/excalidraw",
+      "dependency": "nanoid",
+      "publisher_declared": "3.3.3",
+      "fixture_resolved": "3.3.18",
+      "integrity": "sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w=="
+    },
+    {
+      "consumer": "@excalidraw/mermaid-to-excalidraw",
+      "dependency": "nanoid",
+      "publisher_declared": "4.0.2",
+      "fixture_resolved": "5.1.16",
+      "integrity": "sha512-kVrnsrJqMR8+oLJnGEmSWw9BivK5mt7H3FZatVRjrc5wGqFYuBxX1yG7+A7Gi5AefkX6t/oCkizcQgpu0cY1dQ=="
+    },
+    {
+      "consumer": "@chevrotain/gast",
+      "dependency": "lodash-es",
+      "publisher_declared": "4.17.21",
+      "fixture_resolved": "4.18.1",
+      "integrity": "sha512-J8xewKD/Gk22OZbhpOVSwcs60zhd95ESDwezOFuA3/099925PdHJ7OFHNTGtajL3AlZkykD32HykiMo+BIBI8A=="
+    },
+    {
+      "consumer": "mermaid",
+      "dependency": "katex",
+      "publisher_declared": "^0.16.47",
+      "fixture_resolved": "0.18.2",
+      "integrity": "sha512-3snve4y0SXTMequLim1FMiPvLGElySam0blN5xQZBqEY3lOJz1TnuaaiugnBZBqHzlSAGmFTYL7MCQkORuLKCA=="
+    }
+  ],
+  "changed_lockfile_package_entries": [
+    "node_modules/@excalidraw/mermaid-to-excalidraw/node_modules/nanoid",
+    "node_modules/katex",
+    "node_modules/lodash-es",
+    "node_modules/nanoid"
+  ],
+  "primary_security_sources": [
+    "https://github.com/ai/nanoid/security/advisories/GHSA-xwg4-73v4-xw9w",
+    "https://github.com/ai/nanoid/releases/tag/3.3.18",
+    "https://github.com/ai/nanoid/releases/tag/5.1.16",
+    "https://github.com/lodash/lodash/security/advisories/GHSA-r5fr-rjxr-66jc",
+    "https://github.com/lodash/lodash/security/advisories/GHSA-f23m-r3pf-42rh",
+    "https://github.com/lodash/lodash/security/advisories/GHSA-xxjr-mmjv-4gpg",
+    "https://github.com/KaTeX/KaTeX/security/advisories/GHSA-238p-pmpm-9mq7"
+  ],
+  "bundle_bytes": {
+    "app.js": 13697323,
+    "app.css": 163861
+  },
+  "refresh_history": [
+    {
+      "observed_date_utc": "2026-10-25",
+      "observed_at_utc": "2026-10-25T23:55:24.599510+00:00",
+      "remediation_base_commit": "3edbe00a2264dd7878062eaceb511c51e84c04e5",
+      "node": "24.18.0",
+      "npm": "12.2.0",
+      "platform": "Windows",
+      "chromium": "156.0.8078.4",
+      "fixture_files_sha256": {
+        "dependency-security.test.mjs": "2913b7020573bd418cb2f1bac6af4fc771c424f9e079a6552c4540b3ba58fe0f",
+        "index.html": "55c4a7fa16834ff7da3e4364b5ee6909d776ce4cf4d2a52788655ced2330cc00",
+        "package-lock.json": "32fb212e1a50493ad2346fb22722d9351d1d9e8ab902ce0afefbfbfa22ae5cdf",
+        "package.json": "59eeb0055faa43e2d3794796711c2d3759936973ca8bc41c8176c7f259fc3d5a",
+        "preserve-ids.mjs": "3fd7f597f13ee84cc9fc25075a63232018c1984db436c59f84f034e858dea828",
+        "preserve-ids.test.mjs": "5132285e144f04a5137e5e6e9749f23964d4740d815b97ed2e3c8a83ffcb65d0",
+        "probe.mjs": "6d652d5e7a8ac6a1d946342814c41a2249da8b4e693b6b0b68ff3fb0e6f9732f",
+        "src.jsx": "4b8b7377969cc53852e0cbf51e1483441f73ff4f6011e0850e778dc4d9a146da"
+      },
+      "checks": {
+        "registry_install_ignore_scripts": "passed",
+        "full_dependency_audit": "passed; zero reported vulnerabilities",
+        "production_condition_bundle": "passed",
+        "probe_syntax": "passed",
+        "planning_validation": "passed; 471 items",
+        "browser_launch": "passed; chromiumSandbox=true; cached executable supplied via CHROMIUM_PATH",
+        "browser_assertions_executed": 3,
+        "wrapper_contract_unit_test": "1 passed; unit does not execute editor converter",
+        "dependency_security_regressions": "5 passed; all 5 failed against the original lockfile",
+        "unit_tests_total": 6
+      },
+      "browser_probe": {
+        "result": "local-fixture-passed",
+        "browser": "156.0.8078.4",
+        "remoteCallbacks": 1,
+        "checks": [
+          "remote ID preserved",
+          "NEVER remote baseline survives local undo",
+          "view-mode pointer/unselected shortcut smoke leaves content unchanged"
+        ],
+        "blockedRequests": [],
+        "limitations": [
+          "Not yet tested in Discord",
+          "No server permission checks",
+          "No touch/stylus or accessibility acceptance",
+          "No concurrent remote overwrite/rollback coverage",
+          "Delete and undo smoke lack selection/history preconditions"
+        ]
+      },
+      "audit": {
+        "auditReportVersion": 2,
+        "vulnerabilities": {},
+        "metadata": {
+          "vulnerabilities": {
+            "info": 0,
+            "low": 0,
+            "moderate": 0,
+            "high": 0,
+            "critical": 0,
+            "total": 0
+          },
+          "dependencies": {
+            "prod": 260,
+            "dev": 29,
+            "optional": 28,
+            "peer": 0,
+            "peerOptional": 0,
+            "total": 290
+          }
+        }
+      },
+      "fixture_overrides": {
+        "nanoid@3.3.3": "3.3.18",
+        "nanoid@4.0.2": "5.1.16",
+        "lodash-es": "4.18.1",
+        "mermaid": {
+          "katex": "0.18.2"
+        }
+      },
+      "publisher_declarations_and_fixture_runtime": [
+        {
+          "consumer": "@excalidraw/excalidraw",
+          "dependency": "nanoid",
+          "publisher_declared": "3.3.3",
+          "fixture_resolved": "3.3.18",
+          "integrity": "sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w=="
+        },
+        {
+          "consumer": "@excalidraw/mermaid-to-excalidraw",
+          "dependency": "nanoid",
+          "publisher_declared": "4.0.2",
+          "fixture_resolved": "5.1.16",
+          "integrity": "sha512-kVrnsrJqMR8+oLJnGEmSWw9BivK5mt7H3FZatVRjrc5wGqFYuBxX1yG7+A7Gi5AefkX6t/oCkizcQgpu0cY1dQ=="
+        },
+        {
+          "consumer": "@chevrotain/gast",
+          "dependency": "lodash-es",
+          "publisher_declared": "4.17.21",
+          "fixture_resolved": "4.18.1",
+          "integrity": "sha512-J8xewKD/Gk22OZbhpOVSwcs60zhd95ESDwezOFuA3/099925PdHJ7OFHNTGtajL3AlZkykD32HykiMo+BIBI8A=="
+        },
+        {
+          "consumer": "mermaid",
+          "dependency": "katex",
+          "publisher_declared": "^0.16.47",
+          "fixture_resolved": "0.18.2",
+          "integrity": "sha512-3snve4y0SXTMequLim1FMiPvLGElySam0blN5xQZBqEY3lOJz1TnuaaiugnBZBqHzlSAGmFTYL7MCQkORuLKCA=="
+        }
+      ],
+      "bundle_bytes": {
+        "app.js": 13697008,
+        "app.css": 163861
+      },
+      "limitations": [
+        "Excalidraw 0.18.1 publisher identity/integrity retained; runtime dependency overrides are separate from publisher declarations",
+        "Nano ID 4 to 5 and KaTeX 0.16 to 0.18 cross requested ranges; bounded APIs/build/browser smoke are not every Mermaid/math/editor workflow",
+        "Zero-advisory npm registry observation is dated and not exhaustive security or license clearance",
+        "Playwright 1.56.1 with supplied Chromium 156.0.8078.4 is a local observed pairing, not portable CI or Discord acceptance",
+        "Not yet tested in Discord",
+        "No server permission checks",
+        "No touch/stylus or accessibility acceptance",
+        "No concurrent remote overwrite/rollback coverage",
+        "Delete and undo smoke lack selection/history preconditions",
+        "Original blocked launch and supervisor-supplied original-tree browser/audit captures are preserved separately",
+        "No production implementation, accepted specification, deployment or issue completion"
+      ],
+      "candidate_commit": "0f9ab82a17ed133f0564f7391c440765e3ee6576"
+    }
+  ],
+  "dependency_remediation_base_commit": "3edbe00a2264dd7878062eaceb511c51e84c04e5",
+  "network_probe": {
+    "result": "network-controls-passed",
+    "browser": "156.0.8078.4",
+    "opaqueResources": {
+      "dataText": "canvas-data",
+      "blobText": "canvas-blob",
+      "dataImageLoaded": true,
+      "blobImageLoaded": true
+    },
+    "opaqueIntercepts": [],
+    "otherOriginRejected": true,
+    "otherOriginRequests": 0,
+    "blockedRequests": [
+      "http://127.0.0.1:63789/"
+    ],
+    "checks": [
+      "fixture-origin network request succeeds",
+      "data/blob fetch and images succeed",
+      "data/blob requests do not enter Playwright routing in this scenario",
+      "another loopback origin is blocked before reaching its server"
+    ],
+    "limitations": [
+      "Synthetic Chromium routing controls, not a universal browser-scheme or CSP assessment"
+    ]
+  },
+  "review_findings": [
+    {
+      "comment_id": 4373030847,
+      "disposition": "implemented; independent verification pending",
+      "evidence": "Actual Windows junction disclosed an outside synthetic file with HTTP 200 before the fix; now 404. Root and file realpaths plus lexical/resolved path.relative containment are checked. No independent case-prefix escape is claimed."
+    },
+    {
+      "comment_id": 4373030857,
+      "disposition": "implemented; independent verification pending",
+      "evidence": "executablePath is omitted unless CHROMIUM_PATH is provided; Playwright managed selection and explicit override options are unit-tested. chromiumSandbox stays true and no browser is downloaded."
+    },
+    {
+      "comment_id": 4373030874,
+      "disposition": "data/blob premise not reproduced; actual network policy tightened",
+      "evidence": "Real Chromium text fetches and images using data/blob succeed with zero corresponding route interceptions. Exact fixture-origin checks block a second loopback origin before its server receives any request. No broad non-network allowlist is added."
+    },
+    {
+      "comment_id": 4373030886,
+      "disposition": "implemented; independent verification pending",
+      "evidence": "Top-level aggregate_note explains the historical filename and latest-run dates; initial_observation and refresh_history retain prior dated attempts."
+    },
+    {
+      "comment_id": 4373030896,
+      "disposition": "implemented; independent verification pending",
+      "evidence": "Named readable handler delegates to tested recordSceneChange; event fields are unchanged and collection stops at 200 before inspecting another event."
+    }
+  ],
+  "campaign_verifications": [
+    {
+      "observed_at_utc": "2026-11-13T02:44:55.736493+00:00",
+      "tested_head": "89ed4a121f7624e90431cc212b3ab79333d366da",
+      "main_integrated": "c108b552a660e12a3b3998e1e1ad944fbd7a894d",
+      "environment": {
+        "platform": "Arch Linux x86_64",
+        "node": "26.13.0",
+        "npm": "11.20.0",
+        "chromium": "155.0.8059.84",
+        "playwright": "1.56.1",
+        "browser_executable": "/usr/bin/chromium",
+        "sandbox": true
+      },
+      "unit_tests": {
+        "passed": 14,
+        "failed": 0,
+        "skipped": 0
+      },
+      "audit": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "browser_probe": {
+        "result": "local-fixture-passed",
+        "browser": "155.0.8059.84",
+        "remoteCallbacks": 1,
+        "checks": [
+          "remote ID preserved",
+          "NEVER remote baseline survives local undo",
+          "view-mode Delete with selected content leaves scene unchanged",
+          "view-mode undo with retained local history leaves scene unchanged",
+          "view-mode pointer smoke leaves scene unchanged",
+          "re-enabled undo removes the prepared local-history edit"
+        ],
+        "blockedRequests": [],
+        "limitations": [
+          "Not yet tested in Discord",
+          "No server permission checks",
+          "No touch/stylus or accessibility acceptance",
+          "No concurrent remote overwrite/rollback coverage",
+          "Selection is supplied through the editor API; paste/drop/text/context-menu controls remain untested"
+        ]
+      },
+      "network_probe": {
+        "result": "network-controls-passed",
+        "browser": "155.0.8059.84",
+        "opaqueResources": {
+          "dataText": "canvas-data",
+          "blobText": "canvas-blob",
+          "dataImageLoaded": true,
+          "blobImageLoaded": true
+        },
+        "opaqueIntercepts": [],
+        "otherOriginRejected": true,
+        "otherOriginRequests": 0,
+        "blockedRequests": [
+          "http://127.0.0.1:37515/"
+        ],
+        "checks": [
+          "fixture-origin network request succeeds",
+          "data/blob fetch and images succeed",
+          "data/blob requests do not enter Playwright routing in this scenario",
+          "another loopback origin is blocked before reaching its server"
+        ],
+        "limitations": [
+          "Synthetic Chromium routing controls, not a universal browser-scheme or CSP assessment"
+        ]
+      },
+      "fixture_hash_matches": 13,
+      "build": "pass",
+      "planning_validation": "pass",
+      "limitations": [
+        "Local browser and fixture controls only; no Discord, screen reader, touch/stylus or human acceptance.",
+        "No independent review, CODEOWNER approval, native gate completion, merge or post-merge validation."
+      ]
+    }
+  ]
+}

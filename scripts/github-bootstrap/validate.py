@@ -227,6 +227,9 @@ class WindowsDirectory:
         self.kernel.CloseHandle.argtypes = [wintypes.HANDLE]
         self.kernel.GetFileInformationByHandle.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
         self.kernel.GetFileInformationByHandle.restype = wintypes.BOOL
+        self.kernel.GetFileInformationByHandleEx.argtypes = [
+            wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
+        self.kernel.GetFileInformationByHandleEx.restype = wintypes.BOOL
         self.kernel.SetFileInformationByHandle.argtypes = [wintypes.HANDLE, ctypes.c_int,
                                                             ctypes.c_void_p, wintypes.DWORD]
         self.kernel.SetFileInformationByHandle.restype = wintypes.BOOL
@@ -305,6 +308,17 @@ class WindowsDirectory:
         finally:
             self.kernel.CloseHandle(handle)
 
+    def is_case_sensitive(self):
+        c, w = self.ctypes, self.wintypes
+        flags = w.DWORD()
+        # FileCaseSensitiveInfo (23) queries the pinned directory itself.
+        if not self.kernel.GetFileInformationByHandleEx(
+                self.handle, 23, c.byref(flags), c.sizeof(flags)):
+            raise c.WinError(c.get_last_error())
+        if flags.value & ~1:
+            raise OSError('unknown report directory case-sensitivity flags')
+        return bool(flags.value & 1)
+
     def target_identity(self, name):
         def lookup(insensitive):
             try:
@@ -318,6 +332,10 @@ class WindowsDirectory:
             finally:
                 self.kernel.CloseHandle(handle)
 
+        if not self.is_case_sensitive():
+            # One namespace lookup avoids comparing different generations when
+            # another publisher atomically replaces an ordinary Windows report.
+            return lookup(True)
         exact, folded = lookup(False), lookup(True)
         if exact and folded and exact != folded:
             raise OSError('ambiguous case-sensitive report destination')
@@ -346,23 +364,24 @@ class WindowsDirectory:
                 payload = payload[count:]
             encoded = name.encode('utf-16-le')
             class RenameInfo(c.Structure):
-                _fields_ = [('ReplaceIfExists', c.c_ubyte), ('RootDirectory', w.HANDLE),
+                _fields_ = [('Flags', w.ULONG), ('RootDirectory', w.HANDLE),
                             ('FileNameLength', w.DWORD), ('FileName', w.WCHAR * 1)]
             size = RenameInfo.FileName.offset + len(encoded)
             buffer = c.create_string_buffer(max(size, c.sizeof(RenameInfo)))
             info = RenameInfo.from_buffer(buffer)
-            info.ReplaceIfExists = True
+            info.Flags = 0x00000001 | 0x00000002  # REPLACE_IF_EXISTS | POSIX_SEMANTICS
             info.RootDirectory = self.handle
             info.FileNameLength = len(encoded)
             c.memmove(c.addressof(buffer) + RenameInfo.FileName.offset, encoded, len(encoded))
             class IoStatus(c.Structure):
                 _fields_ = [('Status', c.c_void_p), ('Information', c.c_size_t)]
             ios = IoStatus()
-            # FileRenameInformation (10) preserves RootDirectory. The Win32
-            # FileRenameInfo wrapper returned ERROR_INVALID_PARAMETER on the
-            # hosted Windows runner for this same directory-relative request.
+            # FileRenameInformationEx (65) keeps the pinned RootDirectory and
+            # permits replacing a report still open by another publisher.
+            # Existing handles retain the previous file; new opens see this one.
+            # Unsupported native operations fail closed; there is no path fallback.
             status = self.nt.NtSetInformationFile(handle, c.byref(ios), buffer,
-                                                   max(size, c.sizeof(RenameInfo)), 10)
+                                                   max(size, c.sizeof(RenameInfo)), 65)
             if status < 0:
                 error = c.WinError(self.nt.RtlNtStatusToDosError(status))
                 raise OSError(f'cannot rename report stage: {error}') from error
