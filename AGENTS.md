@@ -32,7 +32,8 @@ each campaign; no standing delegation or default permissions are implied.
   add no delegation levels. The lead
   may also serve as the root directory orchestrator; do not create competing owners.
   One agent may hold several logical directory roles when capacity requires it.
-- Lease each changed file exclusively to one file worker. File workers and
+- After the maintainer records the issue claim, lease each changed file
+  exclusively to one file worker. File workers and
   reviewers are direct children of the responsible directory orchestrator. Record
   the exact path, owner, base SHA, branch/worktree and handoff receipt. File workers
   modify only their leased files; directory orchestrators reconcile and integrate
@@ -119,7 +120,7 @@ each campaign; no standing delegation or default permissions are implied.
   errors. Canvas interactions need practical accessible alternatives; automated
   accessibility scores alone are not acceptance.
 
-## Validation and mandatory review gates
+## Validation and review
 
 - Run `python3 scripts/github-bootstrap/validate.py` for planning changes and
   applicable focused behavior, integration, security and regression checks for
@@ -131,8 +132,9 @@ each campaign; no standing delegation or default permissions are implied.
   clients, real GoDaddy verification and post-merge acceptance. Research, a green
   planning check, a review request or merged documentation proves none of the
   untested runtime claims. Mark unavailable checks as pending or blocked.
-- Before merge, seek actual GitHub Copilot code review of the current full PR head
-  SHA first, covering the complete PR delta and relevant integration. Inspect
+- When an owner-authorized campaign requires Copilot review, seek actual
+  GitHub Copilot code review before merge. Review must cover the current full PR head
+  SHA, the complete PR delta and relevant integration. Inspect
   existing pending requests and completed reviews before requesting or re-requesting
   the actual reviewer `copilot-pull-request-reviewer[bot]` through the supported
   Copilot code-review flow; a coding-agent assignment or mention is not a review.
@@ -142,8 +144,9 @@ each campaign; no standing delegation or default permissions are implied.
   or claim unperformed checks. Pending, stale or inadequate review does not pass.
 - On confirmed Copilot quota, access or service failure, record the evidence and
   reason. An inadequate completed review remains pending unless such a failure is
-  confirmed. A fresh, independent reviewer qualified under the actual owner-authorized
-  campaign role, runtime and model policy may then review the full PR at its current
+  confirmed. If the campaign explicitly allows a fallback in that situation, a fresh,
+  independent reviewer qualified under its role, runtime and model policy may review
+  the full PR at its current
   head SHA, including relevant integration. An explicit Copilot-only STOP remains
   in force; this fallback does not override it. It must have no implementation role,
   make no writes and perform no delegation. Record reviewer identity, model/effort,

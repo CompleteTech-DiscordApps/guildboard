@@ -1,4 +1,4 @@
-# Guildboard mandatory review guidance
+# Guildboard review guidance
 
 Apply `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, accepted ADRs and the live
 issue's scope, GB ID and native blockers. Inspect integration. Give located,
@@ -48,8 +48,9 @@ Planning changes run `python3 scripts/github-bootstrap/validate.py`.
 Record commands, environment, exact SHA, results and limits. Local/model/mock
 checks do not prove real Discord, GoDaddy, recovery or production acceptance.
 
-Before merge, seek actual GitHub Copilot code review of the current full PR head
-SHA first, covering the complete PR delta and relevant integration. Inspect
+When an owner-authorized campaign requires Copilot review, seek actual GitHub
+Copilot code review before merge. Review must cover the current full PR head SHA,
+the complete PR delta and relevant integration. Inspect
 existing pending requests and completed reviews before requesting or re-requesting
 the actual reviewer `copilot-pull-request-reviewer[bot]` through the supported
 Copilot code-review flow; a coding-agent assignment or mention is not a review.
@@ -60,8 +61,9 @@ or claim unperformed checks. Pending, stale or inadequate review does not pass.
 
 On confirmed Copilot quota, access or service failure, record the evidence and
 reason. An inadequate completed review remains pending unless such a failure is
-confirmed. A fresh, independent reviewer qualified under the actual owner-authorized
-campaign role, runtime and model policy may then review the full PR at its current
+confirmed. If the campaign explicitly allows a fallback in that situation, a fresh,
+independent reviewer qualified under its role, runtime and model policy may review
+the full PR at its current
 head SHA, including relevant integration. An explicit Copilot-only STOP remains
 in force; this fallback does not override it. It must have no implementation role,
 make no writes and perform no delegation. Record reviewer identity, model/effort,
