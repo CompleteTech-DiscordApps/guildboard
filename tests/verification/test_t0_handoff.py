@@ -438,6 +438,23 @@ def check_commands(section, root=ROOT):
     return errors
 
 
+def check_read_delivery_fence(section):
+    body = subsection(section, 'Contracts and recorded status') or ''
+    read_fence = next((line for line in body.splitlines() if '**Read delivery fence.**' in line), '')
+    required = (
+        'Serialize each protected transport release with session revocation, expiry, '
+        'membership invalidation, and scoped read policy changes.',
+        'receipts, ACKs, replay, snapshots, and every queued protected chunk, '
+        'including asset and export delivery.',
+        'If an event that removes authority is ordered first, suppress that response and '
+        'every later queued protected chunk.',
+        'A release ordered first may complete.',
+        'if the release boundary cannot enforce the fence.',
+    )
+    return [f'S1 read delivery fence lacks: {statement}' for statement in required
+            if statement not in read_fence]
+
+
 def check_operator_coverage(section):
     body = subsection(section, 'Operator and contributor steps') or ''
     commands = {
@@ -500,7 +517,7 @@ def check_node_workflow_attribution(section, root=ROOT):
 CHECKS = (check_subsections, check_links, check_evidence_names, check_status_table, check_supported,
           check_unresolved, check_status_quotes, check_revisions, check_identities,
           check_forbidden_phrases, check_disclaimer, check_deliverables, check_phrases, check_commands,
-          check_operator_coverage, check_node_workflow_attribution)
+          check_operator_coverage, check_node_workflow_attribution, check_read_delivery_fence)
 
 
 def run_check(check, section):
@@ -556,6 +573,9 @@ class T0HandoffSectionTests(unittest.TestCase):
     def test_deliverables_list_merged_prs(self):
         self.assertEqual([], check_deliverables(self.section))
 
+    def test_s1_handoff_states_read_delivery_fence(self):
+        self.assertEqual([], check_read_delivery_fence(self.section))
+
     def test_operator_steps_cover_the_handoff_commands(self):
         self.assertEqual([], check_operator_coverage(self.section))
 
@@ -601,6 +621,14 @@ class T0HandoffMutationTests(unittest.TestCase):
         self.assertIsNotNone(mutated, f'mutation target not found: {label}')
         self.assertNotEqual(self.section, mutated, f'mutation changed nothing: {label}')
         self.assertTrue(run_check(check, mutated), f'not detected: {label}')
+
+    def test_s1_read_recheck_without_serialized_release_is_detected(self):
+        mutation = self.replaced(
+            'Serialize each protected transport release with session revocation, expiry, '
+            'membership invalidation, and scoped read policy changes. ',
+            '',
+        )
+        self.assertDetected(mutation, check_read_delivery_fence, 'missing read release ordering')
 
     def test_s1_status_quote_upgraded_is_detected(self):
         self.assertDetected(self.replaced('(status: proposed, not accepted and not an implementation authorization)', '(status: accepted)'), check_status_quotes, 'S1 upgraded')
