@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Independent offline acceptance of the installed architecture gate.
 
-Run: python3 -B scripts/verification/verify_architecture_controls.py --base /path/to/engineering20 --tmp /writable/scratch --revision <full-caller-supplied-sha>
-The base must be the actual first-install 8f75 tree. Fixtures are disposable copies.
+Run: python3 -B scripts/verification/verify_architecture_controls.py --base /path/to/engineering20 --installed /path/to/initial-install --tmp /writable/scratch --revision <full-caller-supplied-sha>
+Use the 8f75 pre-install and 556d initial-install trees. Candidate fixtures are disposable copies.
 """
 import argparse, contextlib, hashlib, importlib.util, io, json, os, platform, re, shutil, stat, sys, tempfile
 from pathlib import Path
@@ -120,11 +120,16 @@ def revision(value):
     return value
 def save(p, x): p.write_text(json.dumps(x, indent=2)+'\n')
 def main():
-    a=argparse.ArgumentParser(); a.add_argument('--base',type=Path,required=True); a.add_argument('--tmp',type=Path,required=True); a.add_argument('--revision',type=revision,required=True); args=a.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--base', type=Path, required=True)
+    parser.add_argument('--installed', type=Path, required=True)
+    parser.add_argument('--tmp', type=Path, required=True)
+    parser.add_argument('--revision', type=revision, required=True)
+    args = parser.parse_args()
     sys.dont_write_bytecode=True
     global g
     spec=importlib.util.spec_from_file_location('gate',ROOT/'scripts/architecture-controls/check.py'); g=importlib.util.module_from_spec(spec); spec.loader.exec_module(g)
-    original=snapshot(ROOT); base_original=snapshot(args.base)
+    sources = {path: snapshot(path) for path in (ROOT, args.base, args.installed)}
     failures=[]; count=0
     print('revision='+args.revision+'; base='+PIN+'; identity=caller-supplied, not independently Git verified')
     print('harness_sha256='+digest(Path(__file__))+'; gate_sha256='+digest(ROOT/'scripts/architecture-controls/check.py'))
@@ -155,8 +160,13 @@ def main():
         def changed():
             p='apps/api/README.md'; old=digest(ROOT/p); (head/p).write_bytes((head/p).read_bytes()+b'\nacceptance change\n'); seal(); return p,old,digest(head/p)
         run('installed self comparison',lambda: (_ for _ in ()).throw(AssertionError()) if check()!=0 else None)
-        run('actual first install',lambda: (_ for _ in ()).throw(AssertionError()) if g.bootstrap(args.base,ROOT,PIN)!=1 else None)
-        run('wrong first install base identity',lambda: reject(lambda:g.bootstrap(args.base,ROOT,'0'*40)))
+        def historical_bootstrap():
+            if g.bootstrap(args.base, args.installed, PIN) != 1:
+                raise AssertionError('historical installation must introduce exactly one boundary')
+        run('actual first install', historical_bootstrap)
+        run('wrong first install base identity', lambda: reject(
+            lambda: g.bootstrap(args.base, args.installed, '0' * 40)
+        ))
         def alteration():
             p,o,n=changed(); reject(check); record(p,o,n); assert check()==1
             f=head/POL/'decisions.json'; orig=json.loads(f.read_text())
@@ -208,7 +218,10 @@ def main():
         def unrelated():
             p=head/POL/'traceability.json'; x=json.loads(p.read_text()); x['requirements']['R05']['interactions'].append('I10'); x['requirements']['R05']['canonical_acceptance'].append('F15'); save(p,x); reject(check)
         run('unrelated valid interaction and FID together',unrelated); reset()
-    run('source trees unchanged',lambda: (None if snapshot(ROOT)==original and snapshot(args.base)==base_original else (_ for _ in ()).throw(AssertionError('source modified'))))
+    def source_trees_unchanged():
+        if any(snapshot(path) != before for path, before in sources.items()):
+            raise AssertionError('source modified')
+    run('source trees unchanged', source_trees_unchanged)
     print('SUMMARY cases=%d passed=%d failed=%d'%(count,count-len(failures),len(failures)))
     return bool(failures)
 if __name__=='__main__': sys.exit(main())
