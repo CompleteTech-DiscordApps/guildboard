@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "status": "synthetic-only",
+  "scenarios": [
+    {"id": "E01", "verification": 393, "t0": ["F13"], "t9": ["internal_records", "ingress", "malformed_command"], "signals": ["creates", "binds", "adapterCalls"]},
+    {"id": "E02", "verification": 393, "t0": ["F12", "F13"], "t9": ["commit_dependencies"], "signals": ["creates", "binds", "adapterCalls"]},
+    {"id": "E03", "verification": 393, "t0": ["F10", "F15"], "t9": ["resource_profile"], "signals": ["ownedRemaining", "foreignSentinel"]},
+    {"id": "E04", "verification": 403, "t0": ["F01", "F02", "F03", "F14"], "t9": ["membership", "tenant_scope", "auth_transaction", "policy_matrix", "bounded_content", "audit_integrity"], "signals": ["durableEffects", "egressEvents", "foreignIdentifiers"]},
+    {"id": "E05", "verification": 407, "t0": ["F04", "F05", "F06", "F07", "F08", "F09", "F16", "F17", "F27"], "t9": ["commit_order", "durable_retry", "receipt_lookup"], "signals": ["durableEffects", "acceptedReceipts", "egressEvents"]},
+    {"id": "E06", "verification": 400, "t0": ["F23", "F24", "F25", "F26", "F28", "F29", "F30", "F31", "F32", "F33", "F34", "F35", "F36"], "t9": ["release_order", "asset_export_release", "receipt_release_denial"], "signals": ["durableEffects", "protectedChunks"]},
+    {"id": "E07", "verification": 410, "t0": ["F11", "F18", "F19", "F20", "F21", "F22"], "t9": ["receipt_history", "delete_restore"], "signals": ["restoredReceipts", "restoredAssets", "missingAcceptedEffects", "oldLineageEffects"]},
+    {"id": "E08", "verification": 417, "t0": [], "t9": ["release_gate", "host_boundary"], "signals": ["missingRows", "staleRows", "classMismatches", "openFindings"]}
+  ],
+  "claims": [
+    {"id": "valid", "scenario": "E01", "state": "completed", "cleanup": "verified", "expected": [1, 1, 1], "result": "pass"},
+    {"id": "invalid", "scenario": "E02", "state": "invalid_configuration", "cleanup": "untouched", "expected": [0, 0, 0], "result": "blocked"},
+    {"id": "unavailable", "scenario": "E02", "state": "prerequisite_unavailable", "cleanup": "untouched", "expected": [0, 0, 0], "result": "blocked"},
+    {"id": "interrupted", "scenario": "E03", "state": "interrupted", "cleanup": "verified", "expected": [0, 1], "result": "blocked"},
+    {"id": "allowed", "scenario": "E04", "state": "completed", "cleanup": "verified", "expected": [1, 1, 0], "result": "pass"},
+    {"id": "denied", "scenario": "E04", "state": "completed", "cleanup": "verified", "expected": [0, 0, 0], "result": "pass"},
+    {"id": "duplicate", "scenario": "E05", "state": "completed", "cleanup": "verified", "expected": [1, 1, 2], "result": "pass"},
+    {"id": "ack-fenced", "scenario": "E06", "state": "completed", "cleanup": "verified", "expected": [1, 0], "result": "pass"},
+    {"id": "queued-before-revoke", "scenario": "E06", "state": "completed", "cleanup": "verified", "expected": [1, 1], "result": "pass"},
+    {"id": "restore", "scenario": "E07", "state": "completed", "cleanup": "verified", "expected": [1, 1, 0, 0], "result": "pass"},
+    {"id": "matrix-valid", "scenario": "E08", "state": "completed", "cleanup": "untouched", "expected": [0, 0, 0, 0], "result": "pass"},
+    {"id": "matrix-stale", "scenario": "E08", "state": "completed", "cleanup": "untouched", "expected": [0, 0, 0, 0], "result": "fail"},
+    {"id": "matrix-substituted", "scenario": "E08", "state": "completed", "cleanup": "untouched", "expected": [0, 0, 0, 0], "result": "fail"}
+  ],
+  "observations": [
+    {"run": "valid", "signalSource": "synthetic-resource-observer", "values": {"creates": 1, "binds": 1, "adapterCalls": 1}},
+    {"run": "invalid", "signalSource": "synthetic-resource-observer", "values": {"creates": 0, "binds": 0, "adapterCalls": 0}},
+    {"run": "unavailable", "signalSource": "synthetic-resource-observer", "values": {"creates": 0, "binds": 0, "adapterCalls": 0}},
+    {"run": "interrupted", "signalSource": "synthetic-resource-observer", "values": {"ownedRemaining": 0, "foreignSentinel": 1}},
+    {"run": "allowed", "signalSource": "synthetic-boundary-observer", "values": {"durableEffects": 1, "egressEvents": 1, "foreignIdentifiers": 0}},
+    {"run": "denied", "signalSource": "synthetic-boundary-observer", "values": {"durableEffects": 0, "egressEvents": 0, "foreignIdentifiers": 0}},
+    {"run": "duplicate", "signalSource": "synthetic-boundary-observer", "values": {"durableEffects": 1, "acceptedReceipts": 1, "egressEvents": 2}},
+    {"run": "ack-fenced", "signalSource": "synthetic-boundary-observer", "values": {"durableEffects": 1, "protectedChunks": 0}},
+    {"run": "queued-before-revoke", "signalSource": "synthetic-boundary-observer", "values": {"durableEffects": 1, "protectedChunks": 1}},
+    {"run": "restore", "signalSource": "synthetic-restore-observer", "values": {"restoredReceipts": 1, "restoredAssets": 1, "missingAcceptedEffects": 0, "oldLineageEffects": 0}},
+    {"run": "matrix-valid", "signalSource": "synthetic-gate-observer", "values": {"missingRows": 0, "staleRows": 0, "classMismatches": 0, "openFindings": 0}},
+    {"run": "matrix-stale", "signalSource": "synthetic-gate-observer", "values": {"missingRows": 0, "staleRows": 1, "classMismatches": 0, "openFindings": 0}},
+    {"run": "matrix-substituted", "signalSource": "synthetic-gate-observer", "values": {"missingRows": 0, "staleRows": 0, "classMismatches": 1, "openFindings": 0}}
+  ]
+}
