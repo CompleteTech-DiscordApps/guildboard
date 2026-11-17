@@ -38,21 +38,49 @@ except (RuntimeError,OSError,ValueError):
  if not args.dry_run:raise
  raise SystemExit('Dry run stopped: GitHub issues could not be read.') from None
 remote_by={}
-remote_by_number={}
+preview_edited=set()
 if args.dry_run:
- remote_by_number={issue['number']:issue for issue in remote}
- if len(remote_by_number)!=len(remote):
-  raise SystemExit('Dry run stopped: duplicate issue numbers in GitHub response.')
-for issue in remote:
- marker=re.search(r'<!-- guildboard-id:([^ ]+) -->',issue.get('body') or '')
- if marker:
-  stable=marker[1]
-  if stable in remote_by:
-   if args.dry_run:raise SystemExit('Dry run stopped: duplicate stable issue markers.')
-   raise RuntimeError('Duplicate stable ID '+stable)
-  remote_by[stable]=issue
-  if stable in by:by[stable]['github']=issue_mapping(issue,repo)
-persist()
+ def identity_mismatch():
+  raise SystemExit('Dry run stopped: issue identity mismatch.')
+
+ expected={}
+ if len(by)!=len(m['items']):identity_mismatch()
+ for stable,item in by.items():
+  if 'github' not in item:continue
+  mapping=item['github']
+  if not isinstance(mapping,dict):identity_mismatch()
+  number=mapping.get('number')
+  node_id=mapping.get('id')
+  if (type(number) is not int or number <= 0 or number in expected
+      or not isinstance(node_id,str) or not node_id):identity_mismatch()
+  expected[number]=(stable,node_id)
+ expected_nodes={node_id for _,node_id in expected.values()}
+ if len(expected_nodes)!=len(expected):identity_mismatch()
+
+ seen=set()
+ for issue in remote:
+  number=issue['number']
+  if number in seen:identity_mismatch()
+  seen.add(number)
+  markers=re.findall(r'<!-- guildboard-id:([^\s]+) -->',issue.get('body') or '')
+  if number not in expected:
+   if issue['node_id'] in expected_nodes or any(marker in by for marker in markers):identity_mismatch()
+   continue
+  stable,node_id=expected[number]
+  if issue['node_id']!=node_id or (markers and markers!=[stable]):identity_mismatch()
+  if markers:
+   remote_by[stable]=issue
+  else:
+   preview_edited.add(stable)
+else:
+ for issue in remote:
+  marker=re.search(r'<!-- guildboard-id:([^ ]+) -->',issue.get('body') or '')
+  if marker:
+   stable=marker[1]
+   if stable in remote_by:raise RuntimeError('Duplicate stable ID '+stable)
+   remote_by[stable]=issue
+   if stable in by:by[stable]['github']=issue_mapping(issue,repo)
+ persist()
 def link(id):
  x=by[id];return f"[{id}]({issue_url(x['github']['number'],repo)})" if x.get('github') else f'`{id}` (not yet created; see manifest)'
 def body(x):
@@ -245,8 +273,7 @@ if args.dry_run:
  for x in ordered:
   issue = remote_by.get(x['id'])
   if issue is None:
-   number = x.get('github', {}).get('number')
-   counts['edited' if number in remote_by_number else 'missing'] += 1
+   counts['edited' if x['id'] in preview_edited else 'missing'] += 1
    continue
   old_body = issue.get('body') or ''
   rendered = body(x)

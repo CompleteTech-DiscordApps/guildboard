@@ -6,15 +6,20 @@ root_commit=subprocess.check_output(['git','rev-list','--max-parents=0','HEAD'],
 commit_info=subprocess.check_output(['git','show','-s','--format=%cI%n%s',root_commit],text=True).splitlines()
 def link(id):return '['+id+']('+issue_url(by[id]['github']['number'],repo)+')' if by.get(id,{}).get('github') else '`'+id+'` (not created)'
 audited_repository = r['repository']['url'].removeprefix('https://github.com/').rstrip('/')
-observed_repositories = [node['nameWithOwner'] for node in p['repositories']['nodes']]
-observed_associations = ', '.join(f'`{name}`' for name in observed_repositories) or 'None observed'
-association_confirmed = audited_repository.casefold() in {name.casefold() for name in observed_repositories}
-status = 'Complete and verified' if project_token and r['result'] == 'pass' and association_confirmed else 'Partially complete'
-verified_association = (
- f'Confirmed for `{audited_repository}`'
- if association_confirmed
- else f'Unconfirmed for `{audited_repository}`'
+public_repository = next((name for name in (repo, TRANSFERRED_REPOSITORY)
+                          if name.casefold() == audited_repository.casefold()), None)
+observed_repositories = p['repositories']['nodes']
+matching_count = sum(
+ public_repository is not None and node['nameWithOwner'].casefold() == public_repository.casefold()
+ for node in observed_repositories
 )
+observed_match = f'`{public_repository}`' if matching_count else 'None observed'
+other_associations = len(observed_repositories) - matching_count
+status = 'Complete and verified' if project_token and r['result'] == 'pass' and matching_count else 'Partially complete'
+verified_association = 'Confirmed' if matching_count else 'Unconfirmed'
+if public_repository:
+ verified_association += f' for `{public_repository}`'
+finding_counts = dict(collections.Counter(finding['kind'] for finding in r['findings']))
 text=f'''# Guildboard bootstrap report
 
 **Final status: {status}.** Repository, Project and roadmap audit: **{r['result']}**. The remaining automation credential requirement is described below. Guildboard itself has not been implemented or deployed; no application/production acceptance is claimed.
@@ -37,7 +42,8 @@ Audit time: {r['generated_at']}. Audit inspected repository head `{r['repository
 - URL: {p['url']}
 - Owner: `{p['owner']['login']}`; Project number: {p['number']}; public: {p['public']}.
 - Configuration copied from [Pick Your AI Project #1](https://github.com/orgs/Pick-Your-AI/projects/1), with draft copying disabled. Initial copy independently contained **zero items**. Source issues, PRs and assignments were not imported. The source Project was read-only.
-- Observed Project repository associations at audit time: {observed_associations}.
+- Observed audited repository association: {observed_match}.
+- Other Project repository associations observed: {other_associations}.
 - Audited repository association: {verified_association}.
 - Default first view: Workstream overview, table grouped by Tier, native hierarchy and sub-issue progress visible.
 - {len(p['views']['nodes'])} saved views, {len(p['fields']['nodes'])} total native/configuration fields, {sum(w['enabled'] for w in p['workflows']['nodes'])} enabled native workflows. Default Burn up Insight retained.
@@ -105,9 +111,9 @@ if checks:
 text+='\nIdempotent issue detection was rerun after population; no additional issues were created. Initial comments use durable markers and the live audit verifies exactly one per selected handoff. Scripts preserve assignments and legitimate established field changes; explicit reviewed plan flags were used for the bootstrap milestone/release refinements.\n'
 text+='\n## Remaining or unsupported operations\n\n'
 if not project_token:text+='- **Scheduled full Project-field auditing needs `GUILDBOARD_PROJECT_TOKEN`.** No repository secret is configured. User-owned Projects do not accept the repository installation token for these API operations. A dedicated supported read-Project credential must be added by an authorized maintainer. Daily restricted-token repository integrity checks, native Project workflows, and the full authenticated on-demand audit are implemented; the broader local OAuth credential was not copied into Actions.\n'
-if r['findings']:
- for f in r['findings']:text+='- '+json.dumps(f,ensure_ascii=False)+'\n'
+if finding_counts:
+ for kind,count in sorted(finding_counts.items()):text+=f'- Audit finding `{kind}`: {count}.\n'
 text+='- No Discord application, GoDaddy VPS, DNS/TLS endpoint, production deployment or application acceptance test was performed by this bootstrap. These remain explicitly scoped, unverified roadmap work rather than missing claims of completed setup.\n- GitHub content creation temporarily hit its secondary limit; creation was paused and resumed under the same account/API. Final counts include only confirmed live resources. All recoverable API/configuration discrepancies were reconciled before this report.\n'
 (ROOT/'planning/BOOTSTRAP-REPORT.md').write_text(text)
-save(ROOT/'planning/audit/final-summary.json',{'status':status,'repository':r['repository']['url'],'project':p['url'],'issues':r['live_expected_issues'],'items':r['project_items'],'parents':r['native_parent_links'],'dependencies':r['native_blocking_dependencies'],'counts':counts,'fields':fc,'findings':r['findings'],'project_audit_credential_configured':project_token,'initial_commit':root_commit})
+save(ROOT/'planning/audit/final-summary.json',{'status':status,'repository':r['repository']['url'],'project':p['url'],'issues':r['live_expected_issues'],'items':r['project_items'],'parents':r['native_parent_links'],'dependencies':r['native_blocking_dependencies'],'counts':counts,'fields':fc,'finding_counts':finding_counts,'project_audit_credential_configured':project_token,'initial_commit':root_commit})
 print(status,r['live_expected_issues'],'issues;',r['native_parent_links'],'native parents;',r['native_blocking_dependencies'],'native blockers')

@@ -20,7 +20,8 @@ Audit time: 2026-10-24T03:56:38.837547+00:00. Audit inspected repository head `8
 - URL: https://github.com/users/CompleteDotTech/projects/7
 - Owner: `CompleteDotTech`; Project number: 7; public: True.
 - Configuration copied from [Pick Your AI Project #1](https://github.com/orgs/Pick-Your-AI/projects/1), with draft copying disabled. Initial copy independently contained **zero items**. Source issues, PRs and assignments were not imported. The source Project was read-only.
-- Observed Project repository associations at audit time: `CompleteDotTech/guildboard`.
+- Observed audited repository association: `CompleteDotTech/guildboard`.
+- Other Project repository associations observed: 0.
 - Audited repository association: Confirmed for `CompleteDotTech/guildboard`.
 - Default first view: Workstream overview, table grouped by Tier, native hierarchy and sub-issue progress visible.
 - 17 saved views, 26 total native/configuration fields, 7 enabled native workflows. Default Burn up Insight retained.
