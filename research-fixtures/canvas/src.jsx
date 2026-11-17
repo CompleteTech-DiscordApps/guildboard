@@ -11,6 +11,7 @@ window.capture = CaptureUpdateAction;
 
 function handleSceneChange(elements, state, files) {
   recordSceneChange(window.events, elements, state, files);
+  window.observeFixtureChange?.(elements);
 }
 
 function Fixture() {

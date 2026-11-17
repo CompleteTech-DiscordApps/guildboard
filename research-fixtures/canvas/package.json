@@ -19,6 +19,9 @@
     "lodash-es": "4.18.1",
     "mermaid": {
       "katex": "0.18.2"
+    },
+    "@excalidraw/excalidraw": {
+      "sass": "1.79.0"
     }
   },
   "scripts": {
