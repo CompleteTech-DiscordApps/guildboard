@@ -111,12 +111,22 @@
     }));
     if(focused) [...$('object-list').querySelectorAll('[data-object]')].find(button=>button.dataset.object===focused)?.focus();
   }
+  const draftError = 'Enter nonblank text and whole-number positions from 0 to 1000.';
+  function validDraftFields() {
+    const text = $('object-text');
+    return text.value.trim() !== '' && text.value.length <= text.maxLength &&
+      ['object-x','object-y'].every(id => {
+        const field = $(id);
+        return Number.isInteger(field.valueAsNumber) &&
+          field.valueAsNumber >= Number(field.min) && field.valueAsNumber <= Number(field.max);
+      });
+  }
   function renderFields() {
     const object=drafts.get(selected)||current();
     $('editor-heading').textContent=`Edit ${current().name}`;
     $('object-text').value=object.text; $('object-x').value=object.x; $('object-y').value=object.y;
     sync();
-    $('error').textContent=$('editor').checkValidity()&&$('object-text').value.trim()?'':'Enter nonblank text and whole-number positions from 0 to 1000.';
+    $('error').textContent=validDraftFields()?'':draftError;
   }
   function sync() {
     for (const id of ['object-text','object-x','object-y']) $(id).readOnly=!canEdit()||pending?.id===selected;
@@ -133,14 +143,14 @@
   for(const id of ['object-text','object-x','object-y']) $(id).addEventListener('input',()=>{
     if(!canEdit()||pending?.id===selected)return;
     drafts.set(selected,{...current(),text:$('object-text').value,x:$('object-x').value,y:$('object-y').value});
-    if($('editor').checkValidity()&&$('object-text').value.trim()) $('error').textContent='';
+    if(validDraftFields()) $('error').textContent='';
     say('Local draft changed; not queued or accepted.');
   });
   $('editor').addEventListener('submit',event=>{
     event.preventDefault(); if(!canEdit()) { say('Editing unavailable; draft preserved.'); return; }
     if(pending&&pending.id!==selected) { say('Resolve the other pending object before queuing this change.'); return; }
-    if(!$('editor').checkValidity()||!$('object-text').value.trim()) {
-      $('error').textContent='Enter nonblank text and whole-number positions from 0 to 1000.';
+    if(!validDraftFields()) {
+      $('error').textContent=draftError;
       $('editor').reportValidity(); return;
     }
     $('error').textContent='';

@@ -1,4 +1,4 @@
-async (page) => {
+async (page, screenshotPath = '/tmp/guildboard-t7-fixture.png') => {
   const checks = [];
   function check(name, condition, details = null) {
     checks.push({name, result:condition?'pass':'fail', details});
@@ -120,7 +120,20 @@ async (page) => {
   await page.evaluate(()=>document.querySelector('#accept').click());
   check('asynchronous receipt moves focused rejection control to fixture heading',
     await page.locator('#lab-heading').evaluate(e=>e===document.activeElement)&&await page.locator('#reject').isDisabled()&&(await state()).pending===null);
-  await page.screenshot({path:'/tmp/guildboard-t7-fixture.png',fullPage:true});
+  await page.locator('#object-x').fill('3.5');
+  await page.locator('#queue').click();
+  const beforeReadOnly = await state();
+  await page.locator('#revoke').click();
+  await page.locator('[data-object="note-a"]').click();
+  await page.locator('[data-object="note-b"]').click();
+  const afterReadOnly = await state();
+  check('reselecting a read-only invalid draft preserves its original validation feedback',
+    await page.locator('#object-x').inputValue()==='3.5'&&
+    await page.locator('#error').textContent()!==''&&
+    await page.locator('#queue').isDisabled()&&
+    JSON.stringify(afterReadOnly.accepted)===JSON.stringify(beforeReadOnly.accepted)&&
+    afterReadOnly.revision===beforeReadOnly.revision&&afterReadOnly.pending===null);
+  await page.screenshot({path:screenshotPath,fullPage:true});
   return {result:'pass',evidence_kind:'local-headless-browser-fixture-only',browser:page.context().browser().version(),
     checks,viewports,limitations:['No real Discord iframe/client','No screen reader or human review','No Excalidraw integration','Local state simulations, no server authorization/durability','Viewport/input emulation is not hardware acceptance']};
 }
