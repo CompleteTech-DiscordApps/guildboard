@@ -99,13 +99,22 @@ the board/policy fence by its full tenant+board key, then perform the #481
 receipt/digest/lineage decision order. For a new accepted command, validate current
 write authority, generation, server-time expiry and schema limits, then commit
 state change, monotonic revision, immutable event, receipt, outbox and required
-audit atomically. Delivery occurs after commit. At each transport release,
+audit atomically. At commit, fail closed if required current policy or membership
+evidence or trusted time is missing or stale. No mutation commits in that case.
+
+Delivery occurs after commit. At each transport release,
 serialize current session validity, membership freshness and scoped read authority
-with revocation and expiry. Apply this check to accepted acknowledgments,
-historical receipts, digest-dependent conflicts, events, snapshot chunks and
-asset or export metadata and chunks. A denied delivery leaves an accepted commit
-durable and reveals no protected outcome. Outbox redelivery is possible, so
-consumers deduplicate by scoped lineage/revision.
+with revocation, expiry, membership invalidation and changes to read authority.
+Verify current scoped read policy using trusted time and fail closed if required
+membership evidence, policy or trusted time is missing or stale. Apply the checks
+to accepted acknowledgments, historical receipts, digest-dependent conflicts,
+events and snapshot metadata and chunks. For asset and export delivery, check
+current scoped read authority for the board and each included asset before releasing
+metadata and every queued stream chunk. Withhold delivery if the release path
+cannot enforce these checks, including direct or pre-signed URLs and storage
+bypasses. A denied delivery leaves an accepted commit durable and reveals no
+protected outcome. Outbox redelivery is possible, so consumers deduplicate by
+scoped lineage/revision.
 
 Every relationship and unique constraint includes the verified tenant and board;
 operation identity also includes lineage and actor. Index leading columns serve
@@ -119,7 +128,7 @@ a valid foreign tenant; route/socket/asset authorization tests remain mandatory.
 | --- | --- |
 | Before transaction or after state update, before COMMIT | No committed content/event/receipt/outbox; process-crash fixture D01 verifies one interruption point. Each internal statement boundary and disk-full/SQL-error rollback still needs fault injection. |
 | During COMMIT / connection loss | Outcome unknown until original scoped identity/digest is reconciled. Do not label timeout as rollback/saved or generate a new operation ID automatically. Actual network ambiguity injection pending. |
-| COMMIT returned, before application ACK | Durable bundle recoverable; fixture D02 kills after a SQL witness and confirms survival, not a real application lost-ACK test. |
+| COMMIT returned, before application ACK | After a process kill following the SQL commit witness, D02 observed board revision 2 and counts of 2 in each of the receipt, event and outbox tables. Application lost-ACK handling and individual row contents remain outside this check. |
 | Revocation, expiry or membership invalidation before queued delivery | Suppress the protected result or each later queued chunk and preserve any prior commit. Consumer tests must cover backpressure, stale authority and trusted-time failures for receipt, snapshot, asset and export delivery. |
 | After publish, before delivery marker | Possible duplicate delivery; retain outbox and deduplicate, never repeat the mutation. Network publisher/crash test pending. |
 | Content restore versus receipt history | Atomically publish new lineage/generation and restored content while preserving all retained receipts. Historical receipt settles only its old commit; never apply its old payload to active restored content. D05 proves narrow SQL preservation and zero-row stale selector, not service authorization. |
