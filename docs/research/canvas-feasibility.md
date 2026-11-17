@@ -131,9 +131,9 @@ not establish Discord/AT/hardware acceptance or complete #98/#99.
 
 ## Isolated Linux CI prerequisite, 2026-11-16
 
-The repository workflow `.github/workflows/canvas-feasibility.yml` is intended to run on pull requests and pushes to main affecting the fixture or workflow. In `research-fixtures/canvas` it runs `npm ci --ignore-scripts`, `npm test`, `npm audit --audit-level=low`, `npx --no-install playwright install --with-deps chromium`, `npm run probe`, and `npm run probe:network` on Ubuntu with Node 24. The probes log the managed Chromium version; the workflow logs Node and npm versions. A current native GitHub Actions run is pending; earlier October and Windows/cached-Chromium observations remain historical.
+The repository workflow `.github/workflows/canvas-feasibility.yml` is intended to run on pull requests and pushes to main affecting the fixture or workflow. In `research-fixtures/canvas` it runs `npm ci --ignore-scripts`, `npm test`, `npm audit --audit-level=low`, `npx --no-install playwright install --with-deps chromium`, `npm run probe`, and `npm run probe:network` on Ubuntu with Node 24. The probes log the managed Chromium version; the workflow logs Node and npm versions. Native fixture runs 43974670111 and 43974670128 passed at head b210e75 (merged as 57641db); earlier October and Windows/cached-Chromium observations remain historical.
 
-This isolated Linux fixture and its network controls do not establish Discord, touch/stylus, screen-reader, authorization, concurrent production behavior, or licensing approval. Issue #98 remains incomplete, #99 remains blocked, and actual Copilot re-review remains required.
+This isolated Linux fixture and its network controls do not establish Discord, touch/stylus, screen-reader, authorization, concurrent production behavior, or licensing approval. Issue #98 remains incomplete, #99 remains blocked, and Copilot re-review of head b210e75 was requested but did not arrive.
 
 ## Accepted experiment direction and runner correction, 2026-11-16
 
