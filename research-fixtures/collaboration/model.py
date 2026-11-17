@@ -42,6 +42,15 @@ class Command:
         }, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
 
 
+@dataclass(frozen=True)
+class Receipt:
+    operation: str
+    board: str
+    lineage: str
+    revision: int
+    policy: int
+
+
 class Board:
     def __init__(self, strategy="element"):
         assert strategy in ("element", "board")
@@ -74,8 +83,8 @@ class Board:
         identity = (self.guild, self.board, cmd.lineage, ctx.actor, cmd.operation)
         digest = cmd.digest()
         if identity in self.receipts:
-            old_digest, revision = self.receipts[identity]
-            return ("ACCEPTED", revision) if old_digest == digest else ("IDEMPOTENCY_CONFLICT", None)
+            old_digest, receipt = self.receipts[identity]
+            return ("ACCEPTED", receipt) if old_digest == digest else ("IDEMPOTENCY_CONFLICT", None)
         if cmd.lineage != self.lineage:
             return "LINEAGE_CHANGED", None
         if cmd.base > self.revision:
@@ -97,10 +106,11 @@ class Board:
         # A single modeled atomic transition, not evidence of a real SQL transaction.
         self.revision += 1
         self.elements = candidate
-        self.receipts[identity] = digest, self.revision
+        receipt = Receipt(cmd.operation, self.board, self.lineage, self.revision, self.policy)
+        self.receipts[identity] = digest, receipt
         self.events.append({"lineage": self.lineage, "revision": self.revision,
                             "changes": {c.element: candidate[c.element] for c in cmd.changes}})
-        return ("UNKNOWN", None) if crash == "after_commit" else ("ACCEPTED", self.revision)
+        return ("UNKNOWN", None) if crash == "after_commit" else ("ACCEPTED", receipt)
 
     def revoke(self):
         self.policy += 1

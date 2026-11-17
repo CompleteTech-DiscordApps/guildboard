@@ -2,7 +2,7 @@ from copy import deepcopy
 from dataclasses import replace
 from itertools import permutations
 import unittest
-from model import Board, Change, Command, Context, Replica
+from model import Board, Change, Command, Context, Receipt, Replica
 
 
 def command(op="op-A", element="A", value=1, expected=0, **kwargs):
@@ -34,6 +34,20 @@ class Experiment(unittest.TestCase):
             self.assertEqual([b.submit(Context(), c)[0] for c in schedule], ["ACCEPTED", "CONFLICT"])
             self.assertEqual(b.elements["A"], (1, schedule[0].changes[0].value))
 
+    def test_distinct_primary_elements_conflict_when_compounds_share_a_footprint(self):
+        # A and B stand for distinct edit targets, C for a shared dependent
+        # connector. The footprint is supplied by the test, not derived.
+        left = (Context(actor="actor-A"), Command("move-A", (Change("A", 0, 1), Change("C", 0, 1))))
+        right = (Context(actor="actor-B"), Command("move-B", (Change("B", 0, 2), Change("C", 0, 2))))
+        for winner, loser in permutations((left, right)):
+            with self.subTest(winner=winner[0].actor):
+                board = Board()
+                self.assertEqual(board.submit(*winner)[0], "ACCEPTED")
+                committed = board.observable()
+                self.assertEqual(board.submit(*loser), ("CONFLICT", None))
+                self.assertEqual(board.observable(), committed)
+                self.assertEqual(board.revision, 1)
+
     def test_atomic_compound_rolls_back_first_valid_change(self):
         b = Board()
         before = b.observable()
@@ -43,7 +57,7 @@ class Experiment(unittest.TestCase):
 
     def test_compound_success_one_revision(self):
         b = Board()
-        self.assertEqual(b.submit(Context(), Command("c", (Change("A", 0, 1), Change("B", 0, 2)))), ("ACCEPTED", 1))
+        self.assertEqual(b.submit(Context(), Command("c", (Change("A", 0, 1), Change("B", 0, 2)))), ("ACCEPTED", Receipt("c", "board-A", "lineage-A", 1, 1)))
         self.assertEqual(len(b.events), 1)
         self.assertEqual(b.elements["B"], (1, 2))
 
@@ -52,15 +66,15 @@ class Experiment(unittest.TestCase):
             b, c = Board(), command()
             self.assertEqual(b.submit(Context(), c, crash), ("UNKNOWN", None))
             self.assertEqual(b.revision, prior_revision)
-            self.assertEqual(b.submit(Context(), c), ("ACCEPTED", 1))
-            self.assertEqual(b.submit(Context(), c), ("ACCEPTED", 1))
+            self.assertEqual(b.submit(Context(), c), ("ACCEPTED", Receipt("op-A", "board-A", "lineage-A", 1, 1)))
+            self.assertEqual(b.submit(Context(), c), ("ACCEPTED", Receipt("op-A", "board-A", "lineage-A", 1, 1)))
             self.assertEqual(len(b.events), 1)
             self.assertEqual(b.submit(Context(), replace(c, changes=(Change("A", 0, 2),)))[0], "IDEMPOTENCY_CONFLICT")
 
     def test_scoped_actor_identity(self):
         b = Board()
         b.submit(Context(), command())
-        self.assertEqual(b.submit(Context(actor="actor-B"), command(element="B")), ("ACCEPTED", 2))
+        self.assertEqual(b.submit(Context(actor="actor-B"), command(element="B")), ("ACCEPTED", Receipt("op-A", "board-A", "lineage-A", 2, 1)))
 
     def test_auth_denials_no_side_effects(self):
         for ctx, cmd, code in [
@@ -81,9 +95,9 @@ class Experiment(unittest.TestCase):
         self.assertEqual(b.submit(Context(), c)[0], "POLICY_STALE")
         self.assertEqual(b.revision, 0)
         b = Board()
-        self.assertEqual(b.submit(Context(), c), ("ACCEPTED", 1))
+        self.assertEqual(b.submit(Context(), c), ("ACCEPTED", Receipt("op-A", "board-A", "lineage-A", 1, 1)))
         b.revoke()
-        self.assertEqual(b.submit(Context(writable=False), c), ("ACCEPTED", 1))
+        self.assertEqual(b.submit(Context(writable=False), c), ("ACCEPTED", Receipt("op-A", "board-A", "lineage-A", 1, 1)))
         self.assertEqual(b.submit(Context(readable=False), c)[0], "NOT_FOUND")
         self.assertEqual(b.revision, 1)
 
@@ -96,7 +110,7 @@ class Experiment(unittest.TestCase):
         before = b.observable()
         # The old base exceeds the restored revision, but an existing receipt
         # settles history without replaying content or requiring write access.
-        self.assertEqual(b.submit(Context(writable=False), c), ("ACCEPTED", 2))
+        self.assertEqual(b.submit(Context(writable=False), c), ("ACCEPTED", Receipt("lost-ack", "board-A", "lineage-A", 2, 1)))
         self.assertEqual(b.observable(), before)
         self.assertEqual(b.elements["A"], (0, 0))
         self.assertEqual(b.events, [])
@@ -121,8 +135,41 @@ class Experiment(unittest.TestCase):
                 self.assertEqual(b.submit(ctx, cmd)[0], code)
                 self.assertEqual(b.observable(), before)
         # The same operation ID in the new lineage is independent history.
-        self.assertEqual(b.submit(Context(), replace(c, lineage=b.lineage)), ("ACCEPTED", 1))
+        self.assertEqual(b.submit(Context(), replace(c, lineage=b.lineage)),
+                         ("ACCEPTED", Receipt("op-A", "board-A", "lineage-B", 1, 1)))
         self.assertEqual(len(b.receipts), 2)
+
+    def test_reused_revision_distinguishes_historical_receipt_and_active_event(self):
+        b, c = Board(), command()
+        result, historical = b.submit(Context(), c)
+        self.assertEqual(result, "ACCEPTED")
+        retired_event = deepcopy(b.events[0])
+        b.restore()
+        b.revoke()
+        active_command = replace(c, lineage=b.lineage, policy=b.policy)
+        result, active = b.submit(Context(), active_command)
+        self.assertEqual(result, "ACCEPTED")
+        self.assertEqual(
+            (historical, active),
+            (Receipt("op-A", "board-A", "lineage-A", 1, 1),
+             Receipt("op-A", "board-A", "lineage-B", 1, 2)),
+        )
+
+        before = b.observable()
+        self.assertEqual(b.submit(Context(writable=False), c), ("ACCEPTED", historical))
+        for modified in (replace(c, base=1), replace(c, policy=2)):
+            self.assertEqual(b.submit(Context(), modified), ("IDEMPOTENCY_CONFLICT", None))
+            self.assertEqual(b.submit(Context(readable=False), modified), ("NOT_FOUND", None))
+        self.assertEqual(b.observable(), before)
+
+        replica = Replica()
+        replica.lineage = active.lineage  # Stand-in for an empty restored snapshot.
+        before_delivery = deepcopy(replica.__dict__)
+        self.assertEqual(replica.deliver(retired_event), "SNAPSHOT_REQUIRED")
+        self.assertEqual(replica.__dict__, before_delivery)
+        self.assertEqual(replica.deliver(b.events[0]), "APPLIED")
+        self.assertEqual(replica.revision, active.revision)
+        self.assertEqual(replica.elements, b.elements)
 
     def test_delete_tombstone_stale_undo_no_resurrection(self):
         b = Board(); b.submit(Context(), command(value=None))
