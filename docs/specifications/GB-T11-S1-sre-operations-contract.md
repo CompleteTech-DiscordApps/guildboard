@@ -5,7 +5,15 @@ The [research](../research/t11-sre-objectives.md) merged in #496 and #356 closed
 The target is Guildboard on a GoDaddy Linux VPS with Nginx HTTPS/WSS, private
 database and persistent assets. The contract defines observable boundaries for
 consumers. Implementation, owner approval and acceptance on the target are
-pending. Numeric hypotheses below are internal, never an SLA.
+pending. Numeric hypotheses below are internal trials with no SLA commitment.
+
+The [accepted GB-T0.S1 system contract](GB-T0-S1-system-contract.md) governs
+receipt and read-release ordering. Its original status header is archival.
+The [T0 evidence and handoff](../workstreams/T0.md#evidence-and-handoff)
+records the accepted boundary in
+[#481](https://github.com/CompleteTech-DiscordApps/guildboard/pull/481#issuecomment-6919558260)
+and its protected integration handoff in
+[#521](https://github.com/CompleteTech-DiscordApps/guildboard/pull/521).
 
 ## Telemetry v1
 
@@ -18,7 +26,12 @@ pending. Numeric hypotheses below are internal, never an SLA.
 Outcomes are closed by record class: success, invalid input, authorization denied,
 dependency unavailable, saturated, deadline elapsed, commit unknown, coverage
 unknown, interrupted or integrity failed. Reject unknown fields/enum values and
-invalid units/types before export. Report bounded counts by component and
+invalid units/types before export. Validate values as well as field names:
+timestamps must be valid UTC, categorical values must come from the declared
+record enums, and a correlation value must be server-issued and in the
+canonical 32-character lowercase hexadecimal encoding. A client value is
+ineligible even when it fits the correlation syntax. Reject unsafe values
+without echoing them to the sink. Report bounded counts by component and
 failure class. Use the same allowlist at error reporters, reverse proxy and
 exporters. Never interpolate raw exception messages, headers, paths, query
 strings, bodies, asset filenames, board content, credentials, connection URLs,
@@ -37,7 +50,12 @@ job outcomes. Permitted dimensions are component, declared signal-specific
 outcome, and fixed solo/collaborative/unknown or cold/warm/unknown cohorts where
 applicable. No correlation token, per-guild label, raw identifier, profile URL or
 dynamic dimension. The registry must publish units, finite dimension products,
-series upper bounds and histogram buckets before shipment.
+series upper bounds and histogram buckets before shipment. Require exactly
+the dimensions declared for the signal and reject out-of-domain values and
+undeclared combinations before export. An invalid signal or label cannot
+create a series. Synthetic canaries use only generated data in the approved
+synthetic scope. A canary reference may appear only in authorized restricted
+evidence, never as a metric dimension or operational log value.
 
 Correlation uses a server-issued random token scoped to one journey and
 authorized board/session context. Never treat it as authentication. Keep the
@@ -55,7 +73,11 @@ monotonic clock per journey. Report good, bad, unknown, exclusions by finite
 reason, eligible total, histogram counts, scheduled/missing observations and
 window/profile on every evaluation. The eligible total includes good, bad and
 known eligible unknown outcomes. If eligibility itself is unknown, count that
-separately. Rate is undefined at zero eligible attempts. With unknown coverage,
+separately outside the eligible denominator. Explicit authorization denial
+is a separate exclusion. Dependency failure counts bad when other eligibility
+criteria, including authorization, are already established by trusted evidence.
+If dependency failure prevents that determination, count unknown eligibility
+and do not infer denial. Rate is undefined at zero eligible attempts. With unknown coverage,
 report the conservative interval from good / eligible to (good + unknown) /
 eligible, then disclose unknown-eligibility observations separately. A window
 with missing coverage cannot pass acceptance. Finalize after the relevant
@@ -84,35 +106,50 @@ user journeys.
   of client delivery. Report latency histograms with outcome counts and
   throughput. A timeout during commit produces a commit-unknown outcome, whose
   reconciliation follows the [system contract](GB-T0-S1-system-contract.md).
-  Preserve scope, original identity, digest and preconditions. An authorized
-  matching retained receipt can settle the original outcome. A denial, changed
-  digest or unavailable read cannot settle it. No fresh identity, duplicate
-  logical mutation, revision allocation or broadcast may be induced by receipt
-  recovery. A retired-lineage receipt settles historical commit only. Rejoin and
-  validate the current lineage before reporting its save state. A stale uncommitted
-  intent may be deliberately discarded or resubmitted only as a separately
-  authorized current-lineage intent under the governing system contract.
+  Preserve scope, original identity, digest and preconditions. Verify current
+  session, membership and scoped read authority before any receipt or digest
+  lookup. Check them again using trusted time at the serialized release fence,
+  including for a digest-dependent result. Revocation, expiry or invalidation
+  ordered first suppresses that result. A matching retained receipt can settle
+  the historical commit even if write authority was revoked. Denial, changed
+  digest or unavailable read leaves the original outcome unknown. After a
+  disaster recovery gap, an authorized no-match or a nonrecoverable receipt
+  likewise leaves the original outcome unknown. Receipt recovery never
+  retransmits the operation or creates a new identity, logical mutation,
+  revision or broadcast. A retired-lineage receipt settles historical commit
+  only. Rejoin and validate the current lineage before reporting its save
+  state. A user may deliberately discard stale intent or submit a distinct
+  current-lineage intent through the ordinary write authorization and
+  precondition checks.
 - External probe uses a controlled synthetic tenant and real HTTPS/WSS with
   authorized open/write/read. Count each scheduled minute once. Failed and
   missing probes are bad, including scheduled maintenance. The probe indicator
   stays independent from request rates and supplies independent coverage.
 
-| Candidate evaluation rule | Trigger and response |
-| --- | --- |
-| Journey objectives | Separately for board-open, edit and probe, 99.5% good over rolling 30 days. Good board-open by 5 seconds, good edit by 1 second. A closed window strictly below target opens an SRE investigation. At 43,200 scheduled probe minutes, 216 bad still meets the candidate, 217 breaches. |
-| Fast journey and probe detection | Provisional exercise rules: alert after 3 consecutive failed/missing scheduled minutes or 2 consecutive closed 5-minute journey windows with ≥20 eligible observations each and >5% known bad each. Coverage gaps open a separate telemetry incident after 2 consecutive incomplete 5-minute windows. Insufficient traffic yields no rate page. Use the independent probe during low/no traffic. |
-| Latency/capacity | Pilot candidate p95/p99 durable receipt ≤100/250 ms, peer echo ≤250/500 ms, board-open ≤3/5 seconds at declared cohort/profile. Open capacity investigation after two consecutive complete 5-minute in-profile windows breaching either applicable percentile or research headroom (CPU ≥60%, resident memory or persistent disk ≥70%). Report observed counts and test with approved minimum sample sizes. Queue saturation uses the approved queue capacity and explicit rejection counter; no accepted durable work is dropped. |
-| Backup/recovery | Any failed or interrupted job, missing expected job by approved finish deadline, unverifiable chain or freshness beyond approved maximum opens an operations investigation. Integrity failure, unsafe restore destination or known loss of acknowledged data outside the stated trial boundary escalate immediately. Both job deadline and maximum freshness require T5/T10/SRE approval. |
-| Restart and disaster drill | Candidate ≤60 seconds from process fault to authorized read/write and peer convergence, with zero acknowledged loss. Disaster hypothesis RPO ≤15 minutes and RTO ≤4 hours for the 30 GiB research workload. Breach either measured objective or fail any mandatory integrity/isolation check to fail the drill. |
+| Candidate evaluation rule | Trigger and response | Observable recovery signal |
+| --- | --- | --- |
+| Journey objectives | Separately for board-open, edit and probe, 99.5% good over rolling 30 days. Good board-open by 5 seconds, good edit by 1 second. A closed window strictly below target opens an SRE investigation. At 43,200 scheduled probe minutes, 216 bad still meets the candidate, 217 breaches. | A fresh, complete rolling window for that journey meets the target at the approved minimum volume. |
+| Fast journey and probe detection | Provisional exercise rules: alert after 3 consecutive failed/missing scheduled minutes or 2 consecutive closed 5-minute journey windows with ≥20 eligible observations each and >5% known bad each. Coverage gaps open a separate telemetry incident after 2 consecutive incomplete 5-minute windows. Insufficient traffic yields no rate page. Use the independent probe during low/no traffic. | Fast probe requires a fresh approved run of successful scheduled minutes. Fast journey requires fresh, consecutive, complete windows at approved minimum volumes within the configured bad-rate limit. The coverage incident requires fresh, complete coverage windows. |
+| Latency/capacity | Pilot candidate p95/p99 durable receipt ≤100/250 ms, peer echo ≤250/500 ms, board-open ≤3/5 seconds at declared cohort/profile. Open capacity investigation after two consecutive complete 5-minute in-profile windows breaching either applicable percentile or research headroom (CPU ≥60%, resident memory or persistent disk ≥70%). Report observed counts and test with approved minimum sample sizes. Queue saturation uses the approved queue capacity and explicit rejection counter; no accepted durable work is dropped. | Fresh, consecutive, complete in-profile windows with sufficient samples meet the latency and resource recovery limits. For queue saturation, measured depth meets the approved recovery level and rejection counters show no saturation during the recovery windows. |
+| Backup/recovery | Any failed or interrupted job, missing expected job by approved finish deadline, unverifiable chain or freshness beyond approved maximum opens an operations investigation. Integrity failure, unsafe restore destination or known loss of acknowledged data outside the stated trial boundary escalate immediately. Both job deadline and maximum freshness require T5/T10/SRE approval. | A newly verified job completed on schedule, has an intact chain and meets freshness. For integrity, isolation or acknowledged loss, also require responder acknowledgement and an isolated, independently verified rehearsal with a recorded loss disposition. |
+| Restart and disaster drill | Candidate ≤60 seconds from process fault to authorized read/write and peer convergence, with zero acknowledged loss. Disaster hypothesis RPO ≤15 minutes and RTO ≤4 hours for the 30 GiB research workload. Breach either measured objective or fail any mandatory integrity/isolation check to fail the drill. | After remediation, a fresh independent drill of the failed type verifies authorization, integrity and isolation, measures every objective and meets each trial boundary. |
 
 Candidate comparisons use complete, aligned windows and declared minimum volumes.
 Deduplicate by rule and affected deployment, preserve earliest trigger time,
 route with a bounded reason and runbook reference, and escalate unacknowledged
-pages by the approved rota. Clear only after the named recovery signal is
-observed. Suppressing duplicate notifications cannot exclude observations from
-SLIs. Validate disabled, malformed, inconsistent or missing gate configuration
-with names-only errors. Disable candidate verdict/paging for that configuration,
-surface loss of coverage and retain independent service protection. SRE and QE
+pages by the approved rota. Clear each active rule only after observing its
+recovery signal for the same deployment, rule and approved workload profile. Evidence must come from the
+approved source and be newer than the last breach, within the configured
+freshness bound, complete, and sufficient for the approved recovery window
+count, duration, and minimum samples. Stale, missing, partial or inapplicable
+evidence keeps the alert open. Suppressing duplicate notifications cannot exclude observations from
+SLIs. Require approved configuration for evaluation and recovery: enabled state,
+sources, profile, thresholds, sample counts, window lengths, freshness,
+consecutive windows and routing. Validate disabled, malformed, inconsistent
+or missing configuration with names-only diagnostics. The affected evaluator
+reports loss of coverage, emits no candidate verdict or page, and cannot
+clear an active alert. Independent service protection, including authorization,
+isolation and integrity guards, continues to enforce its own policy. SRE and QE
 must reconcile the #356 workload and #388 QE candidate before approving a shared
 profile. Alert routing, progression/cooldown and numeric policies require pilot
 observations and owner approval.
@@ -157,13 +194,20 @@ verification and unexpected scope access all fail acceptance. Record a denied
 preflight with zero destination writes.
 
 Use one trusted UTC timeline for declaration, incident/fault and recovered
-canary commit. RPO is incident/fault time minus the latest verified consistent
-pre-fault commit time. Count acknowledged operations lost, report the tested
+canary commit. Choose the latest consistent restored synthetic canary whose
+original pre-fault durable commit and restored lineage/cut match trusted
+evidence. RPO is incident/fault time minus that original commit time. Exclude
+inconsistent, unverified, post-fault and unrestored canaries. Copy, replay and
+restore execution timestamps cannot serve as original commit evidence. Count acknowledged operations lost, report the tested
 loss boundary, and treat untrustworthy timing or absent canary as unknown.
 RTO is elapsed time from declaration through access/key recovery, restore and
 service verification over approved DNS/TLS and client paths, including operator
 waits. Use monotonic elapsed timing when available and record clock provenance.
-Restores must report both measures independently even where only one breaches.
+Report each measure and its individual outcome independently as within the
+candidate, breached or unknown. Any known objective breach fails the drill,
+including when the other measure is unknown. After mandatory checks pass,
+unknown timing without a known breach leaves the trial undetermined. Both
+objectives must be known and within their boundaries to pass.
 A local model, snapshot age, copy timing or intact backup cannot certify RPO/RTO.
 
 ## Incident roles and handoffs
