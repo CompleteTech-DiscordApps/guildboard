@@ -1,0 +1,142 @@
+{
+  "sources": {
+    "public/react_19.1.0.json": {
+      "sha256": "f93e69ad3ae948242a4ca5c8c0171c49025ab0920f682e83c1cb74352051b2e5",
+      "url": "https://registry.npmjs.org/react/19.1.0"
+    },
+    "public/react-dom_19.1.0.json": {
+      "sha256": "1f93b2f67602e72d5b20306a10b3bbf8c0bf7f0163a55a54f502a91479e68f88",
+      "url": "https://registry.npmjs.org/react-dom/19.1.0"
+    },
+    "public/fastify_5.6.1.json": {
+      "sha256": "37a0c494bddaabefad5600d9218b455e40a17c2e9812742f94fba2243c3e0b15",
+      "url": "https://registry.npmjs.org/fastify/5.6.1"
+    },
+    "public/_excalidraw-excalidraw_0.18.1.json": {
+      "sha256": "70bd551ab5451d46b533692f28c659de9d364bc2c4872131ac95fb8b0b4412f2",
+      "url": "https://registry.npmjs.org/@excalidraw%2fexcalidraw/0.18.1"
+    },
+    "public/excalidraw-0.18.1-declarations/package.json": {
+      "sha256": "402f54fc7de128b25d22bd4d905fb46dbcdbe2ce6efee567d4da0fc79a29aab1",
+      "url": "https://registry.npmjs.org/@excalidraw/excalidraw/-/excalidraw-0.18.1.tgz"
+    },
+    "public/excalidraw-0.18.1-declarations/dist--types--excalidraw--index.d.ts": {
+      "sha256": "90729dab4b90b24477773dd263aa8b51bbd62afa45f003795d084828a1e1e8e6",
+      "url": "https://registry.npmjs.org/@excalidraw/excalidraw/-/excalidraw-0.18.1.tgz"
+    },
+    "public/excalidraw-0.18.1-declarations/dist--types--excalidraw--types.d.ts": {
+      "sha256": "61681bd17da86a0b811242e83cd8e1f6c7f168a14806c8ca587390e24815486a",
+      "url": "https://registry.npmjs.org/@excalidraw/excalidraw/-/excalidraw-0.18.1.tgz"
+    },
+    "public/fastify-v5.6.1-migration.md": {
+      "sha256": "429f4425dfd0fcff3137d3dc8effb4bb783bc93d9baf602532243dbb234a8836",
+      "url": "https://raw.githubusercontent.com/fastify/fastify/v5.6.1/docs/Guides/Migration-Guide-V5.md"
+    },
+    "public/fastify-v5.6.1-typescript.md": {
+      "sha256": "25436f3a03044b3cbfeb6af4bc5032fd43e996789961a01c8703afeb3898b363",
+      "url": "https://raw.githubusercontent.com/fastify/fastify/v5.6.1/docs/Reference/TypeScript.md"
+    },
+    "public/fastify-v5.6.1-validation.md": {
+      "sha256": "f7b980759f4b2f93c4a2f3ebbd7aef80d254dfc758246eee2e36ee4460505d8d",
+      "url": "https://raw.githubusercontent.com/fastify/fastify/v5.6.1/docs/Reference/Validation-and-Serialization.md"
+    },
+    "sql/mariadb-json.md": {
+      "sha256": "41e7be802639147132a00ebb0aeff069fa243e903929724e82f5fd0862b19993",
+      "url": "https://raw.githubusercontent.com/mariadb-corporation/mariadb-docs/f1d0c1c733efc86dbc685b5943a9ca01b0ae678b/server/reference/data-types/string-data-types/json.md"
+    },
+    "sql/mariadb-11.8.3.md": {
+      "sha256": "6147e9c8a361925cf7132dc3db39b2846e4731267813eb4d61cbaa58797e98d7",
+      "url": "https://raw.githubusercontent.com/mariadb-corporation/mariadb-docs/7c033de04c329f643143f76cf086915d6a4c61d4/release-notes/community-server/11.8/11.8.3.md"
+    },
+    "sql/mysql-json_binary.h": {
+      "sha256": "3530a084dd02113cc21e28e11bb0b339237582de0767ae28d9e9c4de388211ef",
+      "url": "https://raw.githubusercontent.com/mysql/mysql-server/mysql-8.4.7/sql-common/json_binary.h"
+    },
+    "sql/mysql-version": {
+      "sha256": "57cae9a5de0371789fad603f90c5fb9391245ccb10655e3d689ce138134f690a",
+      "url": "https://raw.githubusercontent.com/mysql/mysql-server/mysql-8.4.7/MYSQL_VERSION"
+    }
+  },
+  "mysql_manual_http": "403 Forbidden; trusted short excerpts are separate and not raw HTTP bytes",
+  "historical_observations": [
+    {
+      "source": "sql/mariadb-11.8.3.md",
+      "url": "https://mariadb.com/docs/release-notes/community-server/11.8/11.8.3.md",
+      "previous_sha256": "59784451a924ba4d91961829181fe90a3787de16c355b3d5352796a64fa9efad",
+      "previous_bytes": 12913,
+      "observed_sha256": "b0f3e0a083528b1c8459cd973172fc52cce14c7b4605a2880a53ae2f5a3329e1",
+      "observed_bytes": 12917,
+      "diff_summary": "Three latest-release banner lines changed from 11.8.9 to 11.8.10; all remaining full-source bytes, including evaluated 11.8.3 release content, are identical.",
+      "verification_provenance": {
+        "historical_source": "editor13-sql-primary/mariadb-11.8.3.md",
+        "current_source": "editor14-source-diagnostic/mariadb-11.8.3.current.md",
+        "receipt": "editor14-source-diagnostic/receipt.json",
+        "diff": "editor14-source-diagnostic/source.diff",
+        "observed_at_unix": 1794859974.3254375,
+        "http_status": 200,
+        "final_url": "https://mariadb.com/docs/release-notes/community-server/11.8/11.8.3.md",
+        "comparison": "full raw byte hashes and line-by-line comparison of complete retained sources"
+      },
+      "scope": "Inspection-only source identity observation; no SQL runtime or license claim.",
+      "limitation": "The exact URL is mutable. Future byte drift must fail closed and requires a new review."
+    },
+    {
+      "source": "sql/mariadb-json.md",
+      "previous_url": "https://mariadb.com/docs/server/reference/data-types/string-data-types/json.md",
+      "previous_sha256": "6fc6eb741053654bddd0048613576132174d36bf703c4aea6a883353ff4d1a05",
+      "observed_at": "2026-11-17",
+      "observed_mutable_sha256": "df1abf9d7dccedb51726cda23c0d0cce895bf92ac32e17f82fa3ef2c3e8593ce",
+      "observed_mutable_bytes": 6653,
+      "observation": "The mutable GitBook Markdown export rejected the pinned hash (main run 44118798727, issue #522). The previous bytes were not retained and no Web Archive capture exists, so no old/new byte diff is claimed.",
+      "replacement_url": "https://raw.githubusercontent.com/mariadb-corporation/mariadb-docs/f1d0c1c733efc86dbc685b5943a9ca01b0ae678b/server/reference/data-types/string-data-types/json.md",
+      "replacement_sha256": "41e7be802639147132a00ebb0aeff069fa243e903929724e82f5fd0862b19993",
+      "replacement_bytes": 5951,
+      "replacement_provenance": "Commit-pinned raw Markdown source of the same page in mariadb-corporation/mariadb-docs (latest commit touching the path as of 2026-11-17, 2026-10-01T11:38:36Z). Immutable by commit; differs from the GitBook export only in front matter, relative link form and the export wrapper.",
+      "claim_reverification": [
+        {
+          "claim": "ADR 0004: MariaDB documents JSON as a LONGTEXT alias",
+          "result": "holds",
+          "evidence": "'JSON is an alias for LONGTEXT COLLATE utf8mb4_bin introduced for compatibility reasons with MySQL's JSON data type.'"
+        },
+        {
+          "claim": "ADR 0004: different semantics from MySQL JSON",
+          "result": "holds",
+          "evidence": "'In MariaDB JSON strings are normal strings and compared as strings' versus MySQL comparison by JSON value; text retained verbatim; duplicate keys retained."
+        },
+        {
+          "claim": "ADR 0004: replication implications",
+          "result": "holds",
+          "evidence": "'row-based replication will not work for JSON types from MySQL to MariaDB.'"
+        },
+        {
+          "claim": "editor13 comparison and evaluated-matrix database clause: JSON storage differs; do not assume MySQL binary JSON and MariaDB LONGTEXT JSON are identical",
+          "result": "holds",
+          "evidence": "'The JSON type in MySQL stores the JSON object in a compact form, not as LONGTEXT as in MariaDB.' and 'MariaDB can't directly access MySQL's JSON format.'"
+        }
+      ],
+      "scope": "Inspection-only source identity and quoted-text re-verification; no SQL runtime, replication or license claim.",
+      "limitation": "Commit pin removes upstream byte drift; a later upstream page revision needs a new reviewed pin."
+    },
+    {
+      "source": "sql/mariadb-11.8.3.md",
+      "previous_url": "https://mariadb.com/docs/release-notes/community-server/11.8/11.8.3.md",
+      "previous_sha256": "b0f3e0a083528b1c8459cd973172fc52cce14c7b4605a2880a53ae2f5a3329e1",
+      "observed_at": "2026-11-17",
+      "observed_mutable_sha256": "1aa17df58886fd8be972b3dc67112dd02d5a57420f5c331a8d414e5b57b9e3a7",
+      "observation": "The mutable GitBook export drifted again, one day after the #513 refresh. The fetch loop stops at the first SQL failure, so the CI log hid this drift behind sql/mariadb-json.md. In the repository source the recurring latest-release banner is a GitBook include, so the commit-pinned raw file does not contain it.",
+      "replacement_url": "https://raw.githubusercontent.com/mariadb-corporation/mariadb-docs/7c033de04c329f643143f76cf086915d6a4c61d4/release-notes/community-server/11.8/11.8.3.md",
+      "replacement_sha256": "6147e9c8a361925cf7132dc3db39b2846e4731267813eb4d61cbaa58797e98d7",
+      "replacement_bytes": 11338,
+      "replacement_provenance": "Commit-pinned raw Markdown source in mariadb-corporation/mariadb-docs (latest commit touching the path as of 2026-11-17, 2026-11-05T21:46:28Z, typo fix DOCS-6898).",
+      "claim_reverification": [
+        {
+          "claim": "ADR 0004 and evaluated-matrix database clause: MariaDB 11.8.3 is the evaluated comparison release",
+          "result": "holds",
+          "evidence": "'# MariaDB 11.8.3 Release Notes', 'Release date: 6 Aug 2025', 'MariaDB 11.8.3 is a Stable (GA) release.'"
+        }
+      ],
+      "scope": "Inspection-only source identity and quoted-text re-verification; no SQL runtime or license claim.",
+      "limitation": "Commit pin removes upstream byte drift; a later upstream page revision needs a new reviewed pin."
+    }
+  ]
+}
