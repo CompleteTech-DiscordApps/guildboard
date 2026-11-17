@@ -17,8 +17,10 @@ Backlog/Unblocked and zero native blockers. Live issue had no assignee/comments;
 open PR inventory through #489 had no competing T5 research. Claim recorded in
 the issue. No native dependency or readiness field was changed by this work.
 
-Cross-checked the [system contract proposal](../specifications/GB-T0-S1-system-contract.md)
-in §§3, 5 and 6, introduced by #481 at `d19a1daf67cfa078e5a18d25702ca9ea45d66165`.
+Cross-checked §§3, 5 and 6 of the accepted
+[GB-T0.S1 system contract](../specifications/GB-T0-S1-system-contract.md).
+The [T0 acceptance record](../workstreams/T0.md#evidence-and-handoff) identifies
+the delegated decision for #3 and the reviewed revision merged in #481.
 Operation identity is scoped by
 guild/board/lineage/actor/operation; current identity and read authorization precede
 receipt lookup; same identity/digest returns retained historical receipt **before**
@@ -40,7 +42,7 @@ fence old commands. This aligns the research candidates without proving a real
 application retry protocol, storage retention, or client reconciliation.
 The database fixture only demonstrates that preserving retired receipts is
 feasible; T4/T5/T7/T8/T9/T12 must review the shared proposal before implementation.
-All drafts remain provisional architecture.
+This T5 research and the #484 model remain provisional.
 
 ## Primary sources, versions and dated observations
 
@@ -284,7 +286,7 @@ dump import or restart is not a service RTO or evidence of surviving VPS disk lo
 | VPS recovery and rollback | Required GoDaddy target, explicit settings and restore/migration test plan | T10/T11 exact plan/image/filesystem/versions/backup chain, operator access and measured RPO/RTO |
 | Alternatives, primary URLs, version/date/uncertainty | Source register, response observations and immutable local image identities | Actual Data Engineering/security/consumer review and accepted #147 specification |
 
-No actual reviewer, architecture acceptance, production security, compatibility,
-merged state or issue completion is implied. #147 consumes this proposal; T4/T7/T8
+T5 research review, architecture acceptance, production security, compatibility,
+merge and issue completion remain pending. #147 consumes this proposal; T4/T7/T8
 must preserve #481's pending-operation/retired-receipt distinction; T9 reviews
 retention/privacy and T10/T11/T12/T13 retain deployment, recovery and release gates.
