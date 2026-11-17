@@ -1,0 +1,611 @@
+Recorded 2026-11-16 by an independent haiku verification worker (fresh context) on a read-only export of main a6c887ebcc0116f35666af382aa065ea1c593b98; python=3.12.3; Linux x86_64; no network.
+The read-only export run of the unit tests (A2) failed with 13 filesystem-write errors (harness issue, sha256 f549aa61334bfdaaed387da4537f890685705e590a772d1a6668f7e819b89f32, log not retained here); the writable-copy runs below are the authoritative results.
+
+===== A1_check_licenses (c6026a81df3829de17ca44abf9e7499bbe7fb1eefde923ccb74d134c531611aa)
+license policy check: GB-T0.02.02.T1 (docs/license-supply-chain-policy.md)
+policy sets: allowed=8 review-listed=4 prohibited-exact=3 prohibited-prefixes=6
+exceptions: docs/evidence/license-exceptions.json (3 entries)
+verified overrides: docs/evidence/license-exceptions.json (2 entries, 2 applied)
+lockfile: package-lock.json (lockfileVersion 3)
+  entries=117 skipped-first-party=17 third-party=100
+  allowed=100 excepted=0 review-required=0 prohibited=0 missing-license=0 malformed-license=0 missing-integrity=0 malformed-integrity=0 unexpected-path=0
+  third-party-without-integrity=0 verified-overrides-applied=0
+lockfile: research-fixtures/canvas/package-lock.json (lockfileVersion 3)
+  entries=291 skipped-first-party=1 third-party=290
+  allowed=287 excepted=3 review-required=0 prohibited=0 missing-license=0 malformed-license=0 missing-integrity=0 malformed-integrity=0 unexpected-path=0
+  third-party-without-integrity=0 verified-overrides-applied=2
+details:
+  NOTE research-fixtures/canvas/package-lock.json node_modules/dompurify [dompurify@3.4.17] excepted review-required license '(MPL-2.0 OR Apache-2.0)': Dual-licensed. The checker's conservative OR rule does not select a branch, so the expression is review-required. Apache-2.0 is allowlisted and is the branch this entry proposes to rely on; the owner must record that election and retain Apache-2.0 notices. If MPL-2.0 were relied on instead, its file-level copyleft terms would apply to modified MPL files. Reached from research-fixtures/canvas (no dev flag in the lockfile). Proposed; owner review pending.
+  NOTE research-fixtures/canvas/package-lock.json node_modules/fuzzy [fuzzy@0.1.3] verified override applied: license 'MIT' (npm-tarball-file-sha256, package/LICENSE-MIT, sha256 a4aca837172fb1f6188c426e38835202e96bc853e25b7029cc5c933964f8401e, verified_at 2026-11-16); evidence only, not legal sign-off
+  NOTE research-fixtures/canvas/package-lock.json node_modules/khroma [khroma@2.1.0] verified override applied: license 'MIT' (npm-tarball-file-sha256, package/license, sha256 66b333b0f66759a0b710459e03f7029abe17f4358114a128d2c972e642961b49, verified_at 2026-11-16); evidence only, not legal sign-off
+  NOTE research-fixtures/canvas/package-lock.json node_modules/pako [pako@2.0.3] excepted review-required license '(MIT AND Zlib)': Conjunctive expression: MIT is allowlisted, but Zlib is review-listed and not on the allowlist, so both terms apply. Zlib is a permissive license; it is not added to the allowlist. Reached from research-fixtures/canvas (no dev flag in the lockfile). Proposed; owner review of Zlib notice obligations pending.
+  NOTE research-fixtures/canvas/package-lock.json node_modules/robust-predicates [robust-predicates@3.0.3] excepted review-required license 'Unlicense': Unlicense is a public-domain dedication with no attribution obligation, but it is review-listed rather than allowlisted, so the owner must accept it explicitly. Reached from research-fixtures/canvas (no dev flag in the lockfile). Proposed; owner review pending.
+result: PASS (0 finding(s))
+
+===== A2b_unittest_scratchcopy (e9fda43b0ee9916326659b240c3248362bac40a287c9edf6a7fd9c0a0e4a1535)
+test_architecture_reversals_and_omissions (test_architecture_acceptance.Acceptance.test_architecture_reversals_and_omissions) ... ok
+test_baseline (test_architecture_acceptance.Acceptance.test_baseline) ... ok
+test_directory_and_symlink_rejected (test_architecture_acceptance.Acceptance.test_directory_and_symlink_rejected) ... ok
+test_fifo_without_writer_is_rejected (test_architecture_acceptance.Acceptance.test_fifo_without_writer_is_rejected) ... ok
+test_fixture_nested_malformed_and_scenario_reversal (test_architecture_acceptance.Acceptance.test_fixture_nested_malformed_and_scenario_reversal) ... ok
+test_interruption_is_not_success (test_architecture_acceptance.Acceptance.test_interruption_is_not_success) ... FAIL: verification interrupted
+ok
+test_missing_prerequisite_and_invalid_config (test_architecture_acceptance.Acceptance.test_missing_prerequisite_and_invalid_config) ... FAIL: invalid root or unavailable prerequisite
+ok
+test_missing_safe_open_flags_fails_closed (test_architecture_acceptance.Acceptance.test_missing_safe_open_flags_fails_closed) ... ok
+test_oversized_regular_file_and_growth_after_fstat (test_architecture_acceptance.Acceptance.test_oversized_regular_file_and_growth_after_fstat) ... ok
+test_catalog_traversal_rejected_before_fixture_write (test_architecture_acceptance.ControlsProjection.test_catalog_traversal_rejected_before_fixture_write) ... ok
+test_enumeration_addition_and_replacement (test_architecture_acceptance.ControlsProjection.test_enumeration_addition_and_replacement) ... ok
+test_global_limits_and_race_fail_closed (test_architecture_acceptance.ControlsProjection.test_global_limits_and_race_fail_closed) ... ok
+test_protected_generated_names_preserved_and_rejected_by_gate (test_architecture_acceptance.ControlsProjection.test_protected_generated_names_preserved_and_rejected_by_gate) ... ok
+test_revision_validation (test_architecture_acceptance.ControlsProjection.test_revision_validation) ... ok
+test_unsafe_entries_rejected_without_source_writes (test_architecture_acceptance.ControlsProjection.test_unsafe_entries_rejected_without_source_writes) ... ok
+test_write_failure_cleans_staging (test_architecture_acceptance.ControlsProjection.test_write_failure_cleans_staging) ... ok
+test_corruption (test_editor_feasibility.Checks.test_corruption) ... skipped 'EDITOR14_INPUTS is not set; actual source fixtures are unavailable'
+test_interrupted_output (test_editor_feasibility.Checks.test_interrupted_output) ... skipped 'EDITOR14_INPUTS is not set; actual source fixtures are unavailable'
+test_missing_fifo_symlink (test_editor_feasibility.Checks.test_missing_fifo_symlink) ... skipped 'EDITOR14_INPUTS is not set; actual source fixtures are unavailable'
+test_parent_symlink (test_editor_feasibility.Checks.test_parent_symlink) ... skipped 'EDITOR14_INPUTS is not set; actual source fixtures are unavailable'
+test_peer_with_ledger_update (test_editor_feasibility.Checks.test_peer_with_ledger_update) ... skipped 'EDITOR14_INPUTS is not set; actual source fixtures are unavailable'
+test_pin_and_runtime_claim (test_editor_feasibility.Checks.test_pin_and_runtime_claim) ... skipped 'EDITOR14_INPUTS is not set; actual source fixtures are unavailable'
+test_positive (test_editor_feasibility.Checks.test_positive) ... skipped 'EDITOR14_INPUTS is not set; actual source fixtures are unavailable'
+test_revision_and_path (test_editor_feasibility.Checks.test_revision_and_path) ... skipped 'EDITOR14_INPUTS is not set; actual source fixtures are unavailable'
+test_missing_exceptions_wording_matches_the_real_output (test_license_policy.DocumentWordingCases.test_missing_exceptions_wording_matches_the_real_output) ... ok
+test_policy_documents_the_lockfile_defaults_and_filter_rule (test_license_policy.DocumentWordingCases.test_policy_documents_the_lockfile_defaults_and_filter_rule) ... ok
+test_duplicate_exception_is_input_error (test_license_policy.ExceptionCases.test_duplicate_exception_is_input_error) ... ok
+test_exception_honoured_only_for_pinned_version (test_license_policy.ExceptionCases.test_exception_honoured_only_for_pinned_version) ... ok
+test_exception_requires_exact_license_string (test_license_policy.ExceptionCases.test_exception_requires_exact_license_string) ... ok
+test_malformed_exception_license_is_input_error (test_license_policy.ExceptionCases.test_malformed_exception_license_is_input_error) ... ok
+test_non_string_scope_is_input_error (test_license_policy.ExceptionCases.test_non_string_scope_is_input_error) ... ok
+test_prohibited_exception_license_is_input_error (test_license_policy.ExceptionCases.test_prohibited_exception_license_is_input_error) ... ok
+test_stale_exception_fails (test_license_policy.ExceptionCases.test_stale_exception_fails) ... ok
+test_backslash_install_path_is_unexpected_even_when_prohibited (test_license_policy.InstallPathAndIntegrityCases.test_backslash_install_path_is_unexpected_even_when_prohibited) ... ok
+test_backslash_only_workspace_pattern_is_input_error (test_license_policy.InstallPathAndIntegrityCases.test_backslash_only_workspace_pattern_is_input_error) ... ok
+test_integrity_format_is_checked_for_lockfile_entries (test_license_policy.InstallPathAndIntegrityCases.test_integrity_format_is_checked_for_lockfile_entries) ... ok
+test_nested_guard_rejects_node_modules_as_workspace_segment (test_license_policy.InstallPathAndIntegrityCases.test_nested_guard_rejects_node_modules_as_workspace_segment) ... ok
+test_nested_install_under_unknown_prefix_stays_unexpected (test_license_policy.InstallPathAndIntegrityCases.test_nested_install_under_unknown_prefix_stays_unexpected) ... ok
+test_node_modules_segment_is_never_a_workspace_in_any_case (test_license_policy.InstallPathAndIntegrityCases.test_node_modules_segment_is_never_a_workspace_in_any_case) ... ok
+test_workspace_local_install_is_third_party_by_real_name (test_license_policy.InstallPathAndIntegrityCases.test_workspace_local_install_is_third_party_by_real_name) ... ok
+test_workspace_patterns_cannot_cover_node_modules_or_match_everything (test_license_policy.InstallPathAndIntegrityCases.test_workspace_patterns_cannot_cover_node_modules_or_match_everything) ... ok
+test_aliased_package_is_classified_by_real_name (test_license_policy.PolicyCases.test_aliased_package_is_classified_by_real_name) ... ok
+test_aliased_prohibited_license_is_prohibited (test_license_policy.PolicyCases.test_aliased_prohibited_license_is_prohibited) ... ok
+test_deeply_nested_json_is_input_error_not_traceback (test_license_policy.PolicyCases.test_deeply_nested_json_is_input_error_not_traceback) ... ok
+test_duplicate_key_is_input_error (test_license_policy.PolicyCases.test_duplicate_key_is_input_error) ... ok
+test_empty_packages_map_is_input_error (test_license_policy.PolicyCases.test_empty_packages_map_is_input_error) ... ok
+test_entry_without_version_is_input_error (test_license_policy.PolicyCases.test_entry_without_version_is_input_error) ... ok
+test_exception_under_alias_path_name_does_not_apply (test_license_policy.PolicyCases.test_exception_under_alias_path_name_does_not_apply) ... ok
+test_invalid_alias_name_is_input_error (test_license_policy.PolicyCases.test_invalid_alias_name_is_input_error) ... ok
+test_link_must_point_at_a_present_workspace (test_license_policy.PolicyCases.test_link_must_point_at_a_present_workspace) ... ok
+test_link_to_present_workspace_is_skipped (test_license_policy.PolicyCases.test_link_to_present_workspace_is_skipped) ... ok
+test_malformed_exceptions_file_is_input_error (test_license_policy.PolicyCases.test_malformed_exceptions_file_is_input_error) ... ok
+test_malformed_json_is_input_error (test_license_policy.PolicyCases.test_malformed_json_is_input_error) ... ok
+test_malformed_spdx_expression_fails (test_license_policy.PolicyCases.test_malformed_spdx_expression_fails) ... ok
+test_missing_exceptions_file_is_read_as_none_and_noted (test_license_policy.PolicyCases.test_missing_exceptions_file_is_read_as_none_and_noted) ... ok
+test_missing_file_is_input_error (test_license_policy.PolicyCases.test_missing_file_is_input_error) ... ok
+test_missing_integrity_is_not_bridged_by_override (test_license_policy.PolicyCases.test_missing_integrity_is_not_bridged_by_override) ... ok
+test_missing_license_fails_and_cannot_be_excepted (test_license_policy.PolicyCases.test_missing_license_fails_and_cannot_be_excepted) ... ok
+test_nan_and_infinity_are_input_errors (test_license_policy.PolicyCases.test_nan_and_infinity_are_input_errors) ... ok
+test_nested_node_modules_inside_vendor_is_unexpected (test_license_policy.PolicyCases.test_nested_node_modules_inside_vendor_is_unexpected) ... ok
+test_nested_node_modules_path_is_third_party (test_license_policy.PolicyCases.test_nested_node_modules_path_is_third_party) ... ok
+test_non_string_license_fails (test_license_policy.PolicyCases.test_non_string_license_fails) ... ok
+test_null_and_empty_license_fail (test_license_policy.PolicyCases.test_null_and_empty_license_fail) ... ok
+test_oversized_input_is_input_error (test_license_policy.PolicyCases.test_oversized_input_is_input_error) ... ok
+test_positive_case_passes (test_license_policy.PolicyCases.test_positive_case_passes) ... ok
+test_prohibited_license_cannot_be_excepted (test_license_policy.PolicyCases.test_prohibited_license_cannot_be_excepted) ... ok
+test_prohibited_spellings_fail_without_exception (test_license_policy.PolicyCases.test_prohibited_spellings_fail_without_exception) ... ok
+test_third_party_with_empty_or_non_string_integrity_fails (test_license_policy.PolicyCases.test_third_party_with_empty_or_non_string_integrity_fails) ... ok
+test_third_party_without_integrity_fails (test_license_policy.PolicyCases.test_third_party_without_integrity_fails) ... ok
+test_traversal_in_install_path_is_unexpected_even_when_prohibited (test_license_policy.PolicyCases.test_traversal_in_install_path_is_unexpected_even_when_prohibited) ... ok
+test_unexpected_install_path_fails (test_license_policy.PolicyCases.test_unexpected_install_path_fails) ... ok
+test_unknown_identifier_is_review_required_and_needs_exception (test_license_policy.PolicyCases.test_unknown_identifier_is_review_required_and_needs_exception) ... ok
+test_unknown_literal_is_prohibited (test_license_policy.PolicyCases.test_unknown_literal_is_prohibited) ... ok
+test_unsupported_lockfile_version_is_input_error (test_license_policy.PolicyCases.test_unsupported_lockfile_version_is_input_error) ... ok
+test_workspace_entry_must_be_a_known_workspace_path (test_license_policy.PolicyCases.test_workspace_entry_must_be_a_known_workspace_path) ... ok
+test_workspace_entry_with_resolved_or_integrity_is_unexpected (test_license_policy.PolicyCases.test_workspace_entry_with_resolved_or_integrity_is_unexpected) ... ok
+test_policy_sets_match_checker (test_license_policy.PolicyDocumentCases.test_policy_sets_match_checker) ... ok
+test_policy_states_the_integrity_rule_the_gate_enforces (test_license_policy.PolicyDocumentCases.test_policy_states_the_integrity_rule_the_gate_enforces) ... ok
+test_with_exception_list_matches_checker (test_license_policy.PolicyDocumentCases.test_with_exception_list_matches_checker) ... ok
+test_policy_states_workspace_and_exception_limits (test_license_policy.PolicyLimitCases.test_policy_states_workspace_and_exception_limits) ... ok
+test_committed_lockfiles_pass_gate (test_license_policy.RepositoryDataCases.test_committed_lockfiles_pass_gate) ... ok
+test_and_takes_most_restrictive_term (test_license_policy.SpdxExpressionCases.test_and_takes_most_restrictive_term) ... ok
+test_deep_nesting_is_malformed_not_a_crash (test_license_policy.SpdxExpressionCases.test_deep_nesting_is_malformed_not_a_crash) ... ok
+test_identifier_matching_is_case_insensitive (test_license_policy.SpdxExpressionCases.test_identifier_matching_is_case_insensitive) ... ok
+test_lgpl_is_prohibited_not_review (test_license_policy.SpdxExpressionCases.test_lgpl_is_prohibited_not_review) ... ok
+test_malformed_expressions_return_none (test_license_policy.SpdxExpressionCases.test_malformed_expressions_return_none) ... ok
+test_or_takes_most_restrictive_branch (test_license_policy.SpdxExpressionCases.test_or_takes_most_restrictive_branch) ... ok
+test_policy_prohibited_literals_are_prohibited (test_license_policy.SpdxExpressionCases.test_policy_prohibited_literals_are_prohibited) ... ok
+test_prohibited_spellings_are_prohibited (test_license_policy.SpdxExpressionCases.test_prohibited_spellings_are_prohibited) ... ok
+test_single_identifiers (test_license_policy.SpdxExpressionCases.test_single_identifiers) ... ok
+test_unknown_identifiers_default_to_review (test_license_policy.SpdxExpressionCases.test_unknown_identifiers_default_to_review) ... ok
+test_with_allowed_exceptions_is_at_least_review (test_license_policy.SpdxExpressionCases.test_with_allowed_exceptions_is_at_least_review) ... ok
+test_with_unlisted_exception_is_malformed (test_license_policy.SpdxExpressionCases.test_with_unlisted_exception_is_malformed) ... ok
+test_duplicate_override_is_input_error (test_license_policy.VerifiedOverrideCases.test_duplicate_override_is_input_error) ... ok
+test_empty_license_string_is_never_overridden (test_license_policy.VerifiedOverrideCases.test_empty_license_string_is_never_overridden) ... ok
+test_integrity_mismatch_fails (test_license_policy.VerifiedOverrideCases.test_integrity_mismatch_fails) ... ok
+test_malformed_override_is_input_error (test_license_policy.VerifiedOverrideCases.test_malformed_override_is_input_error) ... ok
+test_matching_override_clears_missing_license (test_license_policy.VerifiedOverrideCases.test_matching_override_clears_missing_license) ... ok
+test_missing_license_without_matching_override_still_fails (test_license_policy.VerifiedOverrideCases.test_missing_license_without_matching_override_still_fails) ... ok
+test_null_license_is_overridden_only_with_matching_integrity (test_license_policy.VerifiedOverrideCases.test_null_license_is_overridden_only_with_matching_integrity) ... ok
+test_override_for_other_version_does_not_apply (test_license_policy.VerifiedOverrideCases.test_override_for_other_version_does_not_apply) ... ok
+test_override_ignored_when_lockfile_declares_license (test_license_policy.VerifiedOverrideCases.test_override_ignored_when_lockfile_declares_license) ... ok
+test_override_license_is_classified_under_policy_sets (test_license_policy.VerifiedOverrideCases.test_override_license_is_classified_under_policy_sets) ... ok
+test_override_never_applies_to_prohibited_license (test_license_policy.VerifiedOverrideCases.test_override_never_applies_to_prohibited_license) ... ok
+test_overrides_must_be_a_list (test_license_policy.VerifiedOverrideCases.test_overrides_must_be_a_list) ... ok
+test_stale_override_fails (test_license_policy.VerifiedOverrideCases.test_stale_override_fails) ... ok
+test_an_unpinned_uses_line_anywhere_in_the_workflow_is_detected (test_license_policy.WorkflowCases.test_an_unpinned_uses_line_anywhere_in_the_workflow_is_detected) ... ok
+test_checkout_is_pinned_without_persisted_credentials (test_license_policy.WorkflowCases.test_checkout_is_pinned_without_persisted_credentials) ... ok
+test_committed_workflow_passes_strict_validator (test_license_policy.WorkflowCases.test_committed_workflow_passes_strict_validator) ... ok
+test_every_uses_line_is_pinned_to_a_full_sha (test_license_policy.WorkflowCases.test_every_uses_line_is_pinned_to_a_full_sha) ... ok
+test_runs_gate_on_ubuntu_with_timeout (test_license_policy.WorkflowCases.test_runs_gate_on_ubuntu_with_timeout) ... ok
+test_scope_and_value_matching_is_case_insensitive (test_license_policy.WorkflowCases.test_scope_and_value_matching_is_case_insensitive) ... ok
+test_continue_on_error_on_gate_step_is_flagged (test_license_policy.WorkflowMutationCases.test_continue_on_error_on_gate_step_is_flagged) ... ok
+test_dropping_canvas_lockfile_from_pull_request_only_is_flagged (test_license_policy.WorkflowMutationCases.test_dropping_canvas_lockfile_from_pull_request_only_is_flagged) ... ok
+test_dropping_canvas_lockfile_from_push_only_is_flagged (test_license_policy.WorkflowMutationCases.test_dropping_canvas_lockfile_from_push_only_is_flagged) ... ok
+test_dropping_checker_from_push_only_is_flagged (test_license_policy.WorkflowMutationCases.test_dropping_checker_from_push_only_is_flagged) ... ok
+test_dropping_exceptions_path_from_pull_request_is_flagged (test_license_policy.WorkflowMutationCases.test_dropping_exceptions_path_from_pull_request_is_flagged) ... ok
+test_extra_key_on_pull_request_trigger_is_flagged (test_license_policy.WorkflowMutationCases.test_extra_key_on_pull_request_trigger_is_flagged) ... ok
+test_extra_step_that_could_mask_failure_is_flagged (test_license_policy.WorkflowMutationCases.test_extra_step_that_could_mask_failure_is_flagged) ... ok
+test_extra_trigger_is_flagged (test_license_policy.WorkflowMutationCases.test_extra_trigger_is_flagged) ... ok
+test_if_condition_on_gate_step_is_flagged (test_license_policy.WorkflowMutationCases.test_if_condition_on_gate_step_is_flagged) ... ok
+test_mixed_case_contents_write_value_is_flagged (test_license_policy.WorkflowMutationCases.test_mixed_case_contents_write_value_is_flagged) ... ok
+test_mixed_case_write_scope_is_flagged (test_license_policy.WorkflowMutationCases.test_mixed_case_write_scope_is_flagged) ... ok
+test_or_true_on_gate_run_line_is_flagged (test_license_policy.WorkflowMutationCases.test_or_true_on_gate_run_line_is_flagged) ... ok
+test_paths_ignore_on_push_is_flagged (test_license_policy.WorkflowMutationCases.test_paths_ignore_on_push_is_flagged) ... ok
+test_pull_request_target_trigger_is_flagged (test_license_policy.WorkflowMutationCases.test_pull_request_target_trigger_is_flagged) ... ok
+test_run_line_with_extra_flag_is_flagged (test_license_policy.WorkflowMutationCases.test_run_line_with_extra_flag_is_flagged) ... ok
+test_secrets_reference_is_flagged (test_license_policy.WorkflowMutationCases.test_secrets_reference_is_flagged) ... ok
+test_unpinned_checkout_is_flagged (test_license_policy.WorkflowMutationCases.test_unpinned_checkout_is_flagged) ... ok
+test_baseline (test_requirements_acceptance.Acceptance.test_baseline) ... ok
+test_cli_unavailable_input (test_requirements_acceptance.Acceptance.test_cli_unavailable_input) ... ok
+test_duplicate_case (test_requirements_acceptance.Acceptance.test_duplicate_case) ... ok
+test_false_fixture_evidence_label (test_requirements_acceptance.Acceptance.test_false_fixture_evidence_label) ... ok
+test_interruption_has_no_success_report (test_requirements_acceptance.Acceptance.test_interruption_has_no_success_report) ... ok
+test_invalid_configuration (test_requirements_acceptance.Acceptance.test_invalid_configuration) ... ok
+test_malformed_nested_types_cli_controlled (test_requirements_acceptance.Acceptance.test_malformed_nested_types_cli_controlled) ... ok
+test_missing_mandatory_scope (test_requirements_acceptance.Acceptance.test_missing_mandatory_scope) ... ok
+test_review_mutations_and_objective_definitions (test_requirements_acceptance.Acceptance.test_review_mutations_and_objective_definitions) ... ok
+test_reviewed_case_fields_are_pinned (test_requirements_acceptance.Acceptance.test_reviewed_case_fields_are_pinned) ... ok
+test_unavailable_input (test_requirements_acceptance.Acceptance.test_unavailable_input) ... ok
+test_unknown_requirement (test_requirements_acceptance.Acceptance.test_unknown_requirement) ... ok
+test_wrong_traceability (test_requirements_acceptance.Acceptance.test_wrong_traceability) ... ok
+
+----------------------------------------------------------------------
+Ran 142 tests in 4.290s
+
+OK (skipped=8)
+
+===== A3b_validate_scratchcopy (7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7)
+{
+  "result": "pass",
+  "item_count": 471,
+  "native_relationships_expected": 457,
+  "dependencies_expected": 600,
+  "mvp_prerequisite_closure": 60,
+  "max_depth": 5,
+  "errors": [],
+  "longest_prerequisite_chain": [
+    "GB-T1.R1",
+    "GB-T1.S1",
+    "GB-T1.02.01.T1",
+    "GB-T1.02.01.V1",
+    "GB-T1.03.02.T1",
+    "GB-T1.03.02.V1",
+    "GB-T2.01.02.T1",
+    "GB-T2.01.02.V1",
+    "GB-T2.02.01.T1",
+    "GB-T2.02.01.V1",
+    "GB-T2.02.02.T1",
+    "GB-T2.02.02.V1",
+    "GB-T6.01.02.T1",
+    "GB-T6.01.02.V1",
+    "GB-T6.D1",
+    "GB-T6.G1",
+    "GB-T13.G3",
+    "GB-T13.04.01.O2"
+  ],
+  "critical_path_note": "Longest unweighted dependency chain, not a duration forecast. Parallel branches and role availability also constrain release."
+}
+
+===== B_analysis (c98176dc2ce2e3187d1bc36f448b27daea0d2863621fb3e888641e560d02045d)
+== package-lock.json entries 117 workspace/root paths 8 links 8 third_party 100 direct 5 transitive 95
+   license_counts {'MIT': 72, 'Apache-2.0': 13, 'BSD-2-Clause': 6, 'ISC': 5, 'BlueOak-1.0.0': 3, 'BSD-3-Clause': 1}
+   non-MIT: 28  missing license: 0  third-party without integrity: 0
+      {'path': 'node_modules/@eslint-community/eslint-utils/node_modules/eslint-visitor-keys', 'name': 'eslint-visitor-keys', 'version': '3.4.3', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@eslint/config-array', 'name': '@eslint/config-array', 'version': '0.23.6', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@eslint/config-helpers', 'name': '@eslint/config-helpers', 'version': '0.7.0', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@eslint/core', 'name': '@eslint/core', 'version': '1.2.1', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@eslint/object-schema', 'name': '@eslint/object-schema', 'version': '3.0.5', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@eslint/plugin-kit', 'name': '@eslint/plugin-kit', 'version': '0.7.3', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@humanfs/core', 'name': '@humanfs/core', 'version': '0.19.2', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@humanfs/node', 'name': '@humanfs/node', 'version': '0.16.8', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@humanfs/types', 'name': '@humanfs/types', 'version': '0.15.0', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@humanwhocodes/module-importer', 'name': '@humanwhocodes/module-importer', 'version': '1.0.1', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@humanwhocodes/retry', 'name': '@humanwhocodes/retry', 'version': '0.4.3', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@isaacs/nonrecursive-glob-match', 'name': '@isaacs/nonrecursive-glob-match', 'version': '1.1.0', 'license': 'BlueOak-1.0.0', 'direct': False}
+      {'path': 'node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch', 'name': 'minimatch', 'version': '11.0.1', 'license': 'BlueOak-1.0.0', 'direct': False}
+      {'path': 'node_modules/eslint-scope', 'name': 'eslint-scope', 'version': '9.1.2', 'license': 'BSD-2-Clause', 'direct': False}
+      {'path': 'node_modules/eslint-visitor-keys', 'name': 'eslint-visitor-keys', 'version': '5.0.1', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/espree', 'name': 'espree', 'version': '11.2.0', 'license': 'BSD-2-Clause', 'direct': False}
+      {'path': 'node_modules/esquery', 'name': 'esquery', 'version': '1.7.0', 'license': 'BSD-3-Clause', 'direct': False}
+      {'path': 'node_modules/esrecurse', 'name': 'esrecurse', 'version': '4.3.0', 'license': 'BSD-2-Clause', 'direct': False}
+      {'path': 'node_modules/estraverse', 'name': 'estraverse', 'version': '5.3.0', 'license': 'BSD-2-Clause', 'direct': False}
+      {'path': 'node_modules/esutils', 'name': 'esutils', 'version': '2.0.3', 'license': 'BSD-2-Clause', 'direct': False}
+      {'path': 'node_modules/flatted', 'name': 'flatted', 'version': '3.4.4', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/glob-parent', 'name': 'glob-parent', 'version': '6.0.2', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/isexe', 'name': 'isexe', 'version': '2.0.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/minimatch', 'name': 'minimatch', 'version': '11.0.8', 'license': 'BlueOak-1.0.0', 'direct': False}
+      {'path': 'node_modules/semver', 'name': 'semver', 'version': '7.8.6', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/typescript', 'name': 'typescript', 'version': '5.9.3', 'license': 'Apache-2.0', 'direct': True}
+      {'path': 'node_modules/uri-js', 'name': 'uri-js', 'version': '4.4.1', 'license': 'BSD-2-Clause', 'direct': False}
+      {'path': 'node_modules/which', 'name': 'which', 'version': '2.0.2', 'license': 'ISC', 'direct': False}
+== research-fixtures/canvas/package-lock.json entries 291 workspace/root paths 0 links 0 third_party 290 direct 5 transitive 285
+   license_counts {'MIT': 226, 'ISC': 38, 'Apache-2.0': 12, 'BSD-3-Clause': 7, '<missing>': 2, '(MPL-2.0 OR Apache-2.0)': 1, 'CC0-1.0': 1, '(MIT AND Zlib)': 1, 'Unlicense': 1, '0BSD': 1}
+   non-MIT: 62  missing license: 2  third-party without integrity: 0
+      {'path': 'node_modules/@chevrotain/cst-dts-gen', 'name': '@chevrotain/cst-dts-gen', 'version': '11.0.3', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@chevrotain/gast', 'name': '@chevrotain/gast', 'version': '11.0.3', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@chevrotain/regexp-to-ast', 'name': '@chevrotain/regexp-to-ast', 'version': '11.0.3', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@chevrotain/types', 'name': '@chevrotain/types', 'version': '11.0.3', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/@chevrotain/utils', 'name': '@chevrotain/utils', 'version': '11.0.3', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/anymatch', 'name': 'anymatch', 'version': '3.1.3', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/browser-fs-access', 'name': 'browser-fs-access', 'version': '0.29.1', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/chevrotain', 'name': 'chevrotain', 'version': '11.0.3', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/crc-32', 'name': 'crc-32', 'version': '0.3.0', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/d3', 'name': 'd3', 'version': '7.9.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-array', 'name': 'd3-array', 'version': '3.2.4', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-axis', 'name': 'd3-axis', 'version': '3.0.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-brush', 'name': 'd3-brush', 'version': '3.0.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-chord', 'name': 'd3-chord', 'version': '3.0.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-color', 'name': 'd3-color', 'version': '3.1.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-contour', 'name': 'd3-contour', 'version': '4.0.2', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-delaunay', 'name': 'd3-delaunay', 'version': '6.0.4', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-dispatch', 'name': 'd3-dispatch', 'version': '3.0.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-drag', 'name': 'd3-drag', 'version': '3.0.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-dsv', 'name': 'd3-dsv', 'version': '3.0.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-ease', 'name': 'd3-ease', 'version': '3.0.1', 'license': 'BSD-3-Clause', 'direct': False}
+      {'path': 'node_modules/d3-fetch', 'name': 'd3-fetch', 'version': '3.0.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-force', 'name': 'd3-force', 'version': '3.0.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-format', 'name': 'd3-format', 'version': '3.1.2', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-geo', 'name': 'd3-geo', 'version': '3.1.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-hierarchy', 'name': 'd3-hierarchy', 'version': '3.1.2', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-interpolate', 'name': 'd3-interpolate', 'version': '3.0.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-path', 'name': 'd3-path', 'version': '3.1.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-polygon', 'name': 'd3-polygon', 'version': '3.0.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-quadtree', 'name': 'd3-quadtree', 'version': '3.0.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-random', 'name': 'd3-random', 'version': '3.0.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-sankey', 'name': 'd3-sankey', 'version': '0.12.3', 'license': 'BSD-3-Clause', 'direct': False}
+      {'path': 'node_modules/d3-sankey/node_modules/d3-array', 'name': 'd3-array', 'version': '2.12.1', 'license': 'BSD-3-Clause', 'direct': False}
+      {'path': 'node_modules/d3-sankey/node_modules/d3-path', 'name': 'd3-path', 'version': '1.0.9', 'license': 'BSD-3-Clause', 'direct': False}
+      {'path': 'node_modules/d3-sankey/node_modules/d3-shape', 'name': 'd3-shape', 'version': '1.3.7', 'license': 'BSD-3-Clause', 'direct': False}
+      {'path': 'node_modules/d3-sankey/node_modules/internmap', 'name': 'internmap', 'version': '1.0.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-scale', 'name': 'd3-scale', 'version': '4.0.2', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-scale-chromatic', 'name': 'd3-scale-chromatic', 'version': '3.1.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-selection', 'name': 'd3-selection', 'version': '3.0.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-shape', 'name': 'd3-shape', 'version': '3.2.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-time', 'name': 'd3-time', 'version': '3.1.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-time-format', 'name': 'd3-time-format', 'version': '4.1.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-timer', 'name': 'd3-timer', 'version': '3.0.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-transition', 'name': 'd3-transition', 'version': '3.0.1', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/d3-zoom', 'name': 'd3-zoom', 'version': '3.0.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/delaunator', 'name': 'delaunator', 'version': '5.1.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/dompurify', 'name': 'dompurify', 'version': '3.4.17', 'license': '(MPL-2.0 OR Apache-2.0)', 'direct': False}
+      {'path': 'node_modules/fractional-indexing', 'name': 'fractional-indexing', 'version': '3.2.0', 'license': 'CC0-1.0', 'direct': False}
+      {'path': 'node_modules/glob-parent', 'name': 'glob-parent', 'version': '5.1.2', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/inherits', 'name': 'inherits', 'version': '2.0.4', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/internmap', 'name': 'internmap', 'version': '2.0.3', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/isexe', 'name': 'isexe', 'version': '2.0.0', 'license': 'ISC', 'direct': False}
+      {'path': 'node_modules/mermaid/node_modules/@chevrotain/types', 'name': '@chevrotain/types', 'version': '11.1.2', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/pako', 'name': 'pako', 'version': '2.0.3', 'license': '(MIT AND Zlib)', 'direct': False}
+      {'path': 'node_modules/playwright', 'name': 'playwright', 'version': '1.56.1', 'license': 'Apache-2.0', 'direct': True}
+      {'path': 'node_modules/playwright-core', 'name': 'playwright-core', 'version': '1.56.1', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/pwacompat', 'name': 'pwacompat', 'version': '2.0.17', 'license': 'Apache-2.0', 'direct': False}
+      {'path': 'node_modules/robust-predicates', 'name': 'robust-predicates', 'version': '3.0.3', 'license': 'Unlicense', 'direct': False}
+      {'path': 'node_modules/rw', 'name': 'rw', 'version': '1.3.3', 'license': 'BSD-3-Clause', 'direct': False}
+      {'path': 'node_modules/source-map-js', 'name': 'source-map-js', 'version': '1.2.2', 'license': 'BSD-3-Clause', 'direct': False}
+      {'path': 'node_modules/tslib', 'name': 'tslib', 'version': '2.8.1', 'license': '0BSD', 'direct': False}
+      {'path': 'node_modules/which', 'name': 'which', 'version': '2.0.2', 'license': 'ISC', 'direct': False}
+      MISSING {'path': 'node_modules/fuzzy', 'name': 'fuzzy', 'version': '0.1.3', 'direct': False}
+      MISSING {'path': 'node_modules/khroma', 'name': 'khroma', 'version': '2.1.0', 'direct': False}
+
+===== scenario_results.json
+[
+ {
+  "scenario": "S01_gpl3_plain",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "96afd7340bc4e82e36957da7b10d96f73ddae2e56fd7754f8867a333c9d77b57",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S02_gpl3_or_later",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "2c5d860d5e07ae009e2dc7bc7d01ae9683727b68a6eb8ba5d47671efb53afe97",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S03_gpl_with_exception_WITH",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "125c1340a3c9afb2212d3977676ce81e21107155e98c8c491100acbb85263248",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S04_exception_names_prohibited_GPL",
+  "expected_exit": [
+   2
+  ],
+  "actual_exit": 2,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "630843803b9d55444720e91289169b1e8f9b9ca91069a492342715234a88b9c7",
+  "output_head": "input error: exception #0 in out/scenarios/S04_exception_n"
+ },
+ {
+  "scenario": "S05_missing_license_no_override",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "3290ff633e29eab396d5878e24effbc4268bff57ebc340cb5329d5a55a6c836c",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S06_malformed_integrity",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "351786d0c59b92f377f71ffa225a3c485b8c5453c5bf9123a4487910505a1fc6",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S07_workspaces_node_modules_pattern",
+  "expected_exit": [
+   2
+  ],
+  "actual_exit": 2,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "e452ffe5ca349e09daa71e2002a0e617a40bb8119b4cc6e8733c9a64359b337e",
+  "output_head": "input error: unsafe workspaces pattern 'node_modules/*' in the root entry: node_modules, parent segments, absolute paths, backslashes and wildcard-only patterns are not allowed"
+ },
+ {
+  "scenario": "S08_nested_path_mit_positive",
+  "expected_exit": [
+   0
+  ],
+  "actual_exit": 0,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "eafa95bfece29998a7d974e25105d69a1cf15e35d9821a594479ea56ac268de2",
+  "output_head": "result: PASS (0 finding(s))"
+ },
+ {
+  "scenario": "S09_alias_name_gpl_real",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "9c1564a44c854c3fd4aca7360d1646ccf28e044eda75805bd2da4b299939a073",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S10_deep_nesting_license",
+  "expected_exit": [
+   1,
+   2
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "deep nested value; must not traceback",
+  "output_sha256": "dd3f6fdec78848cc9b08511ed423950b15bf2009446c0d3e26b26cad0236fab6",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S11_empty_packages_map",
+  "expected_exit": [
+   2
+  ],
+  "actual_exit": 2,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "cb685e1a104ebacaa7d1c0eb05bd6613a3bc8a47c61a44f12772dbfa02826b12",
+  "output_head": "input error: malformed lockfile (missing packages map): <verifier-scratch>/ou"
+ },
+ {
+  "scenario": "S12_missing_lockfile_path",
+  "expected_exit": [
+   2
+  ],
+  "actual_exit": 2,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "167f2d325ff8647c0b8a8567246e5dddfcc941c8d0a3d86df05adcda5c28c4e1",
+  "output_head": "input error: missing file: out/scenarios/S12_missing_lockf"
+ },
+ {
+  "scenario": "S13_stale_exception",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "5d7b64617815eb50f504696bf6b63fe59ffd58292bd91a24218018fe090e0717",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S14_stale_override_no_matching_pkg",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "2a9ed399bb3f79019d22da9f6e7444bf73c3269fc9006b6361dd3c213be2bd3a",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S15_mismatched_override_integrity",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "0721dc044131cc2605d3f6af0a75b5fad0fcda67b64291f04044a400ac735cb2",
+  "output_head": "result: FAIL (2 finding(s))"
+ },
+ {
+  "scenario": "S16_matching_override_positive",
+  "expected_exit": [
+   0
+  ],
+  "actual_exit": 0,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "5daea793ee7a306abeffb4f058135b1f43c1d291e28dc5bd37d6ba0ec521d1cf",
+  "output_head": "result: PASS (0 finding(s))"
+ },
+ {
+  "scenario": "S17_override_license_GPL_not_applied",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 2,
+  "traceback": false,
+  "match": false,
+  "note": "",
+  "output_sha256": "d1274a780476c04ae4b8bc6728af4d110be558537f3544a74b814c905333d2c4",
+  "output_head": "input error: verified_license_overrides #0 in out/scenario"
+ },
+ {
+  "scenario": "S18_review_exception_pinned_positive",
+  "expected_exit": [
+   0
+  ],
+  "actual_exit": 0,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "1ff9e00e3b502d6468d9d96e4766b5266581b0d0442bd0e1bf1ca0731d492bbb",
+  "output_head": "result: PASS (0 finding(s))"
+ },
+ {
+  "scenario": "S19_review_exception_wrong_version",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "9ea65efa27361537b26241b352dc1baeeb586ecc7e2ced7960a6f99920c31a3a",
+  "output_head": "result: FAIL (2 finding(s))"
+ },
+ {
+  "scenario": "S20_apache_mit_positive",
+  "expected_exit": [
+   0
+  ],
+  "actual_exit": 0,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "abe5bf70617ca70e3ad6c48d2030cba6c5593cd45df73d6b3afac36b83436411",
+  "output_head": "result: PASS (0 finding(s))"
+ },
+ {
+  "scenario": "S21_unknown_identifier_no_exception",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "942efb0d70dd2a1c30da0b29ef19573d6087a89d0c11294f57e41b0ae3fa74a0",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S22_lgpl_prohibited",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "f95f0d0233f82b05d8a9528cf75b93bca247c45037b08d2fee7ae0ac5ddbf087",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S23_lowercase_gpl_spelling",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "80707699a04eb9b252c2d2911254344aeb789e67c78d4bdb17c000511817ca7f",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S24_prohibited_in_nested_path",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "a478d3fa258e9b0fdb43d27eed70918a12553ea43fb6b8058bbf43dc94e00e6d",
+  "output_head": "result: FAIL (1 finding(s))"
+ },
+ {
+  "scenario": "S25_missing_integrity_third_party",
+  "expected_exit": [
+   1
+  ],
+  "actual_exit": 1,
+  "traceback": false,
+  "match": true,
+  "note": "",
+  "output_sha256": "8412be63a9ac24ad0a92adb7f746ae4219336babc8fe6b02ba491518f2866a46",
+  "output_head": "result: FAIL (1 finding(s))"
+ }
+]

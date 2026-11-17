@@ -102,7 +102,7 @@ Any distribution of a package (source, bundle, container image or release asset)
 
 ## Fonts, icons and imported assets
 
-No font, icon, image, sound or other third-party asset is adopted by this change. Before any such asset is added, record in the repository:
+No font, icon, image, sound or other third-party asset is adopted by this change. Independent verification (#17) found one existing raster image, `planning/audit/project-overview.jpg` (sha256 `19abbd313b087bb41d59b6e61c0b6a29925deb17b4320ed9d93559f3cc317b47`). Git history records it in commit `da81125` (2026-10-23, "Publish verified bootstrap report, CI evidence and Project screenshot"), so it is a first-party screenshot of the GitHub Project board. No separate license or source URL is recorded, no code references it, and owner confirmation that it is planning documentation only and not distributed is pending. No fonts, icons or icon-library loads were found. Before any such asset is added, record in the repository:
 
 - the asset name and version or revision;
 - the source URL and the date it was retrieved;
