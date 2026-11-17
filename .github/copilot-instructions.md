@@ -92,9 +92,10 @@ In all campaigns, independent reviewers must be fresh and qualified under
 the campaign's role, runtime and model policy. They must have no
 implementation role, make no writes and perform no delegation. Record reviewer identity,
 model/effort, full reviewed SHA, scope, findings, checks and limitations
-in a durable receipt. Required functional and security expertise, CODEOWNER
-approval and all other native approvals still apply. This guidance authorizes
-no additional spend or delegation.
+in a durable receipt. Apply the functional and security review requirements.
+Require CODEOWNER and other approvals when live GitHub protection or explicit
+campaign policy requires them. This guidance authorizes no additional spend
+or delegation.
 
 Maintain a findings ledger covering every inline and summary finding from applicable
 reviews, its disposition, remediation SHA and verification evidence, including
