@@ -55,6 +55,13 @@ alone grows 16.48 GiB/day before indexes, receipts, snapshots, binary logs and
 assets; at 8 hours/day it is 5.49 GiB/day. Do not size retention from socket count.
 T5 must quantify compaction and history needs before any storage purchase.
 
+The [#388 QE candidate](https://github.com/CompleteTech-DiscordApps/guildboard/issues/388)
+uses a separate representative load profile and latency budgets to design
+acceptance tests. The #356 profile sizes proposed pilot SLO evaluation. Both
+are planning inputs. Before shared adoption, SRE and QE must select or reconcile
+the workload and latency thresholds in the consuming specification and record
+which profile governs each gate.
+
 ## Proposed objectives and how to measure them
 
 The values below are engineering hypotheses chosen for an interactive drawing
