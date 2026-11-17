@@ -4,6 +4,8 @@ Status: policy and an offline lockfile gate. It is not legal clearance, not inde
 
 Gate: `python3 scripts/verification/check_licenses.py` (stdlib only; run from the repository root). Tests: `python3 -m unittest discover -s tests/verification -v`. Exceptions and verified license overrides: `docs/evidence/license-exceptions.json`.
 
+The [draft #482 source evidence](research/license-source-evidence.md) records artifact-specific findings for future adoption and distribution review.
+
 ## Scope
 
 The policy applies to every third-party package recorded in a lockfile the project commits, to fonts, icons and imported assets, and to notices shipped with any distribution. First-party workspace entries are excluded from license classification (see Install paths, workspaces and aliases). The gate reads `package-lock.json` and `research-fixtures/canvas/package-lock.json` by default. It does not read installed package files, so declared SPDX metadata is trusted only as far as the lockfile states it.
