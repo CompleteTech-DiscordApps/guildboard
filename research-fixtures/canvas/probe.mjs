@@ -1,6 +1,7 @@
 // Local fixture only. No Discord, server authorization or production claims.
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
+import {probeHydration} from './hydration-probe.mjs';
 import {browserLaunchOptions, isFixtureNetworkRequest, startFixtureServer} from './fixture-runtime.mjs';
 
 const server = await startFixtureServer(process.cwd());
@@ -81,9 +82,10 @@ try {
   await page.keyboard.press('Control+z');
   await page.waitForFunction(() => window.editor.getSceneElements().length === 1);
   assert.deepEqual(await page.evaluate(() => window.editor.getSceneElements().map(element => element.id)), ['remote-baseline']);
+  const hydration = await probeHydration(page, frame);
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({
-    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks,
+    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks, hydration,
     checks: ['remote ID preserved', 'NEVER remote baseline survives local undo',
       'view-mode Delete with selected content leaves scene unchanged',
       'view-mode undo with retained local history leaves scene unchanged',

@@ -144,3 +144,59 @@ The accepted T0 direction in [ADR 0001](../adr/0001-editor-activity-vps-directio
 ### Sandbox-capable runner follow-through, 2026-11-16
 
 [The Ubuntu 24.04 successor run](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/43972072293) on `e266879ce55f7205d7ecbf17c1177b9184471557` installed managed Chromium and passed unit tests, full audit and bundle build, then failed browser launch with `No usable sandbox`. Its network controls were skipped. The job now uses `ubuntu-22.04`, listed by [GitHub's runner images](https://github.com/actions/runner-images#available-images) and the pinned Playwright platform classifier. This is a supported runner choice: it adds no privileged steps, AppArmor/sysctl changes, custom browser flags or sandbox bypass. `chromiumSandbox: true` remains required. A successful native successor run must establish actual launch and probe results; neither failed run establishes browser behavior. The successor-run outcome is recorded in the [Isolated Linux CI prerequisite, 2026-11-16](#isolated-linux-ci-prerequisite-2026-11-16) section above.
+
+## Hydration echo experiment, 2026-11-17
+
+The fixture adds a bounded comparison for synthetic rectangle scenes. The
+browser probe registers an in-memory observer on the real Excalidraw 0.18.1
+`onChange` callback, records an accepted projection before each
+`updateScene` with `CaptureUpdateAction.NEVER`, and exercises an initial
+snapshot, a replay with freshly converted objects, and a changed snapshot.
+Each includes an explicit tombstone. The probe asserts the expected element
+IDs, geometry and deletion flags after hydration and zero candidate writes.
+A pointer-drawn rectangle is the positive control for a candidate observation.
+The fixture counts candidates in memory and sends no mutations. The accepted
+snapshots are synthetic, with no backing server, permissions or revisions.
+
+From `research-fixtures/canvas`, run `npm ci --ignore-scripts --no-audit`,
+`npm test`, `CHROMIUM_PATH=/usr/bin/chromium npm run probe` and
+`CHROMIUM_PATH=/usr/bin/chromium npm run probe:network` for the Linux run.
+Omit `CHROMIUM_PATH` when using provisioned Playwright Chromium.
+
+On Arch Linux with Node 26.13.0, npm 11.20.0, Playwright 1.56.1 and
+sandbox-enabled Chromium 155.0.8059.84, the build and editor probe passed.
+Initial, replayed and changed hydration each delivered one real callback and
+zero in-memory candidates, preserving the two IDs, geometry and tombstone.
+The pointer gesture added a rectangle and delivered nine callbacks and six
+candidate observations in this run. Candidate counts can vary during drawing
+and require aggregation before they can represent a gesture. The earlier six
+editor checks and four isolated network controls also passed. The editor
+probe reported zero blocked requests and no page errors. The historical aggregate keeps the source hashes and results
+for its earlier runs.
+
+All three new unit tests passed. The full fixture suite passed 15 of 17 tests
+on this host, including when run serially with Node 24.18.0. Two existing
+lodash-es dependency probes hit their three-second timeouts. Running the
+unmodified base revision's dependency test file with the same locked
+dependencies reproduced both timeouts. Planning validation and JavaScript
+syntax checks passed.
+
+The observer compares a projection of IDs, scene order, type, rectangle
+geometry and deletion flags with the current accepted and most recently
+observed projections. Node tests use synthetic observations to check
+duplicate suppression and demonstrate two limits: removing or reviving a
+tombstone changes the projection, and a delayed older callback yields a
+candidate after a newer accepted scene has been observed. Candidate detection
+can only justify further validation. The experiment omits bindings, text,
+styles, assets and any other element types, and does not model interleaved local
+and remote state, stale or reordered hydration, rollback, or accepted-intent
+undo.
+
+For #99, the contract should require a revision and restore-epoch fence on
+accepted hydration, explicit local intent, and server validation before any
+mutation. Research still needs to establish callback behavior during rejected
+optimistic edits, revocation, reconnect and concurrent overwrites. Collect
+Discord iframe/proxy behavior in supported clients, screen-reader and
+touch/stylus results with actual assistive technology and hardware, and
+applicable GoDaddy staging evidence separately. The partial fixture provides
+no external acceptance. #98 remains open and #99 remains blocked.
