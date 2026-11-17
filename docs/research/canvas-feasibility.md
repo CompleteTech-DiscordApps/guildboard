@@ -269,3 +269,28 @@ It leaves rendered pixels, serialized export/import, validation of malformed
 or oversized content, private asset authorization, and Discord/VPS delivery
 unverified. For #99, treat asset references and file data as distinct contract
 inputs and define the outcome when the reference cannot be resolved.
+
+## Compound note projection and rollback, 2026-11-17
+
+From `research-fixtures/canvas` with a built bundle and locked dependencies,
+run `CHROMIUM_PATH=/usr/bin/chromium node probe.mjs`. Use a writable local
+`TMPDIR` if the default temporary volume is over quota.
+
+The fixture converts a synthetic rectangle and text element with distinct IDs,
+gives them the same group ID, and stages both in one `updateScene` call with
+`CaptureUpdateAction.NEVER`. After a simulated denial, it replaces the scene
+with the earlier accepted snapshot in another `NEVER` update. Assertions
+require the staging callback to include both live members with the shared
+group ID, the rollback callback to include neither member, and the final
+scene to match the accepted snapshot. The probe checks each observed callback
+within the fixture's two-frame window after each update.
+
+On Arch Linux with Node 26.13.0, Playwright 1.56.1, Excalidraw 0.18.1
+and sandbox-enabled Chromium 155.0.8059.84, the probe observed one staging
+callback with both members, one rollback callback with neither member,
+and zero partial callbacks. The accepted snapshot matched after rollback.
+This exercises grouping and scene projection in a local browser. The denial is injected by the fixture. The result leaves actual
+moderation, database atomicity, concurrent edits, bound-text behavior and
+client delivery unverified. For #99, use stable member IDs and define a
+single operation with server-side validation of every member before
+publishing or rolling back a compound change.

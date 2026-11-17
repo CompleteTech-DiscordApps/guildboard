@@ -1,6 +1,7 @@
 // Local fixture only. No Discord, server authorization or production claims.
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
+import {probeCompound} from './compound-probe.mjs';
 import {probeAsset} from './asset-probe.mjs';
 import {probeHydration} from './hydration-probe.mjs';
 import {browserLaunchOptions, isFixtureNetworkRequest, startFixtureServer} from './fixture-runtime.mjs';
@@ -113,10 +114,11 @@ try {
   await page.waitForFunction(id => !window.editor.getSceneElements().some(element => element.id === id), keyboardEdit);
   keyboardControl.shortcutUndidEdit = true;
   const assets = await probeAsset(page, frame);
+  const compound = await probeCompound(page, frame);
   assert.deepEqual(blockedRequests, []);
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({
-    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks, hydration, keyboardControl, assets,
+    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks, hydration, keyboardControl, assets, compound,
     checks: ['remote ID preserved', 'NEVER remote baseline survives local undo',
       'view-mode Delete with selected content leaves scene unchanged',
       'view-mode undo with retained local history leaves scene unchanged',
