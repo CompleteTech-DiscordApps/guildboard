@@ -1,10 +1,17 @@
 """GitHub transport. Uses gh keyring authentication; never logs credentials."""
-import json, subprocess, time, pathlib, datetime
+import json, subprocess, time, pathlib, datetime, re
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 STATE=ROOT/'planning/github-state.json'
+TRANSFERRED_REPOSITORY = 'CompleteDotTech/guildboard'
+TRANSFERRED_REPOSITORY_LINK = re.compile(
+ r'https://github\.com/' + re.escape(TRANSFERRED_REPOSITORY) + r'(?=[/?#)\s]|$)',
+ re.IGNORECASE,
+)
 def save(path,data):
  path=pathlib.Path(path); tmp=path.with_suffix(path.suffix+'.tmp');tmp.write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n');tmp.replace(path)
-def api(path,method='GET',data=None):
+def api(path,method='GET',data=None,*,quiet_get=False):
+ if quiet_get and (method != 'GET' or data is not None):
+  raise ValueError('quiet transport only supports GET without a body')
  if method!='GET' and path.startswith('repos/Pick-Your-AI/'):
   raise RuntimeError('Reference organization is read-only in this bootstrap')
  if path=='graphql' and data and 'mutation' in data.get('query','') and 'PVT_kwDOFHg4Xc4BnUon' in json.dumps(data) and 'copyProjectV2' not in data.get('query',''):
@@ -23,6 +30,9 @@ def api(path,method='GET',data=None):
    result=json.loads(payload) if payload.strip() else {}
    if not isinstance(result,dict) or not result.get('errors'): return result
   else: result={'stderr':p.stderr,'response':payload,'rate':{k:response_headers.get(k) for k in ['retry-after','x-ratelimit-remaining','x-ratelimit-reset']}}
+  if quiet_get:
+   # A preview must leave no local trace or reveal the failed response.
+   raise RuntimeError('GitHub issue read failed')
   (ROOT/'planning/audit/failures.jsonl').open('a').write(json.dumps({'time':datetime.datetime.now(datetime.timezone.utc).isoformat(),'endpoint':path,'method':method,'error':result})+'\n')
   retryable=any(t in json.dumps(result).lower() for t in ['rate limit','secondary','502','503','timeout'])
   read_query=path=='graphql' and data and data.get('query','').lstrip().startswith('query')
@@ -38,6 +48,16 @@ def api(path,method='GET',data=None):
    time.sleep(delay);continue
   raise RuntimeError(json.dumps(result))
  raise RuntimeError('GitHub retry budget exhausted')
+def issue_url(number, repo):
+ """Build the issue URL from its number and repository identity."""
+ return f'https://github.com/{repo}/issues/{number}'
+
+def canonicalize_transferred_links(text, repo):
+ return TRANSFERRED_REPOSITORY_LINK.sub(f'https://github.com/{repo}', text)
+
+def issue_mapping(issue, repo):
+ return {'number': issue['number'], 'url': issue_url(issue['number'], repo), 'id': issue['node_id']}
+
 def gql(query,**variables):return api('graphql','POST',{'query':query,'variables':variables})['data']
 FIELD_FRAGMENT='... on ProjectV2Field{id name dataType} ... on ProjectV2SingleSelectField{id name dataType options{id name color description}}'
 def project():
