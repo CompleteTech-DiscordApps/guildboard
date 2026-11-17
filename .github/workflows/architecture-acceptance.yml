@@ -1,0 +1,30 @@
+name: Architecture acceptance
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      # github.sha is the PR merge commit for pull_request events, and the
+      # pushed commit for push events. Both checkout and reporting use it.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: 8f75fdb398dfb48d577135ee08f295a4c4f634b6
+          path: first-install
+          persist-credentials: false
+      - name: Run offline structural acceptance
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          REVISION: ${{ github.sha }}
+          RUNNER_SCRATCH: ${{ runner.temp }}
+        run: python3 -B candidate/scripts/verification/verify_architecture_controls.py --base "$GITHUB_WORKSPACE/first-install" --tmp "$RUNNER_SCRATCH" --revision "$REVISION"

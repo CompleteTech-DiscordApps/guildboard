@@ -1,0 +1,179 @@
+{
+  "id": "GB-T0.01.02.T1",
+  "status": "declarative-not-executed",
+  "contract": "../GB-T0-S1-system-contract.md",
+  "contract_fixtures": "GB-T0-S1-scenarios.json",
+  "use_cases": "../../requirements/fixtures/GB-T0-01-01-use-cases.json",
+  "architecture": "../../architecture.md",
+  "note": "Review scenarios, not wire payloads or executed product tests. Canonical contract controls semantics.",
+  "scenarios": [
+    {
+      "id": "I01",
+      "contract_scenarios": [
+        "F01"
+      ],
+      "use_cases": [
+        "UC01"
+      ],
+      "interaction": "Session and join",
+      "expected": "Verified session joins a scoped board; accepted edit commits before ACK."
+    },
+    {
+      "id": "I02",
+      "contract_scenarios": [
+        "F02"
+      ],
+      "use_cases": [
+        "UC05"
+      ],
+      "interaction": "Wrong tenant",
+      "expected": "HTTP, WSS and bot foreign selectors are denied with no protected disclosure or mutation."
+    },
+    {
+      "id": "I03",
+      "contract_scenarios": [
+        "F03"
+      ],
+      "use_cases": [
+        "UC04"
+      ],
+      "interaction": "Viewer",
+      "expected": "HTTP, WSS and bot forged writes are denied without revision or event."
+    },
+    {
+      "id": "I04",
+      "contract_scenarios": [
+        "F27",
+        "F28"
+      ],
+      "use_cases": [
+        "UC08"
+      ],
+      "interaction": "Session expiry",
+      "expected": "Expired or revoked session denies new commands and queued protected delivery on HTTP, WSS and bot."
+    },
+    {
+      "id": "I05",
+      "contract_scenarios": [
+        "F23",
+        "F25",
+        "F26",
+        "F31",
+        "F36"
+      ],
+      "use_cases": [
+        "UC09"
+      ],
+      "interaction": "Read revocation",
+      "expected": "Revoke ordered before release suppresses live, replay, snapshot, receipt and ACK; a prior commit remains durable on HTTP, WSS and bot."
+    },
+    {
+      "id": "I06",
+      "contract_scenarios": [
+        "F05",
+        "F06"
+      ],
+      "use_cases": [
+        "UC10"
+      ],
+      "interaction": "Write and lost ACK",
+      "expected": "Rollback before commit yields no accepted ACK; after possible commit keep outcome unknown and retry identical operation."
+    },
+    {
+      "id": "I07",
+      "contract_scenarios": [
+        "F17"
+      ],
+      "use_cases": [
+        "UC10"
+      ],
+      "interaction": "Read-only historical lookup",
+      "expected": "A matching receipt may be returned with current read access after write authority is lost; no new write."
+    },
+    {
+      "id": "I08",
+      "contract_scenarios": [
+        "F18",
+        "F19",
+        "F22"
+      ],
+      "use_cases": [
+        "UC11"
+      ],
+      "interaction": "Restore lineage",
+      "expected": "Retained historical receipt settles original acceptance only, never replays or saves restored state; missing old receipt rejects old intent."
+    },
+    {
+      "id": "I09",
+      "contract_scenarios": [
+        "F10"
+      ],
+      "use_cases": [],
+      "interaction": "Interrupted snapshot",
+      "expected": "A partial snapshot is not promoted; reauthorize and recover."
+    },
+    {
+      "id": "I10",
+      "contract_scenarios": [
+        "F15"
+      ],
+      "use_cases": [],
+      "interaction": "Upload interruption",
+      "expected": "Quarantine incomplete upload; no finalized asset or false saved state."
+    },
+    {
+      "id": "I11",
+      "contract_scenarios": [
+        "F12",
+        "F29"
+      ],
+      "use_cases": [
+        "UC06"
+      ],
+      "interaction": "Unavailable trusted prerequisite",
+      "expected": "Stale or missing membership, policy or trusted time fails closed for write and protected release."
+    },
+    {
+      "id": "I12",
+      "contract_scenarios": [
+        "F13"
+      ],
+      "use_cases": [],
+      "interaction": "Invalid configuration",
+      "expected": "Prevent startup or affected capability without secret disclosure."
+    },
+    {
+      "id": "I13",
+      "contract_scenarios": [
+        "F04",
+        "F16"
+      ],
+      "use_cases": [
+        "UC07"
+      ],
+      "interaction": "Moderation fence",
+      "expected": "Verified bot moderation uses shared command service and the same serialized policy fence as Activity commands."
+    },
+    {
+      "id": "I14",
+      "contract_scenarios": [
+        "F07",
+        "F21",
+        "F32"
+      ],
+      "use_cases": [],
+      "interaction": "Receipt conflict",
+      "expected": "Digest conflict is released only with current read authority and creates no mutation."
+    },
+    {
+      "id": "I15",
+      "contract_scenarios": [
+        "F24",
+        "F33"
+      ],
+      "use_cases": [],
+      "interaction": "Release first",
+      "expected": "A release ordered before revocation may complete; already emitted bytes cannot be recalled."
+    }
+  ]
+}
