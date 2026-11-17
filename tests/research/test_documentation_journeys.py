@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import importlib.util
 import io
 import json
@@ -19,20 +20,40 @@ spec.loader.exec_module(module)
 
 class JourneyAuditTests(unittest.TestCase):
     def setUp(self):
-        self.manifest = json.loads((ROOT / 'docs/research/documentation-journeys.json').read_text())
+        manifest_path = Path('docs/research/documentation-journeys.json')
+        self.manifest = json.loads((ROOT / manifest_path).read_text())
+        self.source_paths = {item['path'] for journey in self.manifest['journeys']
+                             for step in journey['steps'] for item in step['evidence']}
+        snapshot = tempfile.TemporaryDirectory()
+        self.addCleanup(snapshot.cleanup)
+        self.snapshot = Path(snapshot.name)
+        # Historical source bytes are verified separately against the pinned Git tree.
+        # Unit tests exercise the same manifest shape with deterministic local content.
+        digests = {}
+        for relative in self.source_paths:
+            content = f'synthetic journey evidence for {relative}\n'.encode()
+            source = self.snapshot / relative
+            self.assertTrue(source.resolve().is_relative_to(self.snapshot.resolve()), relative)
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_bytes(content)
+            digests[relative] = hashlib.sha256(content).hexdigest()
+        for journey in self.manifest['journeys']:
+            for step in journey['steps']:
+                for item in step['evidence']:
+                    item['sha256'] = digests[item['path']]
+        target = self.snapshot / manifest_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(self.manifest))
 
     def check_error(self, fragment):
-        errors, _ = module.audit(ROOT, self.manifest)
+        errors, _ = module.audit(self.snapshot, self.manifest)
         self.assertTrue(any(fragment in x for x in errors), errors)
 
     def write_snapshot(self, root, manifest):
-        original = json.loads((ROOT / 'docs/research/documentation-journeys.json').read_text())
-        sources = {item['path'] for journey in original['journeys']
-                   for step in journey['steps'] for item in step['evidence']}
-        for relative in sources:
+        for relative in self.source_paths:
             target = root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / relative, target)
+            shutil.copyfile(self.snapshot / relative, target)
         target = root / 'docs/research/documentation-journeys.json'
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(manifest))
@@ -50,11 +71,14 @@ class JourneyAuditTests(unittest.TestCase):
         self.assertEqual(result.stderr, '')
         return report
 
-    def test_real_snapshot(self):
-        errors, counts = module.audit(ROOT, self.manifest)
+    def test_complete_snapshot(self):
+        errors, counts = module.audit(self.snapshot, self.manifest)
         self.assertEqual(errors, [])
-        self.assertEqual(sum(counts.values()), 12)
-        self.assertGreater(counts['blocked'], 0)  # valid research does not mean usable journeys
+        self.assertEqual(counts, {'documented': 1, 'partial': 3, 'blocked': 8})
+        report = self.run_cli(self.snapshot)
+        self.assertEqual(report.returncode, 0, report.stderr)
+        self.assertEqual(json.loads(report.stdout), {'evidence_valid': True, 'step_counts': counts,
+                                                     'errors': [], 'product_verified': False})
 
     def test_boolean_schema_tag_is_not_version_one(self):
         self.manifest['schema_version'] = True
@@ -93,7 +117,7 @@ class JourneyAuditTests(unittest.TestCase):
     def test_symlink_escape(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            (root / 'escape').symlink_to(ROOT / 'README.md')
+            (root / 'escape').symlink_to(self.snapshot / 'README.md')
             self.manifest['journeys'][0]['steps'][0]['evidence'][0]['path'] = 'escape'
             errors, _ = module.audit(root, self.manifest)
             self.assertIn('evidence path escapes repository', errors)
@@ -109,7 +133,7 @@ class JourneyAuditTests(unittest.TestCase):
 
     def test_unrelated_internal_runtime_error_is_not_suppressed(self):
         output = io.StringIO()
-        with patch.object(sys, 'argv', ['audit', '--root', str(ROOT)]), \
+        with patch.object(sys, 'argv', ['audit', '--root', str(self.snapshot)]), \
                 patch.object(module.hashlib, 'sha256', side_effect=RuntimeError('internal bug')), \
                 redirect_stdout(output):
             with self.assertRaisesRegex(RuntimeError, 'internal bug'):
@@ -127,7 +151,7 @@ class JourneyAuditTests(unittest.TestCase):
         for manifest in (None, [], {}, {'schema_version': 2}, {'schema_version': 1, 'journeys': None},
                          {'schema_version': 1, 'journeys': [None, {'persona': [], 'steps': [None]}]}):
             with self.subTest(manifest=manifest):
-                errors, _ = module.audit(ROOT, manifest)
+                errors, _ = module.audit(self.snapshot, manifest)
                 self.assertTrue(errors)
 
     def test_unknown_state(self):

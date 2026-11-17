@@ -32,3 +32,12 @@ including the unchanged escape-link test and an unrelated internal-error control
 All 17 dated source hashes, the manifest/report and T13 workstream remain byte-
 preserved. Windows symlink validation remains unavailable due to the reported OS
 privilege limit; no Windows symlink pass or product verification is claimed.
+
+## Current reproduction
+
+The October record and follow-up above describe their original revisions.
+For current-base findings and the Git archive command that verifies the unchanged
+historical manifest, see the [T13 research handoff](../workstreams/T13.md#gb-t13r1-documentation-journey-research-2026-11-17).
+The auditor's default root is the current checkout, where the historical hashes
+expose drift. The focused unit suite uses deterministic synthetic source bytes
+so ordinary test discovery needs no Git history.
