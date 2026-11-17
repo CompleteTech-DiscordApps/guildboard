@@ -1,11 +1,10 @@
 {
-  "coverage": "Synthetic G1 evidence and publication examples. Required evidence models only a selected Discord startup row. No gate approval or live evidence is represented.",
-  "candidate": {
+  "coverage": "Synthetic G1 publication examples with one modeled Discord startup evidence row, maintainer decisions and public receipts.",
+  "manifest": {
     "schemaVersion": "1.0.0",
     "version": "0.1.0-mvp.1",
     "gate": "GB-T13.G1",
     "revision": "1111111111111111111111111111111111111111",
-    "artifactSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "notesRef": "synthetic/release-notes.md",
     "evidence": [
       {
@@ -18,13 +17,20 @@
         "result": "pass",
         "ref": "synthetic/discord-startup.json"
       }
-    ]
+    ],
+    "provenanceRef": "synthetic/build-provenance.json"
   },
-  "prior": {
-    "version": "0.1.0-mvp.0",
-    "revision": "2222222222222222222222222222222222222222",
-    "artifactSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  "files": {
+    "dist/operator.txt": "synthetic operator instructions\n",
+    "dist/client.js": "synthetic client bytes\n"
   },
+  "notes": "Synthetic release notes\n",
+  "approval": {
+    "schemaVersion": "1.0.0",
+    "decision": "approved"
+  },
+  "priorVersion": "0.1.0-mvp.0",
+  "otherRevision": "2222222222222222222222222222222222222222",
   "scenarios": [
     {"id": "accepted-evidence", "expected": "PUBLISHED", "current": "candidate"},
     {"id": "malformed-version", "candidatePatch": {"version": "0.01.0"}, "expected": "INVALID_METADATA", "current": "prior"},

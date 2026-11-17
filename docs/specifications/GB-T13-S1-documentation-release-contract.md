@@ -78,7 +78,7 @@ Unknown fields, duplicate JSON keys or record IDs, malformed versions and
 digests, unsafe pointers and oversized values are invalid. Limit the manifest to 512 KiB of UTF-8 JSON and at most
 128 evidence entries. Strings have at most 256 characters.
 Use nonempty repository-relative paths without traversal, or canonical
-repository issue, PR, run or commit links without credentials, query or
+repository issue, PR, run, commit or release links without credentials, query or
 fragment. Digests are lowercase SHA-256 hex and source revisions are full
 lowercase Git SHAs in the repository's current SHA-1 format. Date values
 use ISO calendar dates in UTC. Keep free-text findings in reviewed,
@@ -88,7 +88,25 @@ redacted source documents referenced by the record.
 | --- | --- |
 | Guide entry | `issue`, `path`, `ownerRole`, `audience` (contributor, administrator, moderator, end-user or operator), `revision`, `claimStatus`, `evidenceIds`. For unresolved claims, require `followUpIssue` (stable GB ID). Evidence IDs resolve uniquely in the handoff. |
 | Evidence entry | `id` (lowercase letters, digits and hyphens, starting with a letter), `issue`, `revision`, `date`, `environment`, `level`, `result` (pass, fail or blocked), `ref`. Issue is a canonical stable GB ID. A ref resolves to the actual redacted run, command, review or comparison, including its scope, environment and limitations. |
-| Candidate manifest | `schemaVersion` (this contract version), `version` (SemVer), `gate` (GB-T13.G1, GB-T13.G2 or GB-T13.G3), `revision`, `artifactSha256`, `notesRef`, `evidence`. The reviewed manifest and notes identify the same artifact, version and revision. Full provenance includes build inputs, reproducible build instructions and digests of distributed files. |
+| Candidate manifest | `schemaVersion` (this contract version), `version` (SemVer), `gate` (GB-T13.G1, GB-T13.G2 or GB-T13.G3), `revision`, `artifactSha256`, `notesRef`, `notesSha256`, `provenanceRef`, `evidence`. The reviewed manifest and notes identify the same artifact, version and revision. Provenance records the source revision, build inputs, reproducible build instructions and checksum index. |
+| Candidate identity | `version`, `revision`, `artifactSha256`, `manifestSha256`, `notesSha256`. The publisher derives these fields from the staged bytes. An identity supplied by a caller is valid only when all fields match the derived identity. |
+| Gate approval | `schemaVersion`, `gate`, `identity` (candidate identity), `decision` (`approved`), `decisionRef`, `provenanceRef`. The decision ref resolves to the authoritative maintainer decision under repository governance. Verify who made the decision, their authority for the named gate, the current applicability and outcome of the decision, and all identity fields. Gate and provenance must agree with the candidate manifest. |
+| Public publication receipt | `schemaVersion`, `identity`, `gate`, `decisionRef`, `provenanceRef`, `tagRef`, `releaseRef`. Store the full candidate identity and the gate, decision and provenance references from the verified approval. `tagRef` is a fully qualified Git tag ref in this repository resolving to `identity.revision`. `releaseRef` is the canonical repository release link for that tag, resolving to the complete publication. Verify the tag target and the release bytes through authoritative readback. |
+
+The artifact digest is SHA-256 of the UTF-8 checksum index, including for a
+single distributed file. For every file in the distributed payload, record
+the lowercase SHA-256 of its exact bytes, two ASCII spaces, the file's
+repository-relative distribution path and one LF. Use the safe path grammar
+(ASCII letters, digits, underscores, hyphens and dots, with each slash-separated
+component starting with a letter, digit, underscore or hyphen). Sort by path
+in ascending byte order and require one entry per file with no extra entries.
+Verify the index against the complete delivered payload. The index excludes
+itself, the candidate manifest, the release notes and the publication receipt.
+`manifestSha256` and `notesSha256` hash their exact finalized byte streams.
+The manifest records the notes digest and artifact digest. The manifest carries no manifest digest and the notes carry neither a notes
+nor a manifest digest.
+Compute the manifest digest after finalizing the notes and manifest. The
+approval and receipt can then bind all three digests without circular hashes.
 
 Evidence levels are `static`, `synthetic`, `integration`, `independent-review`,
 `real-discord` and `real-godaddy`. Environment identifies the toolchain or
@@ -109,26 +127,43 @@ acceptance records while grounding release claims in current evidence.
 | [GB-T13.G2 #457][production] | Record dated actual GoDaddy Linux VPS HTTPS/WSS and Discord networking, monitoring, rollback and smoke checks. Link isolated restore of database and assets with measured RPO/RTO and record environment and unresolved findings. |
 | [GB-T13.G3 #472][stable] | Require all native Tier gates, G1/G2, applicable T13 verification, MVP publication and D1. Link full integration, production acceptance, functionality including modes/moderation/import/export/accessibility/recovery, resolved independent security findings, reviewed versioned artifacts, notes and support documentation. Gate approval and [stable publication #473][stable-publication] each have their own evidence record. |
 
-An authorized maintainer accepts the candidate after native prerequisites,
-repository checks and applicable independent and consuming reviews. Before
-any publication, prepare candidate bytes, verify digests and notes, and
-record a reviewed immutable candidate identity and expected previous
-publication. Each identity contains `version`, `revision` and `artifactSha256`.
-Represent the expected prior identity as null only for a first publication. A commit point must make a complete candidate discoverable.
-A consumer sees either the complete prior publication or the complete
-accepted candidate. Require a compare against the expected prior state so a
-competing publisher cannot overwrite a newer publication. Read back and
-verify the exact public identity and digests before reporting success. A
-publication adapter must demonstrate these properties in its own
-verification before use.
+An authorized maintainer accepts the exact candidate after native prerequisites,
+repository checks and applicable independent and consuming reviews. Stage the
+complete bytes privately and verify their identity, provenance and gate approval.
+Before a new publication, record the expected prior identity, using null only
+when no publication exists.
+
+The commit point must atomically check version history and the expected prior
+identity, reserve the candidate version permanently, and make the complete
+candidate and its receipt discoverable. Key the version reservation by the
+full released SemVer string. Any existing reservation for that version with a
+different candidate identity fails, whether current or historical and
+regardless of the expected prior identity. An existing reservation with the
+exact identity is a read-only retry. It requires verified readback and never
+advances or rolls back the current pointer, even when a newer publication is
+current. For an unused version, compare against the expected prior identity
+before publishing. Readers see either the complete prior publication or the
+complete accepted candidate with its receipt.
+
+Before reporting success, read the authoritative current pointer and version
+record, retrieve the published files, manifest and notes, recompute their
+identity, and verify the receipt and the resolved tag and release references.
+Require agreement across the verified approval, receipt, resolved source
+revision and recomputed identity. When the version is current, its pointer
+must agree with that same version record. For a historical retry or lost
+acknowledgment, require the same authoritative publication and receipt checks
+without changing the current pointer. A publication adapter must demonstrate
+these properties in its own verification before use.
 
 | Outcome | Publication requirement |
 | --- | --- |
-| `INVALID_METADATA` | Reject mismatched identity, malformed input, privacy violations or invalid digests. Preserve prior publication and return a safe field name or category. |
-| `PREREQUISITE_UNAVAILABLE` | Keep pending with the missing issue or evidence category when a prerequisite is missing, failed, stale, of insufficient level or unverifiable. Preserve prior publication. |
+| `INVALID_METADATA` | Reject malformed input, mismatched staged identity, privacy violations or invalid digests. Preserve prior publication and return a safe field name or category. |
+| `PREREQUISITE_UNAVAILABLE` | Keep pending with the missing issue or evidence category when a prerequisite or approval is missing, failed, stale, of insufficient level, for a different candidate, or unverifiable. Preserve prior publication. |
+| `VERSION_CONFLICT` | Reject any different identity for a reserved version, before applying the prior-state comparison. Preserve all publications and the current pointer. |
+| `ALREADY_PUBLISHED` | Return the verified receipt for the exact version and candidate identity as a read-only result, even when a different version is current. |
 | `PUBLICATION_INTERRUPTED` | Interruption before commit preserves the complete prior publication. Keep staging private and retry using the same candidate identity after rechecking prerequisites and prior state. |
-| `PUBLICATION_UNKNOWN` | If interrupted after a possible commit, reconcile authoritative state before reporting success or retrying. The candidate visible with matching digests is evidence of commit. If the prior publication remains current, retry conditionally after verification. A different current publication requires a new decision. |
-| `PREVIOUS_PUBLICATION_CHANGED` | Preserve the observed publication. Replan against the authoritative current state with maintainer review. |
+| `PUBLICATION_UNKNOWN` | Reconcile against authoritative readback after a possible commit. An exact, verified version record and receipt establish commit even if the publication is now historical. If the candidate version is absent and the expected prior remains current, retry conditionally after verification. If a different version is current and the candidate version is absent, require a new decision. Keep contradictory or unavailable readback unresolved and do not retry a possible commit blindly. |
+| `PREVIOUS_PUBLICATION_CHANGED` | For an unused version, preserve the observed publication and replan with maintainer review when the expected prior state no longer matches. |
 
 Public evidence may include revision, redacted configuration names, versions,
 outcome and scope. Keep credentials, personal or tenant identifiers, board
@@ -144,9 +179,9 @@ Linux VPS deployment/recovery evidence belong to their gate owners.
 
 Run the [synthetic scenarios][fixtures] with
 `python3 -m unittest discover -s tests/verification -p test_t13_release_contract.py -v`.
-The model exercises a valid staged candidate, malformed identity, missing or
-insufficient prerequisites and interrupted publication without modifying the
-prior publication. Maintainer review assesses guide ownership, compatibility
+The model exercises staged byte verification, malformed identity, approval and
+prerequisite checks, version conflicts, read-only retries and interrupted
+publication with authoritative readback. Maintainer review assesses guide ownership, compatibility
 and community routes against existing policy. D1 and gate consumers review
 their evidence requirements, provenance and failure semantics. Record actual
 reviewers, revision and outcomes on the PR. Repository evidence uses exact
