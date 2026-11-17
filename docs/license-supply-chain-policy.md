@@ -2,7 +2,7 @@
 
 Status: policy and an offline lockfile gate. It is not legal clearance, not independent review, not native CI and not evidence that any shipped asset is licensed. Discord, GoDaddy VPS and legal sign-off are out of scope.
 
-Gate: `python3 scripts/verification/check_licenses.py` (stdlib only; run from the repository root). Tests: `python3 -m unittest discover -s tests/verification -v`. Exceptions: `docs/evidence/license-exceptions.json`.
+Gate: `python3 scripts/verification/check_licenses.py` (stdlib only; run from the repository root). Tests: `python3 -m unittest discover -s tests/verification -v`. Exceptions and verified license overrides: `docs/evidence/license-exceptions.json`.
 
 ## Scope
 
@@ -51,7 +51,7 @@ These licenses are never accepted and cannot be excepted:
 - `UNKNOWN`
 - `NOASSERTION`
 
-Missing, empty, non-string or malformed license fields fail the gate. A missing license is treated as unknown: it is not a permissive default.
+Missing, empty, non-string or malformed license fields fail the gate. A missing license is treated as unknown: it is not a permissive default. A verified override (below) is the only way to supply a missing license.
 
 ## SPDX expressions
 
@@ -66,6 +66,17 @@ Missing, empty, non-string or malformed license fields fail the gate. A missing 
 `docs/evidence/license-exceptions.json` may list a review-required package only with `name`, exact `version`, the exact lockfile `license` string and a non-empty `reason`. An exception matches one name, one version and one license string; a version change re-triggers review. Prohibited, missing and unknown licenses cannot be excepted. An exception that matches no scanned package fails the run, so stale entries are removed.
 
 Exceptions are a review record, not an approval. The owner records approval in the reason or in the workstream entry.
+
+## Verified license overrides
+
+The `verified_license_overrides` list in `docs/evidence/license-exceptions.json` may supply the license for a lockfile entry that has no `license` field. Each entry has `name`, exact `version`, the lockfile `integrity`, `license` (an SPDX expression), `evidence` (`kind`, `source`, `file`, `sha256`, `verified_at` as `YYYY-MM-DD`) and a non-empty `reason`.
+
+- An override applies only when name, exact version and the lockfile `integrity` all match one entry, and that entry has no `license` field (or a null one). Empty or malformed license fields are never overridden.
+- The override's `license` is then classified under the normal sets above. A review-required result still needs a version-pinned exception.
+- An override never applies to a prohibited license. The gate rejects such an override as invalid input (exit 2).
+- A missing license without a matching override still fails. An override that matches no package, whose integrity differs from the lockfile, or whose entry already declares a license fails as `verified override not applied`.
+- The gate checks the override's format only. It does not fetch the tarball or re-hash `sha256`; the evidence is recorded for review.
+- Overrides record evidence, not legal sign-off. Accepting a license text as adequate is an owner decision and is not implied by an override.
 
 ## Attribution and distribution obligations
 
@@ -106,7 +117,7 @@ Not verified by this policy or the gate:
 
 - The gate does not contact any registry or network service, so declared licenses are not compared with registry metadata or package tarballs.
 - Transitive license texts are not read. Installed package files are not inspected.
-- The two packages with no license field in the canvas research lockfile (`fuzzy` 0.1.3 and `khroma` 2.1.0) remain unresolved. Their licenses are not stated in the lockfile, and this change does not infer them.
+- The two packages with no license field in the canvas research lockfile (`fuzzy` 0.1.3 and `khroma` 2.1.0) are covered by verified overrides. Their evidence came from registry tarball files checked outside this offline gate; the gate does not re-fetch or re-hash them. The overrides are evidence, not legal sign-off.
 - The research fixture is not the application. Whether its dependencies ship is not decided here.
 - Integrity values are counted, not cryptographically checked against the registry.
 - No independent review, native CI, protected merge or post-merge check is claimed.

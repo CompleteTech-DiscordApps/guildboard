@@ -255,5 +255,146 @@ class PolicyDocumentCases(unittest.TestCase):
         self.assertEqual(sorted(prefixes), sorted(check.PROHIBITED_PREFIXES))
 
 
+OTHER_INTEGRITY = 'sha512-' + 'B' * 86 + '=='
+REAL_EXCEPTIONS = REPO / 'docs' / 'evidence' / 'license-exceptions.json'
+REAL_CANVAS_LOCK = REPO / 'research-fixtures' / 'canvas' / 'package-lock.json'
+
+
+def override_entry(name='a', version='1.0.0', integrity=INTEGRITY, license_value='MIT', **changes):
+    entry = {
+        'name': name, 'version': version, 'integrity': integrity, 'license': license_value,
+        'evidence': {'kind': 'npm-tarball-file-sha256', 'source': 'https://registry.npmjs.org/x.tgz',
+                     'file': 'package/LICENSE', 'sha256': 'a' * 64, 'verified_at': '2026-11-16'},
+        'reason': 'test evidence',
+    }
+    entry.update(changes)
+    return entry
+
+
+class VerifiedOverrideCases(CheckerCase):
+    def overrides_file(self, overrides, exceptions=(), name='exceptions.json'):
+        return self.write(name, {'schema_version': 1, 'exceptions': list(exceptions),
+                                 'verified_license_overrides': list(overrides)})
+
+    def test_matching_override_clears_missing_license(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', None)}))
+        exc = self.overrides_file([override_entry()])
+        code, out, err = self.run_checker([name], exc)
+        self.assertEqual(code, 0, out + err)
+        self.assertIn('verified override applied', out)
+        self.assertIn('verified-overrides-applied=1', out)
+        self.assertIn('result: PASS (0 finding(s))', out)
+
+    def test_override_license_is_classified_under_policy_sets(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/z': pkg('1.0.0', None)}))
+        exc = self.overrides_file([override_entry('z', license_value='Zlib')])
+        code, out, _ = self.run_checker([name], exc)
+        self.assertEqual(code, 1)
+        self.assertIn('review-required license', out)
+        excepted = self.overrides_file([override_entry('z', license_value='Zlib')],
+                                       exceptions=[{'name': 'z', 'version': '1.0.0', 'license': 'Zlib', 'reason': 'owner pending'}],
+                                       name='excepted.json')
+        code, out, _ = self.run_checker([name], excepted)
+        self.assertEqual(code, 0, out)
+        self.assertIn('excepted review-required license', out)
+
+    def test_missing_license_without_matching_override_still_fails(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', None)}))
+        other = self.overrides_file([override_entry('b', '1.0.0')])
+        code, out, _ = self.run_checker([name], other)
+        self.assertEqual(code, 1)
+        self.assertIn('missing or unknown license', out)
+        self.assertIn('verified override not applied', out)  # the override for b matches nothing
+
+    def test_override_for_other_version_does_not_apply(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.1', None)}))
+        exc = self.overrides_file([override_entry('a', '1.0.0')])
+        code, out, _ = self.run_checker([name], exc)
+        self.assertEqual(code, 1)
+        self.assertIn('missing or unknown license', out)
+
+    def test_stale_override_fails(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', None)}))
+        exc = self.overrides_file([override_entry('a', '1.0.0'), override_entry('gone', '9.9.9')])
+        code, out, _ = self.run_checker([name], exc)
+        self.assertEqual(code, 1)
+        self.assertIn('[gone@9.9.9] verified override not applied: matches no scanned package', out)
+
+    def test_integrity_mismatch_fails(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', None)}))
+        exc = self.overrides_file([override_entry('a', '1.0.0', integrity=OTHER_INTEGRITY)])
+        code, out, _ = self.run_checker([name], exc)
+        self.assertEqual(code, 1)
+        self.assertIn('a verified override exists for this name and version but its integrity differs', out)
+        self.assertIn('[a@1.0.0] verified override not applied: the lockfile integrity', out)
+        self.assertIn('result: FAIL (2 finding(s))', out)
+
+    def test_override_ignored_when_lockfile_declares_license(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', 'ISC')}))
+        exc = self.overrides_file([override_entry('a', '1.0.0')])
+        code, out, _ = self.run_checker([name], exc)
+        self.assertEqual(code, 1)
+        self.assertIn('lockfile already declares a license', out)
+
+    def test_override_never_applies_to_prohibited_license(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', None)}))
+        for license_value in ('GPL-3.0-only', 'UNKNOWN', 'MIT OR GPL-2.0-only', 'AGPL-3.0-or-later'):
+            with self.subTest(license=license_value):
+                exc = self.overrides_file([override_entry('a', '1.0.0', license_value=license_value)])
+                code, out, err = self.run_checker([name], exc)
+                self.assertEqual(code, 2, out + err)
+                self.assertIn('cannot be overridden', err)
+
+    def test_malformed_override_is_input_error(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', None)}))
+        bad_cases = {
+            'extra field': override_entry(extra='x'),
+            'missing reason': {k: v for k, v in override_entry().items() if k != 'reason'},
+            'missing evidence field': override_entry(evidence={'kind': 'k', 'source': 's', 'file': 'f', 'sha256': 'a' * 64}),
+            'short sha256': override_entry(evidence={'kind': 'k', 'source': 's', 'file': 'f', 'sha256': 'a' * 63, 'verified_at': '2026-11-16'}),
+            'uppercase sha256': override_entry(evidence={'kind': 'k', 'source': 's', 'file': 'f', 'sha256': 'A' * 64, 'verified_at': '2026-11-16'}),
+            'impossible date': override_entry(evidence={'kind': 'k', 'source': 's', 'file': 'f', 'sha256': 'a' * 64, 'verified_at': '2026-13-40'}),
+            'compact date': override_entry(evidence={'kind': 'k', 'source': 's', 'file': 'f', 'sha256': 'a' * 64, 'verified_at': '20261116'}),
+            'md5 integrity': override_entry(integrity='md5-' + 'A' * 22 + '=='),
+            'malformed license': override_entry(license_value='MIT OR'),
+            'blank name': override_entry(name='  '),
+        }
+        for label, entry in bad_cases.items():
+            with self.subTest(case=label):
+                exc = self.overrides_file([entry])
+                code, _, err = self.run_checker([name], exc)
+                self.assertEqual(code, 2, err)
+                self.assertIn('verified_license_overrides', err)
+
+    def test_duplicate_override_is_input_error(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', None)}))
+        exc = self.overrides_file([override_entry('a', '1.0.0'), override_entry('a', '1.0.0')])
+        code, _, err = self.run_checker([name], exc)
+        self.assertEqual(code, 2)
+        self.assertIn('duplicate', err)
+
+    def test_overrides_must_be_a_list(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', None)}))
+        exc = self.write('exceptions.json', {'schema_version': 1, 'exceptions': [], 'verified_license_overrides': {}})
+        code, _, err = self.run_checker([name], exc)
+        self.assertEqual(code, 2)
+        self.assertIn('must be a list', err)
+
+    def test_committed_overrides_clear_canvas_findings(self):
+        code, out, err = self.run_checker_real()
+        self.assertEqual(code, 0, out + err)
+        self.assertNotIn('missing or unknown license', out)
+        self.assertIn('node_modules/fuzzy [fuzzy@0.1.3] verified override applied', out)
+        self.assertIn('node_modules/khroma [khroma@2.1.0] verified override applied', out)
+        self.assertIn('excepted review-required', out)  # pending owner review, not approval
+
+    def run_checker_real(self):
+        proc = subprocess.run(
+            [sys.executable, str(CHECKER), '--exceptions', str(REAL_EXCEPTIONS), str(REAL_CANVAS_LOCK)],
+            cwd=REPO, capture_output=True, text=True, timeout=60,
+        )
+        return proc.returncode, proc.stdout, proc.stderr
+
+
 if __name__ == '__main__':
     unittest.main()
