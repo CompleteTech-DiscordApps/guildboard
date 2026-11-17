@@ -1,0 +1,15 @@
+{
+  "repository": "CompleteTech-DiscordApps/guildboard",
+  "issues": [
+    {
+      "issue": 522,
+      "kind": "resolved_incident",
+      "reason": "Incident follow-up tracked in issue #522. The audit accepts this disposition only after the incident issue closes."
+    },
+    {
+      "issue": 524,
+      "kind": "campaign_tracking",
+      "reason": "Tracks the Guildboard repository-completion campaign across roadmap work items and may remain open during the campaign."
+    }
+  ]
+}
