@@ -444,8 +444,11 @@ def check_read_delivery_fence(section):
     required = (
         'Serialize each protected transport release with session revocation, expiry, '
         'membership invalidation, and scoped read policy changes.',
-        'receipts, ACKs, replay, snapshots, and every queued protected chunk, '
-        'including asset and export delivery.',
+        'live and replay events, snapshot metadata and chunks, receipts, ACKs, '
+        'and receipt- or digest-dependent results including `IDEMPOTENCY_CONFLICT`.',
+        'Denial reveals neither receipt existence nor digest match and leaves an unknown outcome unresolved.',
+        'For asset and export metadata and each queued chunk, check scoped read authority '
+        'for the board and every included asset.',
         'If an event that removes authority is ordered first, suppress that response and '
         'every later queued protected chunk.',
         'A release ordered first may complete.',
@@ -486,8 +489,12 @@ def check_operator_coverage(section):
         'node scripts/verification/verify_config.mjs',
         'node scripts/verification/verify_config_failure_paths.mjs',
     )
-    return [f'operator steps lack command: {command}' for command in required
-            if canon(command) not in commands]
+    errors = [f'operator steps lack command: {command}' for command in required
+              if canon(command) not in commands]
+    gate_step = next((line for line in body.splitlines() if 'Gate tests:' in line), '')
+    if 'from the reviewed base for ordinary reviews and from the proposed tree only for the pinned first installation.' not in gate_step:
+        errors.append('operator steps lack the reviewed architecture test tree selection')
+    return errors
 
 
 def check_node_workflow_attribution(section, root=ROOT):
@@ -629,6 +636,27 @@ class T0HandoffMutationTests(unittest.TestCase):
             '',
         )
         self.assertDetected(mutation, check_read_delivery_fence, 'missing read release ordering')
+
+    def test_s1_receipt_dependent_release_omission_is_detected(self):
+        mutation = self.replaced(
+            ', and receipt- or digest-dependent results including `IDEMPOTENCY_CONFLICT`',
+            '',
+        )
+        self.assertDetected(mutation, check_read_delivery_fence, 'missing receipt-dependent release')
+
+    def test_s1_denial_disclosure_is_detected(self):
+        mutation = self.replaced(
+            'Denial reveals neither receipt existence nor digest match and leaves an unknown outcome unresolved.',
+            'Denial reports whether the receipt exists.',
+        )
+        self.assertDetected(mutation, check_read_delivery_fence, 'receipt existence disclosure')
+
+    def test_gate_tests_from_wrong_tree_are_detected(self):
+        mutation = self.replaced(
+            'from the reviewed base for ordinary reviews and from the proposed tree only for the pinned first installation.',
+            'from the proposed tree for every review.',
+        )
+        self.assertDetected(mutation, check_operator_coverage, 'testing from the wrong tree')
 
     def test_s1_status_quote_upgraded_is_detected(self):
         self.assertDetected(self.replaced('(status: proposed, not accepted and not an implementation authorization)', '(status: accepted)'), check_status_quotes, 'S1 upgraded')
