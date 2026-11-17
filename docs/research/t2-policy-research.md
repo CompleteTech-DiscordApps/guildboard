@@ -9,8 +9,8 @@ authorization was executed; official documents are rolling observations.
 
 ## Scope and consumer inputs
 
-Live issue OPEN/unassigned, no earlier claim or competing focused T2 PR; live
-GraphQL native `blockedBy.totalCount=0`. Supervisor triage identifies Ready
+At the October research baseline, the issue was open and unassigned with no
+recorded earlier claim or competing focused T2 PR. Native GraphQL `blockedBy.totalCount=0`. Supervisor triage identifies Ready
 research. Claim and isolated worktree preserve native gates and ownership.
 Read [T2 scope](../workstreams/T2.md), [architecture](../architecture.md),
 [SECURITY](../../SECURITY.md) and [CONTRIBUTING](../../CONTRIBUTING.md).
@@ -18,15 +18,15 @@ The [accepted GB-T0.S1 system contract](../specifications/GB-T0-S1-system-contra
 now controls the receipt, read-delivery and write fences. The historical PR
 snapshots below explain the research baseline. T2 policy choices remain open.
 
-Provisional inputs:
+October research inputs:
 
-- [#481](https://github.com/CompleteTech-DiscordApps/guildboard/pull/481), current
-  head `bc28eebe41a3264045fa5d5164d38abbb99ab206`: verified current identity/read
+- [#481](https://github.com/CompleteTech-DiscordApps/guildboard/pull/481), then-head `bc28eebe41a3264045fa5d5164d38abbb99ab206`: verified current identity/read
   before receipt/digest lookup; retained historical receipt before active-lineage
   and new-write authorization. Same committed retry does not need current write
   capability or cause another mutation. Content restore preserves old receipts.
   Compared with `19d5f5a`: only T0 handoff documentation changed, not the system
-  contract/fixtures. This is a proposal, not an accepted protocol.
+  contract/fixtures. That snapshot was provisional. The accepted GB-T0.S1
+  contract linked above governs the current handoff.
 - [#489](https://github.com/CompleteTech-DiscordApps/guildboard/pull/489),
   `630beb3bebf3f4727fc9c041e7872b038c106f3f`: atomic generation fencing is an
   assumption in its finite model; it proves neither SQL linearization nor timely
@@ -44,7 +44,7 @@ bounded HTTPS GETs, exact UTC dates, URLs and response SHA-256 hashes. These
 identify inspected responses, not stable vendor revisions, reconstructible
 archives or a verified Discord environment. No API freshness SLA was established.
 
-| ID / current official source | Evaluated observation |
+| ID / official source observed 2026-10-26 | Evaluated observation |
 | --- | --- |
 | D1 [Permissions and role hierarchy](https://docs.discord.com/developers/topics/permissions) | Role position limits certain role/member management operations; it is not general permission precedence. Base role permissions combine, then channel overwrites apply. Administrator bypasses Discord channel overwrites; Manage Guild and Manage Roles are separate permissions. Numeric permission strings require safe big-integer handling. |
 | D2 [Guild/member/role resources](https://docs.discord.com/developers/resources/guild) | Member objects supply role IDs; guild roles supply definitions. Single-member lookup and listing are distinct; List Guild Members explicitly requires GUILD_MEMBERS privileged intent. |
@@ -194,8 +194,8 @@ python scripts/github-bootstrap/validate.py
 git diff --check
 ```
 
-[Deterministic report](t2-policy-model-evidence.json): **15 tests passed**;
-2,048 combinations of four role bits and seven boolean policy/freshness choices.
+The October run passed **15 tests**. The [deterministic CLI report](t2-policy-model-evidence.json)
+covers 2,048 combinations of four role bits and seven boolean policy/freshness choices.
 The intentionally unsafe allow-first control admits **1,860** cases across a
 hard denial; the candidate admits **zero**. This is finite coverage of this
 chosen hypothetical matrix, not a risk frequency, completeness or production
@@ -218,7 +218,7 @@ overclaiming external immediacy. The application-revoke trace rejects a prepared
 old-generation write without effects; this assumes the fence is atomic, as #489
 does. Delayed refresh publication shows why unconditional cache updates are unsafe.
 
-Local validation: all 15 tests passed; the report matched fresh CLI stdout
+October local validation: all 15 tests passed; the report matched fresh CLI stdout
 byte-for-byte (SHA-256
 `1826d9f1a64f7672334dce54c47cba81b55d0f771edd465d0dfe230c9db1b757`).
 All seven source-response metadata entries validated. Planning validation passed:
@@ -233,16 +233,33 @@ an administrator mapping another target. Edit counters alone cannot distinguish
 allowed and denied control decisions in this model. A temporary copy outside the
 checkout removes only the administrator self-target predicate: all 15 original
 tests remain green, but the strengthened selected test fails with
-`control_allowed != control_denied`. The unchanged candidate passes all 15 tests.
+`control_allowed != control_denied`. The October candidate passed all 15 tests.
 [Separate regression evidence](t2-self-mapping-regression-2026-10-26.json) records
 the mutation, exact base, old/new test hashes and outcomes. Candidate source,
 deterministic report bytes and original source-response observations are unchanged;
 the earlier evidence is not relabeled as a new run. This validates one regression
 test's sensitivity, not production policy or complete mutation coverage.
 
+### Candidate reproduction (2026-11-17)
+
+On Linux x86_64 with Python 3.14.8, candidate
+`181c45d140d30d5c14c16df649d5c5514d2c8c3d` passed **17 tests** using the
+explicit test command above. Two additions cover forged client administrator
+claims within the same tenant and initial read denial independent of receipt
+existence and digest match. The configured model treats all other input facts,
+including role and scope, as trusted abstractions. The test only verifies that
+the explicit client claim does not influence those decisions.
+
+The CLI output matched the historical report byte for byte. Planning validation
+reported 471 items, 457 expected native relationships, 600 dependencies and zero
+errors. `git diff --check origin/main...HEAD` passed against main
+`46e53068235308ff591b3a4e1b1fe8c501dd3af1`. The seven source observations
+remain dated October 26. This run used local fixtures and exercised no runtime
+transport, database, Discord or GoDaddy service.
+
 ## Real acceptance and remaining decisions
 
-Authorized config inspection still found only `.env.example` under repo/app/
+The October configuration inspection found only `.env.example` under repo/app/
 package config paths. The five recognized Discord client/secret/bot variables
 from #491 were absent, checked by boolean presence only. No secrets were
 printed/copied, app provisioned, test guild modified or paid resource used.
@@ -251,7 +268,7 @@ accepted policy/session/SQL contracts and an approved target remain missing.
 
 | #66 clause | Observable research evidence | Real acceptance still required |
 | --- | --- | --- |
-| Role precedence and explicit abuse | Alternative/capability tables, 2,048 cases and 15 tests | #67/T6 approve role/action/mode/ownership/restriction/bootstrap matrix; implement complete allow/deny/no-side-effect suite |
+| Role precedence and explicit abuse | Alternative/capability tables, 2,048 cases and 17 local tests | #67/T6 approve role/action/mode/ownership/restriction/bootstrap matrix; implement complete allow/deny/no-side-effect suite |
 | Required Discord privileges | D1–D6 and least-privilege acquisition comparison | Real token/scope/intent permissions; owner/Admin/Manage Guild, overwritten channels, private threads, deleted/reordered roles and missing bot access |
 | Revocation freshness | Four-part guarantee, expiry/refresh/external-change traces | Measure change-to-observation-to-committed-fence timestamps, clock uncertainty, rate limits, Gateway gap/outage/old refresh behavior; accept numeric budgets |
 | Immediate local fence | Accepted GB-T0.S1 write fence, #489's atomicity caveat and old-generation no-effects trace | Barrier-controlled multi-worker SQL/HTTP/WSS/bot races, commit-before/after, expiry-in-queue, crash/retry and audit atomicity |
