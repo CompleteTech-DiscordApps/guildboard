@@ -40,10 +40,12 @@ _fetch_context = threading.local()
 
 
 class RejectRedirects(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        # Return the original response as an HTTP error without reading its
-        # body or starting a request to a destination outside the source list.
+    def http_error_302(self, req, fp, code, msg, headers):
+        # Let the default handler raise HTTPError for the original response.
+        # The standard redirect handler parses Location before redirect_request.
         return None
+
+    http_error_301 = http_error_303 = http_error_307 = http_error_308 = http_error_302
 
 
 class CaptureCancelled(OSError):

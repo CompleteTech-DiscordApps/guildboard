@@ -2,6 +2,7 @@
 from contextlib import redirect_stdout
 from email.message import Message
 import io
+from itertools import product
 import os
 from queue import Queue
 import signal
@@ -361,12 +362,15 @@ class SourceCaptureRegression(unittest.TestCase):
                     raise
 
         build_opener = urllib.request.build_opener
-        for code in (301, 302, 303, 307, 308):
-            with self.subTest(code=code):
+        codes = (301, 302, 303, 307, 308)
+        locations = ("http://redirect.invalid/next", "http://[", None)
+        for code, location in product(codes, locations):
+            with self.subTest(code=code, location=location):
                 opened.clear()
                 retained_errors = []
                 headers = Message()
-                headers["Location"] = "http://redirect.invalid/next"
+                if location is not None:
+                    headers["Location"] = location
                 stream = io.BytesIO(b"unread redirect body")
                 body = mock.Mock(wraps=stream)
                 response = addinfourl(body, headers, initial, code)
