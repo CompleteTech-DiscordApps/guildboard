@@ -1,4 +1,10 @@
-"""Offline tests for scripts/verification/check_licenses.py (GB-T0.02.02.T1, #16)."""
+"""Offline tests for scripts/verification/check_licenses.py (GB-T0.02.02.T1, #16).
+
+Most cases run the checker on temporary fixtures. RepositoryDataCases is the one
+real-data regression check: it runs the gate over both default lockfiles with the
+committed exceptions file. A legitimate lockfile or exception change must update that
+data in the same change; the test is drift detection, not a unit test.
+"""
 
 import importlib.util
 import json
@@ -12,12 +18,22 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 CHECKER = REPO / 'scripts' / 'verification' / 'check_licenses.py'
 POLICY_DOC = REPO / 'docs' / 'license-supply-chain-policy.md'
+WORKFLOW = REPO / '.github' / 'workflows' / 'license-policy.yml'
+TASK_DOC = REPO / 'docs' / 'workstreams' / 'T0.md'
 
 _spec = importlib.util.spec_from_file_location('check_licenses', CHECKER)
 check = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(check)
 
 INTEGRITY = 'sha512-' + 'A' * 86 + '=='
+OTHER_INTEGRITY = 'sha512-' + 'B' * 86 + '=='
+PROHIBITED_SPELLINGS = (
+    'GPL', 'GPLv2', 'GPLv3', 'GPL2', 'GPL-2.0-only', 'GPL-3.0-or-later', 'GPL-2.0+',
+    'LGPL', 'LGPLv3', 'LGPL-2.1-only', 'LGPL-3.0-or-later', 'AGPL', 'AGPLv3', 'AGPL-3.0-only',
+    'SSPL', 'SSPL-1.0', 'BUSL', 'BUSL-1.0', 'BUSL-1.1', 'CC-BY-NC-4.0',
+    'NOASSERTION', 'UNLICENSED', 'UNKNOWN',
+    'MIT OR GPLv3', '(MIT OR GPL-3.0-only)', 'Apache-2.0 AND LGPL-2.1-only', 'MIT AND AGPLv3',
+)
 
 
 def pkg(version='1.0.0', license_value='MIT', **extra):
@@ -28,8 +44,12 @@ def pkg(version='1.0.0', license_value='MIT', **extra):
     return entry
 
 
+def without(entry, *fields):
+    return {key: value for key, value in entry.items() if key not in fields}
+
+
 def lockfile(packages, version=3):
-    base = {'': {'name': 'fixture', 'version': '0.0.0', 'devDependencies': {}},
+    base = {'': {'name': 'fixture', 'version': '0.0.0', 'devDependencies': {}, 'workspaces': ['apps/*']},
             'apps/api': {'name': '@fixture/api', 'version': '0.0.0'},
             'node_modules/@fixture/api': {'resolved': 'apps/api', 'link': True}}
     base.update(packages)
@@ -95,20 +115,36 @@ class PolicyCases(CheckerCase):
         self.assertEqual(code, 1)
         self.assertEqual(out.count('missing or unknown license'), 2)
 
-    def test_prohibited_license_fails_even_with_exception(self):
-        name = self.write('package-lock.json', lockfile({'node_modules/g': pkg('3.0.0', 'GPL-3.0-only')}))
-        code, out, _ = self.run_checker([name])
-        self.assertEqual(code, 1)
-        self.assertIn('prohibited license', out)
-        exc = self.exceptions([{'name': 'g', 'version': '3.0.0', 'license': 'GPL-3.0-only', 'reason': 'x'}])
-        code, out, _ = self.run_checker([name], exc)
-        self.assertEqual(code, 1, 'prohibited licenses must not be excepted')
+    def test_prohibited_spellings_fail_without_exception(self):
+        for spelling in PROHIBITED_SPELLINGS:
+            with self.subTest(license=spelling):
+                name = self.write('package-lock.json', lockfile({'node_modules/g': pkg('3.0.0', spelling)}))
+                code, out, _ = self.run_checker([name])
+                self.assertEqual(code, 1, out)
+                self.assertIn('prohibited license', out)
+
+    def test_prohibited_license_cannot_be_excepted(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/g': pkg('3.0.0', 'GPLv3')}))
+        exc = self.exceptions([{'name': 'g', 'version': '3.0.0', 'license': 'GPLv3', 'reason': 'x'}])
+        code, out, err = self.run_checker([name], exc)
+        self.assertEqual(code, 2, 'an exception naming a prohibited license is an input error')
+        self.assertIn('cannot be excepted', err)
 
     def test_unknown_literal_is_prohibited(self):
         name = self.write('package-lock.json', lockfile({'node_modules/u': pkg('1.0.0', 'UNKNOWN')}))
         code, out, _ = self.run_checker([name])
         self.assertEqual(code, 1)
         self.assertIn('prohibited license', out)
+
+    def test_unknown_identifier_is_review_required_and_needs_exception(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/w': pkg('1.0.0', 'WTFPL')}))
+        code, out, _ = self.run_checker([name])
+        self.assertEqual(code, 1)
+        self.assertIn('review-required license', out)
+        exc = self.exceptions([{'name': 'w', 'version': '1.0.0', 'license': 'WTFPL', 'reason': 'owner pending'}])
+        code, out, _ = self.run_checker([name], exc)
+        self.assertEqual(code, 0, out)
+        self.assertIn('excepted review-required license', out)
 
     def test_malformed_spdx_expression_fails(self):
         name = self.write('package-lock.json', lockfile({'node_modules/m': pkg('1.0.0', 'MIT OR')}))
@@ -122,11 +158,138 @@ class PolicyCases(CheckerCase):
         self.assertEqual(code, 1)
         self.assertIn('malformed license', out)
 
+    def test_third_party_without_integrity_fails(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/n': without(pkg('1.0.0', 'MIT'), 'integrity')}))
+        code, out, _ = self.run_checker([name])
+        self.assertEqual(code, 1)
+        self.assertIn('missing integrity', out)
+        self.assertIn('third-party-without-integrity=1', out)
+        self.assertIn('result: FAIL (1 finding(s))', out)
+
+    def test_third_party_with_empty_or_non_string_integrity_fails(self):
+        for value in ('', 5):
+            with self.subTest(integrity=value):
+                name = self.write('package-lock.json', lockfile({'node_modules/n': pkg('1.0.0', 'MIT', integrity=value)}))
+                code, out, _ = self.run_checker([name])
+                self.assertEqual(code, 1, out)
+                self.assertIn('missing integrity', out)
+
+    def test_missing_integrity_is_not_bridged_by_override(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': without(pkg('1.0.0', None), 'integrity')}))
+        exc = self.write('exceptions.json', {'schema_version': 1, 'exceptions': [],
+                                             'verified_license_overrides': [override_entry('a', '1.0.0')]})
+        code, out, _ = self.run_checker([name], exc)
+        self.assertEqual(code, 1)
+        self.assertIn('missing integrity', out)
+        self.assertIn('missing or unknown license', out)
+
     def test_unexpected_install_path_fails(self):
         name = self.write('package-lock.json', lockfile({'vendor/x': pkg('1.0.0', 'MIT')}))
         code, out, _ = self.run_checker([name])
         self.assertEqual(code, 1)
         self.assertIn('unexpected install path', out)
+
+    def test_nested_node_modules_inside_vendor_is_unexpected(self):
+        name = self.write('package-lock.json', lockfile({'vendor/node_modules/y': pkg('1.0.0', 'MIT')}))
+        code, out, _ = self.run_checker([name])
+        self.assertEqual(code, 1)
+        self.assertIn('unexpected install path', out)
+        self.assertIn('vendor/node_modules/y', out)
+
+    def test_traversal_in_install_path_is_unexpected_even_when_prohibited(self):
+        for key in ('apps/../../vendor/x', 'node_modules/../x', 'node_modules/a/../../evil', '/abs/node_modules/x',
+                    'node_modules/..', 'node_modules/.', 'node_modules/a/node_modules/..'):
+            with self.subTest(key=key):
+                name = self.write('package-lock.json', lockfile({key: pkg('1.0.0', 'GPL-3.0-only')}))
+                code, out, _ = self.run_checker([name])
+                self.assertEqual(code, 1)
+                self.assertIn('unexpected install path', out)
+                self.assertNotIn('prohibited license', out)
+
+    def test_nested_node_modules_path_is_third_party(self):
+        name = self.write('package-lock.json', lockfile({
+            'node_modules/a/node_modules/@s/b': pkg('1.0.0', 'Zlib'),
+        }))
+        code, out, _ = self.run_checker([name])
+        self.assertEqual(code, 1, out)
+        self.assertIn('third-party=1', out)
+        self.assertIn('node_modules/a/node_modules/@s/b [@s/b@1.0.0] review-required license', out)
+        self.assertNotIn('unexpected install path', out)
+
+    def test_workspace_entry_must_be_a_known_workspace_path(self):
+        cases = {
+            'tools/ghost': without(pkg('1.0.0', None), 'resolved', 'integrity'),  # no declared workspace glob
+            'apps/api-extra/nested': {'version': '1.0.0'},  # nested below a workspace glob
+        }
+        for key, entry in cases.items():
+            with self.subTest(key=key):
+                name = self.write('package-lock.json', lockfile({key: entry}))
+                code, out, _ = self.run_checker([name])
+                self.assertEqual(code, 1)
+                self.assertIn('unexpected install path', out)
+
+    def test_workspace_entry_with_resolved_or_integrity_is_unexpected(self):
+        for extra in ({'resolved': 'https://example.invalid/x.tgz'}, {'integrity': INTEGRITY}):
+            with self.subTest(extra=extra):
+                name = self.write('package-lock.json', lockfile({'apps/api': {'name': '@fixture/api', 'version': '0.0.0', **extra}}))
+                code, out, _ = self.run_checker([name])
+                self.assertEqual(code, 1)
+                self.assertIn('workspace entry must not carry resolved or integrity', out)
+
+    def test_link_must_point_at_a_present_workspace(self):
+        cases = {
+            'escapes lockfile': {'resolved': '../../outside', 'link': True},
+            'target absent': {'resolved': 'apps/missing', 'link': True},
+            'not a workspace dir': {'resolved': 'vendor/y', 'link': True},
+            'link outside node_modules': {'resolved': 'apps/api', 'link': True},
+        }
+        for label, entry in cases.items():
+            with self.subTest(case=label):
+                key = 'apps/link-here' if label == 'link outside node_modules' else 'node_modules/@fixture/bad'
+                name = self.write('package-lock.json', lockfile({key: entry}))
+                code, out, _ = self.run_checker([name])
+                self.assertEqual(code, 1)
+                self.assertIn('unexpected install path', out)
+
+    def test_link_to_present_workspace_is_skipped(self):
+        name = self.write('package-lock.json', lockfile({}))
+        code, out, _ = self.run_checker([name])
+        self.assertEqual(code, 0, out)
+        self.assertIn('skipped-first-party=3', out)
+
+    def test_aliased_package_is_classified_by_real_name(self):
+        name = self.write('package-lock.json', lockfile({
+            'node_modules/alias': pkg('1.0.0', 'Zlib', name='real-pkg'),
+        }))
+        code, out, _ = self.run_checker([name])
+        self.assertEqual(code, 1)
+        self.assertIn('node_modules/alias [real-pkg@1.0.0] review-required license', out)
+        exc = self.exceptions([{'name': 'real-pkg', 'version': '1.0.0', 'license': 'Zlib', 'reason': 'x'}])
+        code, out, _ = self.run_checker([name], exc)
+        self.assertEqual(code, 0, out)
+
+    def test_exception_under_alias_path_name_does_not_apply(self):
+        name = self.write('package-lock.json', lockfile({
+            'node_modules/alias': pkg('1.0.0', 'Zlib', name='real-pkg'),
+        }))
+        exc = self.exceptions([{'name': 'alias', 'version': '1.0.0', 'license': 'Zlib', 'reason': 'x'}])
+        code, out, _ = self.run_checker([name], exc)
+        self.assertEqual(code, 1)
+        self.assertIn('stale exception', out)
+
+    def test_aliased_prohibited_license_is_prohibited(self):
+        name = self.write('package-lock.json', lockfile({
+            'node_modules/alias': pkg('1.0.0', 'GPL-3.0-only', name='real-gpl'),
+        }))
+        code, out, _ = self.run_checker([name])
+        self.assertEqual(code, 1)
+        self.assertIn('prohibited license', out)
+
+    def test_invalid_alias_name_is_input_error(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/alias': pkg('1.0.0', 'MIT', name=5)}))
+        code, _, err = self.run_checker([name])
+        self.assertEqual(code, 2)
+        self.assertIn('invalid name', err)
 
     def test_malformed_json_is_input_error(self):
         name = self.write('package-lock.json', '{"lockfileVersion": 3, "packages": {')
@@ -140,6 +303,29 @@ class PolicyCases(CheckerCase):
         self.assertEqual(code, 2)
         self.assertIn('duplicate key', err)
 
+    def test_nan_and_infinity_are_input_errors(self):
+        for token in ('NaN', 'Infinity', '-Infinity'):
+            with self.subTest(token=token):
+                name = self.write('package-lock.json', '{"lockfileVersion": 3, "packages": {"": {"x": %s}}}' % token)
+                code, _, err = self.run_checker([name])
+                self.assertEqual(code, 2)
+                self.assertIn('malformed JSON', err)
+
+    def test_deeply_nested_json_is_input_error_not_traceback(self):
+        depth = 100000
+        name = self.write('package-lock.json', '[' * depth + ']' * depth)
+        code, out, err = self.run_checker([name])
+        self.assertEqual(code, 2, err)
+        self.assertIn('nested too deeply', err)
+        self.assertNotIn('Traceback', err)
+
+    def test_oversized_input_is_input_error(self):
+        (self.dir / 'huge.json').write_bytes(b' ' * (check.MAX_INPUT_BYTES + 1))
+        code, out, err = self.run_checker(['huge.json'])
+        self.assertEqual(code, 2)
+        self.assertIn('input too large', err)
+        self.assertNotIn('Traceback', err)
+
     def test_missing_file_is_input_error(self):
         code, _, err = self.run_checker(['no-such-lockfile.json'])
         self.assertEqual(code, 2)
@@ -151,12 +337,18 @@ class PolicyCases(CheckerCase):
         self.assertEqual(code, 2)
         self.assertIn('unsupported lockfileVersion', err)
 
+    def test_empty_packages_map_is_input_error(self):
+        name = self.write('package-lock.json', {'lockfileVersion': 3, 'packages': {}})
+        code, _, err = self.run_checker([name])
+        self.assertEqual(code, 2)
+        self.assertIn('missing packages map', err)
+
     def test_entry_without_version_is_input_error(self):
         broken = lockfile({'node_modules/a': {'license': 'MIT'}})
         name = self.write('package-lock.json', broken)
         code, _, err = self.run_checker([name])
         self.assertEqual(code, 2)
-        self.assertIn('lacks a name or version', err)
+        self.assertIn('lacks a version', err)
 
     def test_malformed_exceptions_file_is_input_error(self):
         name = self.write('package-lock.json', lockfile({'node_modules/a': pkg()}))
@@ -164,6 +356,12 @@ class PolicyCases(CheckerCase):
         code, _, err = self.run_checker([name], bad)
         self.assertEqual(code, 2)
         self.assertIn('must have exactly', err)
+
+    def test_missing_exceptions_file_is_read_as_none_and_noted(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/z': pkg('1.0.0', 'Zlib')}))
+        code, out, _ = self.run_checker([name], 'no-such-exceptions.json')
+        self.assertEqual(code, 1, 'a review-required package still fails without an exceptions file')
+        self.assertIn('file absent, so no exceptions or verified overrides apply', out)
 
 
 class SpdxExpressionCases(unittest.TestCase):
@@ -175,23 +373,53 @@ class SpdxExpressionCases(unittest.TestCase):
         self.assertEqual(self.rank('Zlib'), check.REVIEW_RANK)
         self.assertEqual(self.rank('GPL-2.0-or-later'), check.PROHIBITED_RANK)
 
+    def test_prohibited_spellings_are_prohibited(self):
+        for spelling in PROHIBITED_SPELLINGS:
+            if spelling.startswith('(') or ' ' in spelling:
+                continue
+            with self.subTest(license=spelling):
+                self.assertEqual(self.rank(spelling), check.PROHIBITED_RANK)
+
+    def test_policy_prohibited_literals_are_prohibited(self):
+        for literal in ('NOASSERTION', 'UNLICENSED', 'UNKNOWN', 'SSPL', 'BUSL-1.1', 'CC-BY-NC-SA-4.0'):
+            with self.subTest(license=literal):
+                self.assertEqual(self.rank(literal), check.PROHIBITED_RANK)
+
+    def test_lgpl_is_prohibited_not_review(self):
+        self.assertEqual(self.rank('LGPL-2.1-only'), check.PROHIBITED_RANK)
+        self.assertEqual(self.rank('lgpl-3.0-or-later'), check.PROHIBITED_RANK)
+
+    def test_unknown_identifiers_default_to_review(self):
+        for ident in ('Elastic-2.0', 'LicenseRef-internal', 'WTFPL', 'Artistic-2.0'):
+            with self.subTest(license=ident):
+                self.assertEqual(self.rank(ident), check.REVIEW_RANK)
+
     def test_or_takes_most_restrictive_branch(self):
         self.assertEqual(self.rank('MIT OR Apache-2.0'), check.OK)
         self.assertEqual(self.rank('(MPL-2.0 OR Apache-2.0)'), check.REVIEW_RANK)
         self.assertEqual(self.rank('MIT OR GPL-2.0-only'), check.PROHIBITED_RANK)
+        self.assertEqual(self.rank('MIT OR GPLv3'), check.PROHIBITED_RANK)
 
     def test_and_takes_most_restrictive_term(self):
         self.assertEqual(self.rank('(MIT OR Apache-2.0) AND ISC'), check.OK)
         self.assertEqual(self.rank('(MIT AND Zlib)'), check.REVIEW_RANK)
         self.assertEqual(self.rank('MIT AND GPL-3.0-or-later'), check.PROHIBITED_RANK)
 
-    def test_with_exception_is_at_least_review(self):
+    def test_with_allowed_exceptions_is_at_least_review(self):
         self.assertEqual(self.rank('MIT WITH LLVM-exception'), check.REVIEW_RANK)
+        self.assertEqual(self.rank('Apache-2.0 WITH GCC-exception-3.1'), check.REVIEW_RANK)
+        self.assertEqual(self.rank('MIT WITH classpath-exception-2.0'), check.REVIEW_RANK)
         self.assertEqual(self.rank('GPL-2.0-only WITH Classpath-exception-2.0'), check.PROHIBITED_RANK)
+
+    def test_with_unlisted_exception_is_malformed(self):
+        for text in ('MIT WITH Foo-exception', 'MIT WITH GPL-3.0-only', '(MIT OR ISC) WITH LLVM-exception'):
+            with self.subTest(text=text):
+                self.assertIsNone(self.rank(text))
 
     def test_identifier_matching_is_case_insensitive(self):
         self.assertEqual(self.rank('mit and isc'), check.OK)
-        self.assertEqual(self.rank('lgpl-2.1-only'), check.REVIEW_RANK)
+        self.assertEqual(self.rank('zlib'), check.REVIEW_RANK)
+        self.assertEqual(self.rank('agpl-3.0-only'), check.PROHIBITED_RANK)
 
     def test_malformed_expressions_return_none(self):
         for text in ['', 'MIT OR', '(MIT', 'MIT)', 'MIT MIT', 'MIT/Apache-2.0', 'MIT WITH', '()', 'AND MIT']:
@@ -229,6 +457,38 @@ class ExceptionCases(CheckerCase):
         self.assertEqual(code, 1)
         self.assertIn('stale exception', out)
 
+    def test_prohibited_exception_license_is_input_error(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', 'MIT')}))
+        for license_value in ('GPL-3.0-only', 'MIT OR GPLv3', 'LGPL-2.1-only', 'BUSL-1.1', 'UNKNOWN'):
+            with self.subTest(license=license_value):
+                exc = self.exceptions([{'name': 'a', 'version': '1.0.0', 'license': license_value, 'reason': 'x'}])
+                code, out, err = self.run_checker([name], exc)
+                self.assertEqual(code, 2, out)
+                self.assertIn('cannot be excepted', err)
+                self.assertNotIn('stale exception', out)
+
+    def test_malformed_exception_license_is_input_error(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', 'MIT')}))
+        exc = self.exceptions([{'name': 'a', 'version': '1.0.0', 'license': 'MIT OR', 'reason': 'x'}])
+        code, _, err = self.run_checker([name], exc)
+        self.assertEqual(code, 2)
+        self.assertIn('not a well-formed SPDX expression', err)
+
+    def test_duplicate_exception_is_input_error(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/z': pkg('1.0.0', 'Zlib')}))
+        entry = {'name': 'z', 'version': '1.0.0', 'license': 'Zlib', 'reason': 'x'}
+        exc = self.exceptions([entry, dict(entry)])
+        code, _, err = self.run_checker([name], exc)
+        self.assertEqual(code, 2)
+        self.assertIn('duplicate exception', err)
+
+    def test_non_string_scope_is_input_error(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', 'MIT')}))
+        exc = self.write('exceptions.json', {'schema_version': 1, 'exceptions': [], 'scope': 5})
+        code, _, err = self.run_checker([name], exc)
+        self.assertEqual(code, 2)
+        self.assertIn('scope must be a string', err)
+
 
 class PolicyDocumentCases(unittest.TestCase):
     def sections(self):
@@ -254,10 +514,71 @@ class PolicyDocumentCases(unittest.TestCase):
         self.assertEqual(sorted(prohibited), sorted(check.PROHIBITED_EXACT))
         self.assertEqual(sorted(prefixes), sorted(check.PROHIBITED_PREFIXES))
 
+    def test_with_exception_list_matches_checker(self):
+        text = POLICY_DOC.read_text(encoding='utf-8')
+        for name in check.WITH_EXCEPTIONS:
+            self.assertIn(f'`{name}`', text)
 
-OTHER_INTEGRITY = 'sha512-' + 'B' * 86 + '=='
-REAL_EXCEPTIONS = REPO / 'docs' / 'evidence' / 'license-exceptions.json'
-REAL_CANVAS_LOCK = REPO / 'research-fixtures' / 'canvas' / 'package-lock.json'
+    def test_policy_states_the_integrity_rule_the_gate_enforces(self):
+        text = POLICY_DOC.read_text(encoding='utf-8')
+        self.assertIn('must carry an `integrity` value', text)
+        self.assertIn('fails', text)
+
+
+class WorkflowCases(unittest.TestCase):
+    def setUp(self):
+        self.text = WORKFLOW.read_text(encoding='utf-8')
+
+    def test_triggers_cover_lockfiles_checker_exceptions_and_workflow(self):
+        for needle in ('pull_request:', 'push:', 'branches: [main]', "'**/package-lock.json'",
+                       'scripts/verification/check_licenses.py',
+                       'docs/evidence/license-exceptions.json',
+                       '.github/workflows/license-policy.yml'):
+            with self.subTest(needle=needle):
+                self.assertIn(needle, self.text)
+        self.assertNotIn('pull_request_target', self.text)
+
+    def test_permissions_are_read_only_and_no_secrets(self):
+        self.assertRegex(self.text, r'(?m)^permissions:\n  contents: read\n')
+        self.assertNotRegex(self.text, r'write')
+        self.assertNotIn('secrets.', self.text)
+
+    def test_checkout_is_pinned_without_persisted_credentials(self):
+        self.assertIn('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1', self.text)
+        self.assertIn('persist-credentials: false', self.text)
+        self.assertRegex(self.text, r'uses: actions/[a-z-]+@[0-9a-f]{40}')
+
+    def test_runs_gate_on_ubuntu_with_timeout(self):
+        self.assertIn('runs-on: ubuntu-latest', self.text)
+        self.assertRegex(self.text, r'(?m)^\s+timeout-minutes: \d+')
+        self.assertIn('run: python3 scripts/verification/check_licenses.py', self.text)
+
+
+class RepositoryDataCases(unittest.TestCase):
+    """Real-data regression check: the committed gate over both default lockfiles.
+
+    Runs with default lockfile paths so a root-only exception is never reported stale.
+    PASS here is not approval: the committed exceptions remain pending owner review.
+    """
+
+    def test_committed_lockfiles_pass_gate(self):
+        proc = subprocess.run(
+            [sys.executable, str(CHECKER), '--exceptions', str(REPO / 'docs' / 'evidence' / 'license-exceptions.json')],
+            cwd=REPO, capture_output=True, text=True, timeout=60,
+        )
+        out, err = proc.stdout, proc.stderr
+        self.assertEqual(proc.returncode, 0, out + err)
+        self.assertIn('lockfile: package-lock.json', out)
+        self.assertIn('lockfile: research-fixtures/canvas/package-lock.json', out)
+        self.assertIn('result: PASS (0 finding(s))', out)
+        self.assertNotIn('missing or unknown license', out)
+        self.assertIn('node_modules/fuzzy [fuzzy@0.1.3] verified override applied', out)
+        self.assertIn('node_modules/khroma [khroma@2.1.0] verified override applied', out)
+        self.assertIn('excepted review-required', out)  # pending owner review, not approval
+
+
+OVERRIDE_LICENSE_CASES = ('GPL-3.0-only', 'GPLv3', 'LGPL-2.1-only', 'AGPLv3', 'SSPL', 'BUSL-1.1',
+                          'UNKNOWN', 'NOASSERTION', 'UNLICENSED', 'MIT OR GPLv3')
 
 
 def override_entry(name='a', version='1.0.0', integrity=INTEGRITY, license_value='MIT', **changes):
@@ -336,9 +657,23 @@ class VerifiedOverrideCases(CheckerCase):
         self.assertEqual(code, 1)
         self.assertIn('lockfile already declares a license', out)
 
+    def test_empty_license_string_is_never_overridden(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', '')}))
+        exc = self.overrides_file([override_entry('a', '1.0.0')])
+        code, out, _ = self.run_checker([name], exc)
+        self.assertEqual(code, 1, out)
+        self.assertNotIn('verified override applied', out)
+        self.assertIn('missing or unknown license', out)
+
+    def test_null_license_is_overridden_only_with_matching_integrity(self):
+        name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', None)}))
+        exc = self.overrides_file([override_entry('a', '1.0.0', integrity=OTHER_INTEGRITY)])
+        code, _, _ = self.run_checker([name], exc)
+        self.assertEqual(code, 1)
+
     def test_override_never_applies_to_prohibited_license(self):
         name = self.write('package-lock.json', lockfile({'node_modules/a': pkg('1.0.0', None)}))
-        for license_value in ('GPL-3.0-only', 'UNKNOWN', 'MIT OR GPL-2.0-only', 'AGPL-3.0-or-later'):
+        for license_value in OVERRIDE_LICENSE_CASES:
             with self.subTest(license=license_value):
                 exc = self.overrides_file([override_entry('a', '1.0.0', license_value=license_value)])
                 code, out, err = self.run_checker([name], exc)
@@ -379,21 +714,6 @@ class VerifiedOverrideCases(CheckerCase):
         code, _, err = self.run_checker([name], exc)
         self.assertEqual(code, 2)
         self.assertIn('must be a list', err)
-
-    def test_committed_overrides_clear_canvas_findings(self):
-        code, out, err = self.run_checker_real()
-        self.assertEqual(code, 0, out + err)
-        self.assertNotIn('missing or unknown license', out)
-        self.assertIn('node_modules/fuzzy [fuzzy@0.1.3] verified override applied', out)
-        self.assertIn('node_modules/khroma [khroma@2.1.0] verified override applied', out)
-        self.assertIn('excepted review-required', out)  # pending owner review, not approval
-
-    def run_checker_real(self):
-        proc = subprocess.run(
-            [sys.executable, str(CHECKER), '--exceptions', str(REAL_EXCEPTIONS), str(REAL_CANVAS_LOCK)],
-            cwd=REPO, capture_output=True, text=True, timeout=60,
-        )
-        return proc.returncode, proc.stdout, proc.stderr
 
 
 if __name__ == '__main__':

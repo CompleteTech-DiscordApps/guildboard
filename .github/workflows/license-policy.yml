@@ -1,0 +1,28 @@
+name: License policy
+on:
+  pull_request:
+    paths:
+      - '**/package-lock.json'
+      - 'scripts/verification/check_licenses.py'
+      - 'docs/evidence/license-exceptions.json'
+      - '.github/workflows/license-policy.yml'
+  push:
+    branches: [main]
+    paths:
+      - '**/package-lock.json'
+      - 'scripts/verification/check_licenses.py'
+      - 'docs/evidence/license-exceptions.json'
+      - '.github/workflows/license-policy.yml'
+permissions:
+  contents: read
+jobs:
+  license-gate:
+    name: Offline license gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run offline license gate (PASS is not approval; exceptions remain pending owner review)
+        run: python3 scripts/verification/check_licenses.py

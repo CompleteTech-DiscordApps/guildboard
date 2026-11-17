@@ -9,29 +9,38 @@ no license field and whose name, exact version and integrity all match. It recor
 evidence, not legal sign-off.
 Policy: docs/license-supply-chain-policy.md. Run from the repository root.
 
+Input handling: a missing exceptions file is not an error. It is read as no
+exceptions and no verified overrides, which only makes the gate stricter; the run
+prints a NOTE saying so. A missing, unreadable, larger-than-16-MiB, malformed or
+deeply nested lockfile or exceptions file is an input error.
+
 Exit status: 0 pass; 1 policy findings (prohibited, missing or unknown license,
-malformed license expression, unexcepted review-required package, unexpected
-install path, stale exception, verified override not applied); 2 input error
-(missing, unreadable or malformed lockfile or exceptions file, unsupported
-lockfileVersion, malformed verified override, or an override naming a prohibited
-license).
+malformed license expression, review-required package without an exception,
+third-party package without integrity, unexpected install path, stale exception,
+verified override not applied); 2 input error (missing, unreadable, oversized,
+malformed or deeply nested lockfile or exceptions file, unsupported
+lockfileVersion, malformed verified override, an override or exception naming a
+prohibited license, or an exception whose license is not a well-formed SPDX
+expression).
 """
 
 import argparse
 import datetime
 import json
+import os
 import re
 import sys
 
 DEFAULT_LOCKFILES = ('package-lock.json', 'research-fixtures/canvas/package-lock.json')
 DEFAULT_EXCEPTIONS = 'docs/evidence/license-exceptions.json'
 SUPPORTED_LOCKFILE_VERSIONS = (2, 3)
+MAX_INPUT_BYTES = 16 * 1024 * 1024
 
 ALLOWED = ('0BSD', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'BlueOak-1.0.0', 'CC0-1.0', 'ISC', 'MIT')
-REVIEW = ('LGPL-2.0-only', 'LGPL-2.0-or-later', 'LGPL-2.1-only', 'LGPL-2.1-or-later',
-          'LGPL-3.0-only', 'LGPL-3.0-or-later', 'MPL-2.0', 'Python-2.0', 'Unlicense', 'Zlib')
-PROHIBITED_EXACT = ('BUSL-1.1', 'NOASSERTION', 'UNKNOWN', 'UNLICENSED')
-PROHIBITED_PREFIXES = ('AGPL-', 'CC-BY-NC', 'GPL-', 'SSPL-')
+REVIEW = ('MPL-2.0', 'Python-2.0', 'Unlicense', 'Zlib')
+PROHIBITED_EXACT = ('NOASSERTION', 'UNKNOWN', 'UNLICENSED')
+PROHIBITED_PREFIXES = ('AGPL', 'BUSL', 'CC-BY-NC', 'GPL', 'LGPL', 'SSPL')
+WITH_EXCEPTIONS = ('Classpath-exception-2.0', 'GCC-exception-3.1', 'LLVM-exception')
 
 OK, REVIEW_RANK, PROHIBITED_RANK = 0, 1, 2
 RANK_LABEL = {OK: 'allowed', REVIEW_RANK: 'review-required', PROHIBITED_RANK: 'prohibited'}
@@ -40,6 +49,7 @@ _ALLOWED_U = {x.upper() for x in ALLOWED}
 _REVIEW_U = {x.upper() for x in REVIEW}
 _PROHIBITED_U = {x.upper() for x in PROHIBITED_EXACT}
 _PREFIXES_U = tuple(x.upper() for x in PROHIBITED_PREFIXES)
+_WITH_EXCEPTIONS_L = {x.lower() for x in WITH_EXCEPTIONS}
 
 _TOKEN = re.compile(r'\(|\)|[^\s()]+')
 _IDENT = re.compile(r'^[A-Za-z0-9][A-Za-z0-9.+\-]*$')
@@ -51,6 +61,11 @@ _EVIDENCE_KEYS = {'kind', 'source', 'file', 'sha256', 'verified_at'}
 _INTEGRITY = re.compile(r'(sha512|sha384|sha256)-[A-Za-z0-9+/]+={0,2}')
 _SHA256_HEX = re.compile(r'[0-9a-f]{64}')
 _ISO_DATE = re.compile(r'\d{4}-\d{2}-\d{2}')
+# Install paths: node_modules/<name> with optional nested node_modules/<name> segments.
+_INSTALL_KEY = re.compile(r'node_modules/(?:@[^/]+/)?[^/]+(?:/node_modules/(?:@[^/]+/)?[^/]+)*')
+_PACKAGE_NAME = re.compile(r'(?:@[^/\s]+/)?[^/\s]+')
+_WORKSPACE_GLOB = re.compile(r'([A-Za-z0-9][A-Za-z0-9._-]*)/\*')
+_WORKSPACE_SEGMENT = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]*')
 
 
 class InputError(Exception):
@@ -74,7 +89,7 @@ def classify_identifier(ident):
 
 
 def parse_expression(text):
-    """Validate an SPDX expression; return [(identifier, carries_WITH)]."""
+    """Validate an SPDX expression; return [(identifier or None, carries_WITH)]."""
     tokens = _TOKEN.findall(text)
     if not tokens:
         raise SpdxError('empty expression')
@@ -108,16 +123,17 @@ def parse_expression(text):
             parse_with()
 
     def parse_with():
-        base = parse_atom()
+        ident, parenthesized = parse_atom()
         if is_op(peek(), 'WITH'):
+            if parenthesized:
+                raise SpdxError('WITH applies to a license identifier, not to a parenthesized expression')
             take()
             exception = take()
-            if exception in ('(', ')') or exception.upper() in _OPERATORS or not _IDENT.match(exception):
-                raise SpdxError('invalid WITH exception')
-            base = (base, True)
+            if exception.lower() not in _WITH_EXCEPTIONS_L:
+                raise SpdxError('WITH exception is not one of the allowed SPDX exceptions')
+            terms.append((ident, True))
         else:
-            base = (base, False)
-        terms.append(base)
+            terms.append((ident, False))
 
     def parse_atom():
         token = take()
@@ -125,10 +141,10 @@ def parse_expression(text):
             parse_or()
             if take() != ')':
                 raise SpdxError('unbalanced parentheses')
-            return None
+            return None, True
         if token == ')' or token.upper() in _OPERATORS or not _IDENT.match(token):
             raise SpdxError('invalid license identifier')
-        return token
+        return token, False
 
     parse_or()
     if pos != len(tokens):
@@ -167,14 +183,18 @@ def _no_duplicate_keys(pairs):
 def read_json(path):
     try:
         with open(path, 'rb') as handle:
-            raw = handle.read()
+            raw = handle.read(MAX_INPUT_BYTES + 1)
     except FileNotFoundError:
         raise InputError(f'missing file: {path}')
     except OSError as exc:
         raise InputError(f'cannot read {path}: {exc.strerror}')
+    if len(raw) > MAX_INPUT_BYTES:
+        raise InputError(f'input too large (over {MAX_INPUT_BYTES} bytes): {path}')
     try:
         return json.loads(raw.decode('utf-8'), object_pairs_hook=_no_duplicate_keys,
                           parse_constant=_reject_constant)
+    except RecursionError:
+        raise InputError(f'malformed JSON in {path}: nested too deeply')
     except (UnicodeDecodeError, ValueError) as exc:
         raise InputError(f'malformed JSON in {path}: {exc}')
 
@@ -203,6 +223,11 @@ def load_exceptions(path):
             if not isinstance(value, str) or not value.strip():
                 raise InputError(f'exception #{index} in {path}: {field} must be a non-empty string')
             values[field] = value.strip()
+        rank = classify_expression(values['license'])
+        if rank is None:
+            raise InputError(f'exception #{index} in {path}: license is not a well-formed SPDX expression')
+        if rank == PROHIBITED_RANK:
+            raise InputError(f'exception #{index} in {path}: prohibited license {values["license"]!r} cannot be excepted')
         key = (values['name'], values['version'], values['license'])
         if key in table:
             raise InputError(f'duplicate exception #{index} in {path}')
@@ -287,6 +312,34 @@ def license_status(entry):
     return rank, text, RANK_LABEL[rank]
 
 
+def install_name(key):
+    """Package name for an exact node_modules install path, or None for any other path."""
+    if '\\' in key or not _INSTALL_KEY.fullmatch(key):
+        return None
+    if any(part in ('', '.', '..') for part in key.split('/')):
+        return None
+    name = key.rsplit('node_modules/', 1)[1]
+    return name if _PACKAGE_NAME.fullmatch(name) else None
+
+
+def workspace_dirs(root_entry):
+    """Directories named by the root entry's workspaces globs (exactly `dir/*`)."""
+    patterns = root_entry.get('workspaces', [])
+    if not isinstance(patterns, list):
+        return set()
+    dirs = set()
+    for pattern in patterns:
+        match = _WORKSPACE_GLOB.fullmatch(pattern) if isinstance(pattern, str) else None
+        if match:
+            dirs.add(match.group(1))
+    return dirs
+
+
+def is_workspace_path(key, dirs):
+    head, _, segment = key.rpartition('/')
+    return head in dirs and bool(_WORKSPACE_SEGMENT.fullmatch(segment))
+
+
 class OverrideIndex:
     """Matches verified overrides to lockfile entries that carry no license field."""
 
@@ -335,7 +388,7 @@ class LockfileReport:
         self.overridden = 0
         self.counts = {'allowed': 0, 'excepted': 0, 'review-required': 0,
                        'prohibited': 0, 'missing-license': 0, 'malformed-license': 0,
-                       'unexpected-path': 0}
+                       'missing-integrity': 0, 'unexpected-path': 0}
         self.lines = []
         self.failures = 0
 
@@ -343,6 +396,10 @@ class LockfileReport:
         if severity == 'FAIL':
             self.failures += 1
         self.lines.append(f'  {severity} {self.path} {key} [{label}] {category}: {detail}')
+
+    def unexpected(self, key, detail):
+        self.counts['unexpected-path'] += 1
+        self.add('FAIL', key, '?', 'unexpected install path', detail)
 
 
 def scan_lockfile(path, exceptions, used, index):
@@ -355,6 +412,8 @@ def scan_lockfile(path, exceptions, used, index):
     packages = data.get('packages')
     if not isinstance(packages, dict) or not packages:
         raise InputError(f'malformed lockfile (missing packages map): {path}')
+    root_entry = packages.get('') if isinstance(packages.get(''), dict) else {}
+    dirs = workspace_dirs(root_entry)
 
     report = LockfileReport(path, version)
     for key in sorted(packages):
@@ -362,31 +421,49 @@ def scan_lockfile(path, exceptions, used, index):
         if not isinstance(key, str) or not isinstance(entry, dict):
             raise InputError(f'malformed lockfile entry in {path}')
         report.entries += 1
-        if key == '' or entry.get('link') is True:
+        if key == '':
             report.skipped += 1
             continue
-        if 'node_modules/' not in key:
-            if key.startswith(('apps/', 'packages/')) and 'resolved' not in entry and 'integrity' not in entry:
+        if entry.get('link') is True:
+            target = entry.get('resolved')
+            if (install_name(key) is not None and isinstance(target, str)
+                    and is_workspace_path(target, dirs) and target in packages):
                 report.skipped += 1
-                continue
-            report.counts['unexpected-path'] += 1
-            report.add('FAIL', key, '?', 'unexpected install path', 'entry is outside node_modules and is not a workspace')
+            else:
+                report.unexpected(key, 'link must sit at a node_modules path and point at a workspace that is present in this lockfile')
             continue
-        name = key.rsplit('node_modules/', 1)[1]
+        if is_workspace_path(key, dirs):
+            if 'resolved' in entry or 'integrity' in entry:
+                report.unexpected(key, 'workspace entry must not carry resolved or integrity')
+            else:
+                report.skipped += 1
+            continue
+        path_name = install_name(key)
+        if path_name is None:
+            report.unexpected(key, 'entry is not an exact node_modules install path and is not a known workspace')
+            continue
         version_text = entry.get('version')
-        if not name or not isinstance(version_text, str) or not version_text:
-            raise InputError(f'malformed lockfile entry in {path}: {key} lacks a name or version')
+        if not isinstance(version_text, str) or not version_text:
+            raise InputError(f'malformed lockfile entry in {path}: {key} lacks a version')
+        # npm aliases record the real package name in `name`; classify by that name.
+        name = entry.get('name', path_name)
+        if not isinstance(name, str) or not _PACKAGE_NAME.fullmatch(name):
+            raise InputError(f'malformed lockfile entry in {path}: {key} has an invalid name')
         report.third_party += 1
         label = f'{name}@{version_text}'
         integrity = entry.get('integrity')
-        if not integrity:
+        has_integrity = isinstance(integrity, str) and integrity != ''
+        if not has_integrity:
             report.no_integrity += 1
+            report.counts['missing-integrity'] += 1
+            report.add('FAIL', key, label, 'missing integrity',
+                       'third-party package has no integrity value; every registry package must pin one')
         declared = _has_license(entry)
-        index.record(name, version_text, integrity, declared)
+        index.record(name, version_text, integrity if has_integrity else None, declared)
         if declared:
             rank, text, detail = license_status(entry)
         else:
-            override, candidates = index.match(name, version_text, integrity)
+            override, candidates = index.match(name, version_text, integrity if has_integrity else None)
             if override is None:
                 report.counts['missing-license'] += 1
                 detail = 'no license field'
@@ -437,6 +514,7 @@ def main(argv=None):
     lockfiles = args.lockfiles or list(DEFAULT_LOCKFILES)
 
     try:
+        exceptions_absent = not os.path.exists(args.exceptions)
         exceptions = load_exceptions(args.exceptions)
         overrides = load_overrides(args.exceptions)
         used = set()
@@ -450,7 +528,8 @@ def main(argv=None):
     print('license policy check: GB-T0.02.02.T1 (docs/license-supply-chain-policy.md)')
     print(f'policy sets: allowed={len(ALLOWED)} review-listed={len(REVIEW)} '
           f'prohibited-exact={len(PROHIBITED_EXACT)} prohibited-prefixes={len(PROHIBITED_PREFIXES)}')
-    print(f'exceptions: {args.exceptions} ({len(exceptions)} entries)')
+    absent_note = '; file absent, so no exceptions or verified overrides apply' if exceptions_absent else ''
+    print(f'exceptions: {args.exceptions} ({len(exceptions)} entries{absent_note})')
     print(f'verified overrides: {args.exceptions} ({len(overrides)} entries, {len(index.applied)} applied)')
     for report in reports:
         print(f'lockfile: {report.path} (lockfileVersion {report.version})')
