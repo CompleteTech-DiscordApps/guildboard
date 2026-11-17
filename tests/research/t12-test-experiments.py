@@ -405,16 +405,24 @@ class SourceCaptureRegression(unittest.TestCase):
                 except (BrokenPipeError, ConnectionResetError):
                     pass
 
-        # Warm each real child through imports only. The production Popen call
-        # releases its child after fetch has started the attempt deadline.
+        # Stage both healthy HTTP exchanges before timing the collection so the
+        # short deadline does not depend on scheduling another loopback exchange.
+        # Leave their result output and reaping to fetch. Release the slow
+        # child within its timed attempt so real body traffic tests the deadline.
         worker = """\
 import runpy
 import sys
 
 fetch_worker = runpy.run_path(sys.argv[1])["fetch_worker"]
-print("ready", file=sys.stderr, flush=True)
-if sys.stdin.readline() == "fetch\\n":
-    fetch_worker(sys.argv[2])
+target = sys.argv[2]
+if target.endswith("/slow"):
+    print("ready", file=sys.stderr, flush=True)
+    if sys.stdin.readline() != "fetch\\n":
+        sys.exit(1)
+fetch_worker(target)
+if not target.endswith("/slow"):
+    sys.stdout.flush()
+    print("complete", file=sys.stderr, flush=True)
 """
         ready = Queue()
         processes = {}
@@ -427,8 +435,9 @@ if sys.stdin.readline() == "fetch\\n":
             process = processes[target]
             self.assertNotIn(target, released)
             released[target] = process
-            process.stdin.write("fetch\n")
-            process.stdin.flush()
+            if target.endswith("/slow"):
+                process.stdin.write("fetch\n")
+                process.stdin.flush()
             return process
 
         with socketserver.ThreadingTCPServer(("127.0.0.1", 0), Handler) as server:
@@ -445,11 +454,14 @@ if sys.stdin.readline() == "fetch\\n":
                         stderr=subprocess.PIPE, text=True,
                     )
                     processes[target] = process
-                    reader = threading.Thread(target=lambda stream=process.stderr: ready.put(stream.readline()))
+                    read_ready = process.stderr.readline if path == "/slow" else process.stderr.read
+                    reader = threading.Thread(target=lambda read=read_ready, path=path: ready.put((path, read())))
                     reader.start()
                     readers.append(reader)
+                markers = dict(ready.get(timeout=10) for reader in readers)
+                self.assertEqual(markers, {"/slow": "ready\n", "/alternate": "complete\n",
+                                           "/following": "complete\n"})
                 for reader in readers:
-                    self.assertEqual(ready.get(timeout=10), "ready\n")
                     reader.join(timeout=2)
 
                 with mock.patch.object(self.capture_module, "ATTEMPT_SECONDS", 0.8), \
@@ -506,9 +518,12 @@ if sys.stdin.readline() == "fetch\\n":
 
     def check_cancellation(self, signum):
         stop = threading.Event()
-        class Handler(socketserver.BaseRequestHandler):
+        class Handler(socketserver.StreamRequestHandler):
             def handle(self):
-                request = self.request.recv(4096)
+                request = self.rfile.readline()
+                for header in self.rfile:
+                    if header == b"\r\n":
+                        break
                 try:
                     if b"/slow " in request:
                         self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 100000\r\n\r\n")
@@ -566,14 +581,18 @@ sys.exit(any(row["status"] != "fetched" for row in rows))
             process = subprocess.Popen([sys.executable, "-c", driver, str(Path(self.capture_module.__file__).resolve()), url, str(marker)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             records = []
             try:
+                completed = slow_workers = 0
                 deadline = time.monotonic() + 6
                 while time.monotonic() < deadline:
                     records = [json.loads(line) for line in marker.read_text().splitlines()] if marker.exists() else []
-                    if sum("completed" in row for row in records) >= 2 and sum(row.get("url", "").endswith("/slow") for row in records) >= 4:
+                    completed = sum(row.get("completed") == url + "/healthy" for row in records)
+                    slow_workers = sum(row.get("url") == url + "/slow" for row in records)
+                    if completed >= 2 and slow_workers >= 4:
                         break
                     time.sleep(0.02)
                 else:
-                    self.fail("loopback workers and completed healthy/fallback sources did not become ready")
+                    self.fail(f"loopback setup incomplete: {completed}/2 healthy results, "
+                              f"{slow_workers}/4 slow workers launched")
                 started = time.monotonic()
                 process.send_signal(signum)
                 stdout, stderr = process.communicate(timeout=4)
