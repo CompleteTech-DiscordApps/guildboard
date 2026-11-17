@@ -42,4 +42,14 @@ class Checks(unittest.TestCase):
   p=self.d/'result'; p.write_text('prior\n')
   with self.assertRaises(InterruptedError): v.publish(p,{'new':True},True)
   self.assertEqual(p.read_text(),'prior\n')
+class SourcePins(unittest.TestCase):
+ # Runs without fetched inputs: approved SQL identities must stay on immutable revisions.
+ def test_approved_sql_sources_are_revision_pinned(self):
+  names=[n for n in v.SOURCES if n.startswith('sql/')]; self.assertEqual(len(names),4)
+  for name in names: v.immutable_source(name,v.SOURCES[name]['url'])
+ def test_mutable_sql_urls_rejected(self):
+  for url in ['https://mariadb.com/docs/server/reference/data-types/string-data-types/json.md','https://raw.githubusercontent.com/mariadb-corporation/mariadb-docs/main/server/reference/data-types/string-data-types/json.md','https://raw.githubusercontent.com/mariadb-corporation/mariadb-docs/f1d0c1c/x.md','https://raw.githubusercontent.com/mariadb-corporation/mariadb-docs/'+'0'*40+'/../x.md','https://raw.githubusercontent.com/mariadb-corporation/mariadb-docs/'+'0'*40+'/%2e%2e/x.md','https://raw.githubusercontent.com/mysql/mysql-server/trunk/MYSQL_VERSION']:
+   with self.assertRaises(ValueError): v.immutable_source('sql/mariadb-json.md',url)
+ def test_ledger_matches_code(self):
+  self.assertEqual(json.loads((ROOT/'docs/research/editor14/source-ledger.json').read_text())['sources'],v.SOURCES)
 if __name__=='__main__': unittest.main()
