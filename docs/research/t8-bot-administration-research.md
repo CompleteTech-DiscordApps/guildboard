@@ -144,7 +144,7 @@ real credentials, instance binding, authorization, races/expiry and client tests
 are still needed before accepting an exact-launch/current-presence claim (#35).
 Do not invent a signed launch token or reclassify SDK IDs as trusted proof.
 
-Preserve the order in the [proposed system contract](../specifications/GB-T0-S1-system-contract.md) (#481): current identity/session/tenant/read → scoped
+Preserve the order in the [accepted GB-T0.S1 system boundary contract](../specifications/GB-T0-S1-system-contract.md) (#481): current identity/session/tenant/read → scoped
 existing operation receipt and canonical digest → if absent, active lineage →
 new-write capability/freshness/generation/schema/object checks → atomic state,
 revision, receipt, outbox and audit commit → durable success. Same readable
@@ -296,10 +296,13 @@ and real Discord provenance remain unimplemented specification/verification work
 
 [ADR 0001](../adr/0001-editor-activity-vps-direction.md) accepts a controlled
 experiment with Excalidraw inside a Discord Activity, server-authoritative
-API and collaboration, and GoDaddy Linux VPS. The system contract on main at
-`46e53068235308ff591b3a4e1b1fe8c501dd3af1` remains proposed. Its current scoped
-read, historical receipt and lineage-fence ordering still applies to the
-candidate T8 handoff. Its response-time read fence also applies to delayed
+API and collaboration, and GoDaddy Linux VPS. On main at
+`46e53068235308ff591b3a4e1b1fe8c501dd3af1`, [T0 records delegated acceptance of
+GB-T0.S1](../workstreams/T0.md) for #3. The [architecture](../architecture.md)
+identifies the status text in the contract file as historical. T8 installation,
+command and admission design choices remain proposed. The accepted contract
+requires scoped read, historical receipt and lineage-fence ordering in the T8
+handoff. Its response-time read fence also applies to delayed
 results such as followups. The synchronous fixture cannot validate that fence
 under concurrency or acquire current Discord membership and channel evidence.
 
