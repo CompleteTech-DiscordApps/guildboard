@@ -27,6 +27,13 @@ class PolicyResearchTests(unittest.TestCase):
         for change in ({"guild_matches": False}, {"board_matches": False}):
             self.deny_without_effects(replace(Facts(client_admin_claim=True), **change), "hidden_resource")
 
+    def test_same_tenant_client_admin_claim_does_not_grant_control(self):
+        viewer = Facts(roles=frozenset({"viewer"}), client_admin_claim=True)
+        for action in ("map_roles", "grant"):
+            with self.subTest(action=action):
+                self.deny_without_effects(replace(viewer, action=action), "control_denied")
+        self.deny_without_effects(viewer, "no_write_capability")
+
     def test_viewer_baseline_is_not_an_explicit_write_deny(self):
         self.deny_without_effects(Facts(roles=frozenset({"viewer"})))
         self.assertEqual(candidate(Facts(roles=frozenset({"viewer", "writer"}))), "new_write")
@@ -81,6 +88,14 @@ class PolicyResearchTests(unittest.TestCase):
         self.deny_without_effects(replace(f, digest_matches=False), "digest_conflict")
         self.deny_without_effects(replace(f, board_visible=False), "read_denied")
         self.deny_without_effects(replace(f, receipt_present=False), "lineage_changed")
+
+    def test_initial_read_denial_is_independent_of_receipt_and_digest(self):
+        for receipt_present, digest_matches in ((False, False), (True, False), (True, True)):
+            with self.subTest(receipt_present=receipt_present, digest_matches=digest_matches):
+                facts = Facts(receipt_present=receipt_present, digest_matches=digest_matches)
+                self.deny_without_effects(replace(facts, session_live=False), "unauthenticated")
+                self.deny_without_effects(replace(facts, member=False), "read_denied")
+                self.deny_without_effects(replace(facts, now=10), "evidence_stale")
 
     def test_known_invalidation_prevents_old_refresh_publish(self):
         self.assertFalse(M["publish_refresh"](1, 0))

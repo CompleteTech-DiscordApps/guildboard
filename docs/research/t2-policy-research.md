@@ -12,8 +12,11 @@ authorization was executed; official documents are rolling observations.
 Live issue OPEN/unassigned, no earlier claim or competing focused T2 PR; live
 GraphQL native `blockedBy.totalCount=0`. Supervisor triage identifies Ready
 research. Claim and isolated worktree preserve native gates and ownership.
-Read [T2 scope](../workstreams/T2.md), [architecture proposal](../architecture.md),
-SECURITY and CONTRIBUTING. Research does not accept runtime architecture.
+Read [T2 scope](../workstreams/T2.md), [architecture](../architecture.md),
+[SECURITY](../../SECURITY.md) and [CONTRIBUTING](../../CONTRIBUTING.md).
+The [accepted GB-T0.S1 system contract](../specifications/GB-T0-S1-system-contract.md)
+now controls the receipt, read-delivery and write fences. The historical PR
+snapshots below explain the research baseline. T2 policy choices remain open.
 
 Provisional inputs:
 
@@ -75,6 +78,14 @@ explicit restrictions/view-only, emergency lockdown and T6's mode eligibility;
 object/action permission; then capability union and a valid scoped temporary
 grant. Unknown actions/capabilities are denied. Check all of this at the actual
 commit fence, not only request arrival, UI display or WSS handshake.
+
+The accepted contract also requires a serialized current-read check at each
+protected transport release, including retained receipts, digest-dependent
+conflicts, ACKs and queued chunks. Read revocation, expiry or invalidation ordered
+first suppresses release without revealing the prior result or rolling back an
+accepted write. The model evaluates initial read authority and returns abstract
+decision outcomes. Transport release ordering and durability require separate
+verification.
 
 Read/receipt reconciliation is a distinct branch: current identity/tenant/read
 authority first, then retained receipt and digest check, then active lineage and
@@ -243,8 +254,8 @@ accepted policy/session/SQL contracts and an approved target remain missing.
 | Role precedence and explicit abuse | Alternative/capability tables, 2,048 cases and 15 tests | #67/T6 approve role/action/mode/ownership/restriction/bootstrap matrix; implement complete allow/deny/no-side-effect suite |
 | Required Discord privileges | D1–D6 and least-privilege acquisition comparison | Real token/scope/intent permissions; owner/Admin/Manage Guild, overwritten channels, private threads, deleted/reordered roles and missing bot access |
 | Revocation freshness | Four-part guarantee, expiry/refresh/external-change traces | Measure change-to-observation-to-committed-fence timestamps, clock uncertainty, rate limits, Gateway gap/outage/old refresh behavior; accept numeric budgets |
-| Immediate local fence | Provisional #481/#489 ordering plus old-generation no-effects trace | Barrier-controlled multi-worker SQL/HTTP/WSS/bot races, commit-before/after, expiry-in-queue, crash/retry and audit atomicity |
-| Tenant/receipt/launch boundaries | Foreign-resource tests, current-read/old-receipt ordering, #491 distinction | Two-guild/object/storage/broadcast authorization and no metadata leaks; independent stronger launch/presence proof if product needs it |
+| Immediate local fence | Accepted GB-T0.S1 write fence, #489's atomicity caveat and old-generation no-effects trace | Barrier-controlled multi-worker SQL/HTTP/WSS/bot races, commit-before/after, expiry-in-queue, crash/retry and audit atomicity |
+| Tenant/receipt/launch boundaries | Foreign-resource tests, initial-read/old-receipt ordering, #491 distinction | Two-guild/object/storage/broadcast authorization, serialized protected release with no metadata leaks, and independent stronger launch/presence proof if product needs it |
 | Versions/primary URLs/alternatives/uncertainty | Seven dated source hashes and model-v1 environment/report | Actual Security & Authorization/consumer review and accepted specification, not author self-certification |
 
 #67 consumes the proposed policy specification; #35 supplies identity/evidence;
