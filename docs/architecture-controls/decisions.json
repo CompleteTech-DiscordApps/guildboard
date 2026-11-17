@@ -17,6 +17,25 @@
       "test_evidence": [
         "tests/architecture-controls/test_gate.py"
       ]
+    },
+    {
+      "id": "DEC-0002",
+      "revision": 1,
+      "boundary": "packages/config/README.md",
+      "old_sha256": "de077535d8f5899a3bc084384d999f8c95c6f634935bccd5beef86431bb2caf8",
+      "new_sha256": "bcc23750424efb8ad69032ae78d696af99e987aaaeb7aa3a0095d5692f89b94b",
+      "rationale": "Documentation-only link correction after the repository transfer: the GB-T0.03.02.T1.S2 issue link now names the canonical CompleteTech-DiscordApps/guildboard repository from planning/github-state.json. No parser contract, API, type or behavior text changed.",
+      "alternatives": [
+        "Keep the transfer-era CompleteDotTech/guildboard link, which GitHub redirects but which no longer names the canonical repository"
+      ],
+      "controls": [
+        "planning/github-state.json",
+        "packages/config/README.md"
+      ],
+      "test_evidence": [
+        "packages/config/test/parsers.test.ts",
+        "tests/architecture-controls/test_gate.py"
+      ]
     }
   ]
 }

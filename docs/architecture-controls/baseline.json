@@ -38,7 +38,7 @@
     "packages/collaboration/package.json": "3ac2711e4f8785fe9f389083a1743d1d7e2badbcaf98aa11a575ba7fb6ec14a2",
     "packages/collaboration/src/index.ts": "9bc09c5598267291cd1ee9db2c66e83c50d173f82cd3ae08753478ad1f68e67d",
     "packages/collaboration/tsconfig.json": "3bff4e05652baeac4a983156e420117f182bafe79b4268ee028fd393fc90d46d",
-    "packages/config/README.md": "de077535d8f5899a3bc084384d999f8c95c6f634935bccd5beef86431bb2caf8",
+    "packages/config/README.md": "bcc23750424efb8ad69032ae78d696af99e987aaaeb7aa3a0095d5692f89b94b",
     "packages/config/package.json": "f5210798e99199dd2e8f3dbe67ba2bf22518dcef416331a161c1dad0606ec1ed",
     "packages/config/src/index.ts": "29a16bd7446b6157b9b3098c28a0314ee770db6ecf06b5a5df308cfde190a63c",
     "packages/config/src/parsers.ts": "0a11479a697b9a5889b1f96ef2318df2b91a52fa1f7c817c3049d7bbcf393fcd",

@@ -27,7 +27,7 @@ Tooling is pinned in the root lockfile. See [tooling dependency notes](../../doc
 
 ## Numeric and URL checks
 
-[GB-T0.03.02.T1.S2 / #452](https://github.com/CompleteDotTech/guildboard/issues/452) adds pure `parsePort(value)` and `parseDatabaseUrl(value)` helpers. Each takes `string | undefined` and returns the accepted value (`number` or original URL string), or `undefined` for a failed check. `parseConfig` aggregates failed names through `createConfigFailure`; helper success alone does not establish valid configuration.
+[GB-T0.03.02.T1.S2 / #452](https://github.com/CompleteTech-DiscordApps/guildboard/issues/452) adds pure `parsePort(value)` and `parseDatabaseUrl(value)` helpers. Each takes `string | undefined` and returns the accepted value (`number` or original URL string), or `undefined` for a failed check. `parseConfig` aggregates failed names through `createConfigFailure`; helper success alone does not establish valid configuration.
 
 `parsePort` accepts ASCII decimal digits, including leading zeroes, only when the numeric value is in 1–65535. Signs, whitespace (including a final newline), fractions, exponents, alternate bases, Unicode digits and overflow fail. `parseDatabaseUrl` uses the platform URL parser and requires normalized protocol `mysql:`, a nonempty hostname and a path beyond `/`; query/fragment text cannot supply a missing database path. Scheme case follows URL parsing rules. Accepted URL input is preserved exactly, including credentials/encoding; **do not log it**. Caught URL errors are discarded because they may retain the input.
 

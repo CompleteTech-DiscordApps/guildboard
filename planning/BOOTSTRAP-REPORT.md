@@ -6,12 +6,12 @@ Audit time: 2026-10-24T03:56:38.837547+00:00. Audit inspected repository head `8
 
 ## Repository
 
-- URL: https://github.com/CompleteDotTech/guildboard
+- URL: https://github.com/CompleteTech-DiscordApps/guildboard
 - Owner: `CompleteDotTech`
 - Visibility: public; default branch: `main`
 - License: MIT for original work, subject to future dependency/asset licensing review.
 - Topics: `collaboration`, `discord`, `discord-activity`, `excalidraw`, `godaddy`, `moderation`, `open-source`, `react`, `realtime`, `self-hosted`, `typescript`, `websockets`, `whiteboard`
-- Initial commit: [12254fa606aa59d6083ca241b5568958bfb9f626](https://github.com/CompleteDotTech/guildboard/commit/12254fa606aa59d6083ca241b5568958bfb9f626), 2026-10-23T22:39:33-04:00 — Establish Guildboard engineering foundation and canonical delivery roadmap.
+- Initial commit: [12254fa606aa59d6083ca241b5568958bfb9f626](https://github.com/CompleteTech-DiscordApps/guildboard/commit/12254fa606aa59d6083ca241b5568958bfb9f626), 2026-10-23T22:39:33-04:00 — Establish Guildboard engineering foundation and canonical delivery roadmap.
 - Foundation includes module boundaries for Activity/API/bot/shared contracts/auth/canvas/collaboration, database/migrations, GoDaddy VPS, tests and documentation, plus functioning bootstrap/reconciliation/audit tools. Runtime module READMEs explicitly identify implementation as future work.
 - Issues, Discussions and Actions enabled. Dependabot alerts/security updates, secret scanning, push protection and private vulnerability reporting enabled. Workflow tokens default to read-only; GitHub-owned/verified actions allowed. Main rules require reviewed CODEOWNER PRs and the actual `Validate roadmap` check; an explicit administrator bootstrap bypass is documented. No review was fabricated.
 
@@ -20,7 +20,7 @@ Audit time: 2026-10-24T03:56:38.837547+00:00. Audit inspected repository head `8
 - URL: https://github.com/users/CompleteDotTech/projects/7
 - Owner: `CompleteDotTech`; Project number: 7; public: True.
 - Configuration copied from [Pick Your AI Project #1](https://github.com/orgs/Pick-Your-AI/projects/1), with draft copying disabled. Initial copy independently contained **zero items**. Source issues, PRs and assignments were not imported. The source Project was read-only.
-- Repository association verified: `CompleteDotTech/guildboard`.
+- Repository association verified (audited): `CompleteDotTech/guildboard`.
 - Default first view: Workstream overview, table grouped by Tier, native hierarchy and sub-issue progress visible.
 - 17 saved views, 26 total native/configuration fields, 7 enabled native workflows. Default Burn up Insight retained.
 
@@ -98,20 +98,20 @@ Every descendant is enrolled and fully classified. Native links, rather than bod
 
 | Workstream | Epic | Responsible expertise | Total planned issues |
 | --- | --- | --- | ---: |
-| T0: Product Foundation & Architecture | [GB-T0](https://github.com/CompleteDotTech/guildboard/issues/1) | Architecture | 35 |
-| T1: Discord Activity & Identity | [GB-T1](https://github.com/CompleteDotTech/guildboard/issues/33) | Discord Integration | 33 |
-| T2: Authorization & Moderation | [GB-T2](https://github.com/CompleteDotTech/guildboard/issues/65) | Security & Authorization | 33 |
-| T3: Whiteboard Canvas & Editing | [GB-T3](https://github.com/CompleteDotTech/guildboard/issues/97) | Frontend & Canvas | 33 |
-| T4: Real-Time Collaboration & Presence | [GB-T4](https://github.com/CompleteDotTech/guildboard/issues/131) | Realtime Systems | 33 |
-| T5: Boards, Persistence & Recovery | [GB-T5](https://github.com/CompleteDotTech/guildboard/issues/143) | Data Engineering | 33 |
-| T6: Collaboration Modes & Presentation | [GB-T6](https://github.com/CompleteDotTech/guildboard/issues/195) | Frontend & Canvas | 33 |
-| T7: User Interface & Accessibility | [GB-T7](https://github.com/CompleteDotTech/guildboard/issues/227) | UX & Accessibility | 33 |
-| T8: Backend APIs & Discord Commands | [GB-T8](https://github.com/CompleteDotTech/guildboard/issues/259) | Backend & Bot | 35 |
-| T9: Security, Privacy & Abuse Prevention | [GB-T9](https://github.com/CompleteDotTech/guildboard/issues/291) | Security Engineering | 33 |
-| T10: GoDaddy Infrastructure & CI/CD | [GB-T10](https://github.com/CompleteDotTech/guildboard/issues/323) | Platform Engineering | 33 |
-| T11: Reliability, Monitoring & Operations | [GB-T11](https://github.com/CompleteDotTech/guildboard/issues/355) | SRE | 33 |
-| T12: Quality Engineering & Acceptance | [GB-T12](https://github.com/CompleteDotTech/guildboard/issues/387) | Quality Engineering | 34 |
-| T13: Documentation, Community & Release | [GB-T13](https://github.com/CompleteDotTech/guildboard/issues/419) | Maintainer & Documentation | 37 |
+| T0: Product Foundation & Architecture | [GB-T0](https://github.com/CompleteTech-DiscordApps/guildboard/issues/1) | Architecture | 35 |
+| T1: Discord Activity & Identity | [GB-T1](https://github.com/CompleteTech-DiscordApps/guildboard/issues/33) | Discord Integration | 33 |
+| T2: Authorization & Moderation | [GB-T2](https://github.com/CompleteTech-DiscordApps/guildboard/issues/65) | Security & Authorization | 33 |
+| T3: Whiteboard Canvas & Editing | [GB-T3](https://github.com/CompleteTech-DiscordApps/guildboard/issues/97) | Frontend & Canvas | 33 |
+| T4: Real-Time Collaboration & Presence | [GB-T4](https://github.com/CompleteTech-DiscordApps/guildboard/issues/131) | Realtime Systems | 33 |
+| T5: Boards, Persistence & Recovery | [GB-T5](https://github.com/CompleteTech-DiscordApps/guildboard/issues/143) | Data Engineering | 33 |
+| T6: Collaboration Modes & Presentation | [GB-T6](https://github.com/CompleteTech-DiscordApps/guildboard/issues/195) | Frontend & Canvas | 33 |
+| T7: User Interface & Accessibility | [GB-T7](https://github.com/CompleteTech-DiscordApps/guildboard/issues/227) | UX & Accessibility | 33 |
+| T8: Backend APIs & Discord Commands | [GB-T8](https://github.com/CompleteTech-DiscordApps/guildboard/issues/259) | Backend & Bot | 35 |
+| T9: Security, Privacy & Abuse Prevention | [GB-T9](https://github.com/CompleteTech-DiscordApps/guildboard/issues/291) | Security Engineering | 33 |
+| T10: GoDaddy Infrastructure & CI/CD | [GB-T10](https://github.com/CompleteTech-DiscordApps/guildboard/issues/323) | Platform Engineering | 33 |
+| T11: Reliability, Monitoring & Operations | [GB-T11](https://github.com/CompleteTech-DiscordApps/guildboard/issues/355) | SRE | 33 |
+| T12: Quality Engineering & Acceptance | [GB-T12](https://github.com/CompleteTech-DiscordApps/guildboard/issues/387) | Quality Engineering | 34 |
+| T13: Documentation, Community & Release | [GB-T13](https://github.com/CompleteTech-DiscordApps/guildboard/issues/419) | Maintainer & Documentation | 37 |
 
 ## Triage statistics
 
@@ -139,18 +139,18 @@ All research investigations remain Unverified. Their 14 tracked evidence gaps ar
 - Native hierarchy and enrollment: pass; no accidental orphan descendants.
 - Native dependency graph: pass; no self-dependencies or cycles.
 - Strict initial triage/readiness/label/milestone checks: pass.
-- Traceability: [307 authored capability clauses](TRACEABILITY.md), plus focused MVP integrated acceptance [GB-T12.MVP1](https://github.com/CompleteDotTech/guildboard/issues/455); implementation, testing, documentation and release-gate links are recorded in [traceability.json](traceability.json).
+- Traceability: [307 authored capability clauses](TRACEABILITY.md), plus focused MVP integrated acceptance [GB-T12.MVP1](https://github.com/CompleteTech-DiscordApps/guildboard/issues/455); implementation, testing, documentation and release-gate links are recorded in [traceability.json](traceability.json).
 - Critical-path report: [DEPENDENCIES.md](DEPENDENCIES.md), based on the verified native graph. Longest chains are unweighted prerequisite sequences, not time forecasts.
 - MVP approval consumes only M0–M2 prerequisite phases; no invented dates.
 - Milestones: [MILESTONES.md](MILESTONES.md), nine milestones with no due dates.
 - Machine readback: [remote-audit.json](audit/remote-audit.json).
 
-Release gates: MVP [GB-T13.G1](https://github.com/CompleteDotTech/guildboard/issues/456); production recovery/GoDaddy [GB-T13.G2](https://github.com/CompleteDotTech/guildboard/issues/457); stable approval [GB-T13.G3](https://github.com/CompleteDotTech/guildboard/issues/472). Actual publication is separate: MVP [GB-T13.04.01.O1](https://github.com/CompleteDotTech/guildboard/issues/471), stable v1.0 [GB-T13.04.01.O2](https://github.com/CompleteDotTech/guildboard/issues/473). These are future engineering work, not performed releases.
+Release gates: MVP [GB-T13.G1](https://github.com/CompleteTech-DiscordApps/guildboard/issues/456); production recovery/GoDaddy [GB-T13.G2](https://github.com/CompleteTech-DiscordApps/guildboard/issues/457); stable approval [GB-T13.G3](https://github.com/CompleteTech-DiscordApps/guildboard/issues/472). Actual publication is separate: MVP [GB-T13.04.01.O1](https://github.com/CompleteTech-DiscordApps/guildboard/issues/471), stable v1.0 [GB-T13.04.01.O2](https://github.com/CompleteTech-DiscordApps/guildboard/issues/473). These are future engineering work, not performed releases.
 
 ## CI and repeatability
 
-- [Planning integrity](https://github.com/CompleteDotTech/guildboard/actions/runs/40060080436): success at `8d9ff061caffefe48056c2098b4bf35c8cc39b38`.
-- [Remote roadmap integrity](https://github.com/CompleteDotTech/guildboard/actions/runs/40060102520): success at `8d9ff061caffefe48056c2098b4bf35c8cc39b38`.
+- [Planning integrity](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/40060080436): success at `8d9ff061caffefe48056c2098b4bf35c8cc39b38`.
+- [Remote roadmap integrity](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/40060102520): success at `8d9ff061caffefe48056c2098b4bf35c8cc39b38`.
 
 Idempotent issue detection was rerun after population; no additional issues were created. Initial comments use durable markers and the live audit verifies exactly one per selected handoff. Scripts preserve assignments and legitimate established field changes; explicit reviewed plan flags were used for the bootstrap milestone/release refinements.
 

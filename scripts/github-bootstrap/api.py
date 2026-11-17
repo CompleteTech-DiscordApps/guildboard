@@ -1,7 +1,12 @@
 """GitHub transport. Uses gh keyring authentication; never logs credentials."""
-import json, subprocess, time, pathlib, datetime
+import json, subprocess, time, pathlib, datetime, re
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 STATE=ROOT/'planning/github-state.json'
+TRANSFERRED_REPOSITORY = 'CompleteDotTech/guildboard'
+TRANSFERRED_REPOSITORY_LINK = re.compile(
+ r'https://github\.com/' + re.escape(TRANSFERRED_REPOSITORY) + r'(?=[/?#)\s]|$)',
+ re.IGNORECASE,
+)
 def save(path,data):
  path=pathlib.Path(path); tmp=path.with_suffix(path.suffix+'.tmp');tmp.write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n');tmp.replace(path)
 def api(path,method='GET',data=None):
@@ -38,6 +43,16 @@ def api(path,method='GET',data=None):
    time.sleep(delay);continue
   raise RuntimeError(json.dumps(result))
  raise RuntimeError('GitHub retry budget exhausted')
+def issue_url(number, repo):
+ """Build the issue URL from its number and repository identity."""
+ return f'https://github.com/{repo}/issues/{number}'
+
+def canonicalize_transferred_links(text, repo):
+ return TRANSFERRED_REPOSITORY_LINK.sub(f'https://github.com/{repo}', text)
+
+def issue_mapping(issue, repo):
+ return {'number': issue['number'], 'url': issue_url(issue['number'], repo), 'id': issue['node_id']}
+
 def gql(query,**variables):return api('graphql','POST',{'query':query,'variables':variables})['data']
 FIELD_FRAGMENT='... on ProjectV2Field{id name dataType} ... on ProjectV2SingleSelectField{id name dataType options{id name color description}}'
 def project():

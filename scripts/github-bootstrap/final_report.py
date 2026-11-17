@@ -4,7 +4,7 @@ import collections
 m=json.loads((ROOT/'planning/guildboard-backlog.json').read_text());r=json.loads((ROOT/'planning/audit/remote-audit.json').read_text());by={x['id']:x for x in m['items']};repo=m['repository'];p=r['project'];counts=r['counts'];fc=r['field_counts'];checks=json.loads((ROOT/'planning/audit/ci-verification.json').read_text()) if (ROOT/'planning/audit/ci-verification.json').exists() else {};credentials=api('repos/'+repo+'/actions/secrets')['secrets'];project_token=any(x['name']=='GUILDBOARD_PROJECT_TOKEN' for x in credentials)
 root_commit=subprocess.check_output(['git','rev-list','--max-parents=0','HEAD'],text=True).strip().splitlines()[0]
 commit_info=subprocess.check_output(['git','show','-s','--format=%cI%n%s',root_commit],text=True).splitlines()
-def link(id):return '['+id+']('+by[id]['github']['url']+')' if by.get(id,{}).get('github') else '`'+id+'` (not created)'
+def link(id):return '['+id+']('+issue_url(by[id]['github']['number'],repo)+')' if by.get(id,{}).get('github') else '`'+id+'` (not created)'
 status='Partially complete' if not project_token or r['result']!='pass' else 'Complete and verified'
 text=f'''# Guildboard bootstrap report
 
@@ -14,7 +14,7 @@ Audit time: {r['generated_at']}. Audit inspected repository head `{r['repository
 
 ## Repository
 
-- URL: {r['repository']['url']}
+- URL: {canonicalize_transferred_links(r['repository']['url'], repo)}
 - Owner: `{r['repository']['owner']}`
 - Visibility: {r['repository']['visibility']}; default branch: `{r['repository']['default_branch']}`
 - License: MIT for original work, subject to future dependency/asset licensing review.
@@ -28,7 +28,7 @@ Audit time: {r['generated_at']}. Audit inspected repository head `{r['repository
 - URL: {p['url']}
 - Owner: `{p['owner']['login']}`; Project number: {p['number']}; public: {p['public']}.
 - Configuration copied from [Pick Your AI Project #1](https://github.com/orgs/Pick-Your-AI/projects/1), with draft copying disabled. Initial copy independently contained **zero items**. Source issues, PRs and assignments were not imported. The source Project was read-only.
-- Repository association verified: `{repo}`.
+- Repository association verified (audited): {', '.join('`'+v['nameWithOwner']+'`' for v in p['repositories']['nodes'])}.
 - Default first view: Workstream overview, table grouped by Tier, native hierarchy and sub-issue progress visible.
 - {len(p['views']['nodes'])} saved views, {len(p['fields']['nodes'])} total native/configuration fields, {sum(w['enabled'] for w in p['workflows']['nodes'])} enabled native workflows. Default Burn up Insight retained.
 
@@ -91,7 +91,7 @@ Release gates: MVP {link('GB-T13.G1')}; production recovery/GoDaddy {link('GB-T1
 
 '''
 if checks:
- for run in checks.get('runs',[]):text+=f"- [{run['name']}]({run['html_url']}): {run['conclusion']} at `{run['head_sha']}`.\n"
+ for run in checks.get('runs',[]):text+=f"- [{run['name']}]({canonicalize_transferred_links(run['html_url'], repo)}): {run['conclusion']} at `{run['head_sha']}`.\n"
 text+='\nIdempotent issue detection was rerun after population; no additional issues were created. Initial comments use durable markers and the live audit verifies exactly one per selected handoff. Scripts preserve assignments and legitimate established field changes; explicit reviewed plan flags were used for the bootstrap milestone/release refinements.\n'
 text+='\n## Remaining or unsupported operations\n\n'
 if not project_token:text+='- **Scheduled full Project-field auditing needs `GUILDBOARD_PROJECT_TOKEN`.** No repository secret is configured. User-owned Projects do not accept the repository installation token for these API operations. A dedicated supported read-Project credential must be added by an authorized maintainer. Daily restricted-token repository integrity checks, native Project workflows, and the full authenticated on-demand audit are implemented; the broader local OAuth credential was not copied into Actions.\n'
