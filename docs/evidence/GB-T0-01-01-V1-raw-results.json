@@ -1,0 +1,102 @@
+{
+  "source_candidate_sha": "fc825aac8194ca7282c4b5b984fd5a065eb5c0a0",
+  "accepted_requirements_revision": "ae7aa92a76ff18522e643821df6840bf3bbabc4d",
+  "source_identity": "coordinator supplied; no independent Git object identity reproduced",
+  "artifact_revision": null,
+  "artifact_binding": "Future native CI and independent review receipt must bind actual integrated artifact SHA; self SHA cannot be embedded in same commit.",
+  "environment": {
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+    "execution": "offline scratch copy",
+    "date_utc": "2026-11-16T15:11:32.035726+00:00"
+  },
+  "source_file_sha256": {
+    "scripts/verification/verify_requirements.py": "5f0331ae66f5d232c08b5304993f0684753829cdccc3a31a3500766c70f3456d",
+    "tests/verification/test_requirements_acceptance.py": "676a97fe61ea4ddc9792210780c5a1d13ff26dd62c339a50757a225e3060f16e",
+    "docs/requirements/GB-T0-01-01-requirements.md": "d0ced670caadbe787f861ce5503ec65deeae00b76f4d3dbbb1004ae620a0afb3",
+    "docs/requirements/fixtures/GB-T0-01-01-use-cases.json": "b1cf27dae882560ac1b040c261dd7e97f142f4c8917d07a26bc45005fc796440",
+    "docs/specifications/GB-T0-S1-system-contract.md": "6563ec365b8a36dafd00c79f829234ee53a629bfdf2a1c10a816d996ed9a805f",
+    "planning/MVP-ACCEPTANCE.md": "b9640c205c2f8123dae33d9692121c1056e8d1bbafba94f15943eea4bef45955",
+    "planning/MILESTONES.md": "668ed0b5a47826994dad9249d323ad2e7dd694b7d9504a75b4bf2fd6d6f1a4aa",
+    "scripts/github-bootstrap/validate.py": "ab1862e8f886e98f5609ef369049b972026b2ae79b46fe5c7939a5e78e30e2a6"
+  },
+  "tested_file_sha256": {
+    "scripts/verification/verify_requirements.py": "d77033f7039067743d1a2c3ea9408433aa0baa4330aa5af5597cc5276e389827",
+    "tests/verification/test_requirements_acceptance.py": "4a58ef3e14fcecbb701e0bf042daf7b815f7050bc32ac5b2b60e18e0dd1ad994",
+    "docs/requirements/GB-T0-01-01-requirements.md": "d0ced670caadbe787f861ce5503ec65deeae00b76f4d3dbbb1004ae620a0afb3",
+    "docs/requirements/fixtures/GB-T0-01-01-use-cases.json": "b1cf27dae882560ac1b040c261dd7e97f142f4c8917d07a26bc45005fc796440",
+    "docs/specifications/GB-T0-S1-system-contract.md": "6563ec365b8a36dafd00c79f829234ee53a629bfdf2a1c10a816d996ed9a805f",
+    "planning/MVP-ACCEPTANCE.md": "b9640c205c2f8123dae33d9692121c1056e8d1bbafba94f15943eea4bef45955",
+    "planning/MILESTONES.md": "668ed0b5a47826994dad9249d323ad2e7dd694b7d9504a75b4bf2fd6d6f1a4aa",
+    "scripts/github-bootstrap/validate.py": "ab1862e8f886e98f5609ef369049b972026b2ae79b46fe5c7939a5e78e30e2a6"
+  },
+  "runs": [
+    {
+      "command": [
+        "python3",
+        "scripts/verification/verify_requirements.py"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"case_count\": 20, \"checks_complete\": true, \"errors\": [], \"kind\": \"offline-definition-check\", \"product_runtime\": \"not tested\", \"status\": \"pass\"}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests/verification",
+        "-v"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "test_baseline (test_requirements_acceptance.Acceptance.test_baseline) ... ok\ntest_cli_unavailable_input (test_requirements_acceptance.Acceptance.test_cli_unavailable_input) ... ok\ntest_duplicate_case (test_requirements_acceptance.Acceptance.test_duplicate_case) ... ok\ntest_false_fixture_evidence_label (test_requirements_acceptance.Acceptance.test_false_fixture_evidence_label) ... ok\ntest_interruption_has_no_success_report (test_requirements_acceptance.Acceptance.test_interruption_has_no_success_report) ... ok\ntest_invalid_configuration (test_requirements_acceptance.Acceptance.test_invalid_configuration) ... ok\ntest_malformed_nested_types_cli_controlled (test_requirements_acceptance.Acceptance.test_malformed_nested_types_cli_controlled) ... ok\ntest_missing_mandatory_scope (test_requirements_acceptance.Acceptance.test_missing_mandatory_scope) ... ok\ntest_review_mutations_and_objective_definitions (test_requirements_acceptance.Acceptance.test_review_mutations_and_objective_definitions) ... ok\ntest_reviewed_case_fields_are_pinned (test_requirements_acceptance.Acceptance.test_reviewed_case_fields_are_pinned) ... ok\ntest_unavailable_input (test_requirements_acceptance.Acceptance.test_unavailable_input) ... ok\ntest_unknown_requirement (test_requirements_acceptance.Acceptance.test_unknown_requirement) ... ok\ntest_wrong_traceability (test_requirements_acceptance.Acceptance.test_wrong_traceability) ... ok\n\n----------------------------------------------------------------------\nRan 13 tests in 0.220s\n\nOK\n"
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/github-bootstrap/validate.py"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"result\": \"pass\",\n  \"item_count\": 471,\n  \"native_relationships_expected\": 457,\n  \"dependencies_expected\": 600,\n  \"mvp_prerequisite_closure\": 60,\n  \"max_depth\": 5,\n  \"errors\": [],\n  \"longest_prerequisite_chain\": [\n    \"GB-T1.R1\",\n    \"GB-T1.S1\",\n    \"GB-T1.02.01.T1\",\n    \"GB-T1.02.01.V1\",\n    \"GB-T1.03.02.T1\",\n    \"GB-T1.03.02.V1\",\n    \"GB-T2.01.02.T1\",\n    \"GB-T2.01.02.V1\",\n    \"GB-T2.02.01.T1\",\n    \"GB-T2.02.01.V1\",\n    \"GB-T2.02.02.T1\",\n    \"GB-T2.02.02.V1\",\n    \"GB-T6.01.02.T1\",\n    \"GB-T6.01.02.V1\",\n    \"GB-T6.D1\",\n    \"GB-T6.G1\",\n    \"GB-T13.G3\",\n    \"GB-T13.04.01.O2\"\n  ],\n  \"critical_path_note\": \"Longest unweighted dependency chain, not a duration forecast. Parallel branches and role availability also constrain release.\"\n}\n",
+      "stderr": ""
+    }
+  ],
+  "mutations": [
+    {
+      "mutation": "unsafe_uc",
+      "exit_code": 1,
+      "stdout": "{\"case_count\": 20, \"checks_complete\": true, \"errors\": [\"UC09 expected differs from reviewed baseline\"], \"kind\": \"offline-definition-check\", \"product_runtime\": \"not tested\", \"status\": \"fail\"}\n",
+      "stderr": ""
+    },
+    {
+      "mutation": "inverted_r04",
+      "exit_code": 1,
+      "stdout": "{\"case_count\": 20, \"checks_complete\": true, \"errors\": [\"accepted requirements document differs from reviewed baseline; fresh review required\"], \"kind\": \"offline-definition-check\", \"product_runtime\": \"not tested\", \"status\": \"fail\"}\n",
+      "stderr": ""
+    },
+    {
+      "mutation": "availability_inverted",
+      "exit_code": 1,
+      "stdout": "{\"case_count\": 20, \"checks_complete\": true, \"errors\": [\"accepted requirements document differs from reviewed baseline; fresh review required\"], \"kind\": \"offline-definition-check\", \"product_runtime\": \"not tested\", \"status\": \"fail\"}\n",
+      "stderr": ""
+    },
+    {
+      "mutation": "malformed_trace",
+      "exit_code": 1,
+      "stdout": "{\"case_count\": 20, \"checks_complete\": true, \"errors\": [\"UC09 traceability mismatch\", \"unknown or missing case requirement\"], \"kind\": \"offline-definition-check\", \"product_runtime\": \"not tested\", \"status\": \"fail\"}\n",
+      "stderr": ""
+    }
+  ],
+  "defects": [
+    "Rejected candidate: F1 unsafe scenario and R04 reversal accepted; F2 inverted availability accepted; F4 malformed trace crashed; F5 raw artifact attribution incomplete.",
+    "F3 product scenario execution remains unverified and manager-owned pending fresh review of issue requirements."
+  ],
+  "historical_logs": "Retained independent review logs scratch/review-requirements7/{checker.txt,tests.txt,planning.txt,mutations.jsonl}; no reconstructed historical output.",
+  "limitations": [
+    "Tests check immutable reviewed definitions, not product behavior or natural-language semantics.",
+    "No real product/platform execution, CI, network or independent successor review."
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "observed_date_utc": "2026-10-24",
+  "packages": [
+    {
+      "key": "excalidraw",
+      "name": "@excalidraw/excalidraw",
+      "version": "0.18.1",
+      "tarball": "https://registry.npmjs.org/@excalidraw/excalidraw/-/excalidraw-0.18.1.tgz",
+      "integrity": "sha512-6i5Gt7IDTOH//qa0Z315Ly5iVRhjWpu2whrlQFqkuwrkKUWgRsMk0P5qdE7bpyDpai7jeLeWYkyj1eVAfni1lw==",
+      "source_commit": "a2ec2889babf7d2295469c6d90ebe77fae57df84",
+      "source_license": {
+        "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/LICENSE",
+        "sha256": "1352d204fdb90d5e482c13139d848bc2c9300a9a7de358a0a558a23e72d0d8be"
+      },
+      "archive_license": null,
+      "checks": [
+        {
+          "path": "package/dist/types/excalidraw/index.d.ts",
+          "sha256": "90729dab4b90b24477773dd263aa8b51bbd62afa45f003795d084828a1e1e8e6",
+          "symbols": [
+            "Excalidraw",
+            "serializeAsJSON",
+            "loadFromBlob",
+            "CaptureUpdateAction"
+          ]
+        },
+        {
+          "path": "package/dist/types/excalidraw/types.d.ts",
+          "sha256": "61681bd17da86a0b811242e83cd8e1f6c7f168a14806c8ca587390e24815486a",
+          "symbols": [
+            "onChange",
+            "onPointerUpdate",
+            "viewModeEnabled",
+            "updateScene",
+            "getSceneElements",
+            "addFiles"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "discord",
+      "name": "@discord/embedded-app-sdk",
+      "version": "2.5.0",
+      "tarball": "https://registry.npmjs.org/@discord/embedded-app-sdk/-/embedded-app-sdk-2.5.0.tgz",
+      "integrity": "sha512-FNoe5PbSkoKEbqPubaBmq6tlEMOftMjR3gu55YrdrrKmBfKKM4i9P/Z+Zxl0RZdJcKviBwVcTyYMMPM/aGex/w==",
+      "source_commit": "14264eccbf9e68d5d58c1aadbc7579e003e0dce6",
+      "source_license": {
+        "url": "https://raw.githubusercontent.com/discord/embedded-app-sdk/14264eccbf9e68d5d58c1aadbc7579e003e0dce6/LICENSE.md",
+        "sha256": "ac69ea236ff3ba795e1873f4641b73f99492cf47ed9e0804ee4cf8285dd45b9d"
+      },
+      "archive_license": "package/LICENSE.md",
+      "checks": [
+        {
+          "path": "package/output/index.d.ts",
+          "sha256": "f40de85f7ae9a7c0ef022cf52ef01b8696b8350c239a08fa9110ef16f7c684e3",
+          "symbols": [
+            "DiscordSDK",
+            "patchUrlMappings"
+          ]
+        },
+        {
+          "path": "package/output/Discord.d.ts",
+          "sha256": "0cc67443bcae18a4b5e2e217d9006e2a02e546f6d7dde9e1c273e803acd6c977",
+          "symbols": [
+            "ready",
+            "authorize",
+            "authenticate"
+          ]
+        },
+        {
+          "path": "package/output/utils/patchUrlMappings.d.ts",
+          "sha256": "e1874a41250bcdcf75fdd6a340a0c91381d328c175bfec6ed1050bdfee3e1f08",
+          "symbols": [
+            "patchUrlMappings",
+            "patchWebSocket"
+          ]
+        }
+      ]
+    }
+  ]
+}

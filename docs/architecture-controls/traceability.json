@@ -1,0 +1,313 @@
+{
+  "controls": {
+    "authority": {
+      "description": "Server verifies identity, tenant, session and policy at write and protected release fences",
+      "evidence": [
+        "docs/security/GB-T0-04-02-threat-model.md",
+        "docs/specifications/GB-T0-S1-system-contract.md"
+      ]
+    },
+    "bounded": {
+      "description": "Bound inputs and fail closed without disclosure or partial promotion",
+      "evidence": [
+        "docs/security/GB-T0-04-02-threat-model.md",
+        "docs/specifications/GB-T0-S1-system-contract.md"
+      ]
+    },
+    "durability": {
+      "description": "Atomic durable revision and receipt precede ACK; recovery preserves lineage",
+      "evidence": [
+        "docs/security/GB-T0-04-02-threat-model.md",
+        "docs/specifications/GB-T0-S1-system-contract.md"
+      ]
+    },
+    "release": {
+      "description": "Independent integrated verification and measured objectives remain required",
+      "evidence": [
+        "docs/security/GB-T0-04-02-threat-model.md",
+        "docs/specifications/GB-T0-S1-system-contract.md"
+      ]
+    }
+  },
+  "interfaces": {
+    "activity": {
+      "description": "Discord Activity client",
+      "evidence": [
+        "apps/activity/README.md",
+        "docs/architecture.md"
+      ]
+    },
+    "bot": {
+      "description": "Verified bot command adapter",
+      "evidence": [
+        "apps/bot/README.md",
+        "docs/architecture.md"
+      ]
+    },
+    "collaboration": {
+      "description": "Ordered command and recovery service",
+      "evidence": [
+        "packages/collaboration/README.md",
+        "docs/architecture.md"
+      ]
+    },
+    "contracts": {
+      "description": "Versioned contract interfaces",
+      "evidence": [
+        "packages/contracts/README.md",
+        "docs/architecture.md"
+      ]
+    },
+    "deployment": {
+      "description": "VPS ingress and private services",
+      "evidence": [
+        "infra/godaddy/README.md",
+        "docs/architecture.md"
+      ]
+    },
+    "session": {
+      "description": "Session, HTTP and WSS authority",
+      "evidence": [
+        "apps/api/README.md",
+        "docs/architecture.md"
+      ]
+    },
+    "storage": {
+      "description": "Private durable data and assets",
+      "evidence": [
+        "database/README.md",
+        "docs/architecture.md"
+      ]
+    }
+  },
+  "requirements": {
+    "R01": {
+      "canonical_acceptance": [
+        "F01"
+      ],
+      "controls": [
+        "authority",
+        "durability",
+        "bounded"
+      ],
+      "interactions": [
+        "I01"
+      ],
+      "interfaces": [
+        "activity",
+        "session",
+        "collaboration",
+        "storage"
+      ],
+      "use_cases": [
+        "UC01",
+        "UC02"
+      ]
+    },
+    "R02": {
+      "canonical_acceptance": [
+        "F03"
+      ],
+      "controls": [
+        "authority"
+      ],
+      "interactions": [
+        "I03"
+      ],
+      "interfaces": [
+        "activity",
+        "session",
+        "collaboration"
+      ],
+      "use_cases": [
+        "UC03",
+        "UC04"
+      ]
+    },
+    "R03": {
+      "canonical_acceptance": [
+        "F01",
+        "F02"
+      ],
+      "controls": [
+        "authority",
+        "bounded"
+      ],
+      "interactions": [
+        "I01",
+        "I02"
+      ],
+      "interfaces": [
+        "session",
+        "bot",
+        "contracts"
+      ],
+      "use_cases": [
+        "UC01",
+        "UC05"
+      ]
+    },
+    "R04": {
+      "canonical_acceptance": [
+        "F02",
+        "F03",
+        "F04",
+        "F12",
+        "F16",
+        "F23",
+        "F24",
+        "F25",
+        "F26",
+        "F27",
+        "F28",
+        "F29",
+        "F31",
+        "F33",
+        "F36"
+      ],
+      "controls": [
+        "authority",
+        "bounded"
+      ],
+      "interactions": [
+        "I02",
+        "I03",
+        "I04",
+        "I05",
+        "I11",
+        "I13",
+        "I15"
+      ],
+      "interfaces": [
+        "session",
+        "bot",
+        "collaboration",
+        "storage"
+      ],
+      "use_cases": [
+        "UC04",
+        "UC05",
+        "UC06",
+        "UC07",
+        "UC08",
+        "UC09",
+        "UC15",
+        "UC19"
+      ]
+    },
+    "R05": {
+      "canonical_acceptance": [
+        "F05",
+        "F06",
+        "F07",
+        "F10",
+        "F17",
+        "F18",
+        "F19",
+        "F21",
+        "F22",
+        "F23",
+        "F25",
+        "F26",
+        "F31",
+        "F32",
+        "F36"
+      ],
+      "controls": [
+        "authority",
+        "durability",
+        "bounded"
+      ],
+      "interactions": [
+        "I05",
+        "I06",
+        "I07",
+        "I08",
+        "I09",
+        "I14"
+      ],
+      "interfaces": [
+        "collaboration",
+        "storage",
+        "contracts"
+      ],
+      "use_cases": [
+        "UC09",
+        "UC10",
+        "UC11",
+        "UC12",
+        "UC13",
+        "UC16",
+        "UC20"
+      ]
+    },
+    "R06": {
+      "canonical_acceptance": [
+        "F05",
+        "F06",
+        "F12",
+        "F13",
+        "F29"
+      ],
+      "controls": [
+        "bounded",
+        "durability"
+      ],
+      "interactions": [
+        "I06",
+        "I11",
+        "I12"
+      ],
+      "interfaces": [
+        "session",
+        "collaboration",
+        "storage",
+        "deployment"
+      ],
+      "use_cases": [
+        "UC14",
+        "UC15",
+        "UC16"
+      ]
+    },
+    "R07": {
+      "canonical_acceptance": [],
+      "controls": [
+        "authority",
+        "durability",
+        "bounded",
+        "release"
+      ],
+      "interactions": [],
+      "interfaces": [
+        "session",
+        "bot",
+        "activity",
+        "collaboration",
+        "storage",
+        "deployment",
+        "contracts"
+      ],
+      "use_cases": [
+        "UC17"
+      ]
+    },
+    "R08": {
+      "canonical_acceptance": [],
+      "controls": [
+        "durability",
+        "release"
+      ],
+      "interactions": [],
+      "interfaces": [
+        "collaboration",
+        "storage",
+        "deployment"
+      ],
+      "use_cases": [
+        "UC18"
+      ]
+    }
+  },
+  "version": 1
+}
