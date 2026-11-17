@@ -5,7 +5,16 @@ m=json.loads((ROOT/'planning/guildboard-backlog.json').read_text());r=json.loads
 root_commit=subprocess.check_output(['git','rev-list','--max-parents=0','HEAD'],text=True).strip().splitlines()[0]
 commit_info=subprocess.check_output(['git','show','-s','--format=%cI%n%s',root_commit],text=True).splitlines()
 def link(id):return '['+id+']('+issue_url(by[id]['github']['number'],repo)+')' if by.get(id,{}).get('github') else '`'+id+'` (not created)'
-status='Partially complete' if not project_token or r['result']!='pass' else 'Complete and verified'
+audited_repository = r['repository']['url'].removeprefix('https://github.com/').rstrip('/')
+observed_repositories = [node['nameWithOwner'] for node in p['repositories']['nodes']]
+observed_associations = ', '.join(f'`{name}`' for name in observed_repositories) or 'None observed'
+association_confirmed = audited_repository.casefold() in {name.casefold() for name in observed_repositories}
+status = 'Complete and verified' if project_token and r['result'] == 'pass' and association_confirmed else 'Partially complete'
+verified_association = (
+ f'Confirmed for `{audited_repository}`'
+ if association_confirmed
+ else f'Unconfirmed for `{audited_repository}`'
+)
 text=f'''# Guildboard bootstrap report
 
 **Final status: {status}.** Repository, Project and roadmap audit: **{r['result']}**. The remaining automation credential requirement is described below. Guildboard itself has not been implemented or deployed; no application/production acceptance is claimed.
@@ -15,7 +24,7 @@ Audit time: {r['generated_at']}. Audit inspected repository head `{r['repository
 ## Repository
 
 - URL: {canonicalize_transferred_links(r['repository']['url'], repo)}
-- Owner: `{r['repository']['owner']}`
+- Audited repository owner: `{r['repository']['owner']}`
 - Visibility: {r['repository']['visibility']}; default branch: `{r['repository']['default_branch']}`
 - License: MIT for original work, subject to future dependency/asset licensing review.
 - Topics: {', '.join('`'+t+'`' for t in r['repository']['topics'])}
@@ -28,7 +37,8 @@ Audit time: {r['generated_at']}. Audit inspected repository head `{r['repository
 - URL: {p['url']}
 - Owner: `{p['owner']['login']}`; Project number: {p['number']}; public: {p['public']}.
 - Configuration copied from [Pick Your AI Project #1](https://github.com/orgs/Pick-Your-AI/projects/1), with draft copying disabled. Initial copy independently contained **zero items**. Source issues, PRs and assignments were not imported. The source Project was read-only.
-- Repository association verified (audited): {', '.join('`'+v['nameWithOwner']+'`' for v in p['repositories']['nodes'])}.
+- Observed Project repository associations at audit time: {observed_associations}.
+- Audited repository association: {verified_association}.
 - Default first view: Workstream overview, table grouped by Tier, native hierarchy and sub-issue progress visible.
 - {len(p['views']['nodes'])} saved views, {len(p['fields']['nodes'])} total native/configuration fields, {sum(w['enabled'] for w in p['workflows']['nodes'])} enabled native workflows. Default Burn up Insight retained.
 
@@ -75,7 +85,7 @@ All research investigations remain Unverified. Their 14 tracked evidence gaps ar
 ## Verification and traceability
 
 - Repository configuration and committed foundation: {r['result']}.
-- Project owner, visibility, association, field schema, views/groupings/columns: {r['result']}.
+- Project owner, visibility, field schema, views/groupings/columns: {r['result']}.
 - Native hierarchy and enrollment: {r['result']}; no accidental orphan descendants.
 - Native dependency graph: {r['result']}; no self-dependencies or cycles.
 - Strict initial triage/readiness/label/milestone checks: {r['result']}.

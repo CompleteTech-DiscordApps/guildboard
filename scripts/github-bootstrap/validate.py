@@ -530,12 +530,20 @@ def main(argv=None):
                         help='generated document to scan for transfer-era links '
                              '(repeatable; default: planning reports for the canonical manifest)')
     args = parser.parse_args(argv)
-    check_canonical = args.manifest == DEFAULT_MANIFEST
+    try:
+        check_canonical = args.manifest.samefile(DEFAULT_MANIFEST)
+    except FileNotFoundError:
+        check_canonical = False
+    except (OSError, ValueError) as exc:
+        print(json.dumps({'result': 'fail', 'errors': ['manifest identity: ' + str(exc)]}, indent=2))
+        return 1
     state_path = args.state or (STATE if check_canonical or args.generated else None)
     document_paths = args.generated or (GENERATED_DOCUMENTS if check_canonical else ())
     inputs = (args.manifest, args.schema, *document_paths)
     if state_path is not None:
         inputs += (state_path,)
+    if check_canonical:
+        inputs += (STATE, *GENERATED_DOCUMENTS)
     directory_fd = None
     try:
         directory_fd = open_report_directory(args.report.parent)

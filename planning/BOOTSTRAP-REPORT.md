@@ -7,7 +7,7 @@ Audit time: 2026-10-24T03:56:38.837547+00:00. Audit inspected repository head `8
 ## Repository
 
 - URL: https://github.com/CompleteTech-DiscordApps/guildboard
-- Owner: `CompleteDotTech`
+- Audited repository owner: `CompleteDotTech`
 - Visibility: public; default branch: `main`
 - License: MIT for original work, subject to future dependency/asset licensing review.
 - Topics: `collaboration`, `discord`, `discord-activity`, `excalidraw`, `godaddy`, `moderation`, `open-source`, `react`, `realtime`, `self-hosted`, `typescript`, `websockets`, `whiteboard`
@@ -20,7 +20,8 @@ Audit time: 2026-10-24T03:56:38.837547+00:00. Audit inspected repository head `8
 - URL: https://github.com/users/CompleteDotTech/projects/7
 - Owner: `CompleteDotTech`; Project number: 7; public: True.
 - Configuration copied from [Pick Your AI Project #1](https://github.com/orgs/Pick-Your-AI/projects/1), with draft copying disabled. Initial copy independently contained **zero items**. Source issues, PRs and assignments were not imported. The source Project was read-only.
-- Repository association verified (audited): `CompleteDotTech/guildboard`.
+- Observed Project repository associations at audit time: `CompleteDotTech/guildboard`.
+- Audited repository association: Confirmed for `CompleteDotTech/guildboard`.
 - Default first view: Workstream overview, table grouped by Tier, native hierarchy and sub-issue progress visible.
 - 17 saved views, 26 total native/configuration fields, 7 enabled native workflows. Default Burn up Insight retained.
 
@@ -135,7 +136,7 @@ All research investigations remain Unverified. Their 14 tracked evidence gaps ar
 ## Verification and traceability
 
 - Repository configuration and committed foundation: pass.
-- Project owner, visibility, association, field schema, views/groupings/columns: pass.
+- Project owner, visibility, field schema, views/groupings/columns: pass.
 - Native hierarchy and enrollment: pass; no accidental orphan descendants.
 - Native dependency graph: pass; no self-dependencies or cycles.
 - Strict initial triage/readiness/label/milestone checks: pass.

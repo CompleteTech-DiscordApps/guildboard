@@ -1,13 +1,15 @@
 """Idempotent bootstrap; refreshes remote state before repairing. No credential storage.
 Usage: python3 scripts/github-bootstrap/reconcile.py [--verify-only] [--phase issues|links|fields|comments|all]
        python3 scripts/github-bootstrap/reconcile.py --phase comments --dry-run
---dry-run reads live issues and reports bootstrap-owned body rewrites without any write (GitHub or manifest).
+--dry-run reads live issues and reports bootstrap-owned body rewrites without writing local files or updating GitHub.
 """
-from api import *
-import argparse,hashlib,re,collections
+import argparse,hashlib,re,collections,sys
 parser=argparse.ArgumentParser();parser.add_argument('--verify-only',action='store_true');parser.add_argument('--phase',default='all',choices=['issues','links','fields','comments','all']);parser.add_argument('--dry-run',action='store_true',help='comments phase only: report body rewrites, write nothing');args=parser.parse_args()
 if args.dry_run and (args.phase != 'comments' or args.verify_only):
  parser.error('--dry-run requires --phase comments and cannot be combined with --verify-only')
+if args.dry_run:
+ sys.dont_write_bytecode=True
+from api import *
 if args.verify_only:
  print('Read-only remote audit requested.');subprocess.run(['python3',str(ROOT/'scripts/github-bootstrap/audit.py')],check=True);raise SystemExit()
 manifest=ROOT/'planning/guildboard-backlog.json';m=json.loads(manifest.read_text());s=json.loads(STATE.read_text());repo=s['repo'];pid=s['project']['id'];by={x['id']:x for x in m['items']}
@@ -18,15 +20,36 @@ def persist():
 def all_issues():
  out=[];page=1
  while True:
-  rows=api(f'repos/{repo}/issues?state=all&per_page=100&page={page}');out += [x for x in rows if 'pull_request' not in x]
+  endpoint=f'repos/{repo}/issues?state=all&per_page=100&page={page}'
+  rows=api(endpoint,quiet_get=True) if args.dry_run else api(endpoint)
+  if args.dry_run and (not isinstance(rows,list) or any(
+   not isinstance(row,dict) or type(row.get('number')) is not int
+   or ('body' in row and row['body'] is not None and not isinstance(row['body'],str))
+   or ('pull_request' not in row and not isinstance(row.get('node_id'),str))
+   for row in rows
+  )):
+   raise ValueError('Invalid GitHub issue list')
+  out += [x for x in rows if 'pull_request' not in x]
   if len(rows)<100:return out
   page+=1
-remote=all_issues();remote_by={}
+try:
+ remote=all_issues()
+except (RuntimeError,OSError,ValueError):
+ if not args.dry_run:raise
+ raise SystemExit('Dry run stopped: GitHub issues could not be read.') from None
+remote_by={}
+remote_by_number={}
+if args.dry_run:
+ remote_by_number={issue['number']:issue for issue in remote}
+ if len(remote_by_number)!=len(remote):
+  raise SystemExit('Dry run stopped: duplicate issue numbers in GitHub response.')
 for issue in remote:
  marker=re.search(r'<!-- guildboard-id:([^ ]+) -->',issue.get('body') or '')
  if marker:
   stable=marker[1]
-  if stable in remote_by:raise RuntimeError('Duplicate stable ID '+stable)
+  if stable in remote_by:
+   if args.dry_run:raise SystemExit('Dry run stopped: duplicate stable issue markers.')
+   raise RuntimeError('Duplicate stable ID '+stable)
   remote_by[stable]=issue
   if stable in by:by[stable]['github']=issue_mapping(issue,repo)
 persist()
@@ -222,7 +245,8 @@ if args.dry_run:
  for x in ordered:
   issue = remote_by.get(x['id'])
   if issue is None:
-   counts['missing'] += 1
+   number = x.get('github', {}).get('number')
+   counts['edited' if number in remote_by_number else 'missing'] += 1
    continue
   old_body = issue.get('body') or ''
   rendered = body(x)

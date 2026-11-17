@@ -49,12 +49,13 @@ class ReconciliationPreviewTests(unittest.TestCase):
                 'requirements': ['Synthetic requirement'], 'acceptance_criteria': [],
                 'expected_tests': [], 'documentation_artifacts': ['docs/synthetic.md'],
                 'body_hash': body_hash,
+                'github': {'number': number},
             } for number, body_hash in enumerate(hashes, 1)]
             manifest.write_text(json.dumps({'items': items}))
             bodies = [
                 {'number': 1, 'node_id': 'synthetic-1', 'body': original},
                 {'number': 2, 'node_id': 'synthetic-2',
-                 'body': '<!-- guildboard-id:GB-SYNTHETIC-2 -->\nMaintainer edit.'},
+                 'body': 'Maintainer edit removed the stable marker.'},
             ]
             argv = ['reconcile.py', '--phase', 'comments', '--dry-run']
             output = io.StringIO()
@@ -62,11 +63,12 @@ class ReconciliationPreviewTests(unittest.TestCase):
             with mock.patch.multiple(api, ROOT=root, STATE=state), \
                     mock.patch.object(api, 'api', return_value=bodies) as request, \
                     mock.patch.object(api, 'save') as save, \
-                    mock.patch.object(sys, 'argv', argv), contextlib.redirect_stdout(output):
+                    mock.patch.object(sys, 'argv', argv), mock.patch.object(sys, 'dont_write_bytecode'), \
+                    contextlib.redirect_stdout(output):
                 with self.assertRaises(SystemExit) as exit_result:
                     runpy.run_path(str(SCRIPTS / 'reconcile.py'), run_name='__main__')
             self.assertIsNone(exit_result.exception.code)
-            request.assert_called_once_with(f'repos/{repo}/issues?state=all&per_page=100&page=1')
+            request.assert_called_once_with(f'repos/{repo}/issues?state=all&per_page=100&page=1', quiet_get=True)
             save.assert_not_called()
             self.assertEqual(manifest.read_bytes(), before)
             self.assertNotIn('Maintainer edit.', output.getvalue())
@@ -75,6 +77,89 @@ class ReconciliationPreviewTests(unittest.TestCase):
                 'rewrites_beyond_repository_identity': ['GB-SYNTHETIC-1'], 'already_current': 0,
                 'skipped_maintainer_edited': 1, 'skipped_missing': 1,
             })
+
+    def test_dry_run_failed_get_keeps_diagnostics_and_files_unchanged(self):
+        import contextlib
+        import io
+        import runpy
+
+        import api
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            planning = root / 'planning'
+            audit = planning / 'audit'
+            audit.mkdir(parents=True)
+            manifest = planning / 'guildboard-backlog.json'
+            manifest.write_text('{"items": []}')
+            state = planning / 'github-state.json'
+            state.write_text('{"repo": "example/guildboard", "project": {"id": "synthetic-project"}}')
+            failure_log = audit / 'failures.jsonl'
+            failure_log.write_text('existing audit entry\n')
+            before = {p: p.read_bytes() for p in root.rglob('*') if p.is_file()}
+            argv = ['reconcile.py', '--phase', 'comments', '--dry-run']
+            failed_get = subprocess.CompletedProcess(
+                args=['gh'], returncode=1, stdout='synthetic-sensitive-response',
+                stderr='synthetic-sensitive-stderr',
+            )
+            output = io.StringIO()
+            with mock.patch.multiple(api, ROOT=root, STATE=state), \
+                    mock.patch.object(api.subprocess, 'run', return_value=failed_get) as request, \
+                    mock.patch.object(sys, 'argv', argv), mock.patch.object(sys, 'dont_write_bytecode'), \
+                    contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+                with self.assertRaises(SystemExit) as exit_result:
+                    runpy.run_path(str(SCRIPTS / 'reconcile.py'), run_name='__main__')
+            self.assertEqual(exit_result.exception.code, 'Dry run stopped: GitHub issues could not be read.')
+            self.assertEqual(output.getvalue(), '')
+            request.assert_called_once_with(
+                ['gh', 'api', 'repos/example/guildboard/issues?state=all&per_page=100&page=1',
+                 '--method', 'GET', '--include'], input=None, capture_output=True, text=True,
+            )
+            self.assertEqual({p: p.read_bytes() for p in root.rglob('*') if p.is_file()}, before)
+
+
+class BootstrapReportTests(unittest.TestCase):
+    def test_repository_association_matches_the_audited_repository(self):
+        import contextlib
+        import io
+        import runpy
+        import shutil
+
+        import api
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            planning = root / 'planning'
+            audit = planning / 'audit'
+            audit.mkdir(parents=True)
+            for name in ('guildboard-backlog.json', 'workstreams.json'):
+                shutil.copyfile(ROOT / 'planning' / name, planning / name)
+            source = json.loads((ROOT / 'planning/audit/remote-audit.json').read_text())
+            audited_repo = 'CompleteDotTech/guildboard'
+            for associated, observed, confirmed in (
+                ([], 'None observed', False),
+                (['example/unrelated'], '`example/unrelated`', False),
+                ([audited_repo], f'`{audited_repo}`', True),
+            ):
+                with self.subTest(associated=associated):
+                    source['project']['repositories']['nodes'] = [
+                        {'nameWithOwner': repository} for repository in associated
+                    ]
+                    (audit / 'remote-audit.json').write_text(json.dumps(source))
+                    with mock.patch.object(api, 'ROOT', root), \
+                            mock.patch.object(api, 'api', return_value={
+                                'secrets': [{'name': 'GUILDBOARD_PROJECT_TOKEN'}],
+                            }), mock.patch.object(api.subprocess, 'check_output',
+                                                   side_effect=['synthetic-commit\n', '2026-01-01\nFixture\n']), \
+                            contextlib.redirect_stdout(io.StringIO()):
+                        runpy.run_path(str(SCRIPTS / 'final_report.py'), run_name='__main__')
+                    report = (planning / 'BOOTSTRAP-REPORT.md').read_text()
+                    self.assertIn('- Audited repository owner: `CompleteDotTech`', report)
+                    self.assertIn(f'Observed Project repository associations at audit time: {observed}.', report)
+                    result = 'Confirmed' if confirmed else 'Unconfirmed'
+                    self.assertIn(f'Audited repository association: {result} for `{audited_repo}`.', report)
+                    final_status = 'Complete and verified' if confirmed else 'Partially complete'
+                    self.assertIn(f'**Final status: {final_status}.**', report)
 
 
 class ValidatorTests(unittest.TestCase):
@@ -573,6 +658,33 @@ class CliTests(unittest.TestCase):
         code, report = self.run_cli(json.dumps(MANIFEST))
         self.assertEqual(code, 0)
         self.assertEqual(report['result'], 'pass')
+
+    def test_canonical_manifest_relative_path_and_hardlink_protect_inputs(self):
+        import contextlib
+        import io
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            root = Path(directory)
+            manifest = root / 'canonical-manifest.json'
+            manifest.write_text(json.dumps(MANIFEST))
+            alias = root / 'manifest-alias.json'
+            alias.hardlink_to(manifest)
+            state = root / 'state.json'
+            state.write_text(json.dumps({'repo': MANIFEST['repository']}))
+            document = root / 'generated.md'
+            document.write_text('Generated fixture.')
+            with mock.patch.multiple(validator, DEFAULT_MANIFEST=manifest, STATE=state,
+                                     GENERATED_DOCUMENTS=(document,)):
+                for selected in (Path(os.path.relpath(manifest)), alias):
+                    for target in (state, document):
+                        with self.subTest(manifest=selected.name, target=target.name):
+                            output = io.StringIO()
+                            before = target.read_bytes()
+                            with contextlib.redirect_stdout(output):
+                                result = validator.main(['--manifest', str(selected), '--report', str(target)])
+                            self.assertEqual(result, 1)
+                            self.assertIn('report must not alias', output.getvalue())
+                            self.assertEqual(target.read_bytes(), before)
 
     def test_cli_report_aliases_preserve_state_and_generated_document(self):
         with tempfile.TemporaryDirectory() as directory:
