@@ -102,7 +102,7 @@ conversion is exercised by the browser probe. The full matrix below remains open
 
 1. Remote hydration with NEVER: preserve IDs/tombstones; observe callback counts/origin; prove repeated accepted state does not emit proposed writes.
 2. Local edit A then remote edit B then undo/redo: preserve B, express only accepted A inverse, reject stale revisions and prevent forbidden resurrection. Current probe passes only a simpler remote baseline/local-history undo scenario; it does not test concurrent remote overwrites or server-fenced inverse intent.
-3. Reject optimistic local change and rollback; repeat after role revocation/epoch change, reconnect and restore. No accidental re-proposal or polluted undo history.
+3. Reject optimistic local change and rollback; repeat after role revocation/epoch change, reconnect and restore. The bounded local rollback below filters the hydration echo and reproduces a native undo/redo failure. Accepted-intent history and session-change paths remain open.
 4. Viewer keyboard shortcuts, pointer drag, delete, paste, drop, text input, context menu and imperative hydration; navigation remains available, server denies every forged mutation. The current local probe supplies selected content through the API and retained history for Delete/undo controls, with a writable undo positive control. Real user selection, paste/drop/text/context-menu paths and every server denial remain unverified.
 5. Asset add/roundtrip/export, missing files, excessive data, malformed imports, external URL requests, fonts/CSP and private-file denial.
 6. Keyboard-only/assistive technology, touch and real stylus; drag interruption, focus restoration and repeated controls.
@@ -200,3 +200,33 @@ Discord iframe/proxy behavior in supported clients, screen-reader and
 touch/stylus results with actual assistive technology and hardware, and
 applicable GoDaddy staging evidence separately. The partial fixture provides
 no external acceptance. #98 remains open and #99 remains blocked.
+
+## Rejected optimistic edit rollback, 2026-11-17
+
+The local probe clears the earlier smoke-test history, draws a rectangle
+with a real pointer gesture, and records the new ID. It then simulates
+a rejected mutation by restoring the existing accepted snapshot via
+`updateScene` with `CaptureUpdateAction.NEVER`. The rollback asserts
+the same IDs, geometry, scene order and deletion flags as the accepted
+snapshot. The probe next runs native keyboard undo and redo against the
+writable editor, following the pinned [history action](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/actions/actionHistory.tsx#L48-L75).
+
+From `research-fixtures/canvas` with the existing locked dependencies and
+provisioned Chromium, run `CHROMIUM_PATH=/usr/bin/chromium npm run probe`.
+On Arch Linux with Node 26.13.0, Playwright 1.56.1, Excalidraw 0.18.1 and
+sandbox-enabled Chromium 155.0.8059.84, restoration delivered one real
+callback and zero further in-memory candidates. Native undo then introduced
+the rejected ID as a tombstone. Native redo restored the rejected rectangle
+as a live element under the same ID. Each shortcut delivered three callbacks
+and one candidate in this run. The probe asserts the history effects and
+candidate presence. Counts describe the observed run.
+
+The rejection and accepted snapshot are simulated. The pointer input,
+imperative rollback, editor scene and native keyboard history effects are
+measured in Chromium. The observer sends no writes. For #99, restore the
+accepted scene on rejection and fence native history from the mutation
+path. A proposed inverse needs accepted local intent, the current board
+revision and restore epoch, and server-side validation. Native redo in
+this scenario can reintroduce a rejected edit even after an echo-free
+rollback. Preserving accepted undo history through rollback and handling
+revocation, reconnect, restore and concurrent changes remain unresolved.

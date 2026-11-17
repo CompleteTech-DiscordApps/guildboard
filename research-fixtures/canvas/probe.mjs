@@ -93,7 +93,7 @@ try {
       're-enabled undo removes the prepared local-history edit'],
     blockedRequests,
     limitations: ['Not yet tested in Discord', 'No server permission checks',
-      'No touch/stylus or accessibility acceptance', 'No concurrent remote overwrite/rollback coverage',
+      'No touch/stylus or accessibility acceptance', 'No concurrent remote overwrites or rollback after reconnect or permission changes',
       'Selection is supplied through the editor API; paste/drop/text/context-menu controls remain untested'],
   }, null, 2));
 } finally {
