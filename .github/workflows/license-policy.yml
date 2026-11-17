@@ -26,5 +26,5 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Run offline license gate (PASS is not approval; exceptions remain pending owner review)
+      - name: Run offline license gate (PASS is not legal clearance; exceptions are research-only coordinator decisions)
         run: python3 scripts/verification/check_licenses.py

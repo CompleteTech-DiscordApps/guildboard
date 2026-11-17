@@ -1,5 +1,5 @@
 Recorded 2026-11-16 by an independent haiku verification worker (fresh context) on a read-only export of main a6c887ebcc0116f35666af382aa065ea1c593b98; python=3.12.3; Linux x86_64; no network.
-The read-only export run of the unit tests (A2) failed with 13 filesystem-write errors (harness issue, sha256 f549aa61334bfdaaed387da4537f890685705e590a772d1a6668f7e819b89f32, log not retained here); the writable-copy runs below are the authoritative results.
+The read-only export run of the unit tests (A2) failed with 13 filesystem-write errors (a test-design issue, not a harness setting: tests/verification/test_requirements_acceptance.py:21 creates its temp dir with TemporaryDirectory(dir=ROOT), inside the repository root, so setting TMPDIR does not help; sha256 f549aa61334bfdaaed387da4537f890685705e590a772d1a6668f7e819b89f32, log not retained here); the writable-copy runs below are the authoritative results.
 
 ===== A1_check_licenses (c6026a81df3829de17ca44abf9e7499bbe7fb1eefde923ccb74d134c531611aa)
 license policy check: GB-T0.02.02.T1 (docs/license-supply-chain-policy.md)

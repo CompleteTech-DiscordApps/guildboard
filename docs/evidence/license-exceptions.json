@@ -1,24 +1,24 @@
 {
   "schema_version": 1,
-  "scope": "GB-T0.02.02.T1 (#16). Exceptions cover only review-required licenses, pinned by exact name, version and license string. They never cover prohibited or missing licenses. Entries are agent-proposed from lockfile metadata and are pending owner review; they are not legal clearance. Verified license overrides (verified_license_overrides) supply a license only for a lockfile entry with no license field whose name, exact version and integrity all match. Each override records evidence obtained outside the offline gate; it is not legal sign-off and cannot cover prohibited licenses.",
+  "scope": "GB-T0.02.02.T1 (#16). Exceptions cover only review-required licenses, pinned by exact name, version and license string. They never cover prohibited or missing licenses. The three exceptions were decided by the coordinator on 2026-11-16 under delegated section authority, as ordinary dependency-policy decisions; no human owner approval is recorded or implied. Scope is the research-only canvas fixture (research-fixtures/canvas, not part of product distribution). This is not legal sign-off; re-review is required before any product distribution. Verified license overrides (verified_license_overrides) supply a license only for a lockfile entry with no license field whose name, exact version and integrity all match. Each override records evidence obtained outside the offline gate; it is not legal sign-off and cannot cover prohibited licenses.",
   "exceptions": [
     {
       "name": "dompurify",
       "version": "3.4.17",
       "license": "(MPL-2.0 OR Apache-2.0)",
-      "reason": "Dual-licensed. The checker's conservative OR rule does not select a branch, so the expression is review-required. Apache-2.0 is allowlisted and is the branch this entry proposes to rely on; the owner must record that election and retain Apache-2.0 notices. If MPL-2.0 were relied on instead, its file-level copyleft terms would apply to modified MPL files. Reached from research-fixtures/canvas (no dev flag in the lockfile). Proposed; owner review pending."
+      "reason": "Dual-licensed (MPL-2.0 OR Apache-2.0). The checker's conservative OR rule does not select a branch, so the expression is review-required. Decided by the coordinator on 2026-11-16 under delegated section authority: the Apache-2.0 branch is elected and relied on, Apache-2.0 notices are retained, and the MPL-2.0 branch is not relied on. Reached from research-fixtures/canvas (no dev flag in the lockfile). Scope: research-only canvas fixture, not part of product distribution. This is not legal sign-off; re-review is required before any product distribution."
     },
     {
       "name": "pako",
       "version": "2.0.3",
       "license": "(MIT AND Zlib)",
-      "reason": "Conjunctive expression: MIT is allowlisted, but Zlib is review-listed and not on the allowlist, so both terms apply. Zlib is a permissive license; it is not added to the allowlist. Reached from research-fixtures/canvas (no dev flag in the lockfile). Proposed; owner review of Zlib notice obligations pending."
+      "reason": "Conjunctive expression (MIT AND Zlib): both terms apply. Decided by the coordinator on 2026-11-16 under delegated section authority: accepted as permissive, with the MIT and Zlib notices both retained. Zlib is not added to the allowlist. Reached from research-fixtures/canvas (no dev flag in the lockfile). Scope: research-only canvas fixture, not part of product distribution. This is not legal sign-off; re-review is required before any product distribution."
     },
     {
       "name": "robust-predicates",
       "version": "3.0.3",
       "license": "Unlicense",
-      "reason": "Unlicense is a public-domain dedication with no attribution obligation, but it is review-listed rather than allowlisted, so the owner must accept it explicitly. Reached from research-fixtures/canvas (no dev flag in the lockfile). Proposed; owner review pending."
+      "reason": "Unlicense: a public-domain dedication with no attribution obligation. Decided by the coordinator on 2026-11-16 under delegated section authority: accepted as a public-domain dedication. Reached from research-fixtures/canvas (no dev flag in the lockfile). Scope: research-only canvas fixture, not part of product distribution. This is not legal sign-off; re-review is required before any product distribution."
     }
   ],
   "verified_license_overrides": [
