@@ -12,17 +12,21 @@ from api import ROOT, STATE, TRANSFERRED_REPOSITORY, TRANSFERRED_REPOSITORY_LINK
 REPOSITORY = 'CompleteTech-DiscordApps/guildboard'
 MAX_BATCH = 10
 MARKER = re.compile(r'^<!-- guildboard-id:([^\s]+) -->\r?$', re.MULTILINE)
-# An old repository prefix must start a URL token, rather than appear in the
-# destination or query of another URL.
-URL_START = re.compile(r"""(?<![^\s<(\[{"'`])https://""", re.IGNORECASE)
+# Scan complete URL tokens first so a nested URL inside a query or path never
+# becomes an independent replacement. Angle brackets delimit Markdown URLs.
+URL_TOKEN = re.compile(r"""(?<![^\s<(\[{"'`])(?:[a-z][a-z0-9+.-]*:)?//[^\s<>"'`]+""", re.IGNORECASE)
 
 
 def rewrite(body):
-    return TRANSFERRED_REPOSITORY_LINK.sub(
-        lambda match: match.group()[:-len(TRANSFERRED_REPOSITORY)] + REPOSITORY
-        if URL_START.match(body, match.start()) else match.group(),
-        body,
-    )
+    def replace(token_match):
+        token = token_match.group()
+        prefix = TRANSFERRED_REPOSITORY_LINK.match(token)
+        if prefix is None:
+            return token
+        owner_start = prefix.end() - len(TRANSFERRED_REPOSITORY)
+        return token[:owner_start] + REPOSITORY + token[prefix.end():]
+
+    return URL_TOKEN.sub(replace, body)
 
 
 def selected_items(numbers):
@@ -50,12 +54,16 @@ def selected_items(numbers):
 
 
 def issue_body(issue, item, number):
-    if (not isinstance(issue, dict) or 'pull_request' in issue
-            or type(issue.get('number')) is not int or issue['number'] != number
-            or issue.get('node_id') != item['github']['id']):
+    if (not isinstance(issue, dict)
+            or type(issue.get('number')) is not int or issue['number'] <= 0
+            or not isinstance(issue.get('node_id'), str) or not issue['node_id']
+            or 'body' not in issue or (issue['body'] is not None and not isinstance(issue['body'], str))):
+        raise ValueError('malformed GitHub issue response')
+    if ('pull_request' in issue or issue['number'] != number
+            or issue['node_id'] != item['github']['id']):
         return None
-    body = issue.get('body')
-    if isinstance(body, str) and MARKER.findall(body) == [item['id']]:
+    body = issue['body']
+    if body is not None and MARKER.findall(body) == [item['id']]:
         return body
     return None
 
