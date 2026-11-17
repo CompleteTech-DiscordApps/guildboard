@@ -17,8 +17,9 @@ Backlog/Unblocked and zero native blockers. Live issue had no assignee/comments;
 open PR inventory through #489 had no competing T5 research. Claim recorded in
 the issue. No native dependency or readiness field was changed by this work.
 
-Cross-checked [draft #481](https://github.com/CompleteTech-DiscordApps/guildboard/pull/481)
-at `19d5f5a35511a1edf3a8bd34773fbb4d57546b89`: operation identity is scoped by
+Cross-checked the [system contract proposal](../specifications/GB-T0-S1-system-contract.md)
+in §§3, 5 and 6, introduced by #481 at `d19a1daf67cfa078e5a18d25702ca9ea45d66165`.
+Operation identity is scoped by
 guild/board/lineage/actor/operation; current identity and read authorization precede
 receipt lookup; same identity/digest returns retained historical receipt **before**
 active-lineage checks; different digest conflicts; an unknown old-lineage command
@@ -96,9 +97,13 @@ the board/policy fence by its full tenant+board key, then perform the #481
 receipt/digest/lineage decision order. For a new accepted command, validate current
 write authority, generation, server-time expiry and schema limits, then commit
 state change, monotonic revision, immutable event, receipt, outbox and required
-audit atomically. Delivery occurs after commit; an outbox can redeliver. Consumers
-deduplicate by scoped lineage/revision and reauthorize recipients, including
-retired-lineage events after restore. No exactly-once transport claim follows.
+audit atomically. Delivery occurs after commit. At each transport release,
+serialize current session validity, membership freshness and scoped read authority
+with revocation and expiry. Apply this check to accepted acknowledgments,
+historical receipts, digest-dependent conflicts, events, snapshot chunks and
+asset or export metadata and chunks. A denied delivery leaves an accepted commit
+durable and reveals no protected outcome. Outbox redelivery is possible, so
+consumers deduplicate by scoped lineage/revision.
 
 Every relationship and unique constraint includes the verified tenant and board;
 operation identity also includes lineage and actor. Index leading columns serve
@@ -113,6 +118,7 @@ a valid foreign tenant; route/socket/asset authorization tests remain mandatory.
 | Before transaction or after state update, before COMMIT | No committed content/event/receipt/outbox; process-crash fixture D01 verifies one interruption point. Each internal statement boundary and disk-full/SQL-error rollback still needs fault injection. |
 | During COMMIT / connection loss | Outcome unknown until original scoped identity/digest is reconciled. Do not label timeout as rollback/saved or generate a new operation ID automatically. Actual network ambiguity injection pending. |
 | COMMIT returned, before application ACK | Durable bundle recoverable; fixture D02 kills after a SQL witness and confirms survival, not a real application lost-ACK test. |
+| Revocation, expiry or membership invalidation before queued delivery | Suppress the protected result or each later queued chunk and preserve any prior commit. Consumer tests must cover backpressure, stale authority and trusted-time failures for receipt, snapshot, asset and export delivery. |
 | After publish, before delivery marker | Possible duplicate delivery; retain outbox and deduplicate, never repeat the mutation. Network publisher/crash test pending. |
 | Content restore versus receipt history | Atomically publish new lineage/generation and restored content while preserving all retained receipts. Historical receipt settles only its old commit; never apply its old payload to active restored content. D05 proves narrow SQL preservation and zero-row stale selector, not service authorization. |
 | Older backup restored after disaster | Missing receipt may represent a previously committed operation beyond the backup cut. Treat outcome as unknown under the RPO/restore contract; don't infer uncommitted or automatically reissue. Cross-backup reconciliation and client handling remain unresolved. |
