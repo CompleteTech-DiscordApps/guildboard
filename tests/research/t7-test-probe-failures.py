@@ -101,6 +101,87 @@ class FailureReports(unittest.TestCase):
         self.assertEqual(self.run_failure('copy', b'copy failed: \xff')['command_stderr'], 'copy failed: \ufffd')
 
 
+class CleanupOwnership(unittest.TestCase):
+    OWNED_ID = 'a' * 64
+    REPLACEMENT_ID = 'b' * 64
+
+    def run_cleanup(self, inspected_id, remove_race=False, owner_matches=True, still_present=False):
+        process = OwnedProcess()
+        calls = []
+        live = {}
+
+        def check_output(command, **kwargs):
+            if command[0] == 'git':
+                return 'fixture-head\n'
+            if command[1:] == ['context', 'show']:
+                return 'test-context\n'
+            self.assertEqual(command[-5:], ['ps', '-a', '--no-trunc', '--format', '{{.ID}}'])
+            return '\n'.join(live)
+
+        def run(command, **kwargs):
+            calls.append(command)
+            if 'cp' in command:
+                Path(command[-1]).write_bytes(b'screenshot')
+            if command[3:5] == ['container', 'inspect']:
+                name = command[-1]
+                live[inspected_id] = name
+                info = {'Id': inspected_id, 'Config': {'Labels': {
+                    'tech.complete.guildboard.t7.run': name if owner_matches else 'foreign'}}}
+                if remove_race:
+                    del live[inspected_id]
+                    live[self.REPLACEMENT_ID] = name
+                return subprocess.CompletedProcess(command, 0, stdout=json.dumps([info]))
+            if command[3:5] == ['rm', '--force']:
+                target = command[-1]
+                if not still_present:
+                    # Docker accepts a mutable name too. Using it would remove the replacement.
+                    matching = next((key for key, name in live.items() if name == target), target)
+                    removed = live.pop(matching, None)
+                    return subprocess.CompletedProcess(command, int(removed is None))
+                return subprocess.CompletedProcess(command, 1)
+            return subprocess.CompletedProcess(command, 0)
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'evidence.json'
+            with patch.object(sys, 'argv', ['probe', '--output', str(output)]), \
+                 patch.object(PROBE.platform, 'platform', return_value='test-platform'), \
+                 patch.object(PROBE.subprocess, 'check_output', side_effect=check_output), \
+                 patch.object(PROBE.subprocess, 'run', side_effect=run), \
+                 patch.object(PROBE.subprocess, 'Popen', return_value=process), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                exit_code = PROBE.main()
+            report = json.loads(output.read_text())
+        return exit_code, report, [call[-1] for call in calls if call[3:5] == ['rm', '--force']], live
+
+    def test_auto_remove_then_name_reuse_preserves_replacement(self):
+        code, report, targets, live = self.run_cleanup(self.OWNED_ID, remove_race=True)
+        self.assertEqual(code, 0)
+        self.assertTrue(report['owned_container_absent'])
+        self.assertEqual(targets, [self.OWNED_ID])
+        self.assertEqual(live, {self.REPLACEMENT_ID: report['container']})
+
+    def test_invalid_inspected_id_blocks_removal(self):
+        for value in (None, 'a' * 12, 'g' * 64, '-' + 'a' * 63):
+            with self.subTest(value=value):
+                code, report, targets, _ = self.run_cleanup(value)
+                self.assertEqual(code, 1)
+                self.assertIn('full container ID', report['cleanup_error'])
+                self.assertEqual(targets, [])
+
+    def test_foreign_ownership_blocks_removal(self):
+        code, report, targets, _ = self.run_cleanup(self.OWNED_ID, owner_matches=False)
+        self.assertEqual(code, 1)
+        self.assertIn('exact ownership label', report['cleanup_error'])
+        self.assertEqual(targets, [])
+
+    def test_owned_id_present_after_failed_remove_blocks_report(self):
+        code, report, targets, live = self.run_cleanup(self.OWNED_ID, still_present=True)
+        self.assertEqual(code, 1)
+        self.assertFalse(report['owned_container_absent'])
+        self.assertEqual(targets, [self.OWNED_ID])
+        self.assertIn(self.OWNED_ID, live)
+
+
 class ReportPublicationFailures(unittest.TestCase):
     def exercise(self, partial):
         process = OwnedProcess()

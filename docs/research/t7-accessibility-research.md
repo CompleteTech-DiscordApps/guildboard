@@ -178,8 +178,10 @@ The [probe](../../scripts/research/t7-browser-probe.py) uses an already-cached
 immutable `mcp/playwright` image through its own Docker MCP stdio session, not a
 shared browser, local package install or HTTP service. It has network=none,
 no host mounts/volumes/ports, one CPU, 768 MiB and 256 PIDs. It stops only its
-own process/container, checks its invocation label before forced cleanup if
-needed, and reads back absence. Existing workloads and WSL were not targets.
+own process/container. Forced cleanup requires a matching invocation label and
+a valid full container ID from inspection. Removal and the absence check use
+that ID so automatic removal followed by name reuse preserves a replacement
+container. Existing workloads and WSL were not targets.
 No image pull is performed; a missing image is an explicit local blocker.
 
 Environment: Windows PowerShell/Python **3.14.3**; MCP server

@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import queue
+import re
 import platform
 import subprocess
 import threading
@@ -125,12 +126,20 @@ def main() -> int:
             try:
                 inspect=subprocess.run([*docker,'container','inspect',name],capture_output=True,text=True,timeout=15)
                 if inspect.returncode==0:
-                    owner=json.loads(inspect.stdout)[0]['Config']['Labels'].get(label)
+                    container=json.loads(inspect.stdout)[0]
+                    owner=container['Config']['Labels'].get(label)
                     if owner!=name: raise RuntimeError('refusing cleanup without exact ownership label')
-                    # --rm may remove it between inspect and rm; verify absence below.
-                    subprocess.run([*docker,'rm','--force',name],capture_output=True,timeout=15)
-                remaining=subprocess.check_output([*docker,'ps','-a','--format','{{.Names}}'],text=True,timeout=15).splitlines()
-                report['owned_container_absent']=name not in remaining
+                    container_id=container.get('Id')
+                    if not isinstance(container_id,str) or not re.fullmatch(r'[0-9a-f]{64}',container_id):
+                        raise RuntimeError('refusing cleanup without a full container ID')
+                    # --rm can remove this container and free its name before rm runs.
+                    subprocess.run([*docker,'rm','--force',container_id],capture_output=True,timeout=15)
+                    remaining=subprocess.check_output([*docker,'ps','-a','--no-trunc','--format','{{.ID}}'],text=True,timeout=15).splitlines()
+                    report['owned_container_absent']=container_id not in remaining
+                else:
+                    # Without an inspected ID, a successful listing can only establish name absence.
+                    remaining=subprocess.check_output([*docker,'ps','-a','--format','{{.Names}}'],text=True,timeout=15).splitlines()
+                    report['owned_container_absent']=name not in remaining
                 if not report['owned_container_absent']: raise RuntimeError('owned container remains after cleanup')
             except Exception as error:
                 failed=True;report.update(result='blocked-or-failed',cleanup_error=str(error)[:4000])
