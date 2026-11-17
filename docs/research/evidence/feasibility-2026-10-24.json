@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "observed_at_utc": "2026-10-24T14:49:40.822556+00:00",
+  "python": "3.12.13",
+  "system": "Darwin",
+  "pins_sha256": "9e23763e287644708d416da676a44e31fb70f2339d5830c7b0ad81637d041689",
+  "result": "static-artifacts-match-pins",
+  "limitations": [
+    "No third-party code executed",
+    "No transitive or font license clearance",
+    "No rendering, authorization, Discord client, proxy, or GoDaddy runtime test"
+  ],
+  "packages": [
+    {
+      "name": "@excalidraw/excalidraw",
+      "version": "0.18.1",
+      "archive_sha256": "b280d4b364b65cba264c5aa4e7435cc2ce6421eabbbef9765a56997a0fadf534",
+      "compressed_bytes": 31234066,
+      "declared_license": "MIT",
+      "checked_files": [
+        {
+          "path": "package/dist/types/excalidraw/index.d.ts",
+          "sha256": "90729dab4b90b24477773dd263aa8b51bbd62afa45f003795d084828a1e1e8e6",
+          "symbols": [
+            "Excalidraw",
+            "serializeAsJSON",
+            "loadFromBlob",
+            "CaptureUpdateAction"
+          ]
+        },
+        {
+          "path": "package/dist/types/excalidraw/types.d.ts",
+          "sha256": "61681bd17da86a0b811242e83cd8e1f6c7f168a14806c8ca587390e24815486a",
+          "symbols": [
+            "onChange",
+            "onPointerUpdate",
+            "viewModeEnabled",
+            "updateScene",
+            "getSceneElements",
+            "addFiles"
+          ]
+        }
+      ],
+      "published_license": "not included at a checked path; retain source notice",
+      "license_named_files": [],
+      "font_asset_count": 468,
+      "source_commit": "a2ec2889babf7d2295469c6d90ebe77fae57df84",
+      "source_license": {
+        "url": "https://raw.githubusercontent.com/excalidraw/excalidraw/a2ec2889babf7d2295469c6d90ebe77fae57df84/LICENSE",
+        "sha256": "1352d204fdb90d5e482c13139d848bc2c9300a9a7de358a0a558a23e72d0d8be"
+      }
+    },
+    {
+      "name": "@discord/embedded-app-sdk",
+      "version": "2.5.0",
+      "archive_sha256": "9fea2ebe36dfd1126ad072ba343128db4143043c5b6a1f9bc212a0e3a7198470",
+      "compressed_bytes": 250150,
+      "declared_license": "MIT",
+      "checked_files": [
+        {
+          "path": "package/output/index.d.ts",
+          "sha256": "f40de85f7ae9a7c0ef022cf52ef01b8696b8350c239a08fa9110ef16f7c684e3",
+          "symbols": [
+            "DiscordSDK",
+            "patchUrlMappings"
+          ]
+        },
+        {
+          "path": "package/output/Discord.d.ts",
+          "sha256": "0cc67443bcae18a4b5e2e217d9006e2a02e546f6d7dde9e1c273e803acd6c977",
+          "symbols": [
+            "ready",
+            "authorize",
+            "authenticate"
+          ]
+        },
+        {
+          "path": "package/output/utils/patchUrlMappings.d.ts",
+          "sha256": "e1874a41250bcdcf75fdd6a340a0c91381d328c175bfec6ed1050bdfee3e1f08",
+          "symbols": [
+            "patchUrlMappings",
+            "patchWebSocket"
+          ]
+        }
+      ],
+      "published_license": "package/LICENSE.md",
+      "license_named_files": [
+        "package/LICENSE.md"
+      ],
+      "font_asset_count": 0,
+      "source_commit": "14264eccbf9e68d5d58c1aadbc7579e003e0dce6",
+      "source_license": {
+        "url": "https://raw.githubusercontent.com/discord/embedded-app-sdk/14264eccbf9e68d5d58c1aadbc7579e003e0dce6/LICENSE.md",
+        "sha256": "ac69ea236ff3ba795e1873f4641b73f99492cf47ed9e0804ee4cf8285dd45b9d"
+      }
+    }
+  ]
+}

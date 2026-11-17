@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:guildboard:architecture-decisions:v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "records"],
+  "properties": {
+    "version": {"const": 1},
+    "records": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+      "required": ["id", "revision", "boundary", "old_sha256", "new_sha256", "rationale", "alternatives", "controls", "test_evidence"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^DEC-[0-9]{4}$"},
+        "revision": {"type": "integer", "minimum": 1},
+        "boundary": {"type": "string", "minLength": 1},
+        "old_sha256": {"anyOf": [{"type": "null"}, {"type": "string", "pattern": "^[0-9a-f]{64}$"}]},
+        "new_sha256": {"anyOf": [{"type": "null"}, {"type": "string", "pattern": "^[0-9a-f]{64}$"}]},
+        "rationale": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "alternatives": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1, "maxLength": 4000}},
+        "controls": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "test_evidence": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    }}
+  }
+}

@@ -1,0 +1,46 @@
+name: Canvas feasibility fixture
+
+on:
+  pull_request:
+    paths:
+      - 'research-fixtures/canvas/**'
+      - '.github/workflows/canvas-feasibility.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'research-fixtures/canvas/**'
+      - '.github/workflows/canvas-feasibility.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  fixture:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: research-fixtures/canvas
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+      - name: Record Node and npm versions
+        run: |
+          node --version
+          npm --version
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Run fixture tests
+        run: npm test
+      - name: Audit all dependencies
+        run: npm audit --audit-level=low
+      - name: Install managed Chromium
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Build and run editor smoke checks
+        run: npm run probe
+      - name: Run network controls
+        run: npm run probe:network

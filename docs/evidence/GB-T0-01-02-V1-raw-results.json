@@ -1,0 +1,36 @@
+{
+  "source_revision_supplied": "a08d25a32290091937af1bd0efa439c43d4d6c76",
+  "revision_verification": "Source git metadata unavailable; supplied architecture10-provenance.json; listed file digests independently recomputed and matched.",
+  "environment": {
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+    "network": "not used",
+    "execution": "local scratch copy"
+  },
+  "source_sha256": {
+    "docs/architecture.md": "6da35a1f4a0ef9dfdbbb784db67e006f1683cd8af68e47d53f343db2e1888cad",
+    "docs/adr/0001-editor-activity-vps-direction.md": "1cea5ad95a16a54e156357c3e272d38ff4f756c3042b8eac5b59d2b057034398",
+    "docs/adr/0002-server-authority-and-interactions.md": "d74120927944cbae12d6ebdddde38b92b14e0a55008bf818da351b071a60c058",
+    "docs/specifications/GB-T0-S1-system-contract.md": "6563ec365b8a36dafd00c79f829234ee53a629bfdf2a1c10a816d996ed9a805f",
+    "docs/specifications/fixtures/GB-T0-01-02-interactions.json": "c31d2a8ac09850617f84bd51125358c189308c82d27f05a3d33c50453e77d2de",
+    "docs/specifications/fixtures/GB-T0-S1-scenarios.json": "d28f682ad3bcd0d82dc6c00a9595e0d7e5d5c87763a61cffbadb882c5ed1a470",
+    "docs/requirements/fixtures/GB-T0-01-01-use-cases.json": "b1cf27dae882560ac1b040c261dd7e97f142f4c8917d07a26bc45005fc796440"
+  },
+  "results": [
+    {
+      "command": "python3 scripts/verification/verify_architecture.py",
+      "exit_code": 0,
+      "stdout": "PASS: seven accepted artifact digests match; runtime behavior not tested\n",
+      "stderr": ""
+    },
+    {
+      "command": "python3 -m unittest discover -s tests/verification -v",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "test_architecture_reversals_and_omissions (test_architecture_acceptance.Acceptance.test_architecture_reversals_and_omissions) ... ok\ntest_baseline (test_architecture_acceptance.Acceptance.test_baseline) ... ok\ntest_fixture_nested_malformed_and_scenario_reversal (test_architecture_acceptance.Acceptance.test_fixture_nested_malformed_and_scenario_reversal) ... ok\ntest_interruption_is_not_success (test_architecture_acceptance.Acceptance.test_interruption_is_not_success) ... FAIL: verification interrupted\nok\ntest_missing_prerequisite_and_invalid_config (test_architecture_acceptance.Acceptance.test_missing_prerequisite_and_invalid_config) ... FAIL: invalid root or unavailable prerequisite\nok\n\n----------------------------------------------------------------------\nRan 5 tests in 0.015s\n\nOK\n"
+    }
+  ],
+  "defects": [],
+  "historical_receipts": "Existing source evidence retained unmodified; prerequisite #9 closed after review 504 and postmerge runs 43893431736 / 43893431318 as supplied, not independently queried.",
+  "scope": "No self hash or successor commit claim. Native CI and review must bind the successor."
+}
