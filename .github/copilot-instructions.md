@@ -48,37 +48,48 @@ Planning changes run `python3 scripts/github-bootstrap/validate.py`.
 Record commands, environment, exact SHA, results and limits. Local/model/mock
 checks do not prove real Discord, GoDaddy, recovery or production acceptance.
 
-When an owner-authorized campaign requires Copilot review, seek actual GitHub
-Copilot code review before merge. Review must cover the current full PR head SHA,
-the complete PR delta and relevant integration. Inspect
-existing pending requests and completed reviews before requesting or re-requesting
-the actual reviewer `copilot-pull-request-reviewer[bot]` through the supported
-Copilot code-review flow; a coding-agent assignment or mention is not a review.
-Use the strongest review effort actually available through that flow. Record
-the actual reviewer, reviewed SHA, available/reported effort and linked evidence;
-do not invent model/effort controls, relabel Lite or limited review as Balanced,
-or claim unperformed checks. Pending, stale or inadequate review does not pass.
+When an owner-authorized campaign requires Copilot review, obtain adequate
+GitHub Copilot code review of the eligible changes at the full PR head SHA,
+including relevant integration. Before requesting or re-requesting review,
+inspect current requests and reviews. Use the supported code-review flow for
+`copilot-pull-request-reviewer[bot]`. A coding-agent assignment or mention
+does not count as code review.
 
-On confirmed Copilot quota, access or service failure, record the evidence and
-reason. An inadequate completed review remains pending unless such a failure is
-confirmed. If the campaign explicitly allows a fallback in that situation, a fresh,
-independent reviewer qualified under its role, runtime and model policy may review
-the full PR at its current
-head SHA, including relevant integration. An explicit Copilot-only STOP remains
-in force; this fallback does not override it. It must have no implementation role,
-make no writes and perform no delegation. Record reviewer identity, model/effort,
-full reviewed SHA, scope, findings, checks and limitations in a durable receipt.
-If that qualified fallback is unavailable or incomplete, keep the technical gate
-pending. This policy authorizes no purchases or otherwise unassigned delegation.
+Use the strongest available effort allowed by the campaign and confirmed to
+fit the included usage without additional charges. If that cannot be
+confirmed, leave review pending. Record the actual reviewer, reviewed SHA,
+reported effort and linked evidence. Report available controls and coverage
+accurately. Pending, stale or inadequate review does not pass.
+See [GitHub's review effort and billing guidance](https://docs.github.com/en/copilot/concepts/agent-capabilities/agent-powered-workflows-and-operations/code-review).
 
-Either a qualified current-head Copilot review or that qualified independent
-review satisfies the technical review gate. Neither route constitutes a native
-GitHub approval or replaces required functional/security expertise or CODEOWNER
-approval. Requests, quota failures, author self-review and fabricated clean
-reports are not completed reviews.
+Identify changed paths that [GitHub Copilot excludes from review](https://docs.github.com/en/copilot/reference/review-excluded-files).
+Record each excluded path and the reason. When the campaign allows it, a
+qualified independent reviewer covers those paths and their affected
+integration at the same full PR head SHA. This complements the required
+Copilot review of eligible paths. If GitHub excludes every changed path,
+record that scope and obtain authorized independent coverage of every
+path and affected integration. Keep the gate pending for any uncovered path. Honor any explicit Copilot-only STOP for both complementary review
+and fallback.
 
-Maintain a findings ledger covering every inline and summary finding from both
-routes, its disposition, remediation SHA and verification evidence, including
+On confirmed Copilot quota, access or service failure, record the evidence
+and reason. An inadequate completed review remains pending unless such a
+failure is confirmed. If the campaign explicitly authorizes fallback in that
+situation, a qualified independent reviewer may review the full PR at its
+current full head SHA, including relevant integration. Keep the gate pending
+if the authorized fallback is unavailable or incomplete.
+
+Independent reviewers must be fresh and qualified under the campaign's
+role, runtime and model policy. They must have no implementation role,
+make no writes and perform no delegation. Record reviewer identity,
+model/effort, full reviewed SHA, scope, findings, checks and limitations
+in a durable receipt. The technical gate requires current-head coverage
+of the complete delta through Copilot for eligible paths and complementary
+review for excluded paths, or an explicitly authorized complete fallback. Required functional
+and security expertise, CODEOWNER approval and all other native approvals
+still apply. This guidance authorizes no additional spend or delegation.
+
+Maintain a findings ledger covering every inline and summary finding from applicable
+reviews, its disposition, remediation SHA and verification evidence, including
 reasons for non-applicable findings. Remediate valid actionable findings and
 obtain qualified review again after any pushed head change, including code fixes;
 earlier reviews do not cover the new SHA. Read back the live full PR head,
