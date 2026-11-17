@@ -132,9 +132,10 @@ each campaign; no standing delegation or default permissions are implied.
   clients, real GoDaddy verification and post-merge acceptance. Research, a green
   planning check, a review request or merged documentation proves none of the
   untested runtime claims. Mark unavailable checks as pending or blocked.
-- When an owner-authorized campaign requires Copilot review, obtain adequate
-  GitHub Copilot code review of the eligible changes at the full PR head SHA,
-  including relevant integration. Before requesting or re-requesting review,
+- The following Copilot procedure applies only to owner-authorized campaigns
+  that require Copilot review. Obtain adequate GitHub Copilot code review of
+  the eligible changes at the full PR head SHA, including relevant integration.
+  Before requesting or re-requesting review,
   inspect current requests and reviews. Use the supported code-review flow for
   `copilot-pull-request-reviewer[bot]`. A coding-agent assignment or mention
   does not count as code review.
@@ -146,33 +147,41 @@ each campaign; no standing delegation or default permissions are implied.
   accurately. Pending, stale or inadequate review does not pass.
   See [GitHub's review effort and billing guidance](https://docs.github.com/en/copilot/concepts/agent-capabilities/agent-powered-workflows-and-operations/code-review).
 
-- Identify changed paths that [GitHub Copilot excludes from review](https://docs.github.com/en/copilot/reference/review-excluded-files).
+  Identify changed paths that [GitHub Copilot excludes from review](https://docs.github.com/en/copilot/reference/review-excluded-files).
   Record each excluded path and the reason. When the campaign allows it, a
   qualified independent reviewer covers those paths and their affected
   integration at the same full PR head SHA. This complements the required
   Copilot review of eligible paths. If GitHub excludes every changed path,
   record that scope and obtain authorized independent coverage of every
-  path and affected integration. Keep the gate pending for any uncovered path. Honor any explicit Copilot-only STOP for both complementary review
-  and fallback.
-- On confirmed Copilot quota, access or service failure, record the evidence
+  path and affected integration. Keep the gate pending for any uncovered path.
+  Honor any explicit Copilot-only STOP for complementary review and fallback.
+
+  On confirmed Copilot quota, access or service failure, record the evidence
   and reason. An inadequate completed review remains pending unless such a
   failure is confirmed. If the campaign explicitly authorizes fallback in that
   situation, a qualified independent reviewer may review the full PR at its
   current full head SHA, including relevant integration. Keep the gate pending
   if the authorized fallback is unavailable or incomplete.
-- Independent reviewers must be fresh and qualified under the campaign's
-  role, runtime and model policy. They must have no implementation role,
-  make no writes and perform no delegation. Record reviewer identity,
+
+  For campaigns requiring Copilot review, the technical gate requires
+  current-head coverage of the complete delta through Copilot for eligible
+  paths and complementary review for excluded paths, or an explicitly
+  authorized complete fallback.
+
+- For campaigns without a Copilot requirement, follow the authorized
+  independent-review requirements and record exact-head evidence for the
+  reviews the campaign requires.
+- In all campaigns, independent reviewers must be fresh and qualified under
+  the campaign's role, runtime and model policy. They must have no
+  implementation role, make no writes and perform no delegation. Record reviewer identity,
   model/effort, full reviewed SHA, scope, findings, checks and limitations
-  in a durable receipt. The technical gate requires current-head coverage
-  of the complete delta through Copilot for eligible paths and complementary
-  review for excluded paths, or an explicitly authorized complete fallback. Required functional
-  and security expertise, CODEOWNER approval and all other native approvals
-  still apply. This guidance authorizes no additional spend or delegation.
+  in a durable receipt. Required functional and security expertise, CODEOWNER
+  approval and all other native approvals still apply. This guidance authorizes
+  no additional spend or delegation.
 - Maintain a findings ledger covering every inline and summary finding from applicable
   reviews, its disposition, remediation SHA and verification evidence, including
   reasons for non-applicable findings. Remediate valid actionable findings and
-  obtain qualified review again after any pushed head change, including code fixes;
+  repeat required qualified review after any pushed head change, including code fixes;
   earlier reviews do not cover the new SHA. Read back the live full PR head,
   matching review evidence, findings dispositions and current checks before merge.
   Required native approvals, prerequisite gates and passing CI remain separate.
