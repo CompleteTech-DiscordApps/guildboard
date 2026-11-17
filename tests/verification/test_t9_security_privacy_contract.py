@@ -32,7 +32,8 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
     def test_fixture_is_explicitly_synthetic_and_versioned(self):
         self.assertEqual(
             {'version', 'contract', 'kind', 'scenarios', 'receiptLookupMatrix',
-             'releaseMatrix', 'historicalReceipt'},
+             'releaseMatrix', 'historicalReceipt', 'stageNegatives', 'postLookupDenial',
+             'malformedCommand', 'internalRecords', 'recovery'},
             self.fixture.keys(),
         )
         self.assertIs(type(self.fixture['version']), int)
@@ -98,14 +99,15 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
     def test_release_matrix_covers_every_protected_output_and_both_orders(self):
         matrix = self.fixture['releaseMatrix']
         self.assertEqual(
-            ['ack', 'receipt', 'digest_result', 'live_event', 'replay_event',
+            ['ack', 'receipt', 'digest_result', 'lineage_changed', 'live_event', 'replay_event',
              'snapshot_metadata', 'snapshot_chunk', 'asset_metadata', 'asset_chunk',
              'export_metadata', 'export_chunk'],
             matrix['kinds'],
         )
         self.assertEqual(
             ['session_revoke', 'session_expiry', 'membership_invalid', 'membership_stale',
-             'read_policy_change', 'time_unavailable', 'fence_unavailable'],
+             'read_policy_change', 'time_unavailable', 'fence_unavailable',
+             'policy_stale', 'policy_unavailable', 'time_stale'],
             matrix['authorityLoss'],
         )
         self.assertEqual({'release_first', 'authority_loss_first'}, matrix['orders'].keys())
@@ -125,7 +127,8 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
         self.assertEqual(
             {'settlesHistoricalOperation', 'clearsSameOperationPendingRetry',
              'appliesPayloadToActiveLineage', 'marksActiveLineageSaved',
-             'requiresAuthorizedActiveRejoin', 'requiresValidatedActiveSnapshotOrTail'},
+             'requiresAuthorizedActiveRejoin', 'requiresValidatedCompleteActiveSnapshot',
+             'requiresContiguousTailIfNeeded', 'advancesOnPartialOrGappedTransfer'},
             receipt.keys(),
         )
         for field, expected in (
@@ -134,10 +137,91 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
             ('appliesPayloadToActiveLineage', False),
             ('marksActiveLineageSaved', False),
             ('requiresAuthorizedActiveRejoin', True),
-            ('requiresValidatedActiveSnapshotOrTail', True),
+            ('requiresValidatedCompleteActiveSnapshot', True),
+            ('requiresContiguousTailIfNeeded', True),
+            ('advancesOnPartialOrGappedTransfer', False),
         ):
             with self.subTest(observation=field):
                 self.assertIs(receipt[field], expected)
+
+    def test_commit_and_egress_have_separate_typed_denials(self):
+        unavailable = ['policy_stale', 'policy_unavailable', 'time_stale', 'time_unavailable']
+        self.assertEqual({
+            'commit': {
+                'FORBIDDEN': ['fresh_scoped_read_only'],
+                'POLICY_STALE': ['proven_generation_mismatch'],
+                'DEPENDENCY_UNAVAILABLE': unavailable,
+            },
+            'commitAcceptedEffects': False,
+            'egressProtectedOutput': False,
+            'egress': {
+                'FORBIDDEN': ['read_denied_after_lookup'],
+                'DEPENDENCY_UNAVAILABLE': unavailable,
+            },
+        }, self.fixture['stageNegatives'])
+
+    def test_post_lookup_denial_covers_all_prepared_branches(self):
+        matrix = self.fixture['postLookupDenial']
+        self.assertEqual(set(self.fixture['receiptLookupMatrix']['storedStates']), matrix['prepared'].keys())
+        self.assertEqual({
+            'prepared': {
+                'absent': 'LINEAGE_CHANGED', 'matching': 'receipt',
+                'mismatching': 'IDEMPOTENCY_CONFLICT',
+            },
+            'prelookupAuthorized': True,
+            'authorityLossImmediatelyBeforeEgress': True,
+            'sameNormalizedOutcomeForSameDenial': True,
+            'protectedOutput': False,
+            'additionalDurableEffects': False,
+            'priorAcceptedCommitSurvives': True,
+            'settlesUnknown': False,
+        }, matrix)
+
+    def test_malformed_command_rejects_before_lookup_or_effects(self):
+        self.assertEqual({
+            'INVALID_MESSAGE': {
+                'unknown_field': {'add': {'unknownFixtureField': False}},
+                'duplicate_field': {'repeat': 'operationId'},
+                'unknown_kind': {'set': {'kind': 'UNREGISTERED_FIXTURE_KIND'}},
+                'invalid_id': {'set': {'operationId': 'fixture-not-a-uuid'}},
+                'noncanonical_counter': {'set': {'baseRevision': '01'}},
+                'counter_above_uint64': {'set': {'baseRevision': str(1 << 64)}},
+            },
+            'UNSUPPORTED_VERSION': {'unsupported_version': {'set': {'version': 2}}},
+            'onlySafeRejection': True, 'digestLookup': False, 'receiptLookup': False,
+            'protectedOutput': False, 'durableEffects': False,
+        }, self.fixture['malformedCommand'])
+
+    def test_closed_records_fail_with_typed_results(self):
+        self.assertEqual({
+            'kinds': ['deletion_job', 'audit_event', 'release_evidence', 'exception',
+                      'retention_exception'],
+            'INVALID_RECORD': ['missing_field', 'unknown_field', 'duplicate_field',
+                               'wrong_type', 'wrong_scope', 'unregistered_value'],
+            'UNSUPPORTED_RECORD_VERSION': ['unsupported_version'],
+            'DEPENDENCY_UNAVAILABLE': ['required_registry_unavailable',
+                                       'required_authority_unavailable', 'required_time_unavailable'],
+            'acceptsInvalidOrUnverifiableRecord': False,
+        }, self.fixture['internalRecords'])
+
+    def test_restore_and_audit_have_independent_coverage_checks(self):
+        self.assertEqual({
+            'restoreExposes': {'current_complete_reconciled': True, 'missing': False,
+                               'stale': False, 'gapped': False, 'later_deletion_unapplied': False},
+            'auditVerifies': {'anchored_complete': True, 'anchor_missing': False,
+                              'anchor_stale': False, 'checkpointed_truncation': False,
+                              'accepted_active_tail_truncation': False},
+        }, self.fixture['recovery'])
+
+    def test_refined_cases_trace_to_native_verifiers(self):
+        by_id = {case['id']: case for case in self.fixture['scenarios']}
+        for case, issues in {
+            'commit_order': [300], 'commit_dependencies': [300], 'receipt_release_denial': [300],
+            'malformed_command': [300, 307], 'internal_records': [311, 314, 321],
+            'delete_restore': [311], 'audit_integrity': [314, 318],
+        }.items():
+            with self.subTest(case=case):
+                self.assertEqual(issues, by_id[case]['verificationIssues'])
 
     def test_workstream_and_specification_link_to_exact_artifacts(self):
         self.assertIn(f'](../specifications/{SPECIFICATION.name})', self.workstream)

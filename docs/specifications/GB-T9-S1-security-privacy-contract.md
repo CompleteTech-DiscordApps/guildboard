@@ -51,12 +51,16 @@ put it in URLs, logs, support evidence or exports.
    collision prepares `IDEMPOTENCY_CONFLICT`. An absent receipt proceeds to
    lineage checking. On retired lineage return `LINEAGE_CHANGED` with no write.
    Treat any lineage or state dependent response as a protected result.
-3. For a new active-lineage operation, T2/T4/T5 must serialize the authoritative
-   commit check with revocation, grant changes, membership invalidation,
+3. Every new active-lineage operation requires an affirmative current allow for
+   its specific write or action. A fresh scoped read-only session still receives
+   `FORBIDDEN` for a new write and creates no accepted effects. T2/T4/T5 serialize
+   the authoritative commit check with revocation, grant changes, membership invalidation,
    session expiry/revocation, lock and lineage changes. Revalidate policy and
    session generations, current membership, trusted time, active lineage,
-   grant expiry and command preconditions at commit. Missing or stale required
-   authority, unavailable trusted time or an unavailable fence denies commit.
+   grant expiry and command preconditions at commit. Missing, stale or unavailable required policy, trusted time
+   or other authority evidence, or an unavailable fence, returns commit-stage
+   `DEPENDENCY_UNAVAILABLE` with zero accepted effects. A proven generation
+   mismatch returns `POLICY_STALE` under the T0 rules.
    Regrant must advance the fence and leave old prepared intent stale. If
    commit wins, canonical state, revision, receipt, outbox and required audit
    metadata are accepted atomically. If denial wins, commit none of those
@@ -64,9 +68,11 @@ put it in URLs, logs, support evidence or exports.
    leaves no effects. Ambiguous storage outcome remains unresolved.
 4. Serialize each transport release with session revocation, expiry, membership
    invalidation and scoped read policy changes. Recheck current session, fresh
-   required evidence, applicable policy and trusted time at that boundary.
+   required evidence, applicable policy and trusted time at that boundary. Stale or unavailable
+   policy or trusted time returns egress-stage `DEPENDENCY_UNAVAILABLE` and
+   suppresses protected output. This cannot change the commit result.
    Include live/replay events, ACKs, retained receipts, receipt/digest-dependent
-   errors, snapshots, asset/export metadata and each queued chunk. For assets
+   errors (including `LINEAGE_CHANGED`), snapshots, asset/export metadata and each queued chunk. For assets
    and exports check board and each included asset. A first-ordered valid
    release may complete. Revocation or unavailable authority ordered first
    suppresses that output and all subsequent queued protected chunks from
@@ -75,8 +81,10 @@ put it in URLs, logs, support evidence or exports.
    storage and pre-signed URLs with only issuance-time checks fail this rule.
 5. Use safe `UNAUTHENTICATED`, `NOT_FOUND` or `FORBIDDEN`, or
    `DEPENDENCY_UNAVAILABLE` according to the independently established denial
-   reason. Compare absent, matching and mismatching receipts under the same
-   reason. The public response/close behavior must conceal lookup branch,
+   reason. Compare absent, matching and conflicting receipts at both prelookup
+   denial and release denial. In the latter case, authorize at prelookup and
+   then remove authority immediately before egress. Compare a prepared
+   `LINEAGE_CHANGED`, retained receipt and `IDEMPOTENCY_CONFLICT`. The public response/close behavior must conceal lookup branch,
    receipt existence, digest match, lineage and revision, including size and
    timing signals under the declared measurement envelope. Normalize observable
    metadata, allowing only unrelated opaque per-request correlation. A denied
@@ -86,8 +94,10 @@ put it in URLs, logs, support evidence or exports.
 6. A historical receipt settles only the original operation and clears that
    pending retry. It never applies the original payload to current state or marks
    the active lineage saved. T7 must perform authorized rejoin/resync and verify
-   the active snapshot/tail before advancing active accepted state or save
-   status. An uncommitted retired intent requires explicit discard or a separate
+   a complete active snapshot with matching schema, lineage and content digest
+   plus any contiguous authorized tail needed to reach the active cut before
+   advancing active accepted state or save status. Missing chunks or gaps
+   leave active state and save status unchanged. An uncommitted retired intent requires explicit discard or a separate
    authorized new operation with new identity and current-lineage preconditions.
    Missing evidence after disaster recovery leaves prior outcomes unknown.
 
@@ -96,7 +106,12 @@ put it in URLs, logs, support evidence or exports.
 T8 and producer workstreams own executable codecs. Use T0 §4 command, receipt,
 event and rejection v1 shapes and its status mapping verbatim. Reject duplicates,
 unknown fields and kinds, unsupported versions, noncanonical or overflowing
-counters and malformed identifiers before authoritative processing. Semantically
+counters and malformed identifiers before scope-dependent processing, digest
+calculation or receipt lookup. For an isolated schema defect emit only the safe
+T0 rejection with a server-controlled request ID and no protected output or
+accepted effects. The `malformed_command` fixture defines one replacement,
+addition or repeated wire key per otherwise valid synthetic command. Duplicate
+keys are evaluated before mapping the wire object to a key-value structure. Semantically
 equivalent encodings must produce the same digest through a single canonical
 codec. Authority, roles, audit fields and generation observations are server
 derived. New fields, changed semantics and compatibility windows require an
@@ -148,9 +163,13 @@ finite profile for every applicable limit.
 ### Deletion and recovery policy
 
 Authorize and scope requests for board, guild or subject data under the applicable
-owner-approved policy. An opaque lifecycle job records version, server job ID,
-scope/subject reference, kind and phase. Phase values are `fenced`,
-`propagating`, `live_complete` and `complete`. Accept and fence atomically
+owner-approved policy. The closed internal `DeletionJobV1` requires integer
+`version: 1`, opaque server `jobId`, `kind` (`guild`, `board`, `subject`),
+`target` and `phase`. Target fields are exactly `guildRef` for guild,
+`guildRef, boardRef` for board and `guildRef, subjectRef` for subject. Phase is
+`fenced`, `propagating`, `live_complete` or `complete`. Only an interrupted
+propagation can carry optional `failure` from a bounded approved registry.
+Malformed or unsupported jobs create no fence or lifecycle effects. Accept and fence atomically
 against new access and writers. Disconnect or suppress stale queued delivery and
 hide targets from readers. Keep failed or interrupted jobs in their last durable
 phase with a bounded internal failure category, and retry idempotently. Inventory
@@ -165,24 +184,32 @@ An approved encrypted backup copy or specifically scoped lawful/evidence hold
 may outlast live removal only with documented authority, purpose, access,
 review date, expiry and destruction criteria. Backups remain isolated with
 restricted restore access. Before any isolated restoration can serve,
-reapply and verify deletion and revocation markers, enforce current authority,
-prevent serving deleted assets/exports and verify supported lineage/receipt
-rules. Failed reconciliation keeps the restoration isolated. Document
+read authoritative deletion markers and their current high-water mark from a
+source independent of the restored generation. Verify uninterrupted marker
+coverage from the backup's applied cut through the exposure fence. Apply each
+marker and confirm affected content, assets, exports and references stay hidden.
+Serialize exposure against later deletion or recheck and reconcile under an
+equivalent fence. Missing, stale or gapped coverage, or a later deletion that
+has not been applied, keeps the restoration isolated. Reapply revocations,
+enforce current authority and verify lineage and receipt rules before exposure.
+T5/T11 own the platform adapter and isolation proof. Document
 retained copies, expiry and the limits of external downloads in the approved
 privacy disclosure. Distinguish document restore, which preserves receipt
 history, from disaster recovery with potentially unknown historical outcomes.
 
 ## Audit integrity and incident evidence
 
-The internal logical `AuditEventV1` requires `version` (integer 1),
+The closed internal logical `AuditEventV1` requires `version` (integer 1),
 `eventId` (canonical opaque ID), `occurredAt` (trusted UTC), `actorKind`
 (`user`, `system`, `operator`), bounded opaque `actorRef`, `scope`
 (server-derived guild/board references appropriate to the event, or explicit
 system scope), `action` (registered action), `outcome` (`accepted`,
 `denied`, `failed`), `reason` (bounded enum), optional scoped
 `policyGeneration` (T0 counter, required for accepted scoped policy changes)
-and server-generated `correlationId`. Require explicit per-action scope and
-field requirements. Enumerate protected transitions including grant, revoke,
+and server-generated `correlationId`. The exact scope union is `{kind: system}`, `{kind: guild, guildRef}` or
+`{kind: board, guildRef, boardRef}`. Require an approved per-action registry for
+scope, actor/outcome/reason compatibility and policy generation requirements.
+A required audit record that fails validation blocks authoritative acceptance. Enumerate protected transitions including grant, revoke,
 lock, unlock, restriction, role mapping, deletion, restore, privileged evidence
 access and security administration. Exclude credentials and payloads, raw
 selectors, free-form messages, board content and raw personal metadata.
@@ -193,8 +220,13 @@ telemetry separately. Use append-only write authority, separately scoped
 read/export rights and independently verifiable integrity checkpoints. Ordinary
 writers, moderators and operational application credentials cannot rewrite or
 purge audit history, and viewing board data confers no audit access. Reconcile
-against protected external checkpoints so insertion, modification, truncation
-and sequence gaps are detectable even if the primary storage is altered. Audit
+against protected external checkpoints and an independently anchored accepted
+sequence and integrity high-water mark. Verify continuity, record integrity and
+the accepted head, including the active tail after the latest checkpoint.
+Checkpointed history and accepted active-tail truncation both fail integrity.
+No unanchored suffix is eligible to count as accepted audit history. An absent,
+unavailable or stale anchor keeps verification blocked. T5/T9/T11 own the
+platform adapter, ordering and atomic acceptance proof. Audit
 access and approved retention/hold actions are accountable. Test redaction,
 access, integrity alerts and independently controlled expiry. Preserve incident
 evidence privately with limited custodians and verify integrity at collection and
@@ -219,15 +251,40 @@ SDK tutorial defaults do not meet the accepted fences. T1/T8/T10 must document
 selected session transport, tested origins and real platform constraints before
 activation. Preserve GoDaddy Linux VPS hosting and its private data plane.
 
-Each release evidence record v1 supplies candidate full SHA, native issue/gate,
-scenario IDs, check command or review method, UTC execution time, environment
-and artifact versions, actual tester/reviewer and scope, evidence class
-(`fixture`, `local_integration`, `hosted_ci`, `real_discord`,
-`real_godaddy`, `independent_review`, `post_merge`), result (`pass`,
-`fail`, `blocked`), limitations, redacted artifact reference and finding
-dispositions. Evidence from a different candidate needs explicit relevance and
-current-head verification. Exceptions record scope, severity, accountable
-approver, rationale, compensating controls, expiry and retest/closure criteria.
+The closed `ReleaseEvidenceV1` requires integer `version: 1`, full
+`candidateSha`, `nativeIssue`, nonempty `scenarioIds`, `method`, UTC
+`executedAt`, `environment`, `artifactVersions`, `verifierRef`, `scope`,
+`evidenceClass` (`fixture`, `local_integration`, `hosted_ci`, `real_discord`,
+`real_godaddy`, `independent_review`, `post_merge`), `result` (`pass`, `fail`,
+`blocked`), `limitations`, redacted `artifactRef` and `findingDispositions`.
+Finding entries carry exactly `findingRef` and `dispositionRef`. Evidence
+from a different candidate needs explicit relevance and current-head verification.
+
+The closed `ExceptionV1` requires integer `version: 1`, `scope`, `severity`,
+`approverRef`, `rationale`, nonempty `controls`, UTC `expiresAt` and
+`closureCriteria`. An exception needs independently verified approver authority,
+applicable scope, unexpired coverage and verifiable controls. A data retention
+exception additionally requires a closed `RetentionExceptionV1` with integer
+`version: 1`, `exceptionRef`, `purpose`, `accessPolicyRef`, UTC `reviewAt` and
+`destructionCriteria`. The referenced approved exception supplies scope and expiry.
+
+For these records, references are bounded opaque strings, timestamp fields are
+UTC instants, and descriptive fields are bounded redacted strings. Evidence uses
+a lowercase 40-hex Git commit ID, positive integer issue number, unique traced
+scenario ID array, array of typed artifact reference/version pairs
+(`artifactRef, version`) and array of finding entries. Release exceptions use
+the approved severity registry and a unique array of control references.
+Evidence and exception scope must match their registered gate or retention
+subject and requested action. No free-form nested metadata or optional fields
+beyond those listed.
+
+All internal v1 records reject unknown/duplicate fields, wrong types, unregistered
+values, wrong scope and missing fields as `INVALID_RECORD`, and unsupported
+versions as `UNSUPPORTED_RECORD_VERSION`. Unavailable required registries,
+authority or trusted time yields `DEPENDENCY_UNAVAILABLE`. Invalid, expired or
+unauthorized exceptions confer no retention or release entitlement. Unverified
+evidence blocks the release gate. These are internal result classes. Consumers
+own finite encoding limits, registries and approval policies before activation.
 Critical/high findings block release while unresolved without an authorized
 disposition. Required evidence includes threat model review, authorization
 negative tests, maintained dependency/license/lockfile provenance review, secret
