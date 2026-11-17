@@ -182,6 +182,7 @@ class State:
     current: dict | None
     versions: dict
     committed_authorizations: dict = field(default_factory=dict)
+    designated_mvp: dict | None = None
 
 
 def json_object(data, limit):
@@ -266,6 +267,21 @@ def receipt_for(approval):
     return receipt
 
 
+def authorization_proof(approval, manifest):
+    # The fixture models an authoritative accepted native decision at commit.
+    # Store immutable bytes independently of the observed publication records.
+    native_decision = {
+        "decision": "accepted",
+        "revision": manifest["revision"],
+        "evidenceIds": [evidence["id"] for evidence in manifest["evidence"]],
+        "mvpPublication": manifest.get("mvpPublication"),
+    }
+    return json.dumps(
+        {"approval": approval, "nativeDecision": native_decision},
+        sort_keys=True, separators=(",", ":"),
+    ).encode("utf-8")
+
+
 def verified_receipt(state, identity):
     version = identity["version"]
     published = state.versions.get(version)
@@ -280,7 +296,7 @@ def verified_receipt(state, identity):
     if (published.identity != identity or observed_identity != identity
             or manifest["gate"] != release_gate(identity["version"])
             or not valid_approval(approval, manifest, identity)
-            or state.committed_authorizations.get(version) != approval):
+            or state.committed_authorizations.get(version) != authorization_proof(approval, manifest)):
         return None
 
     receipt = receipt_for(approval)
@@ -324,7 +340,7 @@ def reconcile(state, identity, expected_prior):
 
 def verified_mvp_publication(state, manifest):
     reference = manifest.get("mvpPublication")
-    if not valid_mvp_reference(reference):
+    if not valid_mvp_reference(reference) or reference != state.designated_mvp:
         return False
     receipt = verified_receipt(state, reference["identity"])
     return receipt is not None and receipt["releaseRef"] == reference["releaseRef"]
@@ -374,7 +390,14 @@ def attempt(bundle, identity, approval, state, expected_prior, *,
 
     if authorization_at_commit is not None:
         current_approvals, current_prerequisites = authorization_at_commit()
-        if not current_prerequisites or approval not in current_approvals:
+        if (not current_prerequisites or approval not in current_approvals
+                or not valid_approval(approval, manifest, identity)):
+            return "PREREQUISITE_UNAVAILABLE", state, None
+        if not valid_current(state) or version in state.versions:
+            return "PUBLICATION_UNKNOWN", state, None
+        if state.current != expected_prior:
+            return "PREVIOUS_PUBLICATION_CHANGED", state, None
+        if gate == "GB-T13.G3" and not verified_mvp_publication(state, manifest):
             return "PREREQUISITE_UNAVAILABLE", state, None
 
     receipt = receipt_for(approval)
@@ -382,7 +405,8 @@ def attempt(bundle, identity, approval, state, expected_prior, *,
                               receipt["tagRef"])
     committed = deepcopy(State(
         identity, {**state.versions, version: publication},
-        {**state.committed_authorizations, version: approval},
+        {**state.committed_authorizations, version: authorization_proof(approval, manifest)},
+        state.designated_mvp,
     ))
     if interruption == "after":
         return "PUBLICATION_UNKNOWN", committed, None
@@ -405,6 +429,13 @@ class ReleaseContractScenarios(unittest.TestCase):
             State(None, {}),
         )
         self.assertEqual(outcome, "PUBLISHED")
+        self.prior = replace(self.prior, designated_mvp=self.mvp_reference(
+            self.prior_identity, self.prior_approval,
+        ))
+
+    @staticmethod
+    def mvp_reference(identity, approval):
+        return {"identity": deepcopy(identity), "releaseRef": receipt_for(approval)["releaseRef"]}
 
     def stage(self, *, version=None, scenario=None, notes=None):
         scenario = scenario or {}
@@ -416,10 +447,10 @@ class ReleaseContractScenarios(unittest.TestCase):
         if "recordPatch" in scenario:
             manifest["evidence"][0].update(scenario["recordPatch"])
         if manifest["gate"] == "GB-T13.G3" and scenario.get("includeMvp", True):
-            manifest["mvpPublication"] = {
+            manifest["mvpPublication"] = scenario.get("mvpReference", {
                 "identity": {**self.prior_identity, **scenario.get("mvpIdentityPatch", {})},
                 "releaseRef": receipt_for(self.prior_approval)["releaseRef"],
-            }
+            })
         provenance = {
             "schemaVersion": SCHEMA_VERSION, "sourceRevision": manifest["revision"],
             "inputs": [{"path": "repro/input.lock", "sha256": digest(files["repro/input.lock"])}],
@@ -648,11 +679,29 @@ class ReleaseContractScenarios(unittest.TestCase):
         self.assertEqual(result, "PUBLISHED")
         self.assertEqual(reconcile(current, identity, self.prior_identity),
                          ("ALREADY_PUBLISHED", receipt_for(approval)))
+        published = current.versions[identity["version"]]
+        original_proof = current.committed_authorizations[identity["version"]]
+        proof = json.loads(original_proof)
+        del proof["nativeDecision"]
+        corrupt_proof = {**current.committed_authorizations, identity["version"]: json.dumps(proof).encode()}
+        self.assertEqual(reconcile(replace(current, committed_authorizations=corrupt_proof),
+                                   identity, self.prior_identity),
+                         ("PUBLICATION_UNKNOWN", None))
+        published.approval["decisionRef"] = "synthetic/changed-decision.json"
+        published.receipt["decisionRef"] = published.approval["decisionRef"]
+        self.assertEqual(current.committed_authorizations[identity["version"]], original_proof)
+        self.assertEqual(reconcile(current, identity, self.prior_identity),
+                         ("PUBLICATION_UNKNOWN", None))
 
     def test_stable_requires_verified_historical_mvp_receipt(self):
         scenario = next(row for row in self.fixture["scenarios"] if row["id"] == "stable-publication")
+        _, unrelated_identity, unrelated_approval, before_stable = self.commit_candidate()
+        unrelated_mvp = self.mvp_reference(unrelated_identity, unrelated_approval)
         stable = self.stage(scenario=scenario)
-        outcome, current, _ = self.publish(*stable, self.prior)
+        wrong_stable = self.stage(scenario={**scenario, "mvpReference": unrelated_mvp})
+        self.assertEqual(self.publish(*wrong_stable, before_stable),
+                         ("PREREQUISITE_UNAVAILABLE", before_stable, None))
+        outcome, current, _ = self.publish(*stable, before_stable)
         self.assertEqual(outcome, "PUBLISHED")
         later_scenario = {**scenario, "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.1"}}
         later = self.stage(scenario=later_scenario)
@@ -663,11 +712,21 @@ class ReleaseContractScenarios(unittest.TestCase):
         corrupted = replace(current, versions={**current.versions, mvp_version: replace(mvp, receipt={})})
         self.assertEqual(self.publish(*later, corrupted),
                          ("PREREQUISITE_UNAVAILABLE", corrupted, None))
-        for change in ({"includeMvp": False}, {"mvpIdentityPatch": {"manifestSha256": "a" * 64}}):
+        for change in ({"includeMvp": False}, {"mvpIdentityPatch": {"manifestSha256": "a" * 64}},
+                       {"mvpReference": unrelated_mvp}):
             with self.subTest(change=change):
                 wrong = self.stage(scenario={**later_scenario, **change})
                 self.assertEqual(self.publish(*wrong, current),
                                  ("PREREQUISITE_UNAVAILABLE", current, None))
+
+        def withdraw_mvp_evidence():
+            current.versions[mvp_version] = replace(mvp, receipt={})
+            return self.approvals, True
+
+        self.assertEqual(self.publish(*later, current, authorization_at_commit=withdraw_mvp_evidence),
+                         ("PREREQUISITE_UNAVAILABLE", current, None))
+        self.assertEqual(current.current, stable[1])
+        self.assertNotIn(later[1]["version"], current.versions)
 
     def test_canonical_release_reference_and_version_bound(self):
         record = self.fixture["manifest"]["evidence"][0]
