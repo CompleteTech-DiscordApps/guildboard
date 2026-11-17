@@ -1,0 +1,110 @@
+{
+  "id": "GB-T0.01.02.V1",
+  "status": "partial; issue remains open",
+  "baseline": "a08d25a32290091937af1bd0efa439c43d4d6c76, supplied provenance; seven exact artifact SHA-256 values in raw results and verifier",
+  "method": "Inspection of accepted source clauses plus executable exact-byte drift and negative mutation checks. The baseline is the accepted contract and architecture, not an application model. Digest matches do not interpret natural language or prove behavior. All edits to pinned files require fresh review and an intentional baseline update. This assessment is authored with the implementation and is not the required fresh independent review.",
+  "clause_matrix": [
+    {
+      "clause": "Six component ownership",
+      "assessment": "inspected; artifact identity executed",
+      "evidence": [
+        "docs/architecture.md:7",
+        "docs/architecture.md:47",
+        "docs/specifications/GB-T0-S1-system-contract.md:25"
+      ]
+    },
+    {
+      "clause": "Diagram nodes, edges and trust boundaries",
+      "assessment": "inspected Mermaid source, no rendering or runtime validation",
+      "evidence": [
+        "docs/architecture.md:25",
+        "docs/architecture.md:43"
+      ]
+    },
+    {
+      "clause": "Transport, identity authority, private storage",
+      "assessment": "inspected; implementation not tested",
+      "evidence": [
+        "docs/architecture.md:45",
+        "docs/architecture.md:54",
+        "docs/specifications/GB-T0-S1-system-contract.md:63"
+      ]
+    },
+    {
+      "clause": "ADR alternatives and consumer handoffs",
+      "assessment": "inspected",
+      "evidence": [
+        "docs/adr/0001-editor-activity-vps-direction.md:13",
+        "docs/adr/0002-server-authority-and-interactions.md:9",
+        "docs/architecture.md:88"
+      ]
+    },
+    {
+      "clause": "Write ordering, bot path, read revocation and historical receipts",
+      "assessment": "inspected; negative edits rejected by digest, not semantic execution",
+      "evidence": [
+        "docs/architecture.md:62",
+        "docs/architecture.md:82",
+        "docs/specifications/GB-T0-S1-system-contract.md:156"
+      ]
+    },
+    {
+      "clause": "15 interaction scenarios, 36 canonical fixtures and 20 use cases",
+      "assessment": "declarative data held at exact accepted digests; scenarios not executed against product",
+      "evidence": [
+        "docs/specifications/fixtures/GB-T0-01-02-interactions.json:9",
+        "docs/specifications/fixtures/GB-T0-S1-scenarios.json:1",
+        "docs/requirements/fixtures/GB-T0-01-01-use-cases.json:5"
+      ]
+    },
+    {
+      "clause": "Invalid verifier configuration, missing prerequisite, controlled in-process interruption",
+      "assessment": "executed locally, controlled failure; not application startup or transaction interruption",
+      "evidence": [
+        "tests/verification/test_architecture_acceptance.py:test_missing_prerequisite_and_invalid_config",
+        "tests/verification/test_architecture_acceptance.py:test_interruption_is_not_success"
+      ]
+    },
+    {
+      "clause": "Raw output, revision, environment, defects",
+      "assessment": "executed; supplied revision lacks local Git metadata; actual successor must be bound by CI/review",
+      "evidence": [
+        "docs/evidence/GB-T0-01-02-V1-raw-results.json:1"
+      ]
+    },
+    {
+      "clause": "Discord and GoDaddy evidence, real integration and applicable execution scenarios",
+      "assessment": "NOT RUN and unresolved, no mock pass; T1/T2 identity and roles, T3/T4 editor and recovery, T5 data/assets, T6/T7 mode/UI, T8 transports, T9 security, T10/T11 platform and T12/T13 integration/release; parent #8 and #10 remain open",
+      "evidence": [
+        "docs/architecture.md:92",
+        "docs/adr/0001-editor-activity-vps-direction.md:27"
+      ]
+    }
+  ],
+  "owned_decisions": [
+    {
+      "section": "GB-T0.01.02.V1 artifact verification",
+      "decision_owner": "assigned verification implementer",
+      "chosen_action": "Pin seven entire accepted artifacts; reject all drift until reviewed baseline update",
+      "rationale": "Exact digest detects contradictory edits and missing references without pretending keyword checks understand meaning; conservative scope prevents silent changes.",
+      "requirements_evidence": "issue10 validation and docs/architecture.md:23; accepted contract controls semantics",
+      "validation": "local verifier and negative tests, raw results",
+      "follow_through": "coordinator integrates overlaps, assigns fresh independent review and runs native CI; review any intended baseline change."
+    },
+    {
+      "section": "prerequisite #9",
+      "decision_owner": "assigned verifier within supplied scope",
+      "chosen_action": "Treat native prerequisite as closed per supplied review and postmerge reports; do not alter issue state",
+      "rationale": "Owner supplied status; no live access authorized",
+      "requirements_evidence": "user-provided review 504, postmerge 43893431736/43893431318",
+      "validation": "not independently queried",
+      "follow_through": "coordinator verifies native state and retains protected merge requirements."
+    }
+  ],
+  "limitations": [
+    "No product scenarios executed, no platform, database, browser, performance or Mermaid rendering performed.",
+    "Digest mutations demonstrate drift rejection, not semantic detection or separate link resolution. Malformed nested JSON is rejected on digest mismatch before parsing.",
+    "Functional, security and consumer review remains required; this is not independent review.",
+    "Native CI, merge and post-merge checks have not run; no successor SHA claimed."
+  ]
+}
