@@ -150,7 +150,7 @@ acceptance records while grounding release claims in current evidence.
 | [GB-T13.G2 #457][production] | Supply production and recovery evidence only. Record dated actual GoDaddy Linux VPS HTTPS/WSS and Discord networking, monitoring, rollback and smoke checks. Link isolated restore of database and assets with measured RPO/RTO, environment and unresolved findings. |
 | [GB-T13.G3 #472][stable] | Require all native Tier gates, G1/G2, applicable T13 verification, MVP publication and D1. Link full integration, production acceptance, functionality including modes/moderation/import/export/accessibility/recovery, resolved independent security findings, reviewed versioned artifacts, notes and support documentation. Obtain the authoritative publication receipt designated by #471's accepted evidence independently of the candidate. Require both `mvpPublication` fields to match that designation. Recompute the historical MVP bundle identity and verify its actual G1 decision, receipt, tag target and release bytes. Missing, substituted or unverified MVP evidence leaves G3 pending. |
 | [GB-T13.04.01.V1 #446][automation] | Exercise accepted and rejected dry runs that leave tags and public releases untouched. Hand the publication work items a staged versioned candidate, exact manifest and notes, checksums, build provenance, and raw dry-run evidence tied to the tested revision and environment. Record verification outcomes and approval of the automation handoff. |
-| [MVP publication #471][mvp-publication] | Publish a 0.x SemVer only after matching G1 approval, accepted [release automation #446][automation], and all native prerequisites and publication criteria. Attach notes, checksums, known limitations and rollback/support guidance. Verify the accepted bytes and record the release URL. |
+| [MVP publication #471][mvp-publication] | Publish a 0.x SemVer only after matching G1 approval, accepted [release automation #446][automation], and all native prerequisites and publication criteria. Attach notes, checksums, known limitations and rollback/support guidance. The accepting owner verifies the public bytes and designates the exact candidate identity, verified receipt and canonical release URL in #471's accepted evidence. |
 | [Stable publication #473][stable-publication] | Publish the first stable version as `1.0.0` after matching G3 approval, accepted [release automation #446][automation], and all native prerequisites and publication criteria. Attach reviewed artifacts, provenance, migration notes, security disposition and operator documentation. Verify checksums and actual production smoke evidence and record release and deployment receipts. |
 
 In both publication paths, an authorized maintainer approves the exact
@@ -166,8 +166,9 @@ when no publication exists.
 The commit point must atomically check version history, the expected prior
 identity and the current applicability of the exact approval and required
 prerequisite evidence, including the designated MVP receipt for G3.
-Fence commit against intervening changes to those
-decisions, including supersession or withdrawal. Reserve the candidate
+Obtain the applicable decisions from each authoritative evidence source. Fence
+commit against intervening changes to those decisions, including replacement,
+supersession or withdrawal. Reserve the candidate
 version permanently and make the complete candidate and its receipt
 discoverable with a durable commit authorization. Key the version reservation by the
 full released SemVer string. Any existing reservation for that version with a

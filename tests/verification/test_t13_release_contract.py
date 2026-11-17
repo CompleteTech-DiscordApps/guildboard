@@ -18,6 +18,8 @@ MANIFEST = (IDENTITY - {"manifestSha256"}) | {
 }
 APPROVAL = {"schemaVersion", "gate", "identity", "decision", "decisionRef", "provenanceRef"}
 MVP_PUBLICATION = {"identity", "releaseRef"}
+NATIVE_DECISION = {"identity", "gate", "decision", "authority", "decisionRef", "evidenceRefs", "mvpPublication"}
+NATIVE_AUTHORITY = "synthetic/native-maintainer"
 SCHEMA_VERSION = "1.0.0"
 MAX_VERSION = 128
 INDEX_PATH = "SHA256SUMS"
@@ -267,19 +269,31 @@ def receipt_for(approval):
     return receipt
 
 
-def authorization_proof(approval, manifest):
-    # The fixture models an authoritative accepted native decision at commit.
-    # Store immutable bytes independently of the observed publication records.
-    native_decision = {
-        "decision": "accepted",
-        "revision": manifest["revision"],
-        "evidenceIds": [evidence["id"] for evidence in manifest["evidence"]],
-        "mvpPublication": manifest.get("mvpPublication"),
-    }
-    return json.dumps(
-        {"approval": approval, "nativeDecision": native_decision},
-        sort_keys=True, separators=(",", ":"),
-    ).encode("utf-8")
+def valid_native_decision(decision, manifest, identity):
+    return (
+        isinstance(decision, dict) and decision.keys() == NATIVE_DECISION
+        and strings(decision, {"gate", "decision", "authority", "decisionRef"})
+        and decision["authority"] == NATIVE_AUTHORITY and decision["decision"] == "accepted"
+        and decision["identity"] == identity and decision["gate"] == manifest["gate"]
+        and safe_ref(decision["decisionRef"])
+        and decision["evidenceRefs"] == [row["ref"] for row in manifest["evidence"]]
+        and decision["mvpPublication"] == manifest.get("mvpPublication")
+    )
+
+
+def immutable_json(record):
+    return json.dumps(record, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def matches_authorization_proof(record, approval, manifest, identity):
+    if not isinstance(record, bytes):
+        return False
+    proof = json_object(record, 512 * 1024)
+    return (
+        isinstance(proof, dict) and proof.keys() == {"approval", "nativeDecision"}
+        and proof["approval"] == approval
+        and valid_native_decision(proof["nativeDecision"], manifest, identity)
+    )
 
 
 def verified_receipt(state, identity):
@@ -296,7 +310,8 @@ def verified_receipt(state, identity):
     if (published.identity != identity or observed_identity != identity
             or manifest["gate"] != release_gate(identity["version"])
             or not valid_approval(approval, manifest, identity)
-            or state.committed_authorizations.get(version) != authorization_proof(approval, manifest)):
+            or not matches_authorization_proof(state.committed_authorizations.get(version),
+                                               approval, manifest, identity)):
         return None
 
     receipt = receipt_for(approval)
@@ -347,7 +362,7 @@ def verified_mvp_publication(state, manifest):
 
 
 def attempt(bundle, identity, approval, state, expected_prior, *,
-            authoritative_approvals, native_ready=True, interruption=None,
+            authoritative_approvals, authoritative_native_decisions, interruption=None,
             authorization_at_commit=None):
     """Model a representative evidence row per publication path and atomic commit."""
     verified = verified_bundle(bundle)
@@ -369,9 +384,12 @@ def attempt(bundle, identity, approval, state, expected_prior, *,
         "GB-T13.G1": ("discord-startup", "GB-T12.MVP1", "real-discord"),
         "GB-T13.G3": ("production-smoke", "GB-T13.G2", "real-godaddy"),
     }
-    if (gate != release_gate(version) or not native_ready
+    candidate_digest = identity["manifestSha256"]
+    native_decision = authoritative_native_decisions.get(candidate_digest)
+    if (gate != release_gate(version)
             or not valid_approval(approval, manifest, identity)
             or approval not in authoritative_approvals
+            or not valid_native_decision(native_decision, manifest, identity)
             or (gate == "GB-T13.G3" and not verified_mvp_publication(state, manifest))
             or (gate == "GB-T13.G3" and release_gate(state.current["version"]) == "GB-T13.G1"
                 and version != "1.0.0")
@@ -388,9 +406,12 @@ def attempt(bundle, identity, approval, state, expected_prior, *,
     if interruption == "before":
         return "PUBLICATION_INTERRUPTED", state, None
 
+    # Freeze the verified input before simulating a concurrent authority change.
+    native_snapshot = immutable_json(native_decision)
     if authorization_at_commit is not None:
-        current_approvals, current_prerequisites = authorization_at_commit()
-        if (not current_prerequisites or approval not in current_approvals
+        current_approvals, current_native_decisions = authorization_at_commit()
+        current_decision = current_native_decisions.get(candidate_digest)
+        if (immutable_json(current_decision) != native_snapshot or approval not in current_approvals
                 or not valid_approval(approval, manifest, identity)):
             return "PREREQUISITE_UNAVAILABLE", state, None
         if not valid_current(state) or version in state.versions:
@@ -405,7 +426,9 @@ def attempt(bundle, identity, approval, state, expected_prior, *,
                               receipt["tagRef"])
     committed = deepcopy(State(
         identity, {**state.versions, version: publication},
-        {**state.committed_authorizations, version: authorization_proof(approval, manifest)},
+        {**state.committed_authorizations, version: immutable_json({
+            "approval": approval, "nativeDecision": json.loads(native_snapshot),
+        })},
         state.designated_mvp,
     ))
     if interruption == "after":
@@ -421,6 +444,7 @@ class ReleaseContractScenarios(unittest.TestCase):
         self.fixture = json.loads(FIXTURE.read_text(encoding="utf-8"),
                                   object_pairs_hook=strict_object)
         self.approvals = []
+        self.native_decisions = {}
         self.prior_bundle, self.prior_identity, self.prior_approval = self.stage(
             version=self.fixture["priorVersion"],
         )
@@ -477,12 +501,22 @@ class ReleaseContractScenarios(unittest.TestCase):
             "provenanceRef": manifest["provenanceRef"],
         }
         self.approvals.append(deepcopy(approval))
+        gate = manifest["gate"]
+        self.native_decisions[identity["manifestSha256"]] = {
+            "identity": deepcopy(identity), "gate": gate, "decision": "accepted",
+            "authority": NATIVE_AUTHORITY,
+            "decisionRef": f'synthetic/native/{identity["manifestSha256"]}.json',
+            "evidenceRefs": self.fixture["nativeEvidenceRefs"].get(gate, []),
+            "mvpPublication": self.prior.designated_mvp if gate == "GB-T13.G3" else None,
+        }
         return bundle, identity, approval
 
-    def publish(self, bundle, identity, approval, state, *, expected_matches=True, **kwargs):
+    def publish(self, bundle, identity, approval, state, *, expected_matches=True,
+                native_ready=True, **kwargs):
         return attempt(
             bundle, identity, approval, state, state.current if expected_matches else None,
-            authoritative_approvals=self.approvals, **kwargs,
+            authoritative_approvals=self.approvals,
+            authoritative_native_decisions=self.native_decisions if native_ready else {}, **kwargs,
         )
 
     def commit_candidate(self):
@@ -638,6 +672,7 @@ class ReleaseContractScenarios(unittest.TestCase):
                 self.assertEqual(attempt(
                     bundle, identity, approval, state, None,
                     authoritative_approvals=self.approvals,
+                    authoritative_native_decisions=self.native_decisions,
                 ), ("PUBLICATION_UNKNOWN", state, None))
                 self.assertEqual(reconcile(state, identity, None),
                                  ("PUBLICATION_UNKNOWN", None))
@@ -664,7 +699,12 @@ class ReleaseContractScenarios(unittest.TestCase):
 
     def test_live_approval_fence_preserves_historical_commit_proof(self):
         bundle, identity, approval = self.stage()
-        for commit_state in (([approval], False), ([], True)):
+        digest_key = identity["manifestSha256"]
+        replacement = {
+            digest_key: {**self.native_decisions[digest_key],
+                         "decisionRef": "synthetic/native/replacement.json"},
+        }
+        for commit_state in (([approval], {}), ([], self.native_decisions), ([approval], replacement)):
             with self.subTest(commit_state=commit_state):
                 self.assertEqual(self.publish(
                     bundle, identity, approval, self.prior,
@@ -682,6 +722,7 @@ class ReleaseContractScenarios(unittest.TestCase):
         published = current.versions[identity["version"]]
         original_proof = current.committed_authorizations[identity["version"]]
         proof = json.loads(original_proof)
+        self.assertEqual(proof["nativeDecision"], self.native_decisions[digest_key])
         del proof["nativeDecision"]
         corrupt_proof = {**current.committed_authorizations, identity["version"]: json.dumps(proof).encode()}
         self.assertEqual(reconcile(replace(current, committed_authorizations=corrupt_proof),
@@ -692,6 +733,13 @@ class ReleaseContractScenarios(unittest.TestCase):
         self.assertEqual(current.committed_authorizations[identity["version"]], original_proof)
         self.assertEqual(reconcile(current, identity, self.prior_identity),
                          ("PUBLICATION_UNKNOWN", None))
+
+    def test_native_registry_rejects_unverified_evidence_reference(self):
+        bundle, identity, approval = self.stage(scenario={
+            "recordPatch": {"ref": "synthetic/no-such-authoritative-record.json"},
+        })
+        self.assertEqual(self.publish(bundle, identity, approval, self.prior),
+                         ("PREREQUISITE_UNAVAILABLE", self.prior, None))
 
     def test_stable_requires_verified_historical_mvp_receipt(self):
         scenario = next(row for row in self.fixture["scenarios"] if row["id"] == "stable-publication")
@@ -721,7 +769,7 @@ class ReleaseContractScenarios(unittest.TestCase):
 
         def withdraw_mvp_evidence():
             current.versions[mvp_version] = replace(mvp, receipt={})
-            return self.approvals, True
+            return self.approvals, self.native_decisions
 
         self.assertEqual(self.publish(*later, current, authorization_at_commit=withdraw_mvp_evidence),
                          ("PREREQUISITE_UNAVAILABLE", current, None))

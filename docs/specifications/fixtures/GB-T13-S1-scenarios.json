@@ -31,13 +31,17 @@
     "schemaVersion": "1.0.0",
     "decision": "approved"
   },
+  "nativeEvidenceRefs": {
+    "GB-T13.G1": ["synthetic/discord-startup.json"],
+    "GB-T13.G3": ["synthetic/production-smoke.json"]
+  },
   "priorVersion": "0.1.0-mvp.10",
   "otherRevision": "2222222222222222222222222222222222222222",
   "scenarios": [
     {"id": "accepted-evidence", "expected": "PUBLISHED", "current": "candidate"},
-    {"id": "stable-publication", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.0"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy", "environment": "synthetic GoDaddy VPS environment"}, "expected": "PUBLISHED", "current": "candidate"},
-    {"id": "stable-without-native-prerequisites", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.0"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy", "environment": "synthetic GoDaddy VPS environment"}, "nativeReady": false, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
-    {"id": "wrong-first-stable-version", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.1"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy", "environment": "synthetic GoDaddy VPS environment"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "stable-publication", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.0"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy", "environment": "synthetic GoDaddy VPS environment", "ref": "synthetic/production-smoke.json"}, "expected": "PUBLISHED", "current": "candidate"},
+    {"id": "stable-without-native-prerequisites", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.0"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy", "environment": "synthetic GoDaddy VPS environment", "ref": "synthetic/production-smoke.json"}, "nativeReady": false, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "wrong-first-stable-version", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.1"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy", "environment": "synthetic GoDaddy VPS environment", "ref": "synthetic/production-smoke.json"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
     {"id": "stable-through-mvp", "candidatePatch": {"version": "1.0.0"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
     {"id": "production-is-evidence-only", "candidatePatch": {"gate": "GB-T13.G2", "version": "1.0.0"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy", "environment": "synthetic GoDaddy VPS environment"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
     {"id": "new-lower-version", "candidatePatch": {"version": "0.1.0-mvp.2"}, "expected": "VERSION_NOT_FORWARD", "current": "prior"},
