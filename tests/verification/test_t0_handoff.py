@@ -37,6 +37,17 @@ COMMAND_PREFIXES = ('python3 ', 'python ', 'node ', 'npm ', 'npx ', 'bash ', 'sh
 HARDENING_FLAGS = ('-I', '-B')
 TOPIC_WORDS = ('discord', 'godaddy', 'vps', 'database', 'runtime')
 REQUIRED_PR_REFS = ('PR #481', 'PR #501', 'PR #502', 'PR #503', 'PR #504')
+PREREQUISITE_CLOSURES = {
+    3: 6919588035,
+    7: 6920861665,
+    10: 6921107324,
+    14: 6923936493,
+    17: 6935223132,
+    21: 6923150162,
+    24: 6920174726,
+    28: 6936261478,
+    31: 6923627755,
+}
 TOOLING_FILE = 'config-tooling-2026-10-24.json'
 TOOLING_PHRASE = 'records no test run'
 REQUIRED_PHRASES = (
@@ -98,7 +109,7 @@ REQUIRED_UNRESOLVED = (
     'Architecture artifact verification (#10)', 'Engineering verification (#21)',
     'Editor independent verification (#14)', 'License verification (#17)',
     'Governance verification (#28)', 'Architecture controls (#30)',
-    'Full configuration facade (#23)', 'pako', 'fuzzy', 'project-overview.jpg', 'One maintainer',
+    'configuration facade (#23)', 'pako', 'fuzzy', 'project-overview.jpg', 'One maintainer',
     'Discord iframe and proxy behavior', 'Node commands in steps 9 and 10',
     'Editor adoption is not accepted', 'ADR 0002 needs fresh', 'Semantic design review',
     'Threat model review', 'Issue #32 and #458',
@@ -353,7 +364,13 @@ def check_deliverables(section):
     body = subsection(section, 'Deliverable disposition')
     if body is None:
         return ['missing Deliverable disposition subsection']
-    return [f'Deliverable disposition lacks {ref}' for ref in REQUIRED_PR_REFS if ref not in body]
+    errors = [f'Deliverable disposition lacks {ref}' for ref in REQUIRED_PR_REFS if ref not in body]
+    targets = set(LINK_RE.findall(body))
+    for issue, comment in PREREQUISITE_CLOSURES.items():
+        url = f'https://github.com/CompleteTech-DiscordApps/guildboard/issues/{issue}#issuecomment-{comment}'
+        if (f'#{issue} closure', url) not in targets:
+            errors.append(f'Deliverable disposition lacks issue #{issue} closure evidence')
+    return errors
 
 
 def check_phrases(section):
@@ -382,7 +399,12 @@ def allowlist(root=ROOT):
                     continue
                 rel = p.relative_to(root).parts
                 if name.endswith('.md') or (rel[0] == '.github' and name.endswith(('.yml', '.yaml'))):
-                    texts.append(canon(p.read_text(encoding='utf-8', errors='replace')))
+                    source = p.read_text(encoding='utf-8', errors='replace')
+                    if rel == ('.github', 'workflows', 'architecture-controls.yml'):
+                        # A contributor already in the candidate checkout omits CI's head/ prefix.
+                        source = source.replace('unittest discover -s head/tests/architecture-controls',
+                                                'unittest discover -s tests/architecture-controls')
+                    texts.append(canon(source))
             except OSError:
                 continue
     return texts
@@ -582,6 +604,10 @@ class T0HandoffMutationTests(unittest.TestCase):
 
     def test_deliverable_pr_reference_removed_is_detected(self):
         self.assertDetected(self.replaced('PR #502', 'PR 502', -1), check_deliverables, 'PR #502 removed')
+
+    def test_prerequisite_closure_repointed_is_detected(self):
+        mutation = self.replaced('issues/7#issuecomment-6920861665', 'issues/7')
+        self.assertDetected(mutation, check_deliverables, 'issue closure evidence missing')
 
     def test_command_outside_allowlist_is_detected(self):
         self.assertDetected(self.section + '\n`bash scripts/deploy.sh`\n', check_commands, 'bash deploy command')
