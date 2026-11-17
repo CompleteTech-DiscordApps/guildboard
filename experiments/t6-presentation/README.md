@@ -157,19 +157,65 @@ No primary source is being represented as proving a candidate product choice.
 | --- | --- | --- |
 | Presenter authority / concurrent mode changes | CAS both orders; revoke/regrant ABA test; stale and forged identity tests | Reviewed T2/T4 contracts, server integration, disconnect policy |
 | Follow / personal navigation | Idempotence, personal-view restore, immediate explicit rejoin from cached presenter view, replay rejection, scoped/epoch snapshot tests | Real canvas coordinate conversion and UI behavior |
-| Across Discord clients | Primary source identifies desktop/web/mobile applicability | All actual desktop/web/mobile results; iframe/proxy behavior |
+| Across Discord clients | Shared expected behavior and platform-specific verification cases below | Actual desktop, web, iOS and Android results; iframe and proxy behavior |
 | Alternatives / versions / uncertainty | Counterexamples and source/version notes above | Functional, security and consumer review; accepted decision |
 
-Required later real-client matrix: desktop, web and mobile, each with viewer and
-writer, run designate/revoke/reassign presenter; follow, pan/zoom, unfollow and
-rejoin; reconnect after mode change; late/duplicate delivery; cross-board switch.
-Record exact SDK/editor/build/OS/client versions and dates. Check keyboard-only
-controls, focus retention, screen-reader status announcements without cursor
-noise, narrow layouts and reduced-motion behavior. None is tested by Python.
-Do not retry the previously denied browser launch to manufacture this evidence.
-GoDaddy Linux VPS HTTPS/WSS remains mandatory; infrastructure, proxy and load
-claims are not applicable to this pure model and require later real-environment
-verification. No credentials or production infrastructure are touched.
+## Proposed behavior across Discord clients
+
+The same presenter and navigation rules apply to each supported Discord
+Activity client. Only a server-authorized controller can designate, replace or
+revoke a presenter. The server admits bounded viewport updates only from the
+current authorized presenter in the active board and stream. A viewer or
+writer starts in personal navigation and explicitly chooses Follow. Repeating
+Follow preserves the personal viewport. Unfollow restores it. Personal pan or
+zoom leaves Follow and becomes the new personal viewport. Rejoining uses the
+latest authorized current-stream viewport, even if it arrived while unfollowed.
+Presentation and Follow confer no edit rights.
+
+On reconnect, a trusted current snapshot restores personal navigation and
+requires explicit Follow. A board switch starts with that board's default
+personal view and keeps presenter state scoped to its board and stream. A
+concurrent control change can succeed only against its expected revision.
+After revocation or reassignment, the prior presenter cannot publish and its
+delayed viewport updates cannot move a client that has installed the new
+authority. Final limits, viewport mapping across screen sizes and reconnect
+continuity policy belong to #197 and its consumers.
+
+The platform constraints below come from the [dated T1 source assessment](../../docs/research/t1-discord-feasibility.md#2026-11-16--bounded-current-source-assessment),
+including the [Discord networking guide](https://docs.discord.com/developers/activities/development-guides/networking),
+[mobile guide](https://docs.discord.com/developers/activities/development-guides/mobile)
+and [production readiness guide](https://docs.discord.com/developers/activities/development-guides/production-readiness).
+The listed checks define evidence to collect for actual client builds.
+
+| Client | Documented constraint and open question | Client-specific verification |
+| --- | --- | --- |
+| Discord desktop | Activities use the embedded iframe and proxy path. Older clients can reject newer SDK commands. Supported OS/client builds and sleep or resume behavior are open. | Exercise Follow, Unfollow and pan/zoom with pointer and keyboard. Sleep or disconnect while following, change presenter from a second client, then resume. Verify personal navigation and explicit rejoin against current authority. Record the OS, Discord channel and build. |
+| Discord web | The iframe proxy and browser cookie/storage policies affect session and reconnect behavior. Browser-specific support and WSS recovery are open. | Run in each supported browser with its recorded privacy/cookie settings. Resize the iframe or navigate away and back. Interrupt the mapped WSS connection during a mode change. Verify that denied or expired sessions cannot display cached presenter updates and that a reauthorized viewer can explicitly rejoin. Record browser and OS builds. |
+| Discord iOS | The Activity must be enabled for iOS. Discord documents mobile safe areas. Background/resume, storage and embedded browser behavior are open. | Check Follow and Unfollow within safe areas in supported orientations. Pan and pinch to leave Follow, background the client during reassignment, then resume. Verify the personal view and confirm explicit rejoin uses only the current presenter. Record device, iOS version and Discord build. |
+| Discord Android | The Activity must be enabled for Android. Mobile safe areas apply. Discord documents thermal updates on Android 10 or newer. Supported builds and the effect of lifecycle or resource pressure on delivery are open. | Run the same touch, safe-area and resume sequence. Suspend or interrupt delivery during revocation and verify duplicate or late updates cannot rewind the viewport after recovery. Record device, Android, Discord and available WebView versions. |
+
+Run the shared cases on every row with synthetic boards and permitted test
+sessions, including viewer and writer:
+
+1. [GB-T6.02.02.V1 (#211)](https://github.com/CompleteTech-DiscordApps/guildboard/issues/211)
+   verifies bounded viewport updates and sequences, idempotent Follow,
+   Unfollow and personal-view restoration, pan/zoom and rejoin with no newer
+   packet, duplicate and late delivery, and same-guild and cross-guild board
+   switches. Include malformed and foreign-scope updates and assert that
+   they leave navigation unchanged.
+2. [GB-T6.04.02.V1 (#225)](https://github.com/CompleteTech-DiscordApps/guildboard/issues/225)
+   verifies authorized designation, replacement and revocation across the
+   accepted role/mode matrix. Submit conflicting mode and presenter changes
+   against one revision and verify that only one commits. Reconnect after
+   revocation and check stale session, stale epoch and forged presenter
+   denials. Attempt a board edit as a viewer while following and while
+   designated presenter wherever policy allows that designation. Both
+   navigation roles preserve the original viewer write denial.
+
+Also record keyboard or touch reachability, focus retention, meaningful
+screen-reader announcements, narrow layouts and reduced motion. Capture dates,
+exact app/SDK/editor and client builds, regression results, proxy behavior and
+defects. Real Discord and GoDaddy Linux VPS HTTPS/WSS verification remains open.
 
 ## 2026-11-17 reconciliation
 
