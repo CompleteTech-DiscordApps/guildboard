@@ -151,11 +151,10 @@ def run():
     before = time.process_time()
     with tempfile.TemporaryDirectory(prefix="guildboard-t11-research-") as directory:
         files = file_experiment(Path(directory))
-    return {"experiment": "GB-T11.R1-local-fixture-v1", "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+    return {"experiment": "GB-T11.R1-local-fixture-v2", "timestamp_utc": datetime.now(timezone.utc).isoformat(),
             "python": platform.python_version(), "os": platform.system(),
             "os_release": platform.release(), "machine": platform.machine(),
             "script_sha256": digest(Path(__file__)),
-            "source_base_commit": "c108b552a660e12a3b3998e1e1ad944fbd7a894d",
             "scope": "virtual queue plus local synthetic files; no application/SQL/network/VPS",
             "queues": {"steady": queue_model(100, 60, 4, 128),
                        "burst": queue_model(1000, 10, 4, 128),

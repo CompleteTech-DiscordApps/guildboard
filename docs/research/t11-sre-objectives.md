@@ -167,6 +167,22 @@ under exact arithmetic. The original dated JSON remains historical evidence;
 current commands, source SHA and raw results are in the campaign handoff. These
 are virtual scheduling results, not measured Guildboard capacity or latency.
 
+## Current-base receipt verification (2026-11-17 UTC)
+
+Fresh v2 receipts identify the executed fixture by its SHA-256 and omit the
+hard-coded October base field. The archived v1 receipt keeps its original
+provenance. In the checkout integrating main at
+`46e53068235308ff591b3a4e1b1fe8c501dd3af1`, the executed script SHA-256 was
+`70eaab80ecac9e56c89ea71946b876d90ee4065b8f7a237d6d9b6fd62a6ee33c`.
+
+`python3 -B tests/research/t11-baseline-test.py -v` passed all nine tests on
+Python 3.14.8 / Linux. The CLI regression ran the complete local fixture,
+checked the written receipt's schema marker and script digest, and verified
+that a second run could not overwrite the original receipt. The roadmap
+validator passed with 471 items, 457 expected native relationships, and 600
+expected dependencies when directed to a temporary report. These runs cover
+the local fixture and roadmap structure. Platform acceptance remains pending.
+
 ## Failure, restart and recovery evaluation plan
 
 These are proposed acceptance experiments for consumers after their native
@@ -276,7 +292,7 @@ claim or dependency pin is implied.
 | #356 clause | Reviewable evidence now | Still required |
 | --- | --- | --- |
 | Availability/latency/recovery/capacity objectives from expected use | Explicit synthetic workload, proposed objective table, denominators and clocks | Product/SRE acceptance of demand and targets; no invented usage/SLA. |
-| Measured baseline plan and reproducible experiment | Executable bounded fixture, dated JSON with script hash, five original tests plus three exact-arithmetic regressions, real-platform matrix | T10/T12 actual SQL, HTTPS/WSS, Discord desktop/mobile, assets and soak measurements on accepted contracts. |
+| Measured baseline plan and reproducible experiment | Executable bounded fixture, dated JSON with script hash, nine focused tests, including exact-arithmetic and receipt provenance regressions, real-platform matrix | T10/T12 actual SQL, HTTPS/WSS, Discord desktop/mobile, assets and soak measurements on accepted contracts. |
 | Alternatives, primary URLs, versions/date and uncertainty | Decision comparison and S1-S10 source ledger | Actual current-head GitHub Copilot review plus required SRE/CODEOWNER/consumer review, accepted decision and merge. |
 | Error/abuse and recovery evidence | Local invalid-config, overload accounting, content reorder and corruption rejection, owned child prefix check | Real tenant fairness, slow receivers, revocation, SQL/disk failure, graceful restart, encrypted off-host restore and key recovery. |
 

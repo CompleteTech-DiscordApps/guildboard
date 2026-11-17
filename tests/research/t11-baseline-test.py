@@ -1,6 +1,10 @@
 """Research invariants and negative cases; these do not test Guildboard."""
+import hashlib
 import importlib.util
+import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -62,6 +66,23 @@ class BaselineTests(unittest.TestCase):
             path.write_bytes(baseline.record(1) + baseline.record(0))
             with self.assertRaisesRegex(ValueError, "sequence"):
                 baseline.verify(path, baseline.digest(path), 2)
+
+    def test_cli_receipt_identifies_executed_script_and_preserves_existing_output(self):
+        script = ROOT / "scripts/research/t11-baseline.py"
+        with tempfile.TemporaryDirectory() as directory:
+            receipt = Path(directory) / "receipt.json"
+            command = [sys.executable, str(script), "--output", str(receipt)]
+            subprocess.run(command, check=True, capture_output=True, timeout=30)
+            first_receipt = receipt.read_bytes()
+            data = json.loads(first_receipt)
+            self.assertEqual(data["experiment"], "GB-T11.R1-local-fixture-v2")
+            self.assertEqual(data["script_sha256"], hashlib.sha256(script.read_bytes()).hexdigest())
+            self.assertNotIn("source_base_commit", data)
+
+            repeated = subprocess.run(command, check=False, capture_output=True, timeout=30)
+            self.assertNotEqual(repeated.returncode, 0)
+            self.assertIn(b"FileExistsError", repeated.stderr)
+            self.assertEqual(receipt.read_bytes(), first_receipt)
 
     def test_local_copy_corruption_and_owned_child_exit(self):
         with tempfile.TemporaryDirectory() as directory:
