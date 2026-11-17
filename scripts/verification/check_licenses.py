@@ -344,7 +344,7 @@ def nested_install_name(key, dirs):
     """
     parts = key.split('/')
     if (len(parts) < 4 or parts[0] not in dirs or parts[2] != 'node_modules'
-            or parts[1] == 'node_modules' or not _WORKSPACE_SEGMENT.fullmatch(parts[1])):
+            or parts[1].lower() == 'node_modules' or not _WORKSPACE_SEGMENT.fullmatch(parts[1])):
         return None
     return install_name('/'.join(parts[2:]))
 
@@ -372,7 +372,7 @@ def workspace_dirs(root_entry):
     for pattern in patterns:
         if not isinstance(pattern, str):
             continue
-        if (any(bad in pattern for bad in _WORKSPACE_UNSAFE) or '\\' in pattern
+        if (any(bad in pattern.lower() for bad in _WORKSPACE_UNSAFE) or '\\' in pattern
                 or pattern.startswith(('/', '*')) or not pattern.strip('*')):
             raise InputError(f'unsafe workspaces pattern {pattern!r} in the root entry: node_modules, '
                              'parent segments, absolute paths, backslashes and wildcard-only patterns are not allowed')
@@ -383,6 +383,8 @@ def workspace_dirs(root_entry):
 
 
 def is_workspace_path(key, dirs):
+    if any(part.lower() == 'node_modules' for part in key.split('/')):
+        return False
     head, _, segment = key.rpartition('/')
     return head in dirs and bool(_WORKSPACE_SEGMENT.fullmatch(segment))
 

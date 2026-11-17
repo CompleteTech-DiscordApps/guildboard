@@ -367,7 +367,7 @@ class PolicyCases(CheckerCase):
 class InstallPathAndIntegrityCases(CheckerCase):
     def test_workspace_patterns_cannot_cover_node_modules_or_match_everything(self):
         for patterns in (['node_modules/*'], ['apps/*', 'node_modules/*'], ['node_modules/**'],
-                         ['*'], ['**'], ['../*'], ['apps/../node_modules/*'], ['/abs/*'], ['node_modules\\*']):
+                         ['*'], ['**'], ['../*'], ['apps/../node_modules/*'], ['/abs/*'], ['node_modules\\*'], ['Node_Modules/*'], ['NODE_MODULES/*'], ['apps/Node_Modules/*']):
             with self.subTest(patterns=patterns):
                 data = lockfile({'node_modules/evil': pkg('1.0.0', 'GPL-3.0-only')})
                 data['packages']['']['workspaces'] = patterns
@@ -421,6 +421,36 @@ class InstallPathAndIntegrityCases(CheckerCase):
                 code, out, _ = self.run_checker([name])
                 self.assertEqual(code, 1, out)
                 self.assertIn('unexpected install path', out)
+
+
+    def test_backslash_only_workspace_pattern_is_input_error(self):
+        for pattern in ('apps\\*', 'packages\\*', 'apps\\api\\*'):
+            with self.subTest(pattern=pattern):
+                data = lockfile({'node_modules/evil': pkg('1.0.0', 'GPL-3.0-only')})
+                data['packages']['']['workspaces'] = [pattern]
+                name = self.write('package-lock.json', data)
+                code, out, err = self.run_checker([name])
+                self.assertEqual(code, 2, out + err)
+                self.assertIn('unsafe workspaces pattern', err)
+
+    def test_node_modules_segment_is_never_a_workspace_in_any_case(self):
+        for key in ('apps/node_modules', 'apps/Node_Modules', 'apps/NODE_MODULES'):
+            with self.subTest(key=key):
+                entry = without(pkg('1.0.0', 'GPL-3.0-only'), 'resolved', 'integrity')
+                name = self.write('package-lock.json', lockfile({key: entry}))
+                code, out, _ = self.run_checker([name])
+                self.assertEqual(code, 1, out)
+                self.assertIn('unexpected install path', out)
+                self.assertNotIn('prohibited license', out)
+
+    def test_nested_guard_rejects_node_modules_as_workspace_segment(self):
+        key = 'apps/node_modules/node_modules/x'
+        name = self.write('package-lock.json', lockfile({key: pkg('1.0.0', 'GPL-3.0-only')}))
+        code, out, _ = self.run_checker([name])
+        self.assertEqual(code, 1, out)
+        self.assertIn('unexpected install path', out)
+        self.assertNotIn('prohibited license', out)
+
 
 
 class DocumentWordingCases(unittest.TestCase):
@@ -601,7 +631,14 @@ class PolicyDocumentCases(unittest.TestCase):
 
 USES_LINE = re.compile(r'^\s*(?:-\s+)?uses:\s*(\S+)', re.MULTILINE)
 FULL_SHA_REF = re.compile(r'[^@\s]+@[0-9a-f]{40}')
-WORKFLOW_PATH_ITEM = re.compile(r"(?m)^\s+- '([^']+)'\s*$")
+GATE_RUN = 'run: python3 scripts/verification/check_licenses.py'
+GATE_PATHS = tuple(check.DEFAULT_LOCKFILES) + (
+    'scripts/verification/check_licenses.py',
+    'docs/evidence/license-exceptions.json',
+    '.github/workflows/license-policy.yml',
+)
+FORBIDDEN_TOKENS = ('pull_request_target', 'continue-on-error', 'paths-ignore', '||', 'secrets.', 'secrets[')
+PATH_ITEM = re.compile(r"-\s+'?([^'\s]+)'?")
 
 
 def uses_refs(text):
@@ -612,23 +649,133 @@ def unpinned_refs(refs):
     return [ref for ref in refs if not FULL_SHA_REF.fullmatch(ref)]
 
 
+def _indent(line):
+    return len(line) - len(line.lstrip(' '))
+
+
+def _block_after(lines, index):
+    """Non-blank lines nested deeper than lines[index]: its child block."""
+    base = _indent(lines[index])
+    body = []
+    for line in lines[index + 1:]:
+        if not line.strip():
+            continue
+        if _indent(line) <= base:
+            break
+        body.append(line)
+    return body
+
+
+def _step_text(line):
+    return re.sub(r'^-\s+', '', line.strip())
+
+
+def workflow_violations(text):
+    """Strict, stdlib-only, line-based checks of the license gate workflow. [] means pass.
+
+    No YAML parser is used. Each rule is a line or exact-text rule, so a mutation cannot hide
+    behind YAML structure. Both triggers are checked separately.
+    """
+    problems = []
+    lines = text.splitlines()
+    lowered = text.lower()
+    for token in FORBIDDEN_TOKENS:
+        if token in lowered:
+            problems.append(f'forbidden token {token!r}')
+    for line in lines:
+        if re.match(r'^\s*(?:-\s+)?if:', line):
+            problems.append(f'if condition is not allowed: {line.strip()}')
+
+    on_at = [i for i, line in enumerate(lines) if line == 'on:']
+    if len(on_at) != 1:
+        problems.append('expected exactly one top-level on: block')
+    else:
+        headers = [line.strip() for line in _block_after(lines, on_at[0]) if _indent(line) == 2]
+        if headers != ['pull_request:', 'push:']:
+            problems.append(f'triggers must be exactly pull_request and push, found {headers}')
+        for header, keys in (('pull_request:', ['paths']), ('push:', ['branches', 'paths'])):
+            found = [i for i, line in enumerate(lines) if _indent(line) == 2 and line.strip() == header]
+            if len(found) != 1:
+                problems.append(f'expected exactly one {header} trigger')
+                continue
+            block = _block_after(lines, found[0])
+            names = sorted(line.strip().split(':')[0] for line in block if _indent(line) == 4)
+            if names != keys:
+                problems.append(f'{header} keys must be {keys}, found {names}')
+            if header == 'push:' and 'branches: [main]' not in [line.strip() for line in block]:
+                problems.append('push trigger must be limited to branches: [main]')
+            paths_at = [i for i, line in enumerate(block) if _indent(line) == 4 and line.strip() == 'paths:']
+            if len(paths_at) != 1:
+                problems.append(f'{header} must have exactly one paths: list')
+                continue
+            items = []
+            for line in _block_after(block, paths_at[0]):
+                match = PATH_ITEM.fullmatch(line.strip())
+                if match is None:
+                    problems.append(f'{header} path item is not a plain quoted path: {line.strip()}')
+                else:
+                    items.append(match.group(1))
+            if sorted(items) != sorted(GATE_PATHS):
+                problems.append(
+                    f'{header} paths differ from the expected set: missing '
+                    f'{sorted(set(GATE_PATHS) - set(items))}, extra {sorted(set(items) - set(GATE_PATHS))}, '
+                    f'count {len(items)} (expected {len(GATE_PATHS)})')
+
+    perm_at = [i for i, line in enumerate(lines) if 'permissions' in line.lower()]
+    if len(perm_at) != 1 or lines[perm_at[0]] != 'permissions:':
+        problems.append('expected exactly one top-level permissions: block')
+    else:
+        pairs = []
+        for line in _block_after(lines, perm_at[0]):
+            key, _, value = line.strip().partition(':')
+            pairs.append((key.strip().lower(), value.strip().lower()))
+        if pairs != [('contents', 'read')]:
+            problems.append(f'permissions must be exactly contents: read, found {pairs}')
+
+    runs = [_step_text(line) for line in lines if _step_text(line).lower().startswith('run:')]
+    if runs != [GATE_RUN]:
+        problems.append(f'the only run: line must be exactly {GATE_RUN!r}, found {runs}')
+    steps_at = [i for i, line in enumerate(lines) if line.strip() == 'steps:']
+    if len(steps_at) != 1:
+        problems.append('expected exactly one steps: block')
+    else:
+        body = _block_after(lines, steps_at[0])
+        if body:
+            first = _indent(body[0])
+            count = sum(1 for line in body if _indent(line) == first and line.lstrip().startswith('- '))
+            if count != 2:
+                problems.append(f'expected exactly two steps (checkout and gate), found {count}')
+    refs = uses_refs(text)
+    if len(refs) != 1:
+        problems.append(f'expected exactly one uses: line, found {len(refs)}')
+    problems.extend(f'unpinned action ref {ref!r}' for ref in unpinned_refs(refs))
+    return problems
+
+
+class PolicyLimitCases(unittest.TestCase):
+    def test_policy_states_workspace_and_exception_limits(self):
+        text = POLICY_DOC.read_text(encoding='utf-8')
+        for phrase in ('every third-party package recorded in a lockfile',
+                       'Its own `license` field is not checked',
+                       "taken from the lockfile's root entry",
+                       'not bound to `integrity`',
+                       'in any letter case',
+                       'nested install under a workspace'):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+
+
 class WorkflowCases(unittest.TestCase):
     def setUp(self):
         self.text = WORKFLOW.read_text(encoding='utf-8')
 
-    def test_triggers_cover_lockfiles_checker_exceptions_and_workflow(self):
-        for needle in ('pull_request:', 'push:', 'branches: [main]', "'package-lock.json'", "'research-fixtures/canvas/package-lock.json'",
-                       'scripts/verification/check_licenses.py',
-                       'docs/evidence/license-exceptions.json',
-                       '.github/workflows/license-policy.yml'):
-            with self.subTest(needle=needle):
-                self.assertIn(needle, self.text)
-        self.assertNotIn('pull_request_target', self.text)
+    def test_committed_workflow_passes_strict_validator(self):
+        self.assertEqual(workflow_violations(self.text), [])
 
-    def test_permissions_are_read_only_and_no_secrets(self):
-        self.assertRegex(self.text, r'(?m)^permissions:\n  contents: read\n')
-        self.assertNotRegex(self.text, r'write')
-        self.assertNotIn('secrets.', self.text)
+    def test_scope_and_value_matching_is_case_insensitive(self):
+        mutated = self.text.replace('permissions:\n  contents: read\n', 'permissions:\n  Contents: Read\n', 1)
+        self.assertNotEqual(mutated, self.text)
+        self.assertEqual(workflow_violations(mutated), [])
 
     def test_checkout_is_pinned_without_persisted_credentials(self):
         self.assertIn('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1', self.text)
@@ -643,14 +790,95 @@ class WorkflowCases(unittest.TestCase):
         mutated = self.text + '\n      - uses: actions/setup-python@v5\n'
         self.assertEqual(unpinned_refs(uses_refs(mutated)), ['actions/setup-python@v5'])
 
-    def test_path_filters_name_exactly_the_checker_default_lockfiles(self):
-        lockfiles = {item for item in WORKFLOW_PATH_ITEM.findall(self.text) if item.endswith('package-lock.json')}
-        self.assertEqual(lockfiles, set(check.DEFAULT_LOCKFILES))
-
     def test_runs_gate_on_ubuntu_with_timeout(self):
         self.assertIn('runs-on: ubuntu-latest', self.text)
         self.assertRegex(self.text, r'(?m)^\s+timeout-minutes: \d+')
-        self.assertIn('run: python3 scripts/verification/check_licenses.py', self.text)
+
+
+class WorkflowMutationCases(unittest.TestCase):
+    """Mutated workflow text fed through the same validator that the committed file must pass."""
+    RUN = 'run: python3 scripts/verification/check_licenses.py'
+
+    def setUp(self):
+        self.text = WORKFLOW.read_text(encoding='utf-8')
+
+    def mutant(self, old, new, last=False):
+        self.assertIn(old, self.text, f'mutation anchor missing: {old!r}')
+        if last:
+            head, _, tail = self.text.rpartition(old)
+            return head + new + tail
+        return self.text.replace(old, new, 1)
+
+    def assertFlagged(self, mutated, fragment):
+        problems = workflow_violations(mutated)
+        self.assertTrue(any(fragment in problem for problem in problems),
+                        f'expected a problem containing {fragment!r}, got {problems}')
+
+    def test_or_true_on_gate_run_line_is_flagged(self):
+        self.assertFlagged(self.mutant(self.RUN, self.RUN + ' || true'), 'forbidden token')
+
+    def test_continue_on_error_on_gate_step_is_flagged(self):
+        self.assertFlagged(self.mutant(self.RUN, self.RUN + '\n        continue-on-error: true'), 'forbidden token')
+
+    def test_paths_ignore_on_push_is_flagged(self):
+        self.assertFlagged(self.mutant('branches: [main]', "branches: [main]\n    paths-ignore:\n      - '**'"),
+                           'forbidden token')
+
+    def test_dropping_canvas_lockfile_from_pull_request_only_is_flagged(self):
+        anchor = "      - 'research-fixtures/canvas/package-lock.json'\n"
+        self.assertFlagged(self.mutant(anchor, ''), 'pull_request: paths differ')
+
+    def test_dropping_canvas_lockfile_from_push_only_is_flagged(self):
+        anchor = "      - 'research-fixtures/canvas/package-lock.json'\n"
+        self.assertFlagged(self.mutant(anchor, '', last=True), 'push: paths differ')
+
+    def test_dropping_exceptions_path_from_pull_request_is_flagged(self):
+        anchor = "      - 'docs/evidence/license-exceptions.json'\n"
+        self.assertFlagged(self.mutant(anchor, ''), 'pull_request: paths differ')
+
+    def test_dropping_checker_from_push_only_is_flagged(self):
+        anchor = "      - 'scripts/verification/check_licenses.py'\n"
+        self.assertFlagged(self.mutant(anchor, '', last=True), 'push: paths differ')
+
+    def test_mixed_case_write_scope_is_flagged(self):
+        self.assertFlagged(self.mutant('permissions:\n  contents: read\n',
+                                       'permissions:\n  contents: read\n  id-token: wrIte\n'),
+                           'permissions must be exactly')
+
+    def test_mixed_case_contents_write_value_is_flagged(self):
+        self.assertFlagged(self.mutant('  contents: read', '  contents: wRite'), 'permissions must be exactly')
+
+    def test_pull_request_target_trigger_is_flagged(self):
+        mutated = self.mutant('  pull_request:\n', '  pull_request_target:\n')
+        self.assertFlagged(mutated, 'forbidden token')
+        self.assertFlagged(mutated, 'triggers must be exactly')
+
+    def test_if_condition_on_gate_step_is_flagged(self):
+        self.assertFlagged(self.mutant(self.RUN, self.RUN + '\n        if: always()'), 'if condition')
+
+    def test_extra_step_that_could_mask_failure_is_flagged(self):
+        self.assertFlagged(self.mutant(self.RUN, self.RUN + '\n      - name: mask\n        run: echo ok'),
+                           'expected exactly two steps')
+
+    def test_secrets_reference_is_flagged(self):
+        self.assertFlagged(self.mutant(self.RUN, self.RUN + '\n        env:\n          TOKEN: ${{ secrets.TOKEN }}'),
+                           'secrets.')
+
+    def test_run_line_with_extra_flag_is_flagged(self):
+        self.assertFlagged(self.mutant('python3 scripts/verification/check_licenses.py',
+                                       'python3 -I scripts/verification/check_licenses.py'),
+                           'the only run: line')
+
+    def test_unpinned_checkout_is_flagged(self):
+        self.assertFlagged(self.mutant('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+                                       'actions/checkout@v7'), 'unpinned action ref')
+
+    def test_extra_key_on_pull_request_trigger_is_flagged(self):
+        self.assertFlagged(self.mutant('  pull_request:\n    paths:', '  pull_request:\n    branches: [main]\n    paths:'),
+                           'pull_request: keys must be')
+
+    def test_extra_trigger_is_flagged(self):
+        self.assertFlagged(self.mutant('  push:\n', '  workflow_dispatch:\n  push:\n'), 'triggers must be exactly')
 
 
 class RepositoryDataCases(unittest.TestCase):

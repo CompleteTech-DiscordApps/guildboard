@@ -6,9 +6,9 @@ Gate: `python3 scripts/verification/check_licenses.py` (stdlib only; run from th
 
 ## Scope
 
-The policy applies to every package recorded in a lockfile the project commits, to fonts, icons and imported assets, and to notices shipped with any distribution. The gate reads `package-lock.json` and `research-fixtures/canvas/package-lock.json` by default. It does not read installed package files, so declared SPDX metadata is trusted only as far as the lockfile states it.
+The policy applies to every third-party package recorded in a lockfile the project commits, to fonts, icons and imported assets, and to notices shipped with any distribution. First-party workspace entries are excluded from license classification (see Install paths, workspaces and aliases). The gate reads `package-lock.json` and `research-fixtures/canvas/package-lock.json` by default. It does not read installed package files, so declared SPDX metadata is trusted only as far as the lockfile states it.
 
-A new committed lockfile must be added to `DEFAULT_LOCKFILES` in `scripts/verification/check_licenses.py` and to the `paths` filters in `.github/workflows/license-policy.yml` in the same change. The workflow test fails if the filters name a lockfile that is not a default, or omit a default.
+A new committed lockfile must be added to `DEFAULT_LOCKFILES` in `scripts/verification/check_licenses.py` and to the `paths` filters in `.github/workflows/license-policy.yml` in the same change. The workflow test fails if either trigger's `paths` filters name a lockfile that is not a default, or omit a default.
 
 ## Allowed SPDX identifiers
 
@@ -60,7 +60,7 @@ Missing, empty, non-string or malformed license fields fail the gate. A missing 
 
 ## Exceptions
 
-`docs/evidence/license-exceptions.json` may list a review-required package only with `name`, exact `version`, the exact lockfile `license` string and a non-empty `reason`. An exception matches one name, one version and one license string; a version change re-triggers review. Duplicate exceptions are input errors.
+`docs/evidence/license-exceptions.json` may list a review-required package only with `name`, exact `version`, the exact lockfile `license` string and a non-empty `reason`. An exception matches one name, one version and one license string; a version change re-triggers review. The match is not bound to `integrity` or `resolved`. Duplicate exceptions are input errors.
 
 - Missing licenses cannot be excepted; a missing license fails.
 - Prohibited licenses cannot be excepted. An exception whose `license` is prohibited, or is not a well-formed SPDX expression, is an input error (exit 2), not a stale entry.
@@ -83,10 +83,10 @@ The `verified_license_overrides` list in `docs/evidence/license-exceptions.json`
 ## Install paths, workspaces and aliases
 
 - A third-party entry must sit at an exact `node_modules/...` install path. Path segments `.` and `..`, absolute paths, backslashes and any other shape (for example `vendor/node_modules/x`) fail as an unexpected install path, whatever their license.
-- A first-party workspace entry is skipped only when its key is `<dir>/<name>` where `<dir>/*` appears in the root entry's `workspaces` list, and it carries neither `resolved` nor `integrity`. Any other `apps/...` or `packages/...` entry is an unexpected install path.
+- A first-party workspace entry is skipped only when its key is `<dir>/<name>` where `<dir>/*` appears in the root entry's `workspaces` list, and it carries neither `resolved` nor `integrity`. Its own `license` field is not checked, and the workspace list is taken from the lockfile's root entry itself, not from `package.json`. No path segment named `node_modules` in any letter case is a workspace, so `apps/node_modules` is never skipped. Any other `apps/...` or `packages/...` entry that is not a nested install under a workspace (see below) is an unexpected install path.
 - A `link: true` entry is skipped only when it sits at a `node_modules` path and its `resolved` target is a known workspace present in the same lockfile. Any other link fails.
 - A third-party package installed under a workspace, `<dir>/<name>/node_modules/...` where `<dir>/*` is in `workspaces`, is classified by its real package name like any other third-party entry. A prefix that matches no declared workspace pattern stays an unexpected install path.
-- A `workspaces` pattern that contains `node_modules` or `..`, is absolute, contains a backslash or is wildcard-only (`*`, `**`) is an input error (exit 2). Only `dir/*` with a literal first segment is recognised; other shapes are not workspaces, so their entries fail as unexpected install paths.
+- A `workspaces` pattern that contains `node_modules` (in any letter case) or `..`, is absolute, contains a backslash or is wildcard-only (`*`, `**`) is an input error (exit 2). Only `dir/*` with a literal first segment is recognised; other shapes are not workspaces, so their entries fail as unexpected install paths.
 - An npm alias is classified by the real package name in the entry's `name` field, not by the install path. Exceptions and overrides match that real name.
 
 ## Attribution and distribution obligations
