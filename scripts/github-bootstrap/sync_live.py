@@ -37,7 +37,7 @@ while True:
     f=fields[k];option=next(o['id'] for o in f['options'] if (o['name']['raw'] if isinstance(o['name'],dict) else o['name'])==v)
     updates.append({'id':f['id'],'value':option})
    if x['dependencies']:
-    reason=blocker_summary([by[d]['github']['url'] for d in x['dependencies']])
+    reason=blocker_summary([issue_url(by[d]['github']['number'],s['repo']) for d in x['dependencies']])
     updates.append({'id':fields['Blocking Reason']['id'],'value':reason})
    if muts:gql('mutation('+','.join(decl)+'){'+''.join(muts)+'}',**variables)
    if updates:api('users/'+s['owner']+'/projectsV2/'+str(s['project']['number'])+'/items/'+str(item['fullDatabaseId']),'PATCH',{'fields':updates})

@@ -2,7 +2,7 @@ from api import *
 import collections
 m=json.loads((ROOT/'planning/guildboard-backlog.json').read_text());by={x['id']:x for x in m['items']}
 def link(id):
- x=by[id];return '['+id+']('+x['github']['url']+')' if x.get('github') else '`'+id+'` (creation pending)'
+ x=by[id];return '['+id+']('+issue_url(x['github']['number'],m['repository'])+')' if x.get('github') else '`'+id+'` (creation pending)'
 rows=[]
 for x in m['items']:
  if x['work_type']!='Feature':continue
