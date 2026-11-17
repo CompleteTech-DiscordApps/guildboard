@@ -17,6 +17,7 @@ from pathlib import Path
 import subprocess
 import sys
 import unittest
+import urllib.error
 import urllib.request
 from urllib.response import addinfourl
 
@@ -350,24 +351,38 @@ class SourceCaptureRegression(unittest.TestCase):
                 opened.append(request.full_url)
                 return response
 
+        class RetainErrorResponse(urllib.request.HTTPDefaultErrorHandler):
+            def http_error_default(self, request, fp, code, msg, headers):
+                try:
+                    super().http_error_default(request, fp, code, msg, headers)
+                except urllib.error.HTTPError as error:
+                    # Keep the error alive so implicit cleanup cannot satisfy the assertion.
+                    retained_errors.append(error)
+                    raise
+
         build_opener = urllib.request.build_opener
         for code in (301, 302, 303, 307, 308):
             with self.subTest(code=code):
                 opened.clear()
+                retained_errors = []
                 headers = Message()
                 headers["Location"] = "http://redirect.invalid/next"
-                body = mock.Mock()
+                stream = io.BytesIO(b"unread redirect body")
+                body = mock.Mock(wraps=stream)
                 response = addinfourl(body, headers, initial, code)
                 response.msg = "Redirect"
                 output = io.StringIO()
                 with mock.patch.object(urllib.request, "build_opener",
-                                       side_effect=lambda *handlers: build_opener(RedirectTransport(), *handlers)), \
+                                       side_effect=lambda *handlers: build_opener(RedirectTransport(), RetainErrorResponse(), *handlers)), \
                      mock.patch.object(urllib.request, "urlopen", side_effect=AssertionError("unexpected global opener")), \
                      redirect_stdout(output):
                     self.capture_module.fetch_worker(initial)
 
                 self.assertEqual(opened, [initial])
+                self.assertEqual(len(retained_errors), 1)
                 body.read.assert_not_called()
+                body.close.assert_called_once_with()
+                self.assertTrue(stream.closed)
                 envelope = json.loads(output.getvalue())
                 self.assertNotIn("result", envelope)
                 self.assertEqual(envelope["error"]["type"], "HTTPError")
@@ -721,6 +736,30 @@ sys.exit(status)
                 self.assertEqual(output["cancelled_signal"], number)
                 self.assertEqual(output["sources"][0]["status"], "fetched")
                 print(json.dumps({"first_signal_during_normal_cleanup": number, "exit_code": result.returncode, "owned_child_reaped": True, "completed_result_retained": True}))
+
+    def test_cancellation_during_worker_launch_cleans_up_the_returned_handle(self):
+        cancellation = self.capture_module.Cancellation()
+        process = mock.Mock(spec=subprocess.Popen)
+        process.poll.return_value = None
+        process.stdout = mock.Mock()
+        process.stderr = mock.Mock()
+
+        def launch(*args, **kwargs):
+            cancellation.request(signal.SIGTERM, None)
+            return process
+
+        source = ("P1", "https://example.invalid/starting", "mock worker")
+        with mock.patch.object(self.capture_module, "SOURCES", [source]), \
+             mock.patch.object(self.capture_module.subprocess, "Popen", side_effect=launch) as popen:
+            observation, = self.capture_module.capture_all(cancellation)
+
+        popen.assert_called_once()
+        self.assertEqual(observation["status"], "fetch-failed")
+        self.assertEqual(observation["attempts"][0]["error_type"], "CaptureCancelled")
+        process.kill.assert_called_once_with()
+        process.communicate.assert_called_once_with(timeout=self.capture_module.CLEANUP_SECONDS)
+        process.stdout.close.assert_called_once_with()
+        process.stderr.close.assert_called_once_with()
 
     def test_capture_restores_signal_handlers(self):
         before = {number: signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGINT)}

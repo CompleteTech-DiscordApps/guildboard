@@ -127,6 +127,8 @@ def fetch_worker(url):
         detail = {"type": type(error).__name__, "detail": str(error)}
         if isinstance(error, urllib.error.HTTPError):
             detail["http_status"] = error.code
+            # A rejected response still owns a stream. Close it without reading.
+            error.close()
         envelope = {"error": detail}
     print(json.dumps(envelope))
 
