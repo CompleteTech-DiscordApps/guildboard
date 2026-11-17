@@ -1,6 +1,6 @@
 # GB-T0.R1 — Editor, Activity and VPS feasibility
 
-Research issue: [#2](https://github.com/CompleteDotTech/guildboard/issues/2). Evaluated 2026-10-24 UTC.
+Research issue: [#2](https://github.com/CompleteTech-DiscordApps/guildboard/issues/2). Evaluated 2026-10-24 UTC.
 Status: the owner accepted the controlled experiment and architecture direction in [ADR 0001](../adr/0001-editor-activity-vps-direction.md). Runtime feasibility, shipped-license clearance and the system specification remain open; this is not production certification.
 
 ## Recommendation and evidence boundary
@@ -24,7 +24,7 @@ These are evaluated candidates, not a promise that they are the newest versions 
 
 Both packages declare MIT in their pinned `package.json`. The pinned [Excalidraw source license](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/LICENSE) permits use and redistribution subject to retaining the notice; the [Discord source license](https://github.com/discord/embedded-app-sdk/blob/14264eccbf9e68d5d58c1aadbc7579e003e0dce6/LICENSE.md) has the corresponding MIT terms. The SDK archive includes its source-matching license. No license-named file was found in the inspected Excalidraw archive; keep its pinned source notice in any eventual distribution.
 
-The Excalidraw archive also ships fonts, including Assistant, Cascadia, ComicShanns and Excalifont assets. A package-level MIT declaration **does not clear each bundled asset or transitive dependency**. [License policy implementation #16](https://github.com/CompleteDotTech/guildboard/issues/16) and [verification #17](https://github.com/CompleteDotTech/guildboard/issues/17) must inventory the installed graph and shipped files, identify font/icon licenses and required notices, and test distribution packaging. Imported user assets need a separate policy. Guildboard's MIT intent remains conditional on that audit; this issue grants no legal approval.
+The Excalidraw archive also ships fonts, including Assistant, Cascadia, ComicShanns and Excalifont assets. A package-level MIT declaration **does not clear each bundled asset or transitive dependency**. [License policy implementation #16](https://github.com/CompleteTech-DiscordApps/guildboard/issues/16) and [verification #17](https://github.com/CompleteTech-DiscordApps/guildboard/issues/17) must inventory the installed graph and shipped files, identify font/icon licenses and required notices, and test distribution packaging. Imported user assets need a separate policy. Guildboard's MIT intent remains conditional on that audit; this issue grants no legal approval.
 
 ## Controlled editing and collaboration
 
@@ -37,7 +37,7 @@ Recommended ownership:
 - Server sequences and durably acknowledges accepted operations. Clients consume accepted operations with idempotency and reconnect recovery; they do not overwrite authoritative boards with arbitrary full-scene snapshots.
 - Adapter applies accepted remote scenes without causing an echo loop or polluting local undo history. Define rejection/rollback and compound-operation behavior before implementation.
 
-These are accepted direction and constraints to develop in [system specification #3](https://github.com/CompleteDotTech/guildboard/issues/3), not a finished protocol. [Canvas research #98](https://github.com/CompleteDotTech/guildboard/issues/98) must test the pinned editor in a browser: remote update echo suppression, rejected edits, undo/redo after remote edits, deleted elements, bindings/grouping, binary assets, read-only pointer/keyboard paths, touch/stylus, and extensions such as sticky notes. [Collaboration research #132](https://github.com/CompleteDotTech/guildboard/issues/132) owns operation granularity, same-object conflicts, compound atomicity and convergence. Do not assume the scene callback is an ordered, durable operation log.
+These are accepted direction and constraints to develop in [system specification #3](https://github.com/CompleteTech-DiscordApps/guildboard/issues/3), not a finished protocol. [Canvas research #98](https://github.com/CompleteTech-DiscordApps/guildboard/issues/98) must test the pinned editor in a browser: remote update echo suppression, rejected edits, undo/redo after remote edits, deleted elements, bindings/grouping, binary assets, read-only pointer/keyboard paths, touch/stylus, and extensions such as sticky notes. [Collaboration research #132](https://github.com/CompleteTech-DiscordApps/guildboard/issues/132) owns operation granularity, same-object conflicts, compound atomicity and convergence. Do not assume the scene callback is an ordered, durable operation log.
 
 The editor is browser-side; the [integration guide](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/integration) describes client-only mounting and container sizing. This favors a React SPA adapter. Rendering, memory use and mobile performance remain unmeasured.
 
@@ -47,7 +47,7 @@ The editor is browser-side; the [integration guide](https://docs.excalidraw.com/
 
 Plan same-origin mapped API, asset and WSS paths. Inventory editor fonts, libraries, images and worker requests; test CSP failures rather than assuming CDN access. Prefer explicit mapped paths. Evaluate `patchUrlMappings` only where necessary because it modifies browser networking globals. Session design must address OAuth state binding, server-side code exchange, expiration, revocation and cross-site iframe behavior. The cookie requirements in the vendor guide need browser verification and do not replace CSRF controls.
 
-[Discord research #34](https://github.com/CompleteDotTech/guildboard/issues/34) must record actual client/SDK versions and test startup, scopes, server-verified identity, mapping/CSP, HTTPS/WSS, reconnect, permission refresh and supported desktop/web/mobile clients. Static declarations do not prove these paths work or that the chosen role APIs/scopes are available for every guild context. Role authority and platform permissions remain unresolved until that evidence exists.
+[Discord research #34](https://github.com/CompleteTech-DiscordApps/guildboard/issues/34) must record actual client/SDK versions and test startup, scopes, server-verified identity, mapping/CSP, HTTPS/WSS, reconnect, permission refresh and supported desktop/web/mobile clients. Static declarations do not prove these paths work or that the chosen role APIs/scopes are available for every guild context. Role authority and platform permissions remain unresolved until that evidence exists.
 
 ## GoDaddy Linux VPS feasibility
 
@@ -55,7 +55,7 @@ Plan same-origin mapped API, asset and WSS paths. Inventory editor fonts, librar
 
 Proposed topology: public Nginx TLS endpoint → loopback/private Node API and WebSocket service → private MySQL/MariaDB and persistent assets. Use a supported Linux image and supported Node LTS, least-privilege service users, versioned migrations, backup/restore and health-gated rollback. [Nginx's WebSocket guide](https://nginx.org/en/docs/http/websocket.html) documents upgrade header forwarding and idle timeout behavior. Confirm the installed Nginx version, explicit HTTP/1.1 upstream behavior, connection headers and heartbeat/timeout configuration on the selected image; the guide can evolve independently of a VPS package.
 
-[Infrastructure research #324](https://github.com/CompleteDotTech/guildboard/issues/324) must record a real GoDaddy plan/image, root/SSH policy, Node/Nginx/database versions, DNS/TLS, Discord URL mappings, WSS upgrade/reconnect/idle behavior, renewals, disk durability, restore and rollback evidence. Size only after a declared workload and measured load test. Managed Node hosting can be separately researched but cannot replace the required VPS deployment. No purchase or deployment is authorized by this document.
+[Infrastructure research #324](https://github.com/CompleteTech-DiscordApps/guildboard/issues/324) must record a real GoDaddy plan/image, root/SSH policy, Node/Nginx/database versions, DNS/TLS, Discord URL mappings, WSS upgrade/reconnect/idle behavior, renewals, disk durability, restore and rollback evidence. Size only after a declared workload and measured load test. Managed Node hosting can be separately researched but cannot replace the required VPS deployment. No purchase or deployment is authorized by this document.
 
 ## Alternatives and decision triggers
 
