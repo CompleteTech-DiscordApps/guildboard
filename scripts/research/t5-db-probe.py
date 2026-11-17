@@ -88,6 +88,7 @@ class Probe:
         self.run_id = "guildboard-t5-" + uuid.uuid4().hex[:12]
         self.name, self.volume = self.run_id + "-db", self.run_id + "-data"
         self.label = "tech.complete.guildboard.t5.run"
+        self.unresolved_creation: set[str] = set()
         self.cli = "mysql" if engine == "mysql" else "mariadb"
         self.report = {
             "evidence_kind": "isolated-real-database-fixture-not-product-or-vps",
@@ -105,6 +106,13 @@ class Probe:
             text=True, encoding="utf-8", capture_output=True, timeout=timeout,
             check=check,
         )
+
+    def create_resource(self, kind: str, *args: str) -> None:
+        try:
+            self.command(*args)
+        except subprocess.TimeoutExpired:
+            self.unresolved_creation.add(kind)
+            raise
 
     def verify_owner(self, kind: str, name: str) -> None:
         inspected = json.loads(self.command(kind, "inspect", name).stdout)[0]
@@ -144,13 +152,14 @@ class Probe:
         info = json.loads(self.command("image", "inspect", self.image).stdout)[0]
         self.report["image_id"] = info["Id"]
         self.report["repo_digests"] = info["RepoDigests"]
-        self.command("volume", "create", "--label", self.label + "=" + self.run_id, self.volume)
+        self.create_resource("volume", "volume", "create", "--label",
+                             self.label + "=" + self.run_id, self.volume)
         # Docker returns success for an existing named volume without relabeling it.
         # Never mount it until ownership has been observed on the actual resource.
         self.verify_owner("volume", self.volume)
         env = "MYSQL_ALLOW_EMPTY_PASSWORD=yes" if self.engine == "mysql" else "MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=1"
-        self.command(
-            "run", "--detach", "--pull=never", "--name", self.name,
+        self.create_resource(
+            "container", "run", "--detach", "--pull=never", "--name", self.name,
             "--label", self.label + "=" + self.run_id, "--network=none",
             "--cpus=1", "--memory=768m", "--pids-limit=256",
             "--mount", "type=volume,src=" + self.volume + ",dst=/var/lib/mysql",
@@ -223,6 +232,23 @@ SELECT 'S',guild,board,lineage,revision,schema_version,content,digest
  FROM snapshots ORDER BY guild,board,lineage,revision;
 """, database=database)
 
+    def check_scoped_constraints(self) -> None:
+        baseline = self.bundle()
+        duplicate_operation = self.sql(
+            "INSERT INTO receipts VALUES ('1','board-a','lineage-a',"
+            "'actor-a','op-1',REPEAT('9',64),9);", check=False)
+        duplicate_revision = self.sql(
+            "INSERT INTO receipts VALUES ('1','board-a','lineage-a',"
+            "'actor-a','op-x',REPEAT('9',64),1);", check=False)
+        foreign = self.sql(
+            "INSERT INTO receipts VALUES ('2','board-a','lineage-a',"
+            "'actor-a','op-x',REPEAT('9',64),9);", check=False)
+        self.record("D03-scoped-constraints",
+                    "1062" in duplicate_operation and "1062" in duplicate_revision
+                    and "1452" in foreign and self.bundle() == baseline,
+                    "Operation identity and revision independently rejected 1062; "
+                    "foreign composite parent rejected 1452; no fixture changes.")
+
     def exercise(self) -> None:
         self.sql(operation(1) + "COMMIT;")
         baseline = self.bundle()
@@ -235,14 +261,7 @@ SELECT 'S',guild,board,lineage,revision,schema_version,content,digest
             "(SELECT COUNT(*) FROM outbox) "
             "FROM boards WHERE guild='1' AND board='board-a';") == "2\t2\t2\t2",
             "Commit witness observed before process kill; durable bundle survived. No application ACK modeled.")
-        baseline = self.bundle()
-        duplicate = self.sql("INSERT INTO receipts VALUES ('1','board-a','lineage-a',"
-                             "'actor-a','op-1',REPEAT('9',64),1);", check=False)
-        foreign = self.sql("INSERT INTO receipts VALUES ('2','board-a','lineage-a',"
-                           "'actor-a','op-x',REPEAT('9',64),9);", check=False)
-        self.record("D03-scoped-constraints", "1062" in duplicate and "1452" in foreign
-                    and self.bundle() == baseline,
-                    "Duplicate identity rejected 1062; foreign composite parent rejected 1452; no fixture changes.")
+        self.check_scoped_constraints()
 
         selection = ("SELECT revision,(SELECT COUNT(*) FROM receipts),"
                      "(SELECT COUNT(*) FROM events),(SELECT COUNT(*) FROM outbox),content "
@@ -310,9 +329,8 @@ COMMIT;
                      "restore_target": "fresh separate schema on the same isolated engine"})
 
     def cleanup(self) -> None:
-        # Creation can succeed in the daemon even when the client times out.
-        # A successful exact-name inventory establishes absence; failed inspect
-        # is never interpreted as absence or as permission to delete.
+        # A timed-out create can reach the daemon after these inventories.
+        # Only observing the owned resource resolves that creation here.
         errors = []
         inventories = {
             "container": ("ps", "--all", "--format", "{{.Names}}"),
@@ -324,6 +342,10 @@ COMMIT;
                 names = self.command(*inventories[kind]).stdout.splitlines()
                 if name in names:
                     self.verify_owner(kind, name)
+                    # A pending run could mount or recreate the named volume.
+                    if kind == "volume" and "container" in self.unresolved_creation:
+                        continue
+                    self.unresolved_creation.discard(kind)
                     if kind == "container":
                         self.command("rm", "--force", name)
                     else:
@@ -332,17 +354,26 @@ COMMIT;
                 # The other exact resource still gets its own ownership check.
                 # A later cleanup call can retry safely; this call remains failed.
                 errors.append(f"{kind}: {error}")
-        absent = {}
+        absent, observed = {}, {}
         for kind, name in resources:
+            key = kind + "_absent"
             try:
-                absent[kind + "_absent"] = name not in self.command(
-                    *inventories[kind]).stdout.splitlines()
-                if not absent[kind + "_absent"]:
+                observed[key] = name not in self.command(*inventories[kind]).stdout.splitlines()
+                if not observed[key]:
                     errors.append(f"{kind}: resource remains after cleanup")
             except Exception as error:
-                absent[kind + "_absent"] = None
+                observed[key] = None
                 errors.append(f"{kind}: absence unverified: {error}")
+            pending = kind in self.unresolved_creation or (
+                kind == "volume" and "container" in self.unresolved_creation
+            )
+            absent[key] = None if pending else observed[key]
+        unresolved = sorted(self.unresolved_creation)
+        if unresolved:
+            errors.append("creation unresolved: " + ", ".join(unresolved))
         self.report["cleanup"] = absent | {
+            "observed_absence_at_final_inventory": observed,
+            "unresolved_creation": unresolved,
             "ownership_labels_checked_before_mutation": True,
         }
         if errors:

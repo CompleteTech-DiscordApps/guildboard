@@ -17,11 +17,13 @@ spec.loader.exec_module(module)
 
 
 class FakeDocker:
-    def __init__(self, probe, volume_owner=None, timeout_after_create=False):
+    def __init__(self, probe, volume_owner=None, timeout_after_create=False, delayed_creation=None):
         self.probe = probe
         self.volumes = {} if volume_owner is None else {probe.volume: volume_owner}
         self.containers = {}
         self.timeout_after_create = timeout_after_create
+        self.delayed_creation = delayed_creation
+        self.pending_creation = None
         self.calls = []
         self.sql_calls = []
         self.failures = {}
@@ -39,6 +41,7 @@ class FakeDocker:
         if args[:2] == ("image", "inspect"):
             stdout = json.dumps([{"Id": "sha256:fixture", "RepoDigests": [p.image]}])
         elif args[:2] == ("volume", "create"):
+            self.delay_if_requested("volume", self.volumes, p.volume)
             self.volumes.setdefault(p.volume, p.run_id)
             if self.timeout_after_create:
                 raise subprocess.TimeoutExpired("docker volume create", 90)
@@ -52,6 +55,7 @@ class FakeDocker:
                 value = {"Labels": labels} if args[0] == "volume" else {"Config": {"Labels": labels}}
                 stdout = json.dumps([value])
         elif args[0] == "run":
+            self.delay_if_requested("container", self.containers, p.name)
             self.containers[p.name] = p.run_id
         elif args[0] == "rm":
             del self.containers[args[-1]]
@@ -67,6 +71,16 @@ class FakeDocker:
         if code and kwargs.get("check", True):
             raise subprocess.CalledProcessError(code, args)
         return subprocess.CompletedProcess(args, code, stdout, "")
+
+    def delay_if_requested(self, kind, resources, name):
+        if self.delayed_creation == kind:
+            self.pending_creation = (resources, name)
+            raise subprocess.TimeoutExpired("docker create", 90)
+
+    def complete_pending_creation(self):
+        resources, name = self.pending_creation
+        resources.setdefault(name, self.probe.run_id)
+        self.pending_creation = None
 
     def sql(self, *args, **kwargs):
         self.sql_calls.append((args, kwargs))
@@ -104,6 +118,35 @@ class OwnershipTests(unittest.TestCase):
         self.assertTrue(p.report["cleanup"]["volume_absent"])
         self.assertFalse(any(c[0] == "run" for c in fake.calls))
 
+    def test_creation_after_both_inventories_leaves_cleanup_unresolved(self):
+        for kind in ("volume", "container"):
+            with self.subTest(kind=kind):
+                p, fake = self.make_probe(delayed_creation=kind)
+                code, report = self.run_main(p, start=True)
+                self.assertEqual(code, 1)
+                self.assertEqual(report["result"], "fail")
+                self.assertIn("creation unresolved", report["cleanup_error"])
+                cleanup = report["cleanup"]
+                self.assertEqual(cleanup["unresolved_creation"], [kind])
+                observed = cleanup["observed_absence_at_final_inventory"]
+                self.assertTrue(observed[kind + "_absent"])
+                self.assertIsNone(cleanup[kind + "_absent"])
+                self.assertFalse(any(c[0] == "rm" or c[:2] == ("volume", "rm")
+                                     for c in fake.calls))
+                if kind == "container":
+                    self.assertEqual(fake.volumes, {p.volume: p.run_id})
+                    self.assertFalse(observed["volume_absent"])
+                    self.assertIsNone(cleanup["volume_absent"])
+
+                # The daemon completes creation only after cleanup returns.
+                fake.complete_pending_creation()
+                p.cleanup()
+                self.assertEqual(fake.volumes, {})
+                self.assertEqual(fake.containers, {})
+                self.assertEqual(p.report["cleanup"]["unresolved_creation"], [])
+                self.assertTrue(p.report["cleanup"]["container_absent"])
+                self.assertTrue(p.report["cleanup"]["volume_absent"])
+
     def test_timed_out_create_collision_preserves_foreign_volume(self):
         p, fake = self.make_probe(volume_owner="foreign", timeout_after_create=True)
         with self.assertRaises(subprocess.TimeoutExpired):
@@ -134,8 +177,10 @@ class OwnershipTests(unittest.TestCase):
         self.assertEqual(fake.volumes, {})
         self.assertFalse(any(c[0] == "rm" for c in fake.calls))
 
-    def run_main(self, p):
-        p.start = p.exercise = lambda: None
+    def run_main(self, p, *, start=False):
+        if not start:
+            p.start = lambda: None
+        p.exercise = lambda: None
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / 'result.json'
             argv = ['probe', '--engine', 'mysql', '--image', p.image, '--output', str(output)]
@@ -189,6 +234,28 @@ class OwnershipTests(unittest.TestCase):
         p.cleanup()
         self.assertTrue(p.report["cleanup"]["container_absent"])
         self.assertTrue(p.report["cleanup"]["volume_absent"])
+
+
+class ConstraintFixtureTests(unittest.TestCase):
+    def test_d03_varies_the_operation_and_revision_constraints_independently(self):
+        with patch.object(module.subprocess, "check_output", return_value="fake-context"):
+            probe = module.Probe("mysql", "mysql@sha256:" + "0" * 64)
+        with patch.object(probe, "bundle", return_value="same rows"), \
+                patch.object(probe, "sql", side_effect=["1\nERROR 1062", "1\nERROR 1062",
+                                                       "1\nERROR 1452"]) as sql, \
+                contextlib.redirect_stdout(io.StringIO()):
+            probe.check_scoped_constraints()
+        values = [
+            "'1','board-a','lineage-a','actor-a','op-1',REPEAT('9',64),9",
+            "'1','board-a','lineage-a','actor-a','op-x',REPEAT('9',64),1",
+            "'2','board-a','lineage-a','actor-a','op-x',REPEAT('9',64),9",
+        ]
+        self.assertEqual(
+            [(f"INSERT INTO receipts VALUES ({fields});", {"check": False})
+             for fields in values],
+            [(call.args[0], call.kwargs) for call in sql.call_args_list],
+        )
+        self.assertEqual(probe.report["checks"][0]["result"], "pass")
 
 
 if __name__ == "__main__":

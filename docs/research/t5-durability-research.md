@@ -199,17 +199,31 @@ tests; no VPS board count or latency promise is established here.
 
 ## Reproducible local experiments and observed results
 
-The 2026-11-12 fixture safety follow-up can be checked without Docker using
-`python tests/research/t5-test-db-probe.py -v`. Nine fake-Docker tests cover
-foreign/unlabeled volume collisions, ownership verification before database
-launch, a create response lost after server-side success, foreign-resource
-preservation and independent exact-resource cleanup. Cleanup also fails on
-transient inspection/inventory errors or a resource remaining after removal;
-a safe retry rechecks inventory and ownership. They exercise client
-control flow only; they do not refresh the historical real-engine evidence below.
+Run `python tests/research/t5-test-db-probe.py -v` for daemon-free checks of
+the current fixture. They cover foreign and unlabeled collisions, label
+verification before launch and removal, cleanup failures and safe retries,
+and delayed volume or container creation after both cleanup inventories. They
+also check that the current D03 SQL varies the operation identity and revision
+constraints independently. These tests exercise client control flow and SQL
+inputs using fakes. The revised probe still needs a live MySQL and MariaDB run.
 
+A timed-out volume create or container run can complete after cleanup inventories
+return. The failed report records `cleanup.unresolved_creation` and
+`cleanup.observed_absence_at_final_inventory`. A null settled absence means the
+probe could not establish that cleanup was final. If container creation remains
+unresolved, cleanup retains its data volume because a late run could mount or
+recreate it. Reconcile on the recorded Docker context using the exact
+`<run_id>-db` and `<run_id>-data` names. Inspect the exact resources and confirm
+that the value of `tech.complete.guildboard.t5.run` equals the reported run ID
+before removing anything. Handle the verified container before its verified
+volume and inventory both names again. If the resource has never appeared, keep
+the creation unresolved until daemon evidence establishes that the request
+can no longer create it. An absent name in a later inventory is still a
+point-in-time observation while the request remains unresolved.
 
-The [database probe](../../scripts/research/t5-db-probe.py) ran actual engines via
+The historical database reports were produced from the
+[probe at commit `5e8a9fe999e0ef6db5509ad4075e324da6c2be79`](https://github.com/CompleteTech-DiscordApps/guildboard/blob/5e8a9fe999e0ef6db5509ad4075e324da6c2be79/scripts/research/t5-db-probe.py),
+with the SQL schema and synthetic data embedded in that executable, via
 Docker Desktop 4.93.0 / Engine 29.8.1, linux/amd64, context desktop-linux, from
 Windows PowerShell/Python 3.14.3. No image pull, port, host mount or shared network.
 Each invocation creates its own labeled container and named data volume, capped
@@ -217,6 +231,10 @@ at 1 CPU/768 MiB/256 PIDs, one engine at a time. Synthetic no-password root is
 confined to network=none and never a production credential recommendation.
 Mutation/cleanup checks the exact invocation label; evidence confirms both
 containers and volumes absent afterwards. Existing workloads were not targets.
+
+The historical database commands below refer to that pinned revision. Write
+fresh reports to separate paths when running the current fixture to preserve
+the original evidence.
 
 ```sh
 python scripts/research/t5-db-probe.py --engine mysql --image mysql@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 --output docs/research/t5-mysql-evidence.json
@@ -236,7 +254,7 @@ byte equality of database-run reports. The asset report is deterministic.
 | --- | --- |
 | D01 process crash before commit | Pass / pass: no partial board/receipt/event/outbox remained. |
 | D02 process crash after commit witness | Pass / pass: revision 2 and all three associated record counts remained 2. |
-| D03 tenant/unique constraints | Pass / pass: duplicate scoped identity error 1062 and foreign composite-parent error 1452, fixture rows unchanged. Not application allow/deny evidence. |
+| D03 tenant/unique constraints | Pass / pass: inserting the existing scoped operation `op-1` with the existing revision 1 returned 1062. The insert conflicts with both unique keys, so the report establishes a uniqueness rejection without identifying which key fired. A separate foreign composite-parent insert returned 1452. Fixture rows were unchanged. Application authorization remains outside this fixture. |
 | D04 consistent cut with concurrent writer | Pass / pass: reader retained revision/counts 2 and state-2 while separate writer/current reader reached revision/counts 3 and state-3. |
 | D05 restore and retired receipt preservation | Pass / pass: restored content under new lineage retained op-3's old lineage/digest/revision; stale-lineage conditional update affected zero rows. |
 | D06 logical restore | Pass / pass: dump imported into a fresh separate schema on the **same** isolated engine; every canonical fixture row equal. Not isolated-host/physical/PITR restore. |
