@@ -246,9 +246,9 @@ def check_supported(section):
         matched.add(key)
         if key in REQUIRED_ITEM_WORDS and REQUIRED_ITEM_WORDS[key] not in item:
             errors.append(f'SUPPORTED row {key!r} must state {REQUIRED_ITEM_WORDS[key]!r}')
-        clean = re.sub(r'\([^()]*\)', '', item).lower()
+        item_text = item.lower()
         errors += [f'SUPPORTED row {key!r} names unverified topic: {w}' for w in TOPIC_WORDS
-                   if re.search(r'\b' + w + r'\b', clean)]
+                   if re.search(r'\b' + w + r'\b', item_text)]
         targets = [t for _label, t in LINK_RE.findall(line)]
         plain = EVIDENCE_OR_TEST_RE.findall(LINK_RE.sub(r'\1', line))
         errors += [f'SUPPORTED row {key!r} has unlinked evidence or test path: {p}' for p in plain]
@@ -276,7 +276,7 @@ def norm_status(text):
 
 
 def check_status_quotes(section, root=ROOT, base_dir=T0_PATH.parent):
-    """Each ADR/spec status quoted in the section must be a leading part of that file's Status line."""
+    """Require the complete S1 status and each ADR's opening disposition."""
     errors, found = [], set()
     for target, quote in STATUS_LINK_RE.findall(section):
         path = (base_dir / target).resolve()
@@ -291,7 +291,11 @@ def check_status_quotes(section, root=ROOT, base_dir=T0_PATH.parent):
             errors.append(f'no Status line in {target}')
             continue
         status, q = norm_status(m.group(1)), norm_status(quote)
-        if not q or not (status.startswith(q) and (len(status) == len(q) or status[len(q)] in '.,;')):
+        if path.name == 'GB-T0-S1-system-contract.md':
+            matches = q.rstrip('.') == status.rstrip('.')
+        else:
+            matches = status.startswith(q) and (len(status) == len(q) or status[len(q)] in '.,;')
+        if not q or not matches:
             errors.append(f'quoted status {quote.strip()!r} differs from the Status line of {path.name}')
     errors += [f'no quoted status for required file {k}' for k in REQUIRED_STATUS_FILES if k not in found]
     return errors
@@ -434,9 +438,69 @@ def check_commands(section, root=ROOT):
     return errors
 
 
+def check_operator_coverage(section):
+    body = subsection(section, 'Operator and contributor steps') or ''
+    commands = {
+        canon(command)
+        for line in body.splitlines() if re.match(r'^\d+\. ', line)
+        for command in CODE_RE.findall(line)
+    }
+    required = (
+        'python3 scripts/github-bootstrap/validate.py',
+        'python3 -m unittest discover -s tests/verification -v',
+        'python3 scripts/verification/check_licenses.py',
+        'python3 scripts/verification/verify_requirements.py',
+        'python3 scripts/verification/verify_architecture.py',
+        'python3 scripts/architecture-controls/check.py --base /path/to/reviewed-base --current /path/to/proposed-tree',
+        "python3 -m unittest discover -s tests/architecture-controls -p 'test_*.py' -v",
+        'python3 -m unittest discover -s tests/planning -v',
+        'python3 -m unittest discover -s tests/research -v',
+        'python3 scripts/github-bootstrap/audit.py',
+        'npm ci --ignore-scripts',
+        'npm run lint',
+        'npm run typecheck',
+        'npm run format:check',
+        'npm run boundaries',
+        'npm run test:engineering',
+        'npm run build',
+        'npm run test:config',
+        'npm run typecheck:config',
+        'node scripts/verification/verify_engineering.mjs',
+        'node scripts/verification/verify_config.mjs',
+        'node scripts/verification/verify_config_failure_paths.mjs',
+    )
+    return [f'operator steps lack command: {command}' for command in required
+            if canon(command) not in commands]
+
+
+def check_node_workflow_attribution(section, root=ROOT):
+    body = subsection(section, 'Operator and contributor steps') or ''
+    expected = {
+        'engineering.yml': 'node scripts/verification/verify_engineering.mjs',
+        'config.yml': 'npm run typecheck:config',
+    }
+    errors = []
+    for workflow, command in expected.items():
+        target = f'../../.github/workflows/{workflow}'
+        workflow_text = (root / '.github' / 'workflows' / workflow).read_text(encoding='utf-8')
+        command_is_in_workflow = any(
+            line.strip().removeprefix('- ') == f'run: {command}'
+            for line in workflow_text.splitlines()
+        )
+        command_cites_workflow = any(
+            command in CODE_RE.findall(line)
+            and target in [url for _, url in LINK_RE.findall(line)]
+            for line in body.splitlines()
+        )
+        if not (command_is_in_workflow and command_cites_workflow):
+            errors.append(f'{command} must cite the workflow that runs it: {workflow}')
+    return errors
+
+
 CHECKS = (check_subsections, check_links, check_evidence_names, check_status_table, check_supported,
           check_unresolved, check_status_quotes, check_revisions, check_identities,
-          check_forbidden_phrases, check_disclaimer, check_deliverables, check_phrases, check_commands)
+          check_forbidden_phrases, check_disclaimer, check_deliverables, check_phrases, check_commands,
+          check_operator_coverage, check_node_workflow_attribution)
 
 
 def run_check(check, section):
@@ -492,6 +556,12 @@ class T0HandoffSectionTests(unittest.TestCase):
     def test_deliverables_list_merged_prs(self):
         self.assertEqual([], check_deliverables(self.section))
 
+    def test_operator_steps_cover_the_handoff_commands(self):
+        self.assertEqual([], check_operator_coverage(self.section))
+
+    def test_node_commands_cite_their_workflows(self):
+        self.assertEqual([], check_node_workflow_attribution(self.section))
+
     def test_planning_step_names_both_runner_forms(self):
         self.assertEqual([], check_phrases(self.section))
 
@@ -535,6 +605,13 @@ class T0HandoffMutationTests(unittest.TestCase):
     def test_s1_status_quote_upgraded_is_detected(self):
         self.assertDetected(self.replaced('(status: proposed, not accepted and not an implementation authorization)', '(status: accepted)'), check_status_quotes, 'S1 upgraded')
 
+    def test_s1_status_quote_truncation_is_detected(self):
+        mutation = self.replaced(
+            'status: proposed, not accepted and not an implementation authorization',
+            'status: proposed',
+        )
+        self.assertDetected(mutation, check_status_quotes, 'truncated S1 status')
+
     def test_s1_status_quote_removed_is_detected(self):
         self.assertDetected(self.replaced(' (status: proposed, not accepted and not an implementation authorization)', ''), check_status_quotes, 'S1 quote removed')
 
@@ -577,6 +654,12 @@ class T0HandoffMutationTests(unittest.TestCase):
         m = self.section + '\n| SUPPORTED | Discord iframe and GoDaddy VPS deployment verified | [raw results](../evidence/GB-T0-02-02-V1-raw-results.txt) |\n'
         self.assertDetected(m, check_supported, 'Discord SUPPORTED row')
 
+    def test_unverified_platform_claim_in_supported_parenthetical_is_detected(self):
+        mutation = self.row_replaced(
+            'Editor research static checks', 'static checks only', 'GoDaddy compatibility verified',
+        )
+        self.assertDetected(mutation, check_supported, 'unverified claim in parenthetical')
+
     def test_topic_word_in_supported_row_is_detected(self):
         m = self.row_replaced('Planning manifest validation', 'Planning manifest validation', 'Planning manifest validation in the database')
         self.assertDetected(m, check_supported, 'database topic in SUPPORTED row')
@@ -608,6 +691,20 @@ class T0HandoffMutationTests(unittest.TestCase):
     def test_prerequisite_closure_repointed_is_detected(self):
         mutation = self.replaced('issues/7#issuecomment-6920861665', 'issues/7')
         self.assertDetected(mutation, check_deliverables, 'issue closure evidence missing')
+
+    def test_operator_steps_reduced_to_planning_is_detected(self):
+        mutation = '\n'.join(
+            line for line in self.section.splitlines()
+            if not re.match(r'^\d+\. ', line) or 'scripts/github-bootstrap/validate.py' in line
+        )
+        self.assertDetected(mutation, check_operator_coverage, 'missing operator commands')
+
+    def test_node_command_citing_wrong_workflow_is_detected(self):
+        mutation = self.replaced(
+            '([engineering workflow](../../.github/workflows/engineering.yml)).',
+            '([config workflow](../../.github/workflows/config.yml)).',
+        )
+        self.assertDetected(mutation, check_node_workflow_attribution, 'wrong workflow link')
 
     def test_command_outside_allowlist_is_detected(self):
         self.assertDetected(self.section + '\n`bash scripts/deploy.sh`\n', check_commands, 'bash deploy command')
