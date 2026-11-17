@@ -72,12 +72,28 @@ included in this specification.
 
 | Scenario family | Observations demanded of consuming verification |
 | --- | --- |
-| E01/E02/E03 | Valid owned setup reaches the harness; an invalid setting or unavailable prerequisite causes zero creates, binds or outbound calls; interruption reaps owned work and preserves the unrelated sentinel. Keep unavailable/aborted status distinct from pass. |
-| E04 | Compare authorized and denied viewer, expired/replayed session, stale role, forged claim and foreign guild/board/asset/receipt decisions; no durable or peer side effects on denial. Exercise accepted inert/bounded input controls and generic response equivalence for missing and foreign selectors. |
-| E05 | For independently ordered commit and revocation, cover both sides of the fence; confirm rollback and retained acceptance when delivery fails. Duplicate digest yields one durable effect, changed digest conflicts only after current read authorization. Same-object/disjoint/compound operations and reconnect/late join converge to accepted revision and canonical projection. |
-| E06 | Verify both orderings of read authorization and protected handoff to transport, including already prepared ACKs, current and historical receipt/digest results, events, replay, metadata, and each queued snapshot, asset and export chunk. Exercise expiry, revocation, membership invalidation and unavailable trusted time/freshness under backpressure. Measure emissions at handoff and acceptable disclosure independently; an accepted write stays durable when ACK release is denied. |
-| E07 | Cover precommit interruption, committed/lost ACK, interrupted snapshot publication, current read denial after restore, retained historical receipt retry, changed digest and unknown old lineage. Verify the isolated restored cut against independent SQL, receipt/outbox and persistent asset inventories. Compare canonical hashes and revisions, fence old writers and record achieved RPO/RTO with missing data and measurement boundaries. |
-| E08 | Required platform, integration, review and merge rows match class, exact candidate and observed environment; stale or substituted evidence, missing authority, and unresolved required failures keep the gate blocked. |
+| E01/E02/E03 | Valid owned setup reaches the harness. Invalid configuration and unavailable setup prerequisites cause zero creates, binds or outbound calls. Separately observe F12’s unavailable privileged-action membership evidence and absence of privilege extension or accepted effects. Interruption reaps owned work and preserves the unrelated sentinel. Observe finite queue/quota and isolated slow-consumer recovery under T9’s resource profile. |
+| E04 | Observe the actual decoder, ingress, protected lookup and policy boundaries. Compare authorized and denied viewer, expired/replayed session, stale role, forged claim and foreign guild/board/asset/receipt decisions; no durable or peer side effects on denial. Exercise accepted inert/bounded input controls and generic response equivalence for missing and foreign selectors. |
+| E05 | Establish successful preparation, then withdraw each required commit-stage authority or dependency independently. Observe zero accepted effects. For independently ordered commit and revocation, cover both sides of the fence; confirm rollback and retained acceptance when delivery fails. Duplicate digest yields one durable effect, changed digest conflicts only after current read authorization. Same-object/disjoint/compound operations and reconnect/late join converge to accepted revision and canonical projection. |
+| E06 | Observe the serialized transport handoff and authority transition in both orders. Cover ACKs, current and historical receipt/digest/lineage results, events, replay, metadata and each snapshot, asset and export chunk. Observe protected bytes independently. Enqueue or preparation grants no release authority. A valid handoff ordered first may complete. Revocation, session expiry, membership invalidation or unavailable authority ordered first suppresses that output and all remaining queued protected bytes in the delivery. Preserve durable acceptance when ACK release is denied. Incomplete/quarantined asset read and reference produce no bytes or content write (F15). |
+| E07 | Cover the three separate recovery cases below, including failed complete snapshot validation (F10), read denial after restore, historical receipt retry, digest conflict and unknown retired lineage. Verify each recovered boundary against independent SQL, receipt/outbox and persistent asset inventories. Compare canonical hashes and revisions and fence old writers. |
+| E08 | Resolve actual release artifacts and required rows against current approval. Stale, missing or ineligible evidence remains pending or blocked. Keep verified failures visible separately. Review complete T9 security inputs and disposition evidence below.
+
+Capture the scoped committed operation and receipt inventory independently of
+application state, and independently observe ACKs actually handed off before
+the fault. Retain both before recovery with the fault boundary, lineage,
+revision and identifiers so missing evidence can be measured by set comparison.
+For **process restart with intact durable storage**, require zero acknowledged
+operations lost, no missing committed receipt and identical authorized retry
+for commit-before-ACK. For **document restore**, restore the approved content
+cut in a new lineage and retain all committed receipts, including those beyond
+that cut. Historical acceptance settles only the original pending operation.
+For **disaster recovery**, require an approved recovery point objective and
+isolated restore. Compare the actual recovered cut to the pre-fault inventories,
+report possible and observed loss and achieved RPO/RTO with measurement
+boundaries, and leave missing prior outcomes unknown. Apply the research stop on a missing acknowledged operation and retain the
+observation before comparing isolated disaster-recovery loss to its approved
+boundary. Require zero acknowledged loss for restart with intact storage. |
 
 ## Environment and load matrix
 
@@ -134,8 +150,8 @@ timeout/loss/conflict/reject/throttle counts and generator scheduling lag.
 Retain proposed 70% CPU maximum, 20% available memory/free data disk minimum,
 10% unexplained post-drain RSS growth maximum, 50ms event-loop p99 maximum and
 0.1% unexplained error fraction maximum. Stop on the research stop conditions;
-unauthorized effects, tenant disclosure and acknowledged loss are integrity
-failures. T11 owns operational SLOs, T10 deployment measurement and T5
+unauthorized effects, tenant disclosure and acknowledged loss outside an approved
+disaster-recovery boundary are integrity failures. T11 owns operational SLOs, T10 deployment measurement and T5
 data recovery parameters. These values describe an experimental workload and
 candidate budgets. Hardware capacity, supported clients, freshness SLA and
 numerical recovery objectives remain open.
@@ -154,7 +170,7 @@ Use second-resolution UTC RFC3339 instants ending in `Z`. Canonical fixture
 digests hash sorted-key compact ASCII JSON without a trailing newline.
 Production raw-artifact digests hash the exact retained redacted bytes.
 
-The envelope has exactly these fields:
+The envelope has the following fields.
 
 | Field | Type and meaning |
 | --- | --- |
@@ -177,26 +193,37 @@ by finding reference and contain exactly `findingRef, dispositionRef` tokens.
 Limitations is a nonempty printable ASCII string, up to 240 characters,
 reviewed for privacy. Use `fixture`, `local_integration`, `hosted_ci`,
 `real_discord`, `real_godaddy`, `independent_review`, or `post_merge`
-and `pass`, `fail`, or `blocked` per T9. Resolve redacted refs only in
-approved registries, never directly as network or filesystem paths.
+and `pass`, `fail`, or `blocked` per T9. Resolve redacted refs only in approved registries. The outer `environmentId`
+is the same registered exact environment reference as nested T9 `environment`.
 
-A required row passes only with complete, attributable observations, verified
-artifact integrity, approved exact candidate, exact row/environment/class, and
-current authorization, scope and versions. Require verified cleanup for
-completed resourceful runs, or independently observed untouched state for
-resource-free completed checks. Invalid setup may satisfy its deterministic
-negative scenario when the expected preflight rejection and zero effects are
-observed in a completed fixture test. The failed target execution itself
-remains blocked or failed. Unavailable prerequisites and interruption cannot
-produce a passing target receipt. Independently compare asserted outcomes to
-observations and maintain a positive control and a detection-sensitive negative
-control. Do not derive observations from expected results.
+Resolve a required row from an independent approved registry keyed by
+requirement and row. The registered tuple specifies native verification issue,
+required scenarios and class, full candidate SHA, exact environment/build and
+artifact versions, approved scope, method and verifier, run ID, redacted artifact
+reference and digest, supported configuration, approval and freshness interval,
+and authorized prerequisites. Resolve all fields and the current effective
+approval and prerequisites using trusted time. Caller-provided expectations or
+incomplete metadata confer no qualification. An independent result observer and
+a separate inventory observer each bind their observation to the same candidate,
+environment, run and artifact digest under approved observer identities. Compare
+result independently of claim and expected dataset. Require verified cleanup and
+preservation of the unrelated sentinel for completed resourceful runs. Accept
+untouched only for a resource-free completed check with independently observed
+zero resource creation and zero owned remnants.
 
-Reject malformed data as `INVALID_RECORD` and a syntactically valid unknown
-version as `UNSUPPORTED_RECORD_VERSION`. A missing registry, verifier
-authorization, artifact or trustworthy time produces `DEPENDENCY_UNAVAILABLE`.
-Stale revision/support configuration or missing exact evidence leaves the gate
-pending; a verified failure remains visible and blocks. An exact-scope
+An invalid setup may satisfy a completed deterministic fixture check of the
+expected rejection and zero effects. The target run itself remains blocked or
+failed. Unavailable prerequisites and interruption cannot yield a passing target
+receipt. Maintain detection-sensitive positive and negative observations.
+
+Reject malformed input, wrong scope and unregistered rows, tokens or references
+as `INVALID_RECORD`. A valid bounded JSON object with a positive bounded
+integer version field other than 1 returns
+`UNSUPPORTED_RECORD_VERSION` after structural decoding and before interpreting
+version-specific fields. A missing registry, authority, artifact or trustworthy
+time produces `DEPENDENCY_UNAVAILABLE`. Stale evidence and class substitution
+cannot qualify. Missing real-environment evidence stays pending. A verified
+failure on a required row remains visible and blocks. An exact-scope
 non-applicability decision uses a separate recorded owner rationale with
 approved alternate coverage when applicable. It cannot waive a mandatory
 external row or create a passing receipt. Use T9's separate exception contract
@@ -212,10 +239,33 @@ evidence. Security findings use the [private route](../../SECURITY.md).
 | #399 → #400 and #402 → #403 | QE with T1/T2/T8/T9 Security and content/storage consumers: E04/E06, server authority and isolation. |
 | #406 → #407 and #409 → #410 | QE with T4/T5/T8 and Security: E05–E07, deterministic real-engine and recovery evidence. |
 | #413 → #414 and #416 → #417 | QE, Accessibility, T10/T11 and Security: real platform rows, registered workload dispositions, exact regression/smoke results and E08. |
-| #455 → #456 | QE integrated [mandatory MVP rows](../../planning/MVP-ACCEPTANCE.md) and T13 approval, followed by separate publication #471. |
+| #455 → #456 | QE integrated [mandatory MVP rows](../../planning/MVP-ACCEPTANCE.md) and T13 approval, plus #446 for separate publication #471. |
 | #418 and T12 verification → #470 | QE integration handoff and T12 workstream acceptance, including all eight verification issues and #455. |
 | #353, #378, #414 and #417 → #457 | T10/T11/T12 evidence and T13 production/GoDaddy gate. |
-| #470, #456, #457 and remaining native blockers → #472 | T13 and maintainer stable v1.0 decision, followed by separate publication #473. |
+| #470, #456, #457 and remaining native blockers → #472 | T13 and maintainer stable v1.0 decision, plus #446 for separate publication #473. |
+
+The following crosswalk binds operational checks to the native issues that
+supply the evidence. E08 checks qualification of those receipts.
+
+| Requirement and verification issue | Minimum evidence class and row |
+| --- | --- |
+| Browser E2E, controlled launch/auth/navigation #396 | `local_integration` or `hosted_ci` on the actual Activity/browser with controlled SDK. Real launch/SDK compatibility observes the applicable registered `discord-*` rows as `real_discord`. |
+| Supported client accessibility and performance #414 | `real_discord` for each supported client row with the applicable manual AT workload, plus `real_godaddy` on `vps-network` and `vps-load` for isolated GoDaddy verification and bounded workload. |
+| Production networking #353 | `real_godaddy` on `vps-network` and separate applicable `real_discord` proxy-journey evidence. Include accepted-limit large-message delivery, safe oversized rejection, and reconnect/resync without fabricated acceptance. |
+| Credential and disaster recovery #378 | `real_godaddy` on isolated `vps-recovery`, including E07 inventories and achieved recovery. Exercise the approved credential-recovery procedure with redacted verification of restored access and retired credential rejection. |
+| Regression and production smoke #417 | `hosted_ci` for exact-build integrated regression. Production smoke requires the approved deployed build and `real_godaddy` on `vps-network`, with applicable `real_discord` client journey evidence. |
+| Monitoring and rollback #457 | Consume #353, #378, #414 and #417. Require `real_godaddy` VPS network/recovery observations of current monitor signals and the approved rollback and recovery exercise, including service state and continuity checks. |
+| T12 handoff #418 and workstream gate #470 | Both consume #393/#396/#400/#403/#407/#410/#414/#417 and integrated #455 with their applicable classes. #418 also depends on #389, and #470 depends on #418. |
+| MVP and stable publication #471 and #473 | Consume exact-build gated artifact verification #446 plus the applicable release approval #456 or #472. Record `post_merge` verification against the actual published artifact when applicable. |
+
+T9 security inputs require exact-candidate threat model review, authorization
+negative tests, maintained dependency, license and lockfile provenance review,
+secret and static checks with triage, upload/import controls and actual independent
+security review. Bind each to its authorized exact-scope artifact, verifier and
+current evidence. Unresolved critical/high findings block release. A referenced
+disposition must be independently resolved and authorized for the scope and
+severity. Verify its controls, expiry and closure criteria under T9 when an
+exception applies. Missing, unauthorized or expired dispositions confer no credit.
 
 The release matrix records stable requirement ID, scenario and environment IDs,
 native verification issue, required class, responsible verifier role, candidate
