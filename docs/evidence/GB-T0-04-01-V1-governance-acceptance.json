@@ -1,0 +1,834 @@
+{
+  "acceptance_statement": "Not an acceptance of GB-T0.04.01.V1 (#28), not an independent review, not CI, not a merge. Only observed results are recorded.",
+  "acceptance_status": "Independent verification evidence only, tested at main 2b28cef. Issue #28 acceptance, independent review of this evidence, native CI and merge are not claimed here.",
+  "clause_map": [
+    {
+      "clause": 1,
+      "defined_in": "tests/verification/test_governance_policy.py (63 tests incl. NegativeMutationTests)",
+      "enforced_by": [
+        "test_governance_clauses_present_and_unforbidden",
+        "test_backlog_visibility_clause",
+        "test_contributing_definition_of_ready_done_and_review",
+        "test_code_of_conduct_private_reporting",
+        "test_codeowners_contains_only_known_maintainer",
+        "test_issue_templates_never_assign",
+        "test_pr_template_review_and_evidence_checklist",
+        "test_identity_surface_no_emails_only_maintainer_handles",
+        "test_workstream_record_has_commands_and_limits"
+      ],
+      "status": "observed: all 63 governance tests pass; checks are text/phrase checks, not behavioral",
+      "text": "execute acceptance scenarios for governance and contribution policy"
+    },
+    {
+      "clause": 2,
+      "defined_in": "GOVERNANCE.md ## Maintainers, ## Review roles, ## Decision escalation, ## Contributor conduct, ## Issue ownership and backlog visibility; CODE_OF_CONDUCT.md; CODEOWNERS",
+      "enforced_by": [
+        "test_governance_clauses_present_and_unforbidden",
+        "test_codeowners_contains_only_known_maintainer",
+        "test_code_of_conduct_private_reporting"
+      ],
+      "quote": "Maintainer: @CompleteDotTech, the only known repository maintainer.; Escalation path: contributor -> issue or ADR discussion -> maintainer review.",
+      "status": "defined as policy text; one maintainer only; escalation target is the same single maintainer; no response time (documented, not an SLA)",
+      "text": "maintainers, review roles, decision escalation, contributor conduct, issue ownership defined"
+    },
+    {
+      "clause": 3,
+      "defined_in": "CONTRIBUTING.md ## Definition of Ready, ## Definition of Done",
+      "enforced_by": [
+        "test_contributing_definition_of_ready_done_and_review",
+        "S25-S28 mutations (DoR/DoD removed or paraphrased)"
+      ],
+      "quote": "Definition of Done: \"Deliverable exists, applicable tests pass, integration and documentation are updated, actual review is complete, relevant PR is merged and post-merge/platform checks are evidenced.\"",
+      "status": "defined; DoD requires actual review and merge that the single-maintainer setup cannot independently provide (see contradictions)",
+      "text": "Definition of Ready and Done documented"
+    },
+    {
+      "clause": 4,
+      "defined_in": "GOVERNANCE.md ## Issue ownership and backlog visibility; CONTRIBUTING.md intro",
+      "enforced_by": [
+        "test_backlog_visibility_clause",
+        "NegativeMutationTests backlog weakenings"
+      ],
+      "quote": "Assignment never hides backlog: an assigned issue stays visible in the live Project backlog, and unassigned issues stay visible as unassigned. Leaving an issue unassigned is intentional.",
+      "status": "defined; escapes B01, B02, B04 (negations and deletion phrasing pass the checks)",
+      "text": "unassigned backlog visibility preserved"
+    },
+    {
+      "clause": 5,
+      "defined_in": "docs/workstreams/T0.md ### GB-T0.04.01.T1 governance and contribution policy (#27) (commands and limits); repo has no committed GB-T0.04.01 raw-results file (docs/evidence has none)",
+      "enforced_by": [
+        "test_workstream_record_has_commands_and_limits"
+      ],
+      "quote": "Limits: these checks confirm documented wording, headings and routing.",
+      "status": "partially: repo documents commands; raw results for #28 are in this verification output only; no committed raw-results record exists for #27/#28",
+      "text": "retain raw results, tested revision/environment and defects"
+    },
+    {
+      "clause": 6,
+      "defined_in": "CONTRIBUTING.md ## Definition of Ready (last sentence)",
+      "enforced_by": [],
+      "quote": "Mocked platform checks are not real Discord or VPS verification.",
+      "status": "documented only; no test enforces it (scenario C05 escaped); Discord/GoDaddy platform checks are not in this governance-only scope",
+      "text": "no pass claims from mocks alone for Discord or GoDaddy"
+    },
+    {
+      "clause": 7,
+      "defined_in": "docs/workstreams/T0.md (limits line) and this report",
+      "enforced_by": [
+        "test_workstream_record_has_commands_and_limits (checks \"of this deliverable are not claimed\")"
+      ],
+      "quote": "Independent review, native CI, protected merge and post-merge verification of this deliverable are not claimed and remain open.",
+      "status": "open: no documented independent review of #28 exists in the repo; this verification is not a review or acceptance",
+      "text": "each scope clause has observable test or documented review result; unresolved requirements remain open"
+    }
+  ],
+  "commands": [
+    {
+      "command": "python3 -I -B -m unittest tests.verification.test_governance_policy -v (from writable copy)",
+      "exit_code": 1,
+      "log": "out/logs/01-governance-unittest.log",
+      "log_sha256": "2dda3ce02352d7a5796b91dfd808635a96badd19bf65d37837a6fee2d3426c9b",
+      "observed": "ERROR: ImportError No module named tests; 0 tests run"
+    },
+    {
+      "command": "python3 -I -B -m unittest discover -s tests/verification -p test_governance_policy.py -v (supplementary equivalent)",
+      "exit_code": 0,
+      "log": "out/logs/01b-governance-discover-I.log",
+      "log_sha256": "6cfde19cff66acbc595ff843cee046c76bd136f0140dcd6a2706a01283296a56",
+      "observed": "Ran 63 tests, OK"
+    },
+    {
+      "command": "python3 -B -m unittest discover -s tests/verification",
+      "exit_code": 0,
+      "log": "out/logs/02-verification-discover.log",
+      "log_sha256": "4792f65372722582a8533e62d9b0af15b1ce587ac3523f78f0e45a4d3004d5ba",
+      "observed": "Ran 228 tests, OK (skipped=8: editor-feasibility, EDITOR14_INPUTS unset)"
+    },
+    {
+      "command": "python3 -B -m unittest discover -s tests/verification -v",
+      "exit_code": 0,
+      "log": "out/logs/02b-verification-discover-verbose.log",
+      "log_sha256": "b182b14d98af8418843e47542bc877e3ad28e82c7e9799e758a9a1ada7b5f78e",
+      "observed": "Ran 228 tests, OK (skipped=8)"
+    },
+    {
+      "command": "python3 -I -m unittest discover -s tests/verification -v (command documented in T0 #27 record)",
+      "exit_code": 0,
+      "log": "out/logs/06-t0-documented-cmd.log",
+      "log_sha256": "885540e8a3c7e41f4962632862dabff39f81f7f8c54b931f07ae3cbe79dc3a2b",
+      "observed": "OK (skipped=8)"
+    },
+    {
+      "command": "python3 scripts/github-bootstrap/validate.py",
+      "exit_code": 0,
+      "log": "out/logs/03-github-bootstrap-validate.log",
+      "log_sha256": "df212b7c64b070cd51a794639702c5879ae03eec72b3880b1bb2102697f0e3d0",
+      "observed": "JSON report, \"errors\": []"
+    },
+    {
+      "command": "python3 -I -B scripts/verification/check_licenses.py",
+      "exit_code": 0,
+      "log": "out/logs/04-check-licenses.log",
+      "log_sha256": "63ade8b6cf52892e7ee1fb1923300abd14b3156428de10e120b5f44e40c72bc3",
+      "observed": "result: PASS (0 finding(s)); lockfiles 117 + 291 entries"
+    },
+    {
+      "command": "python3 -I -B out/scripts/scenarios.py (harness, copies only)",
+      "exit_code": 0,
+      "log": "out/logs/05-scenarios.log",
+      "log_sha256": "868cd369db2ddd0913d394e66a85cb1ee9e502d92ff35ad590c0cc2a4cd6be02",
+      "observed": "59 scenarios, 11 mismatches"
+    }
+  ],
+  "contradictions_and_tensions": [
+    "CONTRIBUTING DoD requires \"actual review is complete\" and \"relevant PR is merged\"; GOVERNANCE says there is one maintainer and no other reviewers or approvers. The policy does not say how a maintainer-authored PR is reviewed, so Done cannot be reached independently.",
+    "CONTRIBUTING ## Review and GOVERNANCE ## Review roles require security/realtime-canvas/data/platform expertise routing; CODEOWNERS routes everything (*) to @CompleteDotTech only. Expertise routing is documentation-only.",
+    "SECURITY.md Release gates require \"actual independent security review\"; no independent reviewer exists anywhere in the repo.",
+    "Acceptance clause 6 (no Discord/GoDaddy pass from mocks) is documented in CONTRIBUTING but unenforced by tests.",
+    "CODE_OF_CONDUCT and GOVERNANCE both route conduct reports to a private path that depends on a published GitHub profile contact; if none is published, the reporter is asked to request a channel. No channel is defined.",
+    "No contradictions found between GOVERNANCE.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, CODEOWNERS and the issue templates on the handle (@CompleteDotTech everywhere) or on assignees (no template assigns)."
+  ],
+  "coordinator_annotations": [
+    {
+      "id": "CA1",
+      "note": "The command 'python3 -I -B -m unittest tests.verification.test_governance_policy' was written into the verifier assignment by the coordinator; -I removes the working directory from sys.path so a module path cannot import. This is a command-form error, not a repository defect. The repository's documented form 'python3 -I -m unittest discover -s tests/verification' passes (log 06), as do the governance tests via discover (log 01b).",
+      "subject": "defect D1 (acceptance command failed with ImportError)"
+    },
+    {
+      "id": "CA2",
+      "note": "Reproduced against main 2b28cef and fixed in the same change set by hardening tests/verification/test_governance_policy.py (239 tests at the fixed head; every escape now fails the suite on copies of the real files, unmutated tree passes). The verifier's findings above are unchanged. One residual brittleness: a meaning-preserving rewording of the 'never hides' sentence still breaks four existing anchor-based tests (fails safe).",
+      "subject": "defects D2-D10 (test escapes)"
+    },
+    {
+      "id": "CA3",
+      "note": "These are policy questions, not test defects, and are left open: with one maintainer, a maintainer-authored PR has no independent human reviewer; expertise-based review routing is documentation only (CODEOWNERS routes to the single maintainer); SECURITY.md release gates require an independent security review that has no assigned reviewer; no private conduct channel is defined beyond the maintainer's published GitHub contact. No people, approvers or channels were invented to close them.",
+      "subject": "contradictions_and_tensions"
+    }
+  ],
+  "defects": [
+    {
+      "id": "D1",
+      "kind": "command",
+      "severity": "medium",
+      "summary": "The acceptance command `python3 -I -B -m unittest tests.verification.test_governance_policy -v` exits 1 with ImportError: under -I the cwd is not on sys.path. The governance test was run with discover instead (63 OK). The T0 record documents `python3 -I -m unittest discover -s tests/verification -v`."
+    },
+    {
+      "id": "D2",
+      "kind": "escape",
+      "scenario": "S23",
+      "severity": "high",
+      "summary": "Legacy single-file .github/ISSUE_TEMPLATE.md with assignees is not scanned; load_templates only reads the ISSUE_TEMPLATE/ directory."
+    },
+    {
+      "id": "D3",
+      "kind": "escape",
+      "scenario": "S24",
+      "severity": "medium",
+      "summary": "`assign:` key in a template passes; ASSIGNEES_KEY_RE and ASSIGN_HINT_RE only match assignee(s)/auto-assign."
+    },
+    {
+      "id": "D4",
+      "kind": "escape",
+      "scenarios": [
+        "B01",
+        "B02"
+      ],
+      "severity": "high",
+      "summary": "Negated visibility sentences pass: \"assigned issues are not visible in the live Project backlog\" and \"unassigned issues are not visible as unassigned\" satisfy the property regexes."
+    },
+    {
+      "id": "D5",
+      "kind": "escape",
+      "scenario": "B04",
+      "severity": "high",
+      "summary": "\"Unassigned issues are deleted after 30 days\" passes; forbidden list has archive/removed from/hidden but not deleted/closed/purged."
+    },
+    {
+      "id": "D6",
+      "kind": "escape",
+      "scenarios": [
+        "S31",
+        "S33"
+      ],
+      "severity": "medium",
+      "summary": "SLA phrasings without digits or the word SLA pass (\"within two business days\", \"given in 2 days\")."
+    },
+    {
+      "id": "D7",
+      "kind": "escape",
+      "scenario": "S38",
+      "severity": "medium",
+      "summary": "A public issue-thread channel for conduct reports added alongside the private sentence passes."
+    },
+    {
+      "id": "D8",
+      "kind": "escape",
+      "scenario": "S11",
+      "severity": "medium",
+      "summary": "A named reviewer without an @handle (\"Reviewer of record: Alice Smith\") passes the identity check, which matches only @-tokens and emails."
+    },
+    {
+      "id": "D9",
+      "kind": "escape",
+      "scenario": "C05",
+      "severity": "medium",
+      "summary": "Removing the Discord/GoDaddy mocked-checks sentence from CONTRIBUTING passes; clause 6 has no enforcing test."
+    },
+    {
+      "id": "D10",
+      "kind": "false_positive",
+      "scenario": "B05",
+      "severity": "low",
+      "summary": "The semantically equivalent \"Assignment does not hide backlog\" is rejected because the check requires the word \"never\"."
+    }
+  ],
+  "environment": {
+    "network": "none used",
+    "nodejs": "not used by this verification",
+    "os": "Linux 7.0.0-38-generic x86_64 (Ubuntu 24.04 build #38~24.04.4)",
+    "python": "3.12.3",
+    "writable_copy": "out/work (copied from read-only src)"
+  },
+  "identity_scan": "Every @-token in policy files is @CompleteDotTech. No email addresses, second handles, teams, SLAs or approvers in policy files; SLA and mailbox appear only in SECURITY.md negations (\"A dedicated response SLA and security mailbox have not been established\").",
+  "issue": "GB-T0.04.01.V1 (#28)",
+  "issue_templates": {
+    "assignment_found": false,
+    "files": [
+      ".github/ISSUE_TEMPLATE/bug.yml",
+      ".github/ISSUE_TEMPLATE/config.yml",
+      ".github/ISSUE_TEMPLATE/feature.yml"
+    ],
+    "note": "no assignees key or auto-assign hint; no legacy .github/ISSUE_TEMPLATE.md exists in this export"
+  },
+  "revision_source": "read-only export supplied by coordinator; git not used; revision taken from assignment, not verified against a remote",
+  "scenario_summary": {
+    "matched": 48,
+    "mismatch_ids": [
+      "S11",
+      "S23",
+      "S24",
+      "S31",
+      "S33",
+      "S38",
+      "B01",
+      "B02",
+      "B04",
+      "B05",
+      "C05"
+    ],
+    "mismatched": 11,
+    "total": 59
+  },
+  "scenario_table": [
+    {
+      "actual": "FAIL",
+      "description": "second handle added to CODEOWNERS catch-all",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": ".github/CODEOWNERS:2: owners must be exactly @CompleteDotTech, got ['@CompleteDotTech', '@alice-reviewer']",
+      "id": "S01",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "team-style CODEOWNERS owner @CompleteDotTech/core",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": ".github/CODEOWNERS:2: owners must be exactly @CompleteDotTech, got ['@CompleteDotTech/core']",
+      "id": "S02",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "lookalike handle: capital I for lowercase l in CompleteDotTech",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": ".github/CODEOWNERS:2: owners must be exactly @CompleteDotTech, got ['@CompIeteDotTech']",
+      "id": "S03",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "lookalike handle: Cyrillic o in CompleteDotTech (catch-all)",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": ".github/CODEOWNERS:2: owners must be exactly @CompleteDotTech, got ['@CompleteDotT\u0435ch']",
+      "id": "S04",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "email added as CODEOWNERS owner",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": ".github/CODEOWNERS:2: owners must be exactly @CompleteDotTech, got ['maintainer@example.org']",
+      "id": "S05",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "catch-all removed, path rule owned by maintainer only",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": ".github/CODEOWNERS: missing catch-all \"* @CompleteDotTech\" rule",
+      "id": "S06",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "path rule with second owner (no catch-all change)",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": ".github/CODEOWNERS:3: owners must be exactly @CompleteDotTech, got ['@CompleteDotTech', '@bob-docs']",
+      "id": "S07",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "email added to GOVERNANCE.md",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md: email address present ('maintainer@example.org')",
+      "id": "S08",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "email added to CONTRIBUTING.md (not in test group for check_contributing)",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "CONTRIBUTING.md: email address present ('reviewer@example.com')",
+      "id": "S09",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "second named handle added to GOVERNANCE.md (\"@alice\")",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md: at-sign U+0040 at offset 3364 is not the exact handle @CompleteDotTech",
+      "id": "S10",
+      "match": true
+    },
+    {
+      "actual": "PASS",
+      "description": "named person without @ in GOVERNANCE.md (\"Alice Smith, reviewer\")",
+      "error_count": 0,
+      "expected": "FAIL",
+      "first_error": null,
+      "id": "S11",
+      "match": false
+    },
+    {
+      "actual": "FAIL",
+      "description": "team handle in GOVERNANCE.md (\"@guildboard/core\")",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md: at-sign U+0040 at offset 59 is not the exact handle @CompleteDotTech",
+      "id": "S12",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "email added to SECURITY.md response contact",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "SECURITY.md: email address present ('security@guildboard.example')",
+      "id": "S13",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "assignees block key in bug.yml",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "bug.yml: assignees key present (any form)",
+      "id": "S14",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "assignees list item inside feature.yml body",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "feature.yml: assignees key present (any form)",
+      "id": "S15",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "assignees in .yaml template (task.yaml)",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "task.yaml: assignees key present (any form)",
+      "id": "S16",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "assignees in markdown front matter (task.md)",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "task.md: assignees key present (any form)",
+      "id": "S17",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "assignees inline flow in config.yml",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "config.yml: assignees key present (any form)",
+      "id": "S18",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "assignee in markdown body text only (\"Assignee: alice\" in body)",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "task.md: assignees key present (any form)",
+      "id": "S19",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "assignees in extensionless template file",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "task: assignees key present (any form)",
+      "id": "S20",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "auto-assign hint in comment of feature.yml",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "feature.yml: assignee or auto-assign hint present",
+      "id": "S21",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "assignees in nested subdirectory template",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "nested/task.yml: assignees key present (any form)",
+      "id": "S22",
+      "match": true
+    },
+    {
+      "actual": "PASS",
+      "description": "assignees in legacy single-file .github/ISSUE_TEMPLATE.md (outside the scanned directory)",
+      "error_count": 0,
+      "expected": "FAIL",
+      "first_error": null,
+      "id": "S23",
+      "match": false
+    },
+    {
+      "actual": "PASS",
+      "description": "assign: (non-GitHub key name) alias in bug.yml",
+      "error_count": 0,
+      "expected": "FAIL",
+      "first_error": null,
+      "id": "S24",
+      "match": false
+    },
+    {
+      "actual": "FAIL",
+      "description": "Definition of Ready heading renamed to Readiness",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "CONTRIBUTING.md: missing heading 'Definition of Ready'",
+      "id": "S25",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "Definition of Done acceptance criterion \"applicable tests pass\" removed",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "CONTRIBUTING.md section 'Definition of Done': missing 'applicable tests pass'",
+      "id": "S26",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "DoD review stated optional by paraphrase (\"actual review is complete\" -> \"review can be deferred\")",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "CONTRIBUTING.md section 'Definition of Done': missing 'actual review is complete'",
+      "id": "S27",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "DoD criterion \"applicable tests pass\" paraphrased (\"tests need not pass\")",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "CONTRIBUTING.md section 'Definition of Done': missing 'applicable tests pass'",
+      "id": "S28",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "escalation section removed (heading and body)",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md: missing heading 'Decision escalation'",
+      "id": "S29",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "escalation step 2 (maintainer review) removed",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md section 'Decision escalation': missing 'escalated to maintainer review by @CompleteDotTech'",
+      "id": "S30",
+      "match": true
+    },
+    {
+      "actual": "PASS",
+      "description": "SLA added: \"Maintainers respond within two business days\"",
+      "error_count": 0,
+      "expected": "FAIL",
+      "first_error": null,
+      "id": "S31",
+      "match": false
+    },
+    {
+      "actual": "FAIL",
+      "description": "SLA added in numeric form: \"within 48 hours\"",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md section 'Decision escalation': forbidden within \\d+ (?:business )?(?:hours?|days?|weeks?) present",
+      "id": "S32",
+      "match": true
+    },
+    {
+      "actual": "PASS",
+      "description": "SLA added: \"Responses are typically given in 2 days\" (no SLA keyword)",
+      "error_count": 0,
+      "expected": "FAIL",
+      "first_error": null,
+      "id": "S33",
+      "match": false
+    },
+    {
+      "actual": "FAIL",
+      "description": "escalation decided by \"steering committee\" (team-like decision body)",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md section 'Decision escalation': missing 'no other decision-maker is named'",
+      "id": "S34",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "escalation appended: \"Decisions are approved by the core team.\"",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md section 'Decision escalation': forbidden \\b(?:committee|board|steering|team)s?\\b present",
+      "id": "S35",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "conduct concerns to be posted publicly (in GOVERNANCE)",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md section 'Contributor conduct': missing (?:reported|raised|sent) privately|private (?:path|channel)",
+      "id": "S36",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "CODE_OF_CONDUCT: conduct reporting moved to public issue threads (no \"publicly\" word)",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "CODE_OF_CONDUCT.md: missing 'Report conduct concerns privately'",
+      "id": "S37",
+      "match": true
+    },
+    {
+      "actual": "PASS",
+      "description": "CODE_OF_CONDUCT: public issue threads added as a channel, original sentence kept",
+      "error_count": 0,
+      "expected": "FAIL",
+      "first_error": null,
+      "id": "S38",
+      "match": false
+    },
+    {
+      "actual": "FAIL",
+      "description": "CODE_OF_CONDUCT: \"do not post sensitive details publicly\" removed",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "CODE_OF_CONDUCT.md: missing 'Do not post sensitive details publicly'",
+      "id": "S39",
+      "match": true
+    },
+    {
+      "actual": "PASS",
+      "description": "backlog: \"assigned issues are not visible in the live Project backlog\" (negated, keeps \"never hides\" line)",
+      "error_count": 0,
+      "expected": "FAIL",
+      "first_error": null,
+      "id": "B01",
+      "match": false
+    },
+    {
+      "actual": "PASS",
+      "description": "backlog: \"unassigned issues are not visible as unassigned\" (negated)",
+      "error_count": 0,
+      "expected": "FAIL",
+      "first_error": null,
+      "id": "B02",
+      "match": false
+    },
+    {
+      "actual": "FAIL",
+      "description": "backlog: \"unassigned issues stay invisible as unassigned\"",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md 'Issue ownership and backlog visibility': no sentence states that unassigned issues stay visible as unassigned",
+      "id": "B03",
+      "match": true
+    },
+    {
+      "actual": "PASS",
+      "description": "backlog: unassigned issues deleted after 30 days (no forbidden word)",
+      "error_count": 0,
+      "expected": "FAIL",
+      "first_error": null,
+      "id": "B04",
+      "match": false
+    },
+    {
+      "actual": "FAIL",
+      "description": "backlog: \"Assignment does not hide backlog\" paraphrase (semantically same)",
+      "error_count": 2,
+      "expected": "PASS",
+      "first_error": "GOVERNANCE.md 'Issue ownership and backlog visibility': no sentence states that assignment never hides backlog",
+      "id": "B05",
+      "match": false
+    },
+    {
+      "actual": "FAIL",
+      "description": "backlog: \"Assignment never hides backlog\" reworded with \"removes\" (semantically weakened: assigned issues removed)",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md 'Issue ownership and backlog visibility': no sentence states that assigned issues stay visible in the live Project backlog",
+      "id": "B06",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "backlog: \"Leaving an issue unassigned is not intentional\" (negated)",
+      "error_count": 4,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md 'Issue ownership and backlog visibility': no sentence states that leaving an issue unassigned is intentional",
+      "id": "B07",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "backlog: unassigned issues described as \"out of scope for the Project\" (paraphrase of hide)",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md 'Issue ownership and backlog visibility': no sentence states that unassigned issues stay visible as unassigned",
+      "id": "B08",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "backlog: \"unassigned issues stay visible as unassigned\" kept but \"Every issue must have an owner\" added",
+      "error_count": 4,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md 'Issue ownership and backlog visibility': forbidden 'must have an owner' present",
+      "id": "B09",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "backlog: CONTRIBUTING \"unassigned backlog is intentional\" replaced by \"unassigned backlog is a problem to clear\"",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "CONTRIBUTING.md: no sentence states that unassigned backlog is intentional",
+      "id": "B10",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "backlog: GOVERNANCE backlog heading renamed (rule moved elsewhere)",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md: missing heading 'Issue ownership and backlog visibility'",
+      "id": "B11",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "backlog: duplicate \"Issue ownership and backlog visibility\" heading with weakened text",
+      "error_count": 3,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md: duplicate heading 'Issue ownership and backlog visibility'",
+      "id": "B12",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "backlog: \"Unassigned issues may be archived\" forbidden word added to backlog section",
+      "error_count": 2,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md 'Issue ownership and backlog visibility': forbidden 'archive' present",
+      "id": "B13",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "maintainer identity: CODEOWNERS unchanged; GOVERNANCE line replaced to name \"Alice\" with no @ handle",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md: missing 'The currently known repository maintainer is @CompleteDotTech.'",
+      "id": "C01",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "review role: \"security expertise\" replaced by \"security approval\" (creates approver role)",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "CONTRIBUTING.md section 'Review': missing 'security expertise'",
+      "id": "C02",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "review role: auth routing dropped from CONTRIBUTING \"Review\" section",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "CONTRIBUTING.md section 'Review': missing 'security expertise'",
+      "id": "C03",
+      "match": true
+    },
+    {
+      "actual": "FAIL",
+      "description": "PR template: review checkbox removed",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": ".github/pull_request_template.md: missing '- [ ] Required functional/security review complete'",
+      "id": "C04",
+      "match": true
+    },
+    {
+      "actual": "PASS",
+      "description": "Discord/GoDaddy: \"Mocked platform checks are not real Discord or VPS verification.\" removed from CONTRIBUTING",
+      "error_count": 0,
+      "expected": "FAIL",
+      "first_error": null,
+      "id": "C05",
+      "match": false
+    },
+    {
+      "actual": "FAIL",
+      "description": "escalation pointer to CODE_OF_CONDUCT removed from GOVERNANCE (contributor conduct still present)",
+      "error_count": 1,
+      "expected": "FAIL",
+      "first_error": "GOVERNANCE.md section 'Decision escalation': missing 'CODE_OF_CONDUCT.md'",
+      "id": "C06",
+      "match": true
+    },
+    {
+      "actual": "PASS",
+      "description": "harmless wording change: arrow \"->\" written as unicode arrow (should still pass)",
+      "error_count": 0,
+      "expected": "PASS",
+      "first_error": null,
+      "id": "C07",
+      "match": true
+    }
+  ],
+  "tested_file_sha256": {
+    ".github/CODEOWNERS": "41fab163ef0b883637ce2d9971fe4169f187019671ef24c1d726132ee75b3cf0",
+    "CODE_OF_CONDUCT.md": "b8035d0a0da20a07074dae345b3e064d17843e86a6efb568b07c00371267aceb",
+    "CONTRIBUTING.md": "c2cc14aab1c46ba37a250ccc3184b6f53fc19cda3bd46470c902b6678d3bf77d",
+    "GOVERNANCE.md": "95c50978b9b41ff8b57a3fdb94323788a4328d6d23a1cc54797475d0a3459d58",
+    "SECURITY.md": "2b022bbabd47f6ee0ce92d10861107a4bda555dc6489368eb4ecbc29b4c19f5c",
+    "tests/verification/test_governance_policy.py": "bd3dcb6e5513bd919031bc527dcda7c347b722bd59fef182303d921fc9109d49"
+  },
+  "tested_revision": "2b28cef89f5e21a3d43d1eff9f696ecbe8d6d274",
+  "unresolved": [
+    "Only one maintainer (@CompleteDotTech); no second reviewer, approver, or delegate exists.",
+    "No response SLA for issues, escalation or security; the policy states none is committed.",
+    "Semantic quality of the policy wording is not provable by phrase tests; escapes D2-D9 show the checks can be bypassed.",
+    "Discord and GoDaddy platform checks are not applicable to this governance-only scope; clause 6 is documented but not tested.",
+    "Expertise-based review routing is not enforced by CODEOWNERS.",
+    "Independent review, native CI, protected merge and post-merge checks for #28 have not been performed; they belong to the coordinator.",
+    "No committed raw-results file for GB-T0.04.01 exists in docs/evidence."
+  ],
+  "write_errors_observed": "none in the discover runs; the repaired -I command failed on import, not on writes"
+}

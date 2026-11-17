@@ -35,8 +35,8 @@ IDENTITY_FILES = (GOVERNANCE, CONTRIBUTING, CONDUCT, CODEOWNERS, PR_TEMPLATE, SE
 EMAIL_RE = re.compile(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}')
 HEADING_RE = re.compile(r'^(#{1,6})\s+(.*\S)\s*$')
 BULLET_RE = re.compile(r'^\s*(?:[-*+]|\d+[.)])\s+')
-# Any assignees key in any form: block, list item, quoted, inline flow or front matter.
-ASSIGNEES_KEY_RE = re.compile(r'\bassignees?\b["\']?\s*:', re.IGNORECASE)
+# Any assignment key in any form (assignees, assignee, assign, assigned, assigned_to, owner): block, list item, quoted, inline flow or front matter.
+ASSIGNEES_KEY_RE = re.compile(r'(?<![\w-])["\']?(?:assignees?|assign|assigned|assigned_to|owner)["\']?\s*:', re.IGNORECASE)
 # Any assignee word or auto-assign hint in any template file.
 ASSIGN_HINT_RE = re.compile(r'\bassignees?\b|auto-?assign|autoassign', re.IGNORECASE)
 
@@ -67,13 +67,26 @@ GOVERNANCE_CLAUSES = {
         'must not carry sensitive details', 'documented by the maintainer'],
 }
 # Forbidden weakenings per GOVERNANCE section (backlog section is handled by check_governance_backlog).
+# Response-time phrasing with digits or number words, without the SLA keyword. Shared by escalation, conduct and security text.
+RESPONSE_TIME_FORBIDDEN = [
+    re.compile(r'\bwithin\s+(?:\d+|[a-z]+(?:-[a-z]+)?)\s+(?:business\s+|working\s+|calendar\s+)?(?:hours?|days?|weeks?)\b'),
+    re.compile(r'\bwithin\s+(?:a\s+few|several|a\s+couple\s+of)\s+(?:business\s+)?(?:hours?|days?|weeks?)\b'),
+    re.compile(r'\b(?:given|provided|delivered|issued|sent)\s+in\s+(?:\d+|[a-z]+(?:-[a-z]+)?)\s+(?:business\s+|working\s+)?(?:hours?|days?|weeks?)\b'),
+    'turnaround', 'response time of', 'respond within',
+]
 ESCALATION_FORBIDDEN = [
-    re.compile(r'within \d+ (?:business )?(?:hours?|days?|weeks?)'),
+    *RESPONSE_TIME_FORBIDDEN,
     re.compile(r'\bsla\b'),
     re.compile(r'\b(?:committee|board|steering|team)s?\b'),
     'approved by',
 ]
 CONDUCT_PUBLIC_RE = re.compile(r'conduct (?:concerns?|reports?)[^.]*\b(?:publicly|in public)\b')
+# A sentence that names a reporting channel must not also name a public one (lower case; applied to norm()).
+CONDUCT_CHANNEL_TRIGGER_RE = re.compile(r'\b(?:report|reports|reported|reporting|raise|raised|raising|submit|submitted|send|sent|file|filed|channel|contact|comment|comments|commented|route|routed|path)\b')
+CONDUCT_PUBLIC_TERM_RE = re.compile(r'\bpublic(?:ly)?\b|\bissue threads?\b|\bdiscussion (?:boards?|threads?)\b|\bcomment publicly\b')
+# Named review/approval roles without an @ handle (case-sensitive, raw text).
+NAMED_ROLE_RE = re.compile(r'\b(?:Reviewer of record|Reviewers?|Approvers?|Approved by|Delegates?)[ \t]*:?[ \t]+(?!@)[A-Z][a-z]+')
+NAMED_PERSON_RE = re.compile(r'\b[A-Z][a-z]+ [A-Z][a-z]+,?[ \t]+(?:reviewer|approver|delegate)s?\b')
 GOVERNANCE_FORBIDDEN = {
     'Maintainers': [re.compile(r'anyone (?:may|can) (?:approve|merge)')],
     'Decision escalation': ESCALATION_FORBIDDEN,
@@ -85,7 +98,7 @@ BACKLOG_NEEDLES = [
 # One structured predicate per required property; each must be satisfied by some sentence.
 BACKLOG_PROPERTIES = [
     ('assignment never hides backlog',
-     re.compile(r'\bassign\w*\b.*\bnever\b.*\bhides?\b.*\bbacklog\b')),
+     re.compile(r'\bassign\w*\b.*\b(?:never|does not|do not)\s+hides?\b.*\bbacklog\b')),
     ('assigned issues stay visible in the live Project backlog',
      re.compile(r'\bassigned\b.*\bvisible\b.*\bproject backlog\b')),
     ('unassigned issues stay visible as unassigned',
@@ -97,12 +110,15 @@ CONTRIB_BACKLOG_RE = re.compile(r'\bunassigned (?:backlog|issues?)\b.*\bis inten
 # Weakenings that must never appear in the backlog section (GOVERNANCE) or the CONTRIBUTING intro.
 BACKLOG_FORBIDDEN = [
     'may hide', 'hidden', 'removed from', 'archive', 'not intentional',
+    'not visible', 'no longer visible', 'invisible', 'not shown', 'cannot be seen',
+    'deleted', 'purged', 'expire', 'closed after', 'removed after', 'auto-close', 'stale',
     'must be assigned', 'must have an owner', 'every issue must']
 
 CONTRIBUTING_HEADINGS = ('Definition of Ready', 'Definition of Done', 'Review')
 DOR_NEEDLES = [
     'requirements and scope are bounded', 'acceptance is testable', 'contracts exist',
     'prerequisite native blockers are satisfied', 'validation is defined',
+    'mocked platform checks are not real discord or vps verification',
 ]
 DOD_NEEDLES = [
     'deliverable exists', 'applicable tests pass', 'documentation are updated',
@@ -122,6 +138,7 @@ PR_NEEDLES = [
     '- [ ] Documentation updated',
     '- [ ] Required functional/security review complete',
     '- [ ] No credentials or private board data included',
+    'Distinguish mocks from real Discord/GoDaddy evidence',
 ]
 CONDUCT_NEEDLES = [
     'Report conduct concerns privately', 'contact method published on the maintainer',
@@ -281,6 +298,8 @@ def check_governance(text):
     for heading, items in GOVERNANCE_FORBIDDEN.items():
         errors += forbidden_in_section(text, heading, items, GOVERNANCE)
     errors += check_governance_backlog(text)
+    errors += public_report_channel_errors(sections(text).get('Contributor conduct', ''), GOVERNANCE)
+    errors += named_person_errors(text, GOVERNANCE)
     return errors
 
 
@@ -292,13 +311,35 @@ def check_contributing(text):
     errors += forbidden_in_section(text, 'Definition of Done', DOD_FORBIDDEN, CONTRIBUTING)
     errors += missing_section(text, 'Review', REVIEW_NEEDLES, CONTRIBUTING)
     errors += check_contributing_backlog(text)
+    errors += named_person_errors(text, CONTRIBUTING)
     return errors
+
+
+def public_report_channel_errors(text, label):
+    errors = []
+    for sentence in sentences(text):
+        if CONDUCT_CHANNEL_TRIGGER_RE.search(sentence) and CONDUCT_PUBLIC_TERM_RE.search(sentence):
+            errors.append(f'{label}: public channel named alongside conduct reporting: {sentence[:90]!r}')
+    return errors
+
+
+def named_person_errors(text, label):
+    found = [m.group(0) for pattern in (NAMED_ROLE_RE, NAMED_PERSON_RE) for m in pattern.finditer(text)]
+    return [f'{label}: named review or approval role without @ handle: {item!r}' for item in found]
 
 
 def check_conduct(text):
     return (dup_errors(text, CONDUCT)
             + missing(text, CONDUCT_NEEDLES, CONDUCT)
-            + forbidden_errors(text, [CONDUCT_PUBLIC_RE], CONDUCT))
+            + forbidden_errors(text, [CONDUCT_PUBLIC_RE] + RESPONSE_TIME_FORBIDDEN, CONDUCT)
+            + public_report_channel_errors(text, CONDUCT)
+            + named_person_errors(text, CONDUCT))
+
+
+def check_security(text):
+    return (dup_errors(text, SECURITY)
+            + forbidden_errors(text, RESPONSE_TIME_FORBIDDEN, SECURITY)
+            + named_person_errors(text, SECURITY))
 
 
 def check_pr_template(text):
@@ -342,25 +383,36 @@ def check_issue_templates(templates):
     errors = []
     for name, text in sorted(templates.items()):
         if ASSIGNEES_KEY_RE.search(text):
-            errors.append(f'{name}: assignees key present (any form)')
+            errors.append(f'{name}: assignment key present (any form)')
         if ASSIGN_HINT_RE.search(text):
             errors.append(f'{name}: assignee or auto-assign hint present')
     return errors
 
 
+# GitHub issue-template locations: the directories, plus legacy single-file templates in .github/, the root and docs/.
+ISSUE_TEMPLATE_DIRS = ('.github/ISSUE_TEMPLATE', '.github/issue_template')
+LEGACY_TEMPLATE_FOLDERS = ('.github', '', 'docs')
+
+
 def load_templates(root=REPO):
-    base = root / ISSUE_TEMPLATE_DIR
+    """Return {repo-relative posix path: text} for every issue-template file GitHub may read."""
+    paths = []
+    for rel in ISSUE_TEMPLATE_DIRS:
+        base = root / rel
+        if base.is_dir():
+            paths += [p for p in base.rglob('*') if p.is_file()]
+    for rel in LEGACY_TEMPLATE_FOLDERS:
+        folder = root / rel
+        if folder.is_dir():
+            paths += [p for p in folder.iterdir() if p.is_file() and p.name.lower().startswith('issue_template.')]
     templates = {}
-    if not base.is_dir():
-        return templates
-    for path in sorted(base.rglob('*')):
-        if path.is_file():
-            raw = path.read_bytes()
-            try:
-                text = raw.decode('utf-8')
-            except UnicodeDecodeError:
-                text = raw.decode('latin-1')
-            templates[path.relative_to(base).as_posix()] = text
+    for path in sorted(set(paths)):
+        raw = path.read_bytes()
+        try:
+            text = raw.decode('utf-8')
+        except UnicodeDecodeError:
+            text = raw.decode('latin-1')
+        templates[path.relative_to(root).as_posix()] = text
     return templates
 
 
@@ -402,7 +454,7 @@ def identity_files_text():
     files = {rel: read(rel) for rel in IDENTITY_FILES}
     files[TASK_DOC] = task_section(read(TASK_DOC))
     for name, text in load_templates().items():
-        files[f'{ISSUE_TEMPLATE_DIR}/{name}'] = text
+        files[name] = text
     return files
 
 
@@ -425,7 +477,7 @@ class RepositoryGovernanceTests(unittest.TestCase):
     def test_issue_templates_never_assign(self):
         templates = load_templates()
         self.assertTrue(templates, 'no issue templates found; check would be vacuous')
-        self.assertIn('config.yml', templates)
+        self.assertIn(f'{ISSUE_TEMPLATE_DIR}/config.yml', templates)
         self.assertEqual(check_issue_templates(templates), [])
 
     def test_pr_template_review_and_evidence_checklist(self):
@@ -438,6 +490,20 @@ class RepositoryGovernanceTests(unittest.TestCase):
 
     def test_workstream_record_has_commands_and_limits(self):
         self.assertEqual(check_task_record(read(TASK_DOC)), [])
+
+    def test_security_response_time_and_role_text(self):
+        self.assertEqual(check_security(read(SECURITY)), [])
+
+
+def templates_under(files):
+    """Write files at repo-relative paths under a temporary root and load them with the real loader."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for rel, text in files.items():
+            path = root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding='utf-8')
+        return load_templates(root)
 
 
 def mutate(text, old, new=''):
@@ -502,6 +568,7 @@ class NegativeMutationTests(unittest.TestCase):
         self.assertEqual(check_pr_template(read(PR_TEMPLATE)), [])
         self.assertEqual(check_task_record(read(TASK_DOC)), [])
         self.assertEqual(check_identity_surface(SECURITY, read(SECURITY)), [])
+        self.assertEqual(check_security(read(SECURITY)), [])
 
     # --- 1. backlog visibility (structured sentence checks + forbidden weakenings) ---
 
@@ -544,7 +611,7 @@ class NegativeMutationTests(unittest.TestCase):
     def test_yaml_extension_template_with_assignees_fails(self):
         templates = templates_from({'bug.yml': read(f'{ISSUE_TEMPLATE_DIR}/bug.yml'),
                                     'task.yaml': 'name: Task\nassignees: alice\n'})
-        self.assertIn('task.yaml', templates)
+        self.assertIn(f'{ISSUE_TEMPLATE_DIR}/task.yaml', templates)
         self.assertTrue(any('task.yaml' in e for e in check_issue_templates(templates)))
 
     def test_markdown_front_matter_assignees_fails(self):
@@ -737,6 +804,100 @@ class NegativeMutationTests(unittest.TestCase):
         mutated = mutate(read(TASK_DOC), 'They cannot prove the semantic quality of the wording.',
                          'They assert each clause.')
         self.assertTrue(check_task_record(mutated))
+
+
+    # --- 6. escapes found by the independent verifier (D2-D10); each must fail ---
+
+    def test_legacy_single_file_templates_are_scanned(self):
+        for rel in ('ISSUE_TEMPLATE.md', '.github/ISSUE_TEMPLATE.md', '.github/ISSUE_TEMPLATE.yml',
+                    '.github/issue_template.yaml', '.github/issue_template/task.yml',
+                    'docs/ISSUE_TEMPLATE.md', 'docs/issue_template.yml'):
+            with self.subTest(template=rel):
+                templates = templates_under({rel: 'name: Task\nassignees: alice\n'})
+                self.assertIn(rel, templates)
+                self.assertTrue(check_issue_templates(templates))
+
+    def test_assignment_keys_are_hints_in_templates(self):
+        bug = read(f'{ISSUE_TEMPLATE_DIR}/bug.yml')
+        for line in ('assign: alice', 'assigned: alice', 'assigned_to: alice', 'owner: alice',
+                     '  - assign: alice', '"owner": alice', '{assigned_to: alice}'):
+            with self.subTest(key=line):
+                self.assertTrue(check_issue_templates({'bug.yml': bug + '\n' + line + '\n'}))
+
+    def test_backlog_negated_visibility_fails(self):
+        governance, contributing = read(GOVERNANCE), read(CONTRIBUTING)
+        for sentence in ('Assigned issues are not visible in the live Project backlog.',
+                         'Unassigned issues are no longer visible as unassigned.',
+                         'Unassigned issues are invisible as unassigned.',
+                         'Unassigned issues are not shown as unassigned.',
+                         'Assigned issues cannot be seen in the live Project backlog.'):
+            with self.subTest(sentence=sentence):
+                mutated = mutate(governance, 'Leaving an issue unassigned is intentional.',
+                                 'Leaving an issue unassigned is intentional. ' + sentence)
+                self.assertTrue(check_backlog_visibility(mutated, contributing))
+
+    def test_backlog_retention_and_deletion_rules_fail(self):
+        governance, contributing = read(GOVERNANCE), read(CONTRIBUTING)
+        for sentence in ('Unassigned issues are deleted after 30 days.',
+                         'Unassigned issues are purged monthly.',
+                         'Unassigned issues expire after 90 days.',
+                         'Unassigned issues are closed after 60 days.',
+                         'Unassigned issues are removed after 30 days.',
+                         'Unassigned issues get auto-close after 30 days.',
+                         'Stale unassigned issues are reviewed for removal.'):
+            with self.subTest(sentence=sentence):
+                mutated = mutate(governance, 'Leaving an issue unassigned is intentional.',
+                                 'Leaving an issue unassigned is intentional. ' + sentence)
+                self.assertTrue(check_backlog_visibility(mutated, contributing))
+
+    def test_does_not_hide_is_equivalent_to_never_hides(self):
+        mutated = mutate(read(GOVERNANCE), 'Assignment never hides backlog', 'Assignment does not hide backlog')
+        self.assertEqual(check_backlog_visibility(mutated, read(CONTRIBUTING)), [])
+
+    def test_response_time_phrasing_in_escalation_fails(self):
+        for sentence in ('Maintainers respond within two business days.', 'Responses are given in 2 days.',
+                         'Reports receive a turnaround of one week.', 'The response time of three days applies.',
+                         'Maintainers respond within 48 hours.'):
+            with self.subTest(sentence=sentence):
+                mutated = mutate(read(GOVERNANCE), 'No response time is committed and',
+                                 sentence + ' No response time is committed and')
+                self.assertTrue(check_governance(mutated))
+
+    def test_response_time_phrasing_in_conduct_and_security_fails(self):
+        for sentence in ('Reports are acknowledged within three hours.', 'Replies are given in 2 weeks.',
+                         'Reports have a 5-day turnaround.'):
+            with self.subTest(sentence=sentence):
+                self.assertTrue(check_conduct(read(CONDUCT) + '\n' + sentence + '\n'))
+                self.assertTrue(check_security(read(SECURITY) + '\n' + sentence + '\n'))
+
+    def test_public_channel_for_conduct_reports_fails(self):
+        for sentence in ('Conduct reports may also be posted in public issue threads.',
+                         'Report conduct concerns on the discussion board.',
+                         'Reporters may comment publicly on the issue.'):
+            with self.subTest(sentence=sentence):
+                self.assertTrue(check_conduct(read(CONDUCT) + '\n' + sentence + '\n'))
+        mutated = mutate(read(GOVERNANCE), 'Conduct concerns are reported privately through the path described there.',
+                         'Conduct concerns are reported privately through the path described there. '
+                         'Conduct concerns may also be raised in a public issue thread.')
+        self.assertTrue(check_governance(mutated))
+
+    def test_named_person_review_roles_without_handle_fail(self):
+        cases = [
+            (GOVERNANCE, read(GOVERNANCE) + '\nReviewer of record: Alice Smith\n', check_governance),
+            (GOVERNANCE, read(GOVERNANCE) + '\nAlice Smith, reviewer.\n', check_governance),
+            (CONTRIBUTING, read(CONTRIBUTING) + '\nApprover: Bob Jones\n', check_contributing),
+            (CONDUCT, read(CONDUCT) + '\nApproved by Carol Lee.\n', check_conduct),
+            (SECURITY, read(SECURITY) + '\nReviewers: Dana Kim\n', check_security),
+        ]
+        for name, text, check in cases:
+            with self.subTest(file=name, check=check.__name__):
+                self.assertTrue(check(text))
+
+    def test_mocked_checks_rule_removal_fails(self):
+        mutated = mutate(read(CONTRIBUTING), 'Mocked platform checks are not real Discord or VPS verification.', '')
+        self.assertTrue(check_contributing(mutated))
+        mutated = mutate(read(PR_TEMPLATE), 'Distinguish mocks from real Discord/GoDaddy evidence.', '')
+        self.assertTrue(check_pr_template(mutated))
 
 
 if __name__ == '__main__':
