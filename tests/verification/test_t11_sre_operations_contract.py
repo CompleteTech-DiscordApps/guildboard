@@ -44,16 +44,16 @@ def objective(seconds, limit):
     return "breached" if seconds > limit else "within_candidate"
 
 
-def restore_verdict(backup, preflight, verification, objectives):
+def restore_verdict(selected_generation, preflight, verification, acknowledged_cut, objectives):
     if preflight == "unsafe":
         return "denied"
-    if preflight == "unavailable" or backup != "verified":
+    if preflight == "unavailable" or selected_generation != "verified":
         return "blocked"
-    if verification != "complete":
+    if verification != "complete" or acknowledged_cut == "loss":
         return "failed"
     if "breached" in objectives:
         return "breached"
-    return "undetermined" if "unknown" in objectives else "within_candidate"
+    return "undetermined" if acknowledged_cut == "unknown" or "unknown" in objectives else "within_candidate"
 
 
 class OperationsContractTest(unittest.TestCase):
@@ -196,10 +196,13 @@ class OperationsContractTest(unittest.TestCase):
                 )
 
     def test_backup_and_restore_have_independent_verdicts(self):
-        fields = {"backup", "preflight", "verification", "fault_second", "canaries", "rto_seconds"}
+        fields = {"backup", "selected_generation", "preflight", "verification", "acknowledged_cut",
+                  "fault_second", "canaries", "rto_seconds"}
         for case in self.cases("recovery", fields):
             with self.subTest(case=case["case"]):
                 self.assertIn(case["backup"], {"verified", "interrupted"})
+                self.assertIn(case["selected_generation"], {"verified", "unavailable"})
+                self.assertIn(case["acknowledged_cut"], {"verified", "loss", "unknown"})
                 self.assertIn(case["preflight"], {"isolated", "unsafe", "unavailable"})
                 self.assertIn(case["verification"], {
                     "complete", "unstarted", "interrupted", "integrity_failed", "marker_gap",
@@ -227,8 +230,8 @@ class OperationsContractTest(unittest.TestCase):
                 self.assertEqual(
                     {"backup": case["backup"], "rpo_seconds": rpo_seconds,
                      "rto_seconds": case["rto_seconds"], "rpo": outcomes[0], "rto": outcomes[1],
-                     "drill": restore_verdict(case["backup"], case["preflight"],
-                                              case["verification"], outcomes)},
+                     "drill": restore_verdict(case["selected_generation"], case["preflight"],
+                                              case["verification"], case["acknowledged_cut"], outcomes)},
                     case["expected"],
                 )
 

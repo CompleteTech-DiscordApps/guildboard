@@ -199,8 +199,14 @@ canary commit. Choose the latest consistent restored synthetic canary whose
 original pre-fault durable commit and restored lineage/cut match trusted
 evidence. RPO is incident/fault time minus that original commit time. Exclude
 inconsistent, unverified, post-fault and unrestored canaries. Copy, replay and
-restore execution timestamps cannot serve as original commit evidence. Count acknowledged operations lost, report the tested
-loss boundary, and treat untrustworthy timing or absent canary as unknown.
+restore execution timestamps cannot serve as original commit evidence. Compare an
+independent pre-fault acknowledgment inventory to the verified recovered cut.
+Any acknowledged operation missing at or before that cut causes an integrity
+failure and immediate escalation, even when both timing objectives pass.
+Account for possible post-cut loss against the approved disaster boundary, and
+report the acknowledgments lost and the tested boundary. Unverified acknowledgment
+coverage leaves acceptance undetermined after other checks pass. Record
+untrustworthy timing or absence of a verified canary as unknown.
 RTO is elapsed time from declaration through access/key recovery, restore and
 service verification over approved DNS/TLS and client paths, including operator
 waits. Use monotonic elapsed timing when available and record clock provenance.
