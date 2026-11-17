@@ -1,5 +1,6 @@
 """Test oracle sensitivity, reproducibility and honest matrix evidence boundaries."""
 import os
+from queue import Queue
 import signal
 import socketserver
 import tempfile
@@ -363,54 +364,134 @@ class SourceCaptureRegression(unittest.TestCase):
                 results = list(pool.map(self.capture_module.capture, [("P1", "http://example.invalid", "test"), ("P2", "http://example.invalid", "test")]))
         self.assertEqual([row["status"] for row in results], ["fetch-failed", "fetch-failed"])
 
+    def test_attempt_deadline_includes_launch_and_reaps_worker(self):
+        now = 0.0
+        with subprocess.Popen(
+            [sys.executable, "-c", "import sys; sys.stdin.read()"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        ) as process:
+            def launch(*args, **kwargs):
+                nonlocal now
+                now += 0.81
+                return process
+
+            with mock.patch.object(self.capture_module, "time") as clock, \
+                 mock.patch.object(self.capture_module.subprocess, "Popen", side_effect=launch):
+                clock.monotonic.side_effect = lambda: now
+                with self.assertRaisesRegex(TimeoutError, "response elapsed-time deadline exceeded"):
+                    self.capture_module.fetch("http://127.0.0.1:1/unused", 0.8)
+            self.assertIsNotNone(process.returncode, "capture must reap the child before returning")
+            self.assertNotEqual(process.returncode, 0, "capture must terminate the waiting child")
+
     def test_slow_drip_deadline_reaps_worker_and_preserves_healthy_result(self):
-        import socketserver
-        import time
         stop = threading.Event()
-        connected = threading.Event()
-        class Handler(socketserver.BaseRequestHandler):
+        trickling = threading.Event()
+
+        class Handler(socketserver.StreamRequestHandler):
             def handle(self):
-                request = self.request.recv(4096)
+                request = self.rfile.readline()
+                for header in self.rfile:
+                    if header == b"\r\n":
+                        break
                 try:
                     if b"/slow " in request:
-                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 100000\r\n\r\n")
-                        connected.set()
-                        while not stop.wait(0.02):
+                        self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 100000\r\n\r\nx")
+                        end = time.monotonic() + 4
+                        while time.monotonic() < end and not stop.wait(0.02):
                             self.request.sendall(b"x")
+                            trickling.set()
                     else:
                         self.request.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
                 except (BrokenPipeError, ConnectionResetError):
                     pass
-        processes = []
-        original_popen = subprocess.Popen
-        def popen(*args, **kwargs):
-            process = original_popen(*args, **kwargs)
-            processes.append(process)
+
+        # Warm each real child through imports only. The production Popen call
+        # releases its child after fetch has started the attempt deadline.
+        worker = """\
+import runpy
+import sys
+
+fetch_worker = runpy.run_path(sys.argv[1])["fetch_worker"]
+print("ready", file=sys.stderr, flush=True)
+if sys.stdin.readline() == "fetch\\n":
+    fetch_worker(sys.argv[2])
+"""
+        ready = Queue()
+        processes = {}
+        released = {}
+        script = str(Path(self.capture_module.__file__).resolve())
+
+        def release_worker(command, **kwargs):
+            self.assertEqual(command[:3], [sys.executable, script, "--fetch-worker"])
+            target = command[3]
+            process = processes[target]
+            self.assertNotIn(target, released)
+            released[target] = process
+            process.stdin.write("fetch\n")
+            process.stdin.flush()
             return process
+
         with socketserver.ThreadingTCPServer(("127.0.0.1", 0), Handler) as server:
             thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05))
             thread.start()
             url = "http://127.0.0.1:" + str(server.server_address[1])
-            started = time.monotonic()
+            readers = []
             try:
+                for path in ("/slow", "/alternate", "/following"):
+                    target = url + path
+                    process = subprocess.Popen(
+                        [sys.executable, "-c", worker, script, target],
+                        stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE, text=True,
+                    )
+                    processes[target] = process
+                    reader = threading.Thread(target=lambda stream=process.stderr: ready.put(stream.readline()))
+                    reader.start()
+                    readers.append(reader)
+                for reader in readers:
+                    self.assertEqual(ready.get(timeout=10), "ready\n")
+                    reader.join(timeout=2)
+
                 with mock.patch.object(self.capture_module, "ATTEMPT_SECONDS", 0.8), \
-                     mock.patch.object(self.capture_module.subprocess, "Popen", side_effect=popen):
+                     mock.patch.object(self.capture_module.subprocess, "Popen", side_effect=release_worker):
                     original = self.capture_module.fetch
+
                     def routed(target, timeout):
-                        path = "/slow" if target.startswith("https://docs.discord.com/") else "/healthy"
-                        return original(url + path, timeout)
-                    with mock.patch.object(self.capture_module, "fetch", side_effect=routed), mock.patch.object(self.capture_module, "SOURCES", [("D1", "https://docs.discord.com/example", "test"), ("P1", url, "test")]):
+                        if target.startswith("https://docs.discord.com/"):
+                            target = url + "/slow"
+                        elif target.startswith("https://raw.githubusercontent.com/"):
+                            target = url + "/alternate"
+                        return original(target, timeout)
+
+                    sources = [("D1", "https://docs.discord.com/example", "test"),
+                               ("P1", url + "/following", "test")]
+                    with mock.patch.object(self.capture_module, "fetch", side_effect=routed), \
+                         mock.patch.object(self.capture_module, "SOURCES", sources):
+                        started = time.monotonic()
                         result = self.capture_module.capture_all()
-                elapsed = time.monotonic() - started
-                self.assertTrue(connected.is_set(), "test must exercise actual slow HTTP traffic")
+                        elapsed = time.monotonic() - started
+                self.assertTrue(trickling.is_set(), "test must exercise actual slow HTTP body traffic")
                 self.assertLess(elapsed, 3, "healthy output must not await the trickling body")
                 self.assertEqual(result[0]["attempts"][0]["error_type"], "TimeoutError")
                 self.assertEqual(result[0]["attempts"][1]["status"], "fetched")
+                self.assertEqual(result[0]["attempts"][1]["final_url"], url + "/alternate")
                 self.assertEqual(result[1]["status"], "fetched")
-                self.assertTrue(processes)
-                self.assertTrue(all(process.poll() is not None for process in processes), "all fetch children must be reaped")
+                self.assertEqual(result[1]["attempts"][0]["final_url"], url + "/following")
+                self.assertEqual(released.keys(), processes.keys())
+                self.assertTrue(all(process.returncode is not None for process in processes.values()),
+                                "capture must reap every child before returning")
             finally:
                 stop.set()
+                for process in processes.values():
+                    if process.returncode is None:
+                        process.kill()
+                        process.wait(timeout=2)
+                for reader in readers:
+                    reader.join(timeout=2)
+                for process in processes.values():
+                    process.stdin.close()
+                    process.stdout.close()
+                    process.stderr.close()
                 server.shutdown()
                 thread.join(timeout=2)
         self.assertFalse(thread.is_alive())
