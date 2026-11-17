@@ -1,6 +1,6 @@
 # Contributing
 
-Start with the live Project and the issue's stable GB identifier. Do not infer readiness from the title. Claim work with maintainer coordination; unassigned backlog is intentional. Use a focused branch and PR referencing the issue without closing directives until acceptance evidence is available.
+Start with the live Project and the issue's stable GB identifier. Do not infer readiness from the title. Claim work with maintainer coordination; unassigned backlog is intentional. Use a focused branch and PR referencing the issue without closing directives until acceptance evidence is available. Decision escalation and issue ownership rules are in [GOVERNANCE.md](GOVERNANCE.md).
 
 ## Definition of Ready
 

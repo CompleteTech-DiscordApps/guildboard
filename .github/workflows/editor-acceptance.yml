@@ -1,0 +1,25 @@
+name: Editor acceptance
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Fetch public source inputs
+        run: python3 -B scripts/research/editor14/fetch_public.py --output-dir "$RUNNER_TEMP/editor14-inputs"
+      - name: Verify and test in process
+        env:
+          EDITOR14_INPUTS: ${{ runner.temp }}/editor14-inputs
+          TMPDIR: ${{ runner.temp }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          python3 -B -m unittest discover -s tests/verification -p test_editor_feasibility.py -v
+          python3 -B scripts/verification/verify_editor_feasibility.py --root "$GITHUB_WORKSPACE" --inputs "$EDITOR14_INPUTS" --revision "$CANDIDATE_SHA" --output "$RUNNER_TEMP/editor14-result.json"
