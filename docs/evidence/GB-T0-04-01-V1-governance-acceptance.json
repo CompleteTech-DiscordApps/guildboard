@@ -156,13 +156,19 @@
     },
     {
       "id": "CA2",
-      "note": "Reproduced against main 2b28cef and fixed in the same change set by hardening tests/verification/test_governance_policy.py (239 tests at the fixed head; every escape now fails the suite on copies of the real files, unmutated tree passes). The verifier's findings above are unchanged. One residual brittleness: a meaning-preserving rewording of the 'never hides' sentence still breaks four existing anchor-based tests (fails safe).",
+      "note": "Reproduced against main 2b28cef and fixed in the same change set by hardening tests/verification/test_governance_policy.py (whole tests/verification suite: 250 tests, 8 skipped, at the fixed head; governance module: 85 tests; every recorded escape now fails the suite on copies of the real files and the unmutated tree passes). The verifier's findings above are unchanged. Two independent reviews of the first hardening found further escapes (response-time wording outside the escalation, conduct and security text; named reviewers in other word orders), which a second hardening pass closed. Further novel phrasings still pass: phrase-based checks establish required wording and forbidden weakenings, not meaning. One residual brittleness: a meaning-preserving rewording of the 'never hides' sentence still breaks anchor-based tests (fails safe).",
       "subject": "defects D2-D10 (test escapes)"
     },
     {
       "id": "CA3",
       "note": "These are policy questions, not test defects, and are left open: with one maintainer, a maintainer-authored PR has no independent human reviewer; expertise-based review routing is documentation only (CODEOWNERS routes to the single maintainer); SECURITY.md release gates require an independent security review that has no assigned reviewer; no private conduct channel is defined beyond the maintainer's published GitHub contact. No people, approvers or channels were invented to close them.",
       "subject": "contradictions_and_tensions"
+    },
+    {
+      "added_by": "coordinator",
+      "id": "CA4",
+      "note": "Removed from 'unresolved' because the hardening change set resolved them: acceptance clause 6 (mocked checks are not real Discord/GoDaddy evidence) is now enforced by a test, and the raw results are committed in docs/evidence/GB-T0-04-01-V1-raw-results.txt. Logs 02b (verbose rerun of 02) and 06 (documented-command rerun) are recorded with digests only in the commands list; their contents duplicate log 02's result and are not retained, so those two digests cannot be re-checked from this repository.",
+      "subject": "resolved items and digest-only logs"
     }
   ],
   "defects": [
@@ -825,10 +831,8 @@
     "Only one maintainer (@CompleteDotTech); no second reviewer, approver, or delegate exists.",
     "No response SLA for issues, escalation or security; the policy states none is committed.",
     "Semantic quality of the policy wording is not provable by phrase tests; escapes D2-D9 show the checks can be bypassed.",
-    "Discord and GoDaddy platform checks are not applicable to this governance-only scope; clause 6 is documented but not tested.",
     "Expertise-based review routing is not enforced by CODEOWNERS.",
-    "Independent review, native CI, protected merge and post-merge checks for #28 have not been performed; they belong to the coordinator.",
-    "No committed raw-results file for GB-T0.04.01 exists in docs/evidence."
+    "Independent review, native CI, protected merge and post-merge checks for #28 have not been performed; they belong to the coordinator."
   ],
   "write_errors_observed": "none in the discover runs; the repaired -I command failed on import, not on writes"
 }
