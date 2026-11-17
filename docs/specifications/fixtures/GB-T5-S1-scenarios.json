@@ -1,0 +1,681 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "id": "C01",
+      "kind": "command",
+      "inputs": {},
+      "outcome": "ACK_CURRENT_7",
+      "effects": []
+    },
+    {
+      "id": "C02",
+      "kind": "command",
+      "inputs": {
+        "write": false
+      },
+      "outcome": "ACK_CURRENT_7",
+      "effects": []
+    },
+    {
+      "id": "C03",
+      "kind": "command",
+      "inputs": {
+        "digest": "digest-b"
+      },
+      "outcome": "IDEMPOTENCY_CONFLICT",
+      "effects": []
+    },
+    {
+      "id": "C04",
+      "kind": "command",
+      "inputs": {
+        "read": false
+      },
+      "outcome": "NOT_FOUND",
+      "effects": []
+    },
+    {
+      "id": "C05",
+      "kind": "command",
+      "inputs": {
+        "read": false,
+        "digest": "digest-b"
+      },
+      "outcome": "NOT_FOUND",
+      "effects": []
+    },
+    {
+      "id": "C06",
+      "kind": "command",
+      "inputs": {
+        "read": false,
+        "operation": "operation-b"
+      },
+      "outcome": "NOT_FOUND",
+      "effects": []
+    },
+    {
+      "id": "C07",
+      "kind": "command",
+      "inputs": {
+        "guild": "guild-b"
+      },
+      "outcome": "NOT_FOUND",
+      "effects": []
+    },
+    {
+      "id": "C08",
+      "kind": "command",
+      "inputs": {
+        "board": "board-b"
+      },
+      "outcome": "NOT_FOUND",
+      "effects": []
+    },
+    {
+      "id": "C09",
+      "kind": "command",
+      "inputs": {
+        "valid": false
+      },
+      "outcome": "INVALID_MESSAGE",
+      "effects": []
+    },
+    {
+      "id": "C10",
+      "kind": "command",
+      "inputs": {
+        "actor": "actor-b"
+      },
+      "outcome": "ACK_NEW",
+      "effects": [
+        "state",
+        "event",
+        "receipt",
+        "outbox",
+        "quota",
+        "audit"
+      ]
+    },
+    {
+      "id": "C11",
+      "kind": "command",
+      "inputs": {
+        "operation": "operation-b",
+        "policy_current": false
+      },
+      "outcome": "POLICY_STALE",
+      "effects": []
+    },
+    {
+      "id": "C12",
+      "kind": "command",
+      "inputs": {
+        "operation": "operation-b",
+        "write": false
+      },
+      "outcome": "FORBIDDEN",
+      "effects": []
+    },
+    {
+      "id": "C13",
+      "kind": "command",
+      "inputs": {
+        "operation": "operation-b",
+        "capacity": false
+      },
+      "outcome": "RATE_LIMITED",
+      "effects": []
+    },
+    {
+      "id": "C14",
+      "kind": "command",
+      "inputs": {
+        "capacity": false
+      },
+      "outcome": "ACK_CURRENT_7",
+      "effects": []
+    },
+    {
+      "id": "C15",
+      "kind": "command",
+      "inputs": {
+        "operation": "operation-b",
+        "commit": "rollback"
+      },
+      "outcome": "DEPENDENCY_UNAVAILABLE",
+      "effects": []
+    },
+    {
+      "id": "C16",
+      "kind": "command",
+      "inputs": {
+        "operation": "operation-b",
+        "commit": "unknown_committed"
+      },
+      "outcome": "DEPENDENCY_UNAVAILABLE",
+      "effects": [
+        "state",
+        "event",
+        "receipt",
+        "outbox",
+        "quota",
+        "audit"
+      ]
+    },
+    {
+      "id": "C17",
+      "kind": "command",
+      "inputs": {
+        "operation": "operation-b",
+        "commit": "unknown_rolled_back"
+      },
+      "outcome": "DEPENDENCY_UNAVAILABLE",
+      "effects": []
+    },
+    {
+      "id": "C18",
+      "kind": "command",
+      "inputs": {
+        "operation": "operation-b",
+        "lost_ack": true
+      },
+      "outcome": "NO_RELEASE",
+      "effects": [
+        "state",
+        "event",
+        "receipt",
+        "outbox",
+        "quota",
+        "audit"
+      ]
+    },
+    {
+      "id": "C19",
+      "kind": "command",
+      "inputs": {
+        "operation": "operation-b",
+        "release": false
+      },
+      "outcome": "NOT_FOUND",
+      "effects": [
+        "state",
+        "event",
+        "receipt",
+        "outbox",
+        "quota",
+        "audit"
+      ]
+    },
+    {
+      "id": "C20",
+      "kind": "command",
+      "inputs": {
+        "release": false
+      },
+      "outcome": "NOT_FOUND",
+      "effects": []
+    },
+    {
+      "id": "C21",
+      "kind": "command",
+      "inputs": {
+        "release": false,
+        "digest": "digest-b"
+      },
+      "outcome": "NOT_FOUND",
+      "effects": []
+    },
+    {
+      "id": "C22",
+      "kind": "command",
+      "inputs": {
+        "release": false,
+        "lineage": "lineage-old"
+      },
+      "outcome": "NOT_FOUND",
+      "effects": []
+    },
+    {
+      "id": "C23",
+      "kind": "command",
+      "inputs": {
+        "recovery": "document",
+        "write": false
+      },
+      "outcome": "ACK_HISTORICAL_7",
+      "effects": []
+    },
+    {
+      "id": "C24",
+      "kind": "command",
+      "inputs": {
+        "recovery": "document",
+        "digest": "digest-b"
+      },
+      "outcome": "IDEMPOTENCY_CONFLICT",
+      "effects": []
+    },
+    {
+      "id": "C25",
+      "kind": "command",
+      "inputs": {
+        "recovery": "document",
+        "operation": "operation-b"
+      },
+      "outcome": "LINEAGE_CHANGED",
+      "effects": []
+    },
+    {
+      "id": "C26",
+      "kind": "command",
+      "inputs": {
+        "recovery": "disaster"
+      },
+      "outcome": "ACK_HISTORICAL_7",
+      "effects": []
+    },
+    {
+      "id": "C27",
+      "kind": "command",
+      "inputs": {
+        "recovery": "disaster",
+        "operation": "operation-b"
+      },
+      "outcome": "DEPENDENCY_UNAVAILABLE",
+      "effects": []
+    },
+    {
+      "id": "C28",
+      "kind": "command",
+      "inputs": {
+        "recovery": "disaster",
+        "lineage": "lineage-lost"
+      },
+      "outcome": "DEPENDENCY_UNAVAILABLE",
+      "effects": []
+    },
+    {
+      "id": "C29",
+      "kind": "command",
+      "inputs": {
+        "recovery": "disaster",
+        "lineage": "lineage-lost",
+        "complete_history": true
+      },
+      "outcome": "LINEAGE_CHANGED",
+      "effects": []
+    },
+    {
+      "id": "C30",
+      "kind": "command",
+      "inputs": {
+        "recovery": "disaster",
+        "lineage": "lineage-b"
+      },
+      "outcome": "ACK_NEW",
+      "effects": [
+        "state",
+        "event",
+        "receipt",
+        "outbox",
+        "quota",
+        "audit"
+      ]
+    },
+    {
+      "id": "S01",
+      "kind": "snapshot",
+      "inputs": {},
+      "outcome": "PROMOTED",
+      "effects": [
+        "snapshot"
+      ]
+    },
+    {
+      "id": "S02",
+      "kind": "snapshot",
+      "inputs": {
+        "same_scope": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "S03",
+      "kind": "snapshot",
+      "inputs": {
+        "tail": [
+          6
+        ]
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "S04",
+      "kind": "snapshot",
+      "inputs": {
+        "tail": [
+          5,
+          5,
+          6
+        ]
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "S05",
+      "kind": "snapshot",
+      "inputs": {
+        "assets_verified": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "S06",
+      "kind": "snapshot",
+      "inputs": {
+        "consistent_cut": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "S07",
+      "kind": "snapshot",
+      "inputs": {
+        "pinned": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "S08",
+      "kind": "snapshot",
+      "inputs": {
+        "complete_transfer": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "S09",
+      "kind": "snapshot",
+      "inputs": {
+        "same_lineage": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "S10",
+      "kind": "snapshot",
+      "inputs": {
+        "durable_bytes": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "S11",
+      "kind": "snapshot",
+      "inputs": {
+        "digest_matches": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "M01",
+      "kind": "migration",
+      "inputs": {},
+      "outcome": "EXPANDED",
+      "effects": [
+        "schema",
+        "journal"
+      ]
+    },
+    {
+      "id": "M02",
+      "kind": "migration",
+      "inputs": {
+        "catalog": "expanded"
+      },
+      "outcome": "RESUMED",
+      "effects": [
+        "journal"
+      ]
+    },
+    {
+      "id": "M03",
+      "kind": "migration",
+      "inputs": {
+        "catalog": "unrecognized"
+      },
+      "outcome": "FENCED",
+      "effects": []
+    },
+    {
+      "id": "M04",
+      "kind": "migration",
+      "inputs": {
+        "digest_matches": false
+      },
+      "outcome": "FENCED",
+      "effects": []
+    },
+    {
+      "id": "M05",
+      "kind": "migration",
+      "inputs": {
+        "compatible": false
+      },
+      "outcome": "FENCED",
+      "effects": []
+    },
+    {
+      "id": "M06",
+      "kind": "migration",
+      "inputs": {
+        "old_writer_fenced": false
+      },
+      "outcome": "FENCED",
+      "effects": []
+    },
+    {
+      "id": "M07",
+      "kind": "migration",
+      "inputs": {
+        "recoverable": false
+      },
+      "outcome": "FENCED",
+      "effects": []
+    },
+    {
+      "id": "M08",
+      "kind": "migration",
+      "inputs": {
+        "verified": false
+      },
+      "outcome": "FENCED",
+      "effects": []
+    },
+    {
+      "id": "D01",
+      "kind": "disaster",
+      "inputs": {},
+      "outcome": "EXPOSED",
+      "effects": [
+        "exposure"
+      ]
+    },
+    {
+      "id": "D02",
+      "kind": "disaster",
+      "inputs": {
+        "deletion_independent": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "D03",
+      "kind": "disaster",
+      "inputs": {
+        "applied_markers": [
+          6
+        ]
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "D04",
+      "kind": "disaster",
+      "inputs": {
+        "current_watermark": 7
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "D05",
+      "kind": "disaster",
+      "inputs": {
+        "audit_independent": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "D06",
+      "kind": "disaster",
+      "inputs": {
+        "audit_tail": [
+          5
+        ]
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "D07",
+      "kind": "disaster",
+      "inputs": {
+        "audit_tail": [
+          5,
+          6,
+          7
+        ]
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "D08",
+      "kind": "disaster",
+      "inputs": {
+        "revocations_applied": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "D09",
+      "kind": "disaster",
+      "inputs": {
+        "generation_fenced": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "D10",
+      "kind": "disaster",
+      "inputs": {
+        "exposure_fence": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "D11",
+      "kind": "disaster",
+      "inputs": {
+        "manifest_verified": false
+      },
+      "outcome": "ISOLATED",
+      "effects": []
+    },
+    {
+      "id": "R01",
+      "kind": "restore",
+      "inputs": {},
+      "outcome": "RESTORED",
+      "effects": [
+        "state",
+        "lineage",
+        "policy",
+        "audit"
+      ]
+    },
+    {
+      "id": "R02",
+      "kind": "restore",
+      "inputs": {
+        "same_scope": false
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    },
+    {
+      "id": "R03",
+      "kind": "restore",
+      "inputs": {
+        "authorized": false
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    },
+    {
+      "id": "R04",
+      "kind": "restore",
+      "inputs": {
+        "deleted": true
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    },
+    {
+      "id": "R05",
+      "kind": "restore",
+      "inputs": {
+        "generation_current": false
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    },
+    {
+      "id": "R06",
+      "kind": "restore",
+      "inputs": {
+        "audit_ready": false
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    },
+    {
+      "id": "R07",
+      "kind": "restore",
+      "inputs": {
+        "commit": false
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    }
+  ]
+}
