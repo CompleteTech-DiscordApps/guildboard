@@ -26,12 +26,22 @@ adoption. Its wrapper renders Excalidraw with view mode and bounded onChange
 metadata; it adds no separate semantic object outline. This does not establish
 the absence or completeness of the editor's internal accessibility.
 
-The current #483 record reports three bounded browser smoke checks on Chromium
+The historical #483 record reports three bounded browser smoke checks on Chromium
 156.0.8078.4 after dependency remediation. Its earlier zero-assertion launch
-failure is historical, not its current result. Those checks cover ID preservation,
+failure predates those results. Those checks cover ID preservation,
 a remote baseline/local-history undo case and view-mode smoke, **not** screen
 reader, comprehensive keyboard, touch/stylus or human acceptance. No #483 file
 was mutated, executed, copied into this fixture or adopted. T3 retains ownership.
+
+The [merged #530 keyboard probe](canvas-feasibility.md#undo-button-keyboard-probe-2026-11-17)
+at `3c1e1d6775b39e562fb81db16306b5b02e07502a` used Excalidraw 0.18.1 and
+sandbox-enabled headless Chromium 155.0.8059.84. Playwright found an enabled,
+visible button named Undo. With an API-prepared edit and programmatic focus on
+Undo, pressing Enter moved focus away and left the edit visible. Control+Z
+removed the edit after a pointer click returned focus to the editor. The result
+is limited to that exact local scenario. [Accepted-intent undo coverage for #99](https://github.com/CompleteTech-DiscordApps/guildboard/issues/99)
+still needs a keyboard-only path through Tab order, keyboard activation,
+focus destination and restoration in the user-facing controls.
 
 ## Current primary sources and evaluated versions
 
@@ -181,7 +191,12 @@ no host mounts/volumes/ports, one CPU, 768 MiB and 256 PIDs. It stops only its
 own process/container. Forced cleanup requires a matching invocation label and
 a valid full container ID from inspection. Removal and the absence check use
 that ID so automatic removal followed by name reuse preserves a replacement
-container. Existing workloads and WSL were not targets.
+container. A name-list snapshot taken without an inspected ID records only
+whether the name was absent at that moment. Confirmation also requires evidence
+that the container was registered and that the Docker client was reaped. With
+either missing, an empty listing yields `owned_container_absent: null` and a
+failed report. Cleanup errors are also emitted on stdout so a report write
+failure cannot hide them. Existing workloads and WSL were not targets.
 No image pull is performed; a missing image is an explicit local blocker.
 
 Environment: Windows PowerShell/Python **3.14.3**; MCP server
@@ -225,10 +240,10 @@ probe. The publication handoff records the exact SHA and hosted planning result.
 | #228 scope | Observable local/source evidence | Still-required acceptance |
 | --- | --- | --- |
 | Supported viewport/client matrix | D1–D3, concrete candidate matrix and eight synthetic cells | Real registered-app client/build/OS/browser/device/zoom/PIP/safe-area matrix and approved minimum support policy |
-| Practical keyboard/nonvisual alternatives | E1/E2/W1–W6; separate object/form prototype and focus/edit checks | T3/T7 accepted semantics/operation bridge; real keyboard, screen-reader and user tasks including groups/arrows/freehand/images/large boards |
+| Practical keyboard/nonvisual alternatives | E1/E2/W1–W6; separate object/form prototype and focus/edit checks; #530 local Undo focus finding | T3/T7 accepted semantics/operation bridge; real keyboard, screen-reader and user tasks including groups/arrows/freehand/images/large boards |
 | Touch/stylus/reduced motion/contrast | W3/W4/W7–W9; 44×44 outer controls/media emulation | Real touch/stylus/switch input, gesture cancellation, perceived contrast/focus and assistive-technology feedback |
 | Permission/reconnect/status feedback | W5 and explicit local draft/pending/accepted/rejected states | Actual authorization/revocation/socket/receipt/lineage integration with no false save status or data leaks |
-| Sources/versions/alternatives/uncertainty | 14 dated source observations, exact #483 input, local browser hashes/results and screenshot | Actual UX & Accessibility/security/consumer/CODEOWNER review and accepted #229 specification |
+| Sources/versions/alternatives/uncertainty | 14 dated source observations, historical #483 input, merged #530 keyboard probe, local browser hashes/results and screenshot | Actual UX & Accessibility/security/consumer/CODEOWNER review and accepted #229 specification |
 
 No actual screen reader, disabled participant/user study, mobile/stylus device or
 Discord client was exercised; browser automation/DOM semantics do not prove
@@ -302,8 +317,8 @@ network requests and emits the tested revision, source hashes, individual
 outcomes and screenshot hash. The screenshot SHA-256 was
 `e0cf6cf32f0b94efb7e26876f7181062d6c06da33582107211ed6bc9700dab66`. Two
 attempts with full Chromium executables timed out waiting for element stability.
-The 13 mocked Docker harness regressions passed separately. The exact Docker probe
-wrote a blocked report when the local socket denied access during image preflight.
+The 13 mocked Docker harness regressions at that revision passed separately.
+The exact Docker probe wrote a blocked report when the local socket denied access during image preflight.
 The planning validator returned zero errors across 471 items, 457 expected native
 relationships and 600 dependencies.
 
@@ -311,3 +326,8 @@ These results cover the local fixture only. Real Discord clients and iframe
 behavior, screen-reader speech, human usability, hardware input, consumer
 integration and required reviews are still open. The proposal has no approved
 support policy or #229 acceptance.
+
+The current harness passes 20 mocked regressions, including late daemon
+registration after an empty name-list snapshot, a client reaping timeout,
+and cleanup diagnostics when the report write fails. These checks use test
+doubles and do not exercise a Docker daemon or browser.

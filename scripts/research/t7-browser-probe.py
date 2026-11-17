@@ -52,6 +52,7 @@ def main() -> int:
                 if 'error' in message: raise RuntimeError(str(message['error']))
                 return message['result']
     failed=False
+    startup_confirmed=False
     try:
         report['stage']='initialization'
         report['observed_at_utc']=datetime.now(timezone.utc).isoformat()
@@ -80,6 +81,7 @@ def main() -> int:
                                  text=True,encoding='utf-8',bufsize=1)
         threading.Thread(target=read,daemon=True).start()
         init=request('initialize',{'protocolVersion':'2024-11-05','capabilities':{},'clientInfo':{'name':'guildboard-t7-research','version':'1'}})
+        startup_confirmed=True
         report['mcp_server']=init.get('serverInfo')
         process.stdin.write(json.dumps({'jsonrpc':'2.0','method':'notifications/initialized'})+'\n');process.stdin.flush()
         names=[t['name'] for t in request('tools/list',{})['tools']]
@@ -117,10 +119,15 @@ def main() -> int:
             report['owned_container_absent']=True
             report['cleanup_note']='No container process was started; preflight failed.'
         else:
+            report['owned_container_absent']=None
+            process_reaped=False
             try:
                 process.terminate()
                 try: process.wait(timeout=10)
-                except subprocess.TimeoutExpired: process.kill();process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+                process_reaped=True
             except Exception as error:
                 failed=True;report.update(result='blocked-or-failed',process_cleanup_error=str(error)[:4000])
             try:
@@ -135,12 +142,25 @@ def main() -> int:
                     # --rm can remove this container and free its name before rm runs.
                     subprocess.run([*docker,'rm','--force',container_id],capture_output=True,timeout=15)
                     remaining=subprocess.check_output([*docker,'ps','-a','--no-trunc','--format','{{.ID}}'],text=True,timeout=15).splitlines()
-                    report['owned_container_absent']=container_id not in remaining
+                    id_absent=container_id not in remaining
+                    report['owned_container_id_absent_at_check']=id_absent
+                    if not id_absent:
+                        report['owned_container_absent']=False
+                        raise RuntimeError('owned container remains after cleanup')
+                    startup_confirmed=True
                 else:
                     # Without an inspected ID, a successful listing can only establish name absence.
                     remaining=subprocess.check_output([*docker,'ps','-a','--format','{{.Names}}'],text=True,timeout=15).splitlines()
-                    report['owned_container_absent']=name not in remaining
-                if not report['owned_container_absent']: raise RuntimeError('owned container remains after cleanup')
+                    name_absent=name not in remaining
+                    report['container_name_absent_at_check']=name_absent
+                    if not name_absent:
+                        raise RuntimeError('container name is still listed and ownership is unconfirmed')
+                # The daemon can register a pending create after an empty listing.
+                if not process_reaped:
+                    raise RuntimeError('container cleanup is unconfirmed because the Docker client was not reaped')
+                if not startup_confirmed:
+                    raise RuntimeError('container cleanup is unconfirmed because startup was not observed')
+                report['owned_container_absent']=True
             except Exception as error:
                 failed=True;report.update(result='blocked-or-failed',cleanup_error=str(error)[:4000])
         try:
@@ -152,7 +172,8 @@ def main() -> int:
                 staged.replace(args.output)
         except OSError as error:
             failed=True;report.update(result='blocked-or-failed',report_write_error=str(error)[:4000])
-    print(json.dumps({k:report.get(k) for k in ('result','owned_container_absent','error','report_write_error')}))
+    print(json.dumps({k:report.get(k) for k in ('result','owned_container_absent','error',
+                                                'process_cleanup_error','cleanup_error','report_write_error')}))
     return int(failed)
 
 

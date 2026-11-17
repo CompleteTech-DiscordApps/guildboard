@@ -182,9 +182,76 @@ class CleanupOwnership(unittest.TestCase):
         self.assertIn(self.OWNED_ID, live)
 
 
-class ReportPublicationFailures(unittest.TestCase):
-    def exercise(self, partial):
+class UnconfirmedCleanup(unittest.TestCase):
+    def exercise(self, startup_observed, reap_timeout):
         process = OwnedProcess()
+        if not startup_observed:
+            process.stdout = io.StringIO()
+        docker_names = []
+        name_at_launch = None
+
+        def launch(command, **kwargs):
+            nonlocal name_at_launch
+            name_at_launch = command[command.index('--name') + 1]
+            return process
+
+        def check_output(command, **kwargs):
+            if command[0] == 'git':
+                return 'fixture-head\n'
+            if command[1:] == ['context', 'show']:
+                return 'test-context\n'
+            self.assertEqual(command[-4:], ['ps', '-a', '--format', '{{.Names}}'])
+            listed = '\n'.join(docker_names)
+            if not startup_observed:
+                # Model the daemon registering an in-flight create after taking the listing snapshot.
+                docker_names.append(name_at_launch)
+            return listed
+
+        def run(command, **kwargs):
+            if command[3:5] == ['container', 'inspect']:
+                self.assertEqual(docker_names, [])
+                return subprocess.CompletedProcess(command, 1, stdout='')
+            self.assertNotIn('rm', command)
+            if 'cp' in command:
+                Path(command[-1]).write_bytes(b'screenshot')
+            return subprocess.CompletedProcess(command, 0)
+
+        timeout = subprocess.TimeoutExpired('docker run', 5)
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'evidence.json'
+            with patch.object(sys, 'argv', ['probe', '--output', str(output)]), \
+                 patch.object(PROBE.subprocess, 'check_output', side_effect=check_output), \
+                 patch.object(PROBE.subprocess, 'run', side_effect=run), \
+                 patch.object(PROBE.subprocess, 'Popen', side_effect=launch), \
+                 patch.object(process, 'wait', side_effect=timeout if reap_timeout else None, return_value=0) as wait, \
+                 patch.object(process, 'kill', create=True) as kill, \
+                 contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(PROBE.main(), 1)
+            report = json.loads(output.read_text())
+        self.assertTrue(report['container_name_absent_at_check'])
+        self.assertIsNone(report['owned_container_absent'])
+        self.assertEqual(report['result'], 'blocked-or-failed')
+        if reap_timeout:
+            self.assertEqual(wait.call_count, 2)
+            kill.assert_called_once_with()
+            self.assertIn('not reaped', report['cleanup_error'])
+            self.assertIn('timed out', report['process_cleanup_error'])
+        else:
+            self.assertEqual(docker_names, [report['container']])
+            self.assertIn('startup was not observed', report['cleanup_error'])
+
+    def test_empty_listing_can_precede_late_registration(self):
+        self.exercise(startup_observed=False, reap_timeout=False)
+
+    def test_empty_listing_does_not_confirm_cleanup_after_reap_timeout(self):
+        self.exercise(startup_observed=True, reap_timeout=True)
+
+
+class ReportPublicationFailures(unittest.TestCase):
+    def exercise(self, partial, cleanup_unconfirmed=False):
+        process = OwnedProcess()
+        if cleanup_unconfirmed:
+            process.stdout = io.StringIO()
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / 'evidence.json'
             old_image = Path(directory) / 'old.png'
@@ -210,8 +277,13 @@ class ReportPublicationFailures(unittest.TestCase):
                  patch.object(PROBE.subprocess, 'check_output', side_effect=check_output), \
                  patch.object(PROBE.subprocess, 'run', side_effect=run), \
                  patch.object(PROBE.subprocess, 'Popen', return_value=process), \
-                 patch.object(Path, 'write_bytes', write), contextlib.redirect_stdout(io.StringIO()):
+                 patch.object(Path, 'write_bytes', write), contextlib.redirect_stdout(io.StringIO()) as stdout:
                 self.assertEqual(PROBE.main(), 1)
+            summary = json.loads(stdout.getvalue())
+            self.assertIn('injected report write failure', summary['report_write_error'])
+            if cleanup_unconfirmed:
+                self.assertIn('startup was not observed', summary['cleanup_error'])
+                self.assertIsNone(summary['owned_container_absent'])
             self.assertEqual(output.read_text(), old_report)
             self.assertEqual(old_image.read_bytes(), b'old screenshot')
             self.assertEqual(list(Path(directory).glob('.t7-report-*')), [])
@@ -222,6 +294,9 @@ class ReportPublicationFailures(unittest.TestCase):
 
     def test_partial_report_write_failure(self):
         self.exercise(True)
+
+    def test_write_failure_still_reports_cleanup_error(self):
+        self.exercise(False, cleanup_unconfirmed=True)
 
 
 class CliStartupReports(unittest.TestCase):
