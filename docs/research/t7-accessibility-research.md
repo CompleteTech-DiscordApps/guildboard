@@ -260,3 +260,52 @@ The original historical evidence and screenshot remain unchanged; separate
 results are appended under `campaign_verifications` in the evidence JSON.
 These local checks do not satisfy the remaining client/AT/hardware/consumer
 review gates or unblock #229.
+
+## Offline current-base recheck, 2026-11-17 UTC
+
+The local candidate retains draft `475c9c6a1c043fdf6c88444ac4f3dff48c2feab8`
+and main `46e5306` as ancestors. The
+[accepted system contract](../specifications/GB-T0-S1-system-contract.md)
+and [editor selection for a controlled experiment](../adr/0004-editor-and-database-selection.md)
+govern any future bridge. The proposed outline and visual editor would consume
+the same currently authorized state, submit the same bounded operation proposals
+and wait for the server's applicable durable receipt before displaying accepted
+content. The fixture still uses synthetic data and has no editor integration.
+
+A retained invalid position now keeps its validation feedback when the draft is
+reselected after editing is revoked. The regression failed against the previous
+prototype and passed after validation became independent of the browser's
+read-only form validation behavior. The earlier 30 assertions and eight local
+viewport cells still pass.
+
+Run the following from the repository root with an existing Playwright 1.64.1
+package directory and matching Chromium Headless Shell 156.0.8078.4 executable
+set as `PLAYWRIGHT_DIR` and `CHROMIUM_EXECUTABLE`. The package for this run was
+materialized in a scratch directory from the offline npm cache with scripts
+disabled. No browser download is required.
+
+```sh
+evidence_dir=$(mktemp -d)
+node scripts/research/t7-local-browser-probe.cjs \
+  "$PLAYWRIGHT_DIR" "$CHROMIUM_EXECUTABLE" "$evidence_dir" > "$evidence_dir/browser.json"
+python3 tests/research/t7-test-probe-failures.py
+python3 scripts/github-bootstrap/validate.py --report "$evidence_dir/planning.json"
+git diff --check
+```
+
+The executable revision `46a96f72d0866016869de155a1d620efcfa3287e` passed 31
+assertions using Node 26.13.0 and Playwright 1.64.1 with the cached sandbox-enabled
+Chromium Headless Shell 156.0.8078.4 on Arch Linux. The runner blocks fixture
+network requests and emits the tested revision, source hashes, individual
+outcomes and screenshot hash. The screenshot SHA-256 was
+`e0cf6cf32f0b94efb7e26876f7181062d6c06da33582107211ed6bc9700dab66`. Two
+attempts with full Chromium executables timed out waiting for element stability.
+The 13 mocked Docker harness regressions passed separately. The exact Docker probe
+wrote a blocked report when the local socket denied access during image preflight.
+The planning validator returned zero errors across 471 items, 457 expected native
+relationships and 600 dependencies.
+
+These results cover the local fixture only. Real Discord clients and iframe
+behavior, screen-reader speech, human usability, hardware input, consumer
+integration and required reviews are still open. The proposal has no approved
+support policy or #229 acceptance.
