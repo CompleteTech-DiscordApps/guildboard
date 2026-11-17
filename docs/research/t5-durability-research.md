@@ -212,7 +212,7 @@ return. The failed report records `cleanup.unresolved_creation` and
 `cleanup.observed_absence_at_final_inventory`. A null settled absence means the
 probe could not establish that cleanup was final. If container creation remains
 unresolved, cleanup retains its data volume because a late run could mount or
-recreate it. Reconcile on the recorded Docker context using the exact
+recreate it. A nonzero create or run client response is also an unresolved outcome until daemon evidence settles it. Reconcile on the recorded Docker context using the exact
 `<run_id>-db` and `<run_id>-data` names. Inspect the exact resources and confirm
 that the value of `tech.complete.guildboard.t5.run` equals the reported run ID
 before removing anything. Handle the verified container before its verified
@@ -220,6 +220,17 @@ volume and inventory both names again. If the resource has never appeared, keep
 the creation unresolved until daemon evidence establishes that the request
 can no longer create it. An absent name in a later inventory is still a
 point-in-time observation while the request remains unresolved.
+
+The current runner requires `--exclusive-disposable-daemon` before contacting
+Docker. Supply it only with exclusive administration of the disposable daemon
+and its volumes. Docker named volumes are checked by name and run label, so this
+environment requirement covers changes between their ownership check and use.
+The runner pins one Docker context. It validates the label and full immutable
+container ID, then uses that ID for SQL, restart and removal. Cleanup inventory
+tracks the ID once established, including any name change. Keep any subsequent
+run's output in a new file outside the pinned historical evidence. Future
+commands use the original engine and digest arguments plus the exclusive-daemon
+flag. The commands below document the original historical runner.
 
 The historical database reports were produced from the
 [probe at commit `5e8a9fe999e0ef6db5509ad4075e324da6c2be79`](https://github.com/CompleteTech-DiscordApps/guildboard/blob/5e8a9fe999e0ef6db5509ad4075e324da6c2be79/scripts/research/t5-db-probe.py),

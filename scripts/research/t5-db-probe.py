@@ -80,7 +80,9 @@ INSERT INTO outbox(guild,board,lineage,revision)
 
 
 class Probe:
-    def __init__(self, engine: str, image: str):
+    def __init__(self, engine: str, image: str, *, exclusive_disposable_daemon: bool):
+        if exclusive_disposable_daemon is not True:
+            raise ValueError("the caller must exclusively administer a disposable Docker daemon")
         self.engine, self.image = engine, image
         self.context = subprocess.check_output(
             ["docker", "context", "show"], text=True
@@ -88,6 +90,7 @@ class Probe:
         self.run_id = "guildboard-t5-" + uuid.uuid4().hex[:12]
         self.name, self.volume = self.run_id + "-db", self.run_id + "-data"
         self.label = "tech.complete.guildboard.t5.run"
+        self.container_id: str | None = None
         self.unresolved_creation: set[str] = set()
         self.cli = "mysql" if engine == "mysql" else "mariadb"
         self.report = {
@@ -95,6 +98,7 @@ class Probe:
             "observed_at_utc": datetime.now(timezone.utc).isoformat(),
             "engine": engine, "requested_image": image, "docker_context": self.context,
             "run_id": self.run_id, "checks": [],
+            "exclusive_disposable_daemon_confirmed": True,
             "limits": {"cpus": 1, "memory_bytes": 805306368,
                        "pids": 256, "network": "none", "published_ports": []},
         }
@@ -107,21 +111,39 @@ class Probe:
             check=check,
         )
 
-    def create_resource(self, kind: str, *args: str) -> None:
+    def create_resource(self, kind: str, *args: str) -> subprocess.CompletedProcess:
         try:
-            self.command(*args)
-        except subprocess.TimeoutExpired:
+            return self.command(*args)
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+            # The client may have lost a response after the daemon received it.
             self.unresolved_creation.add(kind)
             raise
 
-    def verify_owner(self, kind: str, name: str) -> None:
-        inspected = json.loads(self.command(kind, "inspect", name).stdout)[0]
+    def verify_owner(self, kind: str, identity: str) -> None:
+        inspected = json.loads(self.command(kind, "inspect", identity).stdout)[0]
         labels = inspected["Config"]["Labels"] if kind == "container" else inspected["Labels"]
         if (labels or {}).get(self.label) != self.run_id:
             raise RuntimeError("refusing mutation of resource without invocation ownership")
+        if kind == "container" and inspected.get("Id") != identity:
+            raise RuntimeError("refusing mutation of a different container identity")
+
+    def owned_container(self) -> str:
+        if self.container_id is None:
+            raise RuntimeError("container identity has not been verified")
+        return self.container_id
+
+    def listed_container(self) -> str | None:
+        listing = self.command("ps", "--all", "--no-trunc", "--format", "{{.ID}} {{.Names}}")
+        for line in listing.stdout.splitlines():
+            identity, _, name = line.partition(" ")
+            if identity == self.container_id or (self.container_id is None and name == self.name):
+                if not re.fullmatch(r"[a-f0-9]{64}", identity):
+                    raise RuntimeError("container inventory did not provide a full ID")
+                return identity
+        return None
 
     def sql(self, sql: str, database: str = "t5_research", check: bool = True) -> str:
-        result = self.command("exec", "-i", self.name, self.cli, "-uroot",
+        result = self.command("exec", "-i", self.owned_container(), self.cli, "-uroot",
                               "--batch", "--raw", "--skip-column-names",
                               "--skip-reconnect", database, data=sql, check=check)
         if not check:
@@ -139,9 +161,9 @@ class Probe:
         deadline = time.monotonic() + 90
         while time.monotonic() < deadline:
             # Entrypoint's temporary initialization server must not count as ready.
-            proc = self.command("exec", self.name, "cat", "/proc/1/comm", check=False)
+            proc = self.command("exec", self.owned_container(), "cat", "/proc/1/comm", check=False)
             if proc.stdout.strip() in ("mysqld", "mariadbd"):
-                result = self.command("exec", self.name, self.cli, "-uroot",
+                result = self.command("exec", self.owned_container(), self.cli, "-uroot",
                                       "--batch", "--execute=SELECT 1", check=False)
                 if result.returncode == 0:
                     return
@@ -158,7 +180,7 @@ class Probe:
         # Never mount it until ownership has been observed on the actual resource.
         self.verify_owner("volume", self.volume)
         env = "MYSQL_ALLOW_EMPTY_PASSWORD=yes" if self.engine == "mysql" else "MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=1"
-        self.create_resource(
+        created = self.create_resource(
             "container", "run", "--detach", "--pull=never", "--name", self.name,
             "--label", self.label + "=" + self.run_id, "--network=none",
             "--cpus=1", "--memory=768m", "--pids-limit=256",
@@ -167,6 +189,11 @@ class Probe:
             "--innodb-flush-log-at-trx-commit=1", "--sync-binlog=1",
             "--log-bin=t5-bin", "--server-id=51",
         )
+        identity = created.stdout.strip()
+        if not re.fullmatch(r"[a-f0-9]{64}", identity):
+            raise RuntimeError("container creation did not provide a full ID")
+        self.verify_owner("container", identity)
+        self.container_id = identity
         self.ready()
         self.sql(SCHEMA, database="mysql")
         self.report["server_version"] = self.sql("SELECT VERSION();")
@@ -178,7 +205,7 @@ class Probe:
 
     def session(self, sql: str) -> tuple[subprocess.Popen, queue.Queue]:
         process = subprocess.Popen(
-            ["docker", "--context", self.context, "exec", "-i", self.name,
+            ["docker", "--context", self.context, "exec", "-i", self.owned_container(),
              self.cli, "-uroot", "--batch", "--raw", "--skip-column-names",
              "--skip-reconnect", "--unbuffered", "t5_research"],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -211,10 +238,11 @@ class Probe:
         process, lines = self.session(sql + "; SELECT 'T5_BARRIER'; SELECT SLEEP(45);")
         try:
             self.barrier(lines)
-            self.verify_owner("container", self.name)
-            self.command("kill", "--signal=KILL", self.name)
+            identity = self.owned_container()
+            self.verify_owner("container", identity)
+            self.command("kill", "--signal=KILL", identity)
             process.wait(timeout=15)
-            self.command("start", self.name)
+            self.command("start", identity)
             self.ready()
         finally:
             if process.poll() is None:
@@ -319,7 +347,7 @@ COMMIT;
         options = ["--single-transaction", "--quick", "--skip-comments", "--no-tablespaces"]
         if self.engine == "mysql":
             options.append("--set-gtid-purged=OFF")
-        dump = self.command("exec", self.name, dumper, "-uroot", *options, "t5_research").stdout
+        dump = self.command("exec", self.owned_container(), dumper, "-uroot", *options, "t5_research").stdout
         self.sql("CREATE DATABASE t5_restored;")
         self.sql(dump, database="t5_restored")
         restored = self.bundle("t5_restored")
@@ -332,33 +360,35 @@ COMMIT;
         # A timed-out create can reach the daemon after these inventories.
         # Only observing the owned resource resolves that creation here.
         errors = []
-        inventories = {
-            "container": ("ps", "--all", "--format", "{{.Names}}"),
-            "volume": ("volume", "ls", "--format", "{{.Name}}"),
-        }
-        resources = (("container", self.name), ("volume", self.volume))
-        for kind, name in resources:
+        def listed_resource(kind: str) -> str | None:
+            if kind == "container":
+                return self.listed_container()
+            volumes = self.command("volume", "ls", "--format", "{{.Name}}")
+            return self.volume if self.volume in volumes.stdout.splitlines() else None
+
+        for kind in ("container", "volume"):
             try:
-                names = self.command(*inventories[kind]).stdout.splitlines()
-                if name in names:
-                    self.verify_owner(kind, name)
+                identity = listed_resource(kind)
+                if identity is not None:
+                    self.verify_owner(kind, identity)
                     # A pending run could mount or recreate the named volume.
                     if kind == "volume" and "container" in self.unresolved_creation:
                         continue
                     self.unresolved_creation.discard(kind)
                     if kind == "container":
-                        self.command("rm", "--force", name)
+                        self.container_id = identity
+                        self.command("rm", "--force", identity)
                     else:
-                        self.command("volume", "rm", name)
+                        self.command("volume", "rm", identity)
             except Exception as error:
                 # The other exact resource still gets its own ownership check.
                 # A later cleanup call can retry safely; this call remains failed.
                 errors.append(f"{kind}: {error}")
         absent, observed = {}, {}
-        for kind, name in resources:
+        for kind in ("container", "volume"):
             key = kind + "_absent"
             try:
-                observed[key] = name not in self.command(*inventories[kind]).stdout.splitlines()
+                observed[key] = listed_resource(kind) is None
                 if not observed[key]:
                     errors.append(f"{kind}: resource remains after cleanup")
             except Exception as error:
@@ -385,10 +415,13 @@ def main() -> int:
     parser.add_argument("--engine", choices=("mysql", "mariadb"), required=True)
     parser.add_argument("--image", required=True, help="pre-existing repository@sha256 digest")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--exclusive-disposable-daemon", action="store_true", required=True,
+                        help="confirm exclusive administration of the disposable daemon and volumes")
     args = parser.parse_args()
     if not re.fullmatch(args.engine + r"@sha256:[0-9a-f]{64}", args.image):
         parser.error("explicit engine repository@sha256 digest required; no mutable tag/pull")
-    probe = Probe(args.engine, args.image)
+    probe = Probe(args.engine, args.image,
+                  exclusive_disposable_daemon=args.exclusive_disposable_daemon)
     failed = False
     try:
         probe.start()

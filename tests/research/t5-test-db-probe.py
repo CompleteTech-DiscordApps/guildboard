@@ -1,5 +1,6 @@
 """Fake Docker safety regressions; no daemon or database is contacted."""
 import contextlib
+import hashlib
 import io
 import importlib.util
 import json
@@ -8,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 spec = importlib.util.spec_from_file_location(
     "t5_db_probe", Path(__file__).resolve().parents[2] / "scripts/research/t5-db-probe.py")
@@ -17,17 +18,27 @@ spec.loader.exec_module(module)
 
 
 class FakeDocker:
-    def __init__(self, probe, volume_owner=None, timeout_after_create=False, delayed_creation=None):
+    def __init__(self, probe, volume_owner=None, timeout_after_create=False,
+                 delayed_creation=None, delayed_transport_failure=False):
         self.probe = probe
         self.volumes = {} if volume_owner is None else {probe.volume: volume_owner}
         self.containers = {}
+        self.container_ids = {}
         self.timeout_after_create = timeout_after_create
         self.delayed_creation = delayed_creation
+        self.delayed_transport_failure = delayed_transport_failure
         self.pending_creation = None
         self.calls = []
         self.sql_calls = []
         self.failures = {}
         self.removal_noop = False
+
+    def container_identity(self, name):
+        return self.container_ids.get(name, hashlib.sha256(name.encode()).hexdigest())
+
+    def container_name(self, identity):
+        return next((name for name in self.containers
+                     if self.container_identity(name) == identity), None)
 
     def command(self, *args, **kwargs):
         self.calls.append(args)
@@ -46,24 +57,33 @@ class FakeDocker:
             if self.timeout_after_create:
                 raise subprocess.TimeoutExpired("docker volume create", 90)
         elif args[:2] in (("volume", "inspect"), ("container", "inspect")):
-            resources = self.volumes if args[0] == "volume" else self.containers
-            if args[2] not in resources:
+            is_volume = args[0] == "volume"
+            resources = self.volumes if is_volume else self.containers
+            name = args[2] if is_volume else self.container_name(args[2])
+            if name not in resources:
                 code = 1
             else:
-                owner = resources[args[2]]
+                owner = resources[name]
                 labels = None if owner == "unlabeled" else {p.label: owner}
-                value = {"Labels": labels} if args[0] == "volume" else {"Config": {"Labels": labels}}
+                value = ({"Labels": labels} if is_volume else
+                         {"Id": args[2], "Config": {"Labels": labels}})
                 stdout = json.dumps([value])
         elif args[0] == "run":
             self.delay_if_requested("container", self.containers, p.name)
             self.containers[p.name] = p.run_id
-        elif args[0] == "rm":
-            del self.containers[args[-1]]
+            stdout = self.container_identity(p.name)
+        elif args[0] in ("rm", "kill", "start"):
+            name = self.container_name(args[-1])
+            if name is None:
+                code = 1
+            elif args[0] == "rm":
+                del self.containers[name]
         elif args[:2] == ("volume", "rm"):
             if not self.removal_noop:
                 del self.volumes[args[2]]
         elif args[0] == "ps":
-            stdout = "\n".join(self.containers)
+            stdout = "\n".join(f"{self.container_identity(name)} {name}"
+                               for name in self.containers)
         elif args[:2] == ("volume", "ls"):
             stdout = "\n".join(self.volumes)
         else:
@@ -75,6 +95,8 @@ class FakeDocker:
     def delay_if_requested(self, kind, resources, name):
         if self.delayed_creation == kind:
             self.pending_creation = (resources, name)
+            if self.delayed_transport_failure:
+                raise subprocess.CalledProcessError(1, "docker create", stderr="response lost")
             raise subprocess.TimeoutExpired("docker create", 90)
 
     def complete_pending_creation(self):
@@ -90,7 +112,7 @@ class FakeDocker:
 class OwnershipTests(unittest.TestCase):
     def make_probe(self, **kwargs):
         with patch.object(module.subprocess, "check_output", return_value="fake-context"):
-            p = module.Probe("mysql", "mysql@sha256:" + "0" * 64)
+            p = module.Probe("mysql", "mysql@sha256:" + "0" * 64, exclusive_disposable_daemon=True)
         fake = FakeDocker(p, **kwargs)
         p.command, p.sql, p.ready = fake.command, fake.sql, lambda: None
         return p, fake
@@ -147,6 +169,56 @@ class OwnershipTests(unittest.TestCase):
                 self.assertTrue(p.report["cleanup"]["container_absent"])
                 self.assertTrue(p.report["cleanup"]["volume_absent"])
 
+    def test_transport_failure_does_not_settle_unobserved_creation(self):
+        p, fake = self.make_probe(delayed_creation="volume", delayed_transport_failure=True)
+        code, report = self.run_main(p, start=True)
+        self.assertEqual(code, 1)
+        self.assertEqual(report["error_type"], "CalledProcessError")
+        cleanup = report["cleanup"]
+        self.assertEqual(cleanup["unresolved_creation"], ["volume"])
+        self.assertTrue(cleanup["observed_absence_at_final_inventory"]["volume_absent"])
+        self.assertIsNone(cleanup["volume_absent"])
+        fake.complete_pending_creation()
+        p.cleanup()
+        self.assertTrue(p.report["cleanup"]["volume_absent"])
+
+    def test_cleanup_preserves_replacement_after_identity_check(self):
+        p, fake = self.make_probe()
+        p.start()
+        owned_id = p.container_id
+        replacement = "f" * 64
+
+        def replace_and_remove(*args, **kwargs):
+            if args[0] == "rm":
+                fake.containers[p.name] = "foreign"
+                fake.container_ids[p.name] = replacement
+            return fake.command(*args, **kwargs)
+
+        p.command = replace_and_remove
+        with self.assertRaises(RuntimeError):
+            p.cleanup()
+        self.assertIn(("rm", "--force", owned_id), fake.calls)
+        self.assertEqual(fake.containers, {p.name: "foreign"})
+
+    def test_crash_and_restart_use_full_owned_container_id(self):
+        p, fake = self.make_probe()
+        p.start()
+        process = Mock()
+        process.poll.return_value = 0
+        with patch.object(p, "session", return_value=(process, object())), \
+                patch.object(p, "barrier", return_value=[]):
+            p.crash_at("SELECT 1")
+        self.assertIn(("container", "inspect", p.container_id), fake.calls)
+        self.assertIn(("kill", "--signal=KILL", p.container_id), fake.calls)
+        self.assertIn(("start", p.container_id), fake.calls)
+
+    def test_dedicated_daemon_confirmation_required_before_docker(self):
+        with patch.object(module.subprocess, "check_output") as docker:
+            with self.assertRaisesRegex(ValueError, "exclusively administer"):
+                module.Probe("mysql", "mysql@sha256:" + "0" * 64,
+                             exclusive_disposable_daemon=False)
+        docker.assert_not_called()
+
     def test_timed_out_create_collision_preserves_foreign_volume(self):
         p, fake = self.make_probe(volume_owner="foreign", timeout_after_create=True)
         with self.assertRaises(subprocess.TimeoutExpired):
@@ -183,7 +255,8 @@ class OwnershipTests(unittest.TestCase):
         p.exercise = lambda: None
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / 'result.json'
-            argv = ['probe', '--engine', 'mysql', '--image', p.image, '--output', str(output)]
+            argv = ['probe', '--engine', 'mysql', '--image', p.image,
+                    '--exclusive-disposable-daemon', '--output', str(output)]
             with patch.object(module, 'Probe', return_value=p), patch.object(sys, 'argv', argv), \
                     contextlib.redirect_stdout(io.StringIO()):
                 code = module.main()
@@ -239,7 +312,7 @@ class OwnershipTests(unittest.TestCase):
 class ConstraintFixtureTests(unittest.TestCase):
     def test_d03_varies_the_operation_and_revision_constraints_independently(self):
         with patch.object(module.subprocess, "check_output", return_value="fake-context"):
-            probe = module.Probe("mysql", "mysql@sha256:" + "0" * 64)
+            probe = module.Probe("mysql", "mysql@sha256:" + "0" * 64, exclusive_disposable_daemon=True)
         with patch.object(probe, "bundle", return_value="same rows"), \
                 patch.object(probe, "sql", side_effect=["1\nERROR 1062", "1\nERROR 1062",
                                                        "1\nERROR 1452"]) as sql, \
