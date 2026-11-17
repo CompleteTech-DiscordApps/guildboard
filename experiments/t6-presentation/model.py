@@ -99,13 +99,17 @@ def snapshot(viewer, authority):
     target scope is unseen and MAX_SCOPE_HISTORY distinct scopes are retained.
     History uses first-seen scope insertion order; refreshing a known scope
     replaces its entry in place. No untrusted packet can add a scope to history.
+    A known scope accepts an identical snapshot or one that advances both its
+    revision and stream epoch, as required by this model's transition function.
     """
     history = {entry.authority.scope: entry for entry in viewer.history}
     history[viewer.authority.scope] = StreamMemory(
         viewer.authority, viewer.sequence, viewer.presenter_view)
     previous = history.get(authority.scope)
-    if previous is not None and authority.revision < previous.authority.revision:
-        return viewer
+    if previous is not None and authority != previous.authority:
+        if (authority.revision <= previous.authority.revision
+                or authority.epoch <= previous.authority.epoch):
+            return viewer
     if previous is None and len(history) >= MAX_SCOPE_HISTORY:
         raise ValueError('scope history budget exhausted; validated fresh stream required')
     same_stream = previous is not None and authority.epoch == previous.authority.epoch

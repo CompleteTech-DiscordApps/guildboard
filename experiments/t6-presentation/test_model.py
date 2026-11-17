@@ -237,6 +237,19 @@ class PresentationResearch(unittest.TestCase):
         updated = receive(returned, replace(self.p, epoch=newest.epoch))
         self.assertEqual(follow(updated).displayed, self.p.view)
 
+    def test_inconsistent_snapshot_cannot_reopen_or_reuse_stream(self):
+        v = receive(self.v, replace(self.p, sequence=10))
+        other = snapshot(v, replace(self.a, scope=('guild-b', 'board-a')))
+        for authority in (
+            replace(self.a, presenter='bob'),
+            replace(self.a, epoch=2),
+            replace(self.a, revision=2),
+            replace(self.a, revision=2, epoch=0),
+        ):
+            with self.subTest(authority=authority):
+                self.assertIs(snapshot(v, authority), v)
+                self.assertIs(snapshot(other, authority), other)
+
     def test_naive_follow_snapshot_overwrites_personal_counterexample(self):
         displayed = receive(self.v, self.p)
         naive_personal_on_second_follow = displayed.displayed

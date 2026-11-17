@@ -105,7 +105,7 @@ multi-process behavior, fairness, persistence, liveness, or real network orderin
 
 ## 2026-11-12 follow-up: passive receipt and scope round trips
 
-The current model passes **18 tests**. New regressions first failed against the
+The 2026-11-12 model passed **18 tests**. New regressions first failed against the
 previous candidate `d480b5d99af8acfd4b493fac94e958392f9493d0`: a valid update while
 unfollowed was lost, and A → B → A reopened A's old sequence numbers. `receive`
 now updates the current stream's sequence/cache while unfollowed without changing
@@ -170,6 +170,34 @@ Do not retry the previously denied browser launch to manufacture this evidence.
 GoDaddy Linux VPS HTTPS/WSS remains mandatory; infrastructure, proxy and load
 claims are not applicable to this pure model and require later real-environment
 verification. No credentials or production infrastructure are touched.
+
+## 2026-11-17 reconciliation
+
+For a known scope, the model can restore its cached viewport and watermark from
+an identical authority snapshot. A changed snapshot must advance both the
+revision and the stream epoch. Otherwise the viewer remains unchanged, including
+when returning to a previously visited board. This preserves the model's control
+transition invariant and prevents an inconsistent trusted snapshot from
+reopening an older epoch or assigning a cached presenter view to another
+presenter.
+
+The regression covering four inconsistent snapshot variants fails on the
+previous model and passes with this guard. The full offline suite passes
+**19 tests** on Linux with Python **3.14.8**, using the commands above.
+
+The accepted [GB-T0.S1 system contract](../../docs/specifications/GB-T0-S1-system-contract.md)
+([acceptance record](../../docs/workstreams/T0.md)) requires server-derived
+tenant scope and current authorization at mutation and protected release. T6
+integration must reauthorize viewport subscriptions and queued releases through
+that boundary. The model's trusted snapshot and publication inputs assume
+those decisions. A presenter stream epoch fences navigation updates within
+the model and confers no write permission.
+
+For platform validation, use the dated [T1 Discord source assessment](../../docs/research/t1-discord-feasibility.md#2026-11-16--bounded-current-source-assessment)
+and [ADR 0004 experiment pins](../../docs/adr/0004-editor-and-database-selection.md)
+for context. SDK 2.5.0 and Excalidraw 0.18.1 are evaluated in their respective
+workstreams. T6 still needs recorded client builds and actual presenter/follow
+observations across Discord desktop, web and mobile.
 
 For #197 review: decide overlay versus mutually exclusive presentation mode,
 mode/grant/queue lifecycle, disconnect/reconnect continuity, trusted snapshot
