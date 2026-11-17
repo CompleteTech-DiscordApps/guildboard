@@ -98,7 +98,7 @@ redacted source documents referenced by the record.
 | Candidate identity | `version`, `revision`, `artifactSha256`, `manifestSha256`, `notesSha256`. The publisher derives these fields from the staged bytes. An identity supplied by a caller is valid only when all fields match the derived identity. |
 | Gate approval | `schemaVersion`, `gate`, `identity` (candidate identity), `decision` (`approved`), `decisionRef`, `provenanceRef`. The decision ref resolves to the authoritative maintainer decision under repository governance. Verify who made the decision, their authority for the named gate, the current applicability and outcome of the decision, and all identity fields. Gate and provenance must agree with the candidate manifest. |
 | Public publication receipt | `schemaVersion`, `identity`, `gate`, `decisionRef`, `provenanceRef`, `tagRef`, `releaseRef`. Store the full candidate identity and the gate, decision and provenance references from the verified approval. `tagRef` is a fully qualified Git tag ref in this repository resolving to `identity.revision`. `releaseRef` is the canonical repository release link for that tag, resolving to the complete publication. Verify the tag target and the release bytes through authoritative readback. |
-| Internal commit authorization | Bind the verified approval and applicable native prerequisite decisions to the exact candidate and committed version reservation. Store immutable proof of the decision, its authority and applicability at commit, and the verified evidence references. Redact private inputs before making any public receipt. |
+| Internal commit authorization | Bind the exact verified approval and applicable native prerequisite decisions to the candidate and committed version reservation. Store immutable proof of decisions, authority and applicability at commit, and the verified evidence references. Seal the proof digest in the authenticated authoritative reservation so altered proof cannot satisfy later readback. Redact private inputs before making any public receipt. |
 
 The artifact digest is SHA-256 of the UTF-8 checksum index, including for a
 single distributed file. For every file in the distributed payload, record
@@ -168,7 +168,9 @@ identity and the current applicability of the exact approval and required
 prerequisite evidence, including the designated MVP receipt for G3.
 Obtain the applicable decisions from each authoritative evidence source. Fence
 commit against intervening changes to those decisions, including replacement,
-supersession or withdrawal. Reserve the candidate
+supersession or withdrawal. Bind the commit to the verified immutable staged
+bundle and revalidate before commitment if the staging boundary can change.
+Reserve the candidate
 version permanently and make the complete candidate and its receipt
 discoverable with a durable commit authorization. Key the version reservation by the
 full released SemVer string. Any existing reservation for that version with a
@@ -191,8 +193,9 @@ identity, and verify the receipt and the resolved tag and release references.
 Resolve the notes and provenance paths within the observed bundle, verify the
 notes declaration and the indexed provenance and build files, and require
 agreement across approval, receipt, resolved source revision and recomputed
-identity. Verify the stored commit authorization as evidence of the historical
-decision. Subsequent changes to live authorization govern new commits.
+identity. Verify both the stored commit authorization and its exact
+reservation-bound seal as evidence of the historical decision. Subsequent
+changes to live authorization govern new commits.
 Historical readback continues to validate against the durable proof captured
 at the original commit. A null pointer is valid only with empty authoritative history.
 Otherwise the pointer must resolve to a fully verified current publication

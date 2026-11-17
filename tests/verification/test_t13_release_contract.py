@@ -185,6 +185,7 @@ class State:
     versions: dict
     committed_authorizations: dict = field(default_factory=dict)
     designated_mvp: dict | None = None
+    reservation_proof_digests: tuple = ()
 
 
 def json_object(data, limit):
@@ -307,11 +308,13 @@ def verified_receipt(state, identity):
         return None
     manifest, observed_identity = verified
     approval = published.approval
+    proof = state.committed_authorizations.get(version)
+    reserved_proof_digest = dict(state.reservation_proof_digests).get(version)
     if (published.identity != identity or observed_identity != identity
             or manifest["gate"] != release_gate(identity["version"])
             or not valid_approval(approval, manifest, identity)
-            or not matches_authorization_proof(state.committed_authorizations.get(version),
-                                               approval, manifest, identity)):
+            or not matches_authorization_proof(proof, approval, manifest, identity)
+            or digest(proof) != reserved_proof_digest):
         return None
 
     receipt = receipt_for(approval)
@@ -325,12 +328,14 @@ def valid_current(state):
     if state is None:
         return False
     if state.current is None:
-        return not state.versions and not state.committed_authorizations
+        return not (state.versions or state.committed_authorizations or state.reservation_proof_digests)
     if not isinstance(state.current, dict) or state.current.keys() != IDENTITY:
         return False
     version = state.current["version"]
     return (valid_version(version) and verified_receipt(state, state.current) is not None
             and state.committed_authorizations.keys() == state.versions.keys()
+            and dict(state.reservation_proof_digests).keys() == state.versions.keys()
+            and len(state.reservation_proof_digests) == len(state.versions)
             and all(valid_version(other) and precedence(other) < precedence(version)
                     for other in state.versions if other != version))
 
@@ -406,30 +411,34 @@ def attempt(bundle, identity, approval, state, expected_prior, *,
     if interruption == "before":
         return "PUBLICATION_INTERRUPTED", state, None
 
-    # Freeze the verified input before simulating a concurrent authority change.
+    # Freeze the verified authority inputs before simulating a concurrent change.
+    verified_approval = json.loads(immutable_json(approval))
     native_snapshot = immutable_json(native_decision)
+    prior_snapshot = deepcopy(expected_prior)
     if authorization_at_commit is not None:
         current_approvals, current_native_decisions = authorization_at_commit()
         current_decision = current_native_decisions.get(candidate_digest)
-        if (immutable_json(current_decision) != native_snapshot or approval not in current_approvals
-                or not valid_approval(approval, manifest, identity)):
+        if (immutable_json(current_decision) != native_snapshot
+                or verified_approval not in current_approvals):
             return "PREREQUISITE_UNAVAILABLE", state, None
+        if verified_bundle(bundle) != (manifest, identity):
+            return "INVALID_METADATA", state, None
         if not valid_current(state) or version in state.versions:
             return "PUBLICATION_UNKNOWN", state, None
-        if state.current != expected_prior:
+        if state.current != prior_snapshot:
             return "PREVIOUS_PUBLICATION_CHANGED", state, None
         if gate == "GB-T13.G3" and not verified_mvp_publication(state, manifest):
             return "PREREQUISITE_UNAVAILABLE", state, None
 
-    receipt = receipt_for(approval)
-    publication = Publication(identity, bundle, approval, receipt, identity["revision"],
+    receipt = receipt_for(verified_approval)
+    publication = Publication(identity, bundle, verified_approval, receipt, identity["revision"],
                               receipt["tagRef"])
+    proof = immutable_json({"approval": verified_approval, "nativeDecision": json.loads(native_snapshot)})
     committed = deepcopy(State(
         identity, {**state.versions, version: publication},
-        {**state.committed_authorizations, version: immutable_json({
-            "approval": approval, "nativeDecision": json.loads(native_snapshot),
-        })},
+        {**state.committed_authorizations, version: proof},
         state.designated_mvp,
+        (*state.reservation_proof_digests, (version, digest(proof))),
     ))
     if interruption == "after":
         return "PUBLICATION_UNKNOWN", committed, None
@@ -712,6 +721,7 @@ class ReleaseContractScenarios(unittest.TestCase):
                 ), ("PREREQUISITE_UNAVAILABLE", self.prior, None))
         _, committed, _ = self.publish(bundle, identity, approval, self.prior, interruption="after")
         self.approvals.clear()
+        self.native_decisions.clear()
         self.assertEqual(reconcile(committed, identity, self.prior_identity),
                          ("ALREADY_PUBLISHED", receipt_for(approval)))
         later = self.stage(version="0.1.0-mvp.12")
@@ -722,8 +732,9 @@ class ReleaseContractScenarios(unittest.TestCase):
         published = current.versions[identity["version"]]
         original_proof = current.committed_authorizations[identity["version"]]
         proof = json.loads(original_proof)
-        self.assertEqual(proof["nativeDecision"], self.native_decisions[digest_key])
-        del proof["nativeDecision"]
+        self.assertEqual(proof["nativeDecision"]["decisionRef"],
+                         f"synthetic/native/{digest_key}.json")
+        proof["nativeDecision"]["decisionRef"] = "synthetic/native/replacement.json"
         corrupt_proof = {**current.committed_authorizations, identity["version"]: json.dumps(proof).encode()}
         self.assertEqual(reconcile(replace(current, committed_authorizations=corrupt_proof),
                                    identity, self.prior_identity),
@@ -733,6 +744,25 @@ class ReleaseContractScenarios(unittest.TestCase):
         self.assertEqual(current.committed_authorizations[identity["version"]], original_proof)
         self.assertEqual(reconcile(current, identity, self.prior_identity),
                          ("PUBLICATION_UNKNOWN", None))
+
+    def test_commit_rejects_replaced_approval_and_mutated_stage(self):
+        for change, expected in (("approval", "PREREQUISITE_UNAVAILABLE"),
+                                 ("payload", "INVALID_METADATA")):
+            with self.subTest(change=change):
+                bundle, identity, approval = self.stage()
+
+                def change_commit_inputs():
+                    if change == "approval":
+                        approval["decisionRef"] = "synthetic/decision/replacement.json"
+                        return [deepcopy(approval)], self.native_decisions
+                    bundle.files["dist/client.js"] = b"changed after verification"
+                    return self.approvals, self.native_decisions
+
+                self.assertEqual(self.publish(
+                    bundle, identity, approval, self.prior,
+                    authorization_at_commit=change_commit_inputs,
+                ), (expected, self.prior, None))
+                self.assertNotIn(identity["version"], self.prior.versions)
 
     def test_native_registry_rejects_unverified_evidence_reference(self):
         bundle, identity, approval = self.stage(scenario={
