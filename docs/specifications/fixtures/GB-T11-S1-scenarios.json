@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "log": [
+    {"case": "bounded_operational_event", "fields": ["schema_version", "utc", "component", "event", "outcome", "correlation"], "expected": "allowed"},
+    {"case": "raw_operation_identity", "fields": ["schema_version", "utc", "component", "event", "outcome", "operation_id"], "expected": "rejected"},
+    {"case": "raw_exception", "fields": ["schema_version", "utc", "component", "event", "outcome", "exception"], "expected": "rejected"},
+    {"case": "missing_component", "fields": ["schema_version", "utc", "event", "outcome"], "expected": "rejected"}
+  ],
+  "alert": [
+    {"case": "two_bad_windows", "eligible": [20, 20], "bad": [2, 2], "complete": [true, true], "expected": "journey"},
+    {"case": "exactly_five_percent", "eligible": [20, 20], "bad": [1, 2], "complete": [true, true], "expected": "quiet"},
+    {"case": "insufficient_volume", "eligible": [19, 20], "bad": [5, 5], "complete": [true, true], "expected": "quiet"},
+    {"case": "telemetry_gap", "eligible": [20, 20], "bad": [2, 2], "complete": [false, false], "expected": "coverage"},
+    {"case": "invalid_window", "eligible": [20, 20], "bad": [2, 21], "complete": [true, true], "expected": "invalid_configuration"}
+  ],
+  "edit": [
+    {"case": "retry_inside_original_deadline", "peer": "selected", "ack_ms": 650, "peer_ms": 900, "expected": "good"},
+    {"case": "late_retry_cannot_reset_deadline", "peer": "selected", "ack_ms": 600, "peer_ms": 1100, "expected": "bad"},
+    {"case": "selected_peer_disconnects", "peer": "selected", "ack_ms": 200, "peer_ms": null, "expected": "bad"},
+    {"case": "solo_deadline_inclusive", "peer": "none", "ack_ms": 1000, "peer_ms": null, "expected": "good"},
+    {"case": "peer_sampling_lost", "peer": "unknown", "ack_ms": 200, "peer_ms": null, "expected": "unknown"},
+    {"case": "authorization_dependency_unavailable", "peer": "none", "ack_ms": null, "peer_ms": null, "expected": "bad"}
+  ],
+  "probe": [
+    {"case": "boundary", "scheduled": 43200, "success": 42984, "expected": "within_candidate"},
+    {"case": "missing_probe_breaches", "scheduled": 43200, "success": 42983, "expected": "breached"},
+    {"case": "empty_window", "scheduled": 0, "success": 0, "expected": "undefined"},
+    {"case": "invalid_count", "scheduled": 60, "success": 61, "expected": "invalid_configuration"}
+  ],
+  "reconcile": [
+    {"case": "retained_authorized", "authorized": true, "receipt": "matching", "expected": "settled"},
+    {"case": "revoked", "authorized": false, "receipt": "matching", "expected": "unknown"},
+    {"case": "changed_digest", "authorized": true, "receipt": "conflict", "expected": "unknown"},
+    {"case": "store_unavailable", "authorized": true, "receipt": "unavailable", "expected": "unknown"}
+  ],
+  "recovery": [
+    {"case": "backup_restore_pass", "backup": "verified", "preflight": "isolated", "verification": "complete", "rpo_seconds": 900, "rto_seconds": 14400, "expected": "within_candidate"},
+    {"case": "verified_backup_unsafe_target", "backup": "verified", "preflight": "unsafe", "verification": "unstarted", "rpo_seconds": null, "rto_seconds": null, "expected": "denied"},
+    {"case": "key_unavailable", "backup": "verified", "preflight": "unavailable", "verification": "unstarted", "rpo_seconds": null, "rto_seconds": null, "expected": "blocked"},
+    {"case": "backup_interrupted", "backup": "interrupted", "preflight": "isolated", "verification": "unstarted", "rpo_seconds": null, "rto_seconds": null, "expected": "blocked"},
+    {"case": "restore_interrupted", "backup": "verified", "preflight": "isolated", "verification": "interrupted", "rpo_seconds": null, "rto_seconds": null, "expected": "failed"},
+    {"case": "deletion_marker_gap", "backup": "verified", "preflight": "isolated", "verification": "marker_gap", "rpo_seconds": null, "rto_seconds": null, "expected": "failed"},
+    {"case": "missing_asset", "backup": "verified", "preflight": "isolated", "verification": "integrity_failed", "rpo_seconds": null, "rto_seconds": null, "expected": "failed"},
+    {"case": "clock_provenance_missing", "backup": "verified", "preflight": "isolated", "verification": "complete", "rpo_seconds": null, "rto_seconds": 12000, "expected": "undetermined"},
+    {"case": "only_rpo_breaches", "backup": "verified", "preflight": "isolated", "verification": "complete", "rpo_seconds": 901, "rto_seconds": 13000, "expected": "breached"},
+    {"case": "only_rto_breaches", "backup": "verified", "preflight": "isolated", "verification": "complete", "rpo_seconds": 850, "rto_seconds": 14401, "expected": "breached"}
+  ]
+}
