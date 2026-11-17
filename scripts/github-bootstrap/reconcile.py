@@ -1,30 +1,88 @@
 """Idempotent bootstrap; refreshes remote state before repairing. No credential storage.
 Usage: python3 scripts/github-bootstrap/reconcile.py [--verify-only] [--phase issues|links|fields|comments|all]
+       python3 scripts/github-bootstrap/reconcile.py --phase comments --dry-run
+--dry-run reads live issues and reports bootstrap-owned body rewrites without writing local files or updating GitHub.
 """
+import argparse,hashlib,re,collections,sys
+parser=argparse.ArgumentParser();parser.add_argument('--verify-only',action='store_true');parser.add_argument('--phase',default='all',choices=['issues','links','fields','comments','all']);parser.add_argument('--dry-run',action='store_true',help='comments phase only: report body rewrites, write nothing');args=parser.parse_args()
+if args.dry_run and (args.phase != 'comments' or args.verify_only):
+ parser.error('--dry-run requires --phase comments and cannot be combined with --verify-only')
+if args.dry_run:
+ sys.dont_write_bytecode=True
 from api import *
-import argparse,hashlib,re,collections
-parser=argparse.ArgumentParser();parser.add_argument('--verify-only',action='store_true');parser.add_argument('--phase',default='all',choices=['issues','links','fields','comments','all']);args=parser.parse_args()
+if args.verify_only:
+ print('Read-only remote audit requested.');subprocess.run(['python3',str(ROOT/'scripts/github-bootstrap/audit.py')],check=True);raise SystemExit()
 manifest=ROOT/'planning/guildboard-backlog.json';m=json.loads(manifest.read_text());s=json.loads(STATE.read_text());repo=s['repo'];pid=s['project']['id'];by={x['id']:x for x in m['items']}
 def persist():
+ if args.dry_run:return
  for x in m['items']:x.setdefault('description','; '.join(x['requirements']))
  save(manifest,m)
 def all_issues():
  out=[];page=1
  while True:
-  rows=api(f'repos/{repo}/issues?state=all&per_page=100&page={page}');out += [x for x in rows if 'pull_request' not in x]
+  endpoint=f'repos/{repo}/issues?state=all&per_page=100&page={page}'
+  rows=api(endpoint,quiet_get=True) if args.dry_run else api(endpoint)
+  if args.dry_run and (not isinstance(rows,list) or any(
+   not isinstance(row,dict) or type(row.get('number')) is not int
+   or ('body' in row and row['body'] is not None and not isinstance(row['body'],str))
+   or ('pull_request' not in row and not isinstance(row.get('node_id'),str))
+   for row in rows
+  )):
+   raise ValueError('Invalid GitHub issue list')
+  out += [x for x in rows if 'pull_request' not in x]
   if len(rows)<100:return out
   page+=1
-remote=all_issues();remote_by={}
-for issue in remote:
- marker=re.search(r'<!-- guildboard-id:([^ ]+) -->',issue.get('body') or '')
- if marker:
-  stable=marker[1]
-  if stable in remote_by:raise RuntimeError('Duplicate stable ID '+stable)
-  remote_by[stable]=issue
-  if stable in by:by[stable]['github']={'number':issue['number'],'url':issue['html_url'],'id':issue['node_id']}
-persist()
+try:
+ remote=all_issues()
+except (RuntimeError,OSError,ValueError):
+ if not args.dry_run:raise
+ raise SystemExit('Dry run stopped: GitHub issues could not be read.') from None
+remote_by={}
+preview_edited=set()
+if args.dry_run:
+ def identity_mismatch():
+  raise SystemExit('Dry run stopped: issue identity mismatch.')
+
+ expected={}
+ if len(by)!=len(m['items']):identity_mismatch()
+ for stable,item in by.items():
+  if 'github' not in item:continue
+  mapping=item['github']
+  if not isinstance(mapping,dict):identity_mismatch()
+  number=mapping.get('number')
+  node_id=mapping.get('id')
+  if (type(number) is not int or number <= 0 or number in expected
+      or not isinstance(node_id,str) or not node_id):identity_mismatch()
+  expected[number]=(stable,node_id)
+ expected_nodes={node_id for _,node_id in expected.values()}
+ if len(expected_nodes)!=len(expected):identity_mismatch()
+
+ seen=set()
+ for issue in remote:
+  number=issue['number']
+  if number in seen:identity_mismatch()
+  seen.add(number)
+  markers=re.findall(r'<!-- guildboard-id:([^\s]+) -->',issue.get('body') or '')
+  if number not in expected:
+   if issue['node_id'] in expected_nodes or any(marker in by for marker in markers):identity_mismatch()
+   continue
+  stable,node_id=expected[number]
+  if issue['node_id']!=node_id or (markers and markers!=[stable]):identity_mismatch()
+  if markers:
+   remote_by[stable]=issue
+  else:
+   preview_edited.add(stable)
+else:
+ for issue in remote:
+  marker=re.search(r'<!-- guildboard-id:([^ ]+) -->',issue.get('body') or '')
+  if marker:
+   stable=marker[1]
+   if stable in remote_by:raise RuntimeError('Duplicate stable ID '+stable)
+   remote_by[stable]=issue
+   if stable in by:by[stable]['github']=issue_mapping(issue,repo)
+ persist()
 def link(id):
- x=by[id];return f"[{id}]({x['github']['url']})" if x.get('github') else f'`{id}` (not yet created; see manifest)'
+ x=by[id];return f"[{id}]({issue_url(x['github']['number'],repo)})" if x.get('github') else f'`{id}` (not yet created; see manifest)'
 def body(x):
  f=x['fields'];typ=x['work_type'];scope='\n'.join('- '+v for v in x['requirements']);ac='\n'.join('- [ ] '+v for v in x['acceptance_criteria']);tests='\n'.join('- '+v for v in x['expected_tests']);deps='\n'.join('- Blocked by (native): '+link(d)+(' — '+x.get('dependency_rationale',{}).get(d,'') if d in x.get('dependency_rationale',{}) else '') for d in x['dependencies']) or '- No execution blockers recorded. Information inputs do not imply sequencing.'
  parent='- Parent: '+link(x['parent_id']) if x['parent_id'] else '- Top-level workstream; no parent.'
@@ -156,14 +214,12 @@ def order():
  for id in by:visit(id,[])
  return result
 ordered=order()
-if args.verify_only:
- print('Read-only remote audit requested.');subprocess.run(['python3',str(ROOT/'scripts/github-bootstrap/audit.py')],check=True);raise SystemExit()
 if args.phase in ['issues','all']:
  for i,x in enumerate(ordered):
   if x.get('github'):continue
   content=body(x)
   r=api('repos/'+repo+'/issues','POST',{'title':x['title'],'body':content,'labels':x['labels'],'milestone':s['milestones'][x['milestone']]})
-  x['github']={'number':r['number'],'url':r['html_url'],'id':r['node_id']};x['body_hash']=hashlib.sha256(content.encode()).hexdigest();persist()
+  x['github']=issue_mapping(r,repo);x['body_hash']=hashlib.sha256(content.encode()).hexdigest();persist()
   print(f"created {i+1}/{len(ordered)} {x['id']} #{r['number']}",flush=True)
   # Conservative writes stay under 80/min; retries never duplicate a known stable ID.
   time.sleep(1.2)
@@ -211,6 +267,34 @@ if args.phase in ['links','fields','all']:
     variables['i'+str(j)]={'projectId':pid,'itemId':x['project_item_id'],'fieldId':field['id'],'value':{'singleSelectOptionId':option}};decl.append('$i'+str(j)+':UpdateProjectV2ItemFieldValueInput!');mutations.append('f'+str(j)+':updateProjectV2ItemFieldValue(input:$i'+str(j)+'){projectV2Item{id}}')
    if mutations:gql('mutation('+','.join(decl)+'){'+''.join(mutations)+'}',**variables)
    x['applied_hash']=hashlib.sha256(json.dumps(x['fields'],sort_keys=True).encode()).hexdigest();persist();print('triaged',x['id'],flush=True)
+if args.dry_run:
+ counts = collections.Counter()
+ beyond = []
+ for x in ordered:
+  issue = remote_by.get(x['id'])
+  if issue is None:
+   counts['edited' if x['id'] in preview_edited else 'missing'] += 1
+   continue
+  old_body = issue.get('body') or ''
+  rendered = body(x)
+  if rendered == old_body:
+   counts['current'] += 1
+  elif hashlib.sha256(old_body.encode()).hexdigest() != x.get('body_hash'):
+   counts['edited'] += 1
+  else:
+   counts['rewrite'] += 1
+   if canonicalize_transferred_links(old_body, repo) != rendered:
+    beyond.append(x['id'])
+ print(json.dumps({
+  'mode': 'dry-run',
+  'repository': repo,
+  'would_rewrite': counts['rewrite'],
+  'rewrites_beyond_repository_identity': beyond,
+  'already_current': counts['current'],
+  'skipped_maintainer_edited': counts['edited'],
+  'skipped_missing': counts['missing'],
+ }, indent=2))
+ raise SystemExit()
 if args.phase in ['comments','all']:
  for x in ordered:
   if not x.get('github'):continue

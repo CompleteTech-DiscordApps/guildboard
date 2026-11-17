@@ -12,6 +12,8 @@ def add(id,title,t,typ,parent=None,requirements='',deps=None,milestone=None,rele
  x={'id':id,'title':title if typ=='Epic' else id+' — '+title,'workstream':f'T{t}','parent_id':parent,'work_type':typ,'fields':meta,'milestone':ms[milestone if milestone is not None else w['milestone']],'labels':labels,'dependencies':dep,'acceptance_criteria':ac,'expected_tests':tests,'documentation_artifacts':[f'docs/workstreams/T{t}.md'],'requirements':clauses,'assignees':[]}
  for k in ['github','project_item_id','applied_hash','body_hash','comment_id']: 
   if k in old.get(id,{}):x[k]=old[id][k]
+ # Remote mappings keep number/node ID; links always derive from the pinned canonical repository.
+ if 'github' in x:x['github']={**x['github'],'url':issue_url(x['github']['number'],state['repo'])}
  items.append(x);return x
 for t,w in enumerate(streams):
  root=f'GB-T{t}';add(root,f'T{t}: '+w['name'],t,'Epic',requirements='Deliver all native child outcomes with accepted evidence; resolve handoffs, security findings and release acceptance; do not close while mandatory descendants remain incomplete')
