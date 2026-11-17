@@ -144,7 +144,7 @@ real credentials, instance binding, authorization, races/expiry and client tests
 are still needed before accepting an exact-launch/current-presence claim (#35).
 Do not invent a signed launch token or reclassify SDK IDs as trusted proof.
 
-Preserve #481's proposed order: current identity/session/tenant/read → scoped
+Preserve the order in the [proposed system contract](../specifications/GB-T0-S1-system-contract.md) (#481): current identity/session/tenant/read → scoped
 existing operation receipt and canonical digest → if absent, active lineage →
 new-write capability/freshness/generation/schema/object checks → atomic state,
 revision, receipt, outbox and audit commit → durable success. Same readable
@@ -192,7 +192,7 @@ accepted production budgets.
 | Same-ID retry / same-ID different bytes | One modeled effect/audit; identical retry returns receipt; changed transport body conflicts | Durable canonical operation codec, restart/restore, concurrent delivery, bounded admission and receipts |
 | Readable receipt after write loss/retired lineage; no-read receipt lookup | Receipt-first candidate works; write-first negative control wrongly denies; no-read conceals receipt/digest match | SQL/outbox atomicity, no metadata leaks, actual current-read acquisition |
 
-The 19 tests do **not** verify Discord delivery, OAuth, command configuration,
+The original 19 tests do **not** verify Discord delivery, OAuth, command configuration,
 API lookup permissions, live role freshness, registered app ownership, SQL,
 outbox durability, production replay protection or real user acceptance. Fixture
 authority is supplied booleans; tenant IDs are fixed synthetic allowlists; maps
@@ -218,7 +218,7 @@ local test is substituted for them.
 | --- | --- | --- |
 | Least privilege and alternatives | D1–D8 dated facts; install/registration/options comparison | T1/T2/T8 choose evidence transport, scopes/intents/permission bits; verify install/remove/reinstall, owner/Admin/Manage Guild and actual endpoint access |
 | Slash lifecycle and backend API surface | Responsibility matrix, explicit registration/rollback and common-service proposal | #261 accepted schemas/OpenAPI/WS versions, manifest/readback, command overwrites/context/deprecation behavior and Activity-entry-point coexistence |
-| Verification/provenance/denial | Real local crypto plus 19 tests and negative controls | Discord signed PING/invalid probes, delayed/repeated deliveries; cross-guild and stale roles; real HTTP raw-body/proxy handling |
+| Verification/provenance/denial | Real local crypto and offline model tests with negative controls | Discord signed PING/invalid probes, delayed/repeated deliveries; cross-guild and stale roles; real HTTP raw-body/proxy handling |
 | Authorization/durability | Reconciled exact provisional #481/#492/#491 heads and no-side-effect model | Functional/security/consumer review; barrier-controlled SQL commit/revoke/restore races, read-before-receipt, durable retry, safe Discord failure handling |
 | Evidence and gates | Dated response hashes, exact local versions and reproducible commands | Current-head Copilot/independent Sol MAX, actual Security & Authorization/Backend & Bot/consumer and CODEOWNER review; hosted CI, release and real Discord/GoDaddy acceptance remain separate |
 
@@ -290,3 +290,23 @@ both requests without read to check that no digest information is disclosed.
 The model assumes trusted original lineage/generation at admission and retains
 metadata only in unbounded memory; durable admission, capacity/retention policy
 and real Discord provenance remain unimplemented specification/verification work.
+
+
+## Reconciliation with main (2026-11-17 UTC)
+
+[ADR 0001](../adr/0001-editor-activity-vps-direction.md) accepts a controlled
+experiment with Excalidraw inside a Discord Activity, server-authoritative
+API and collaboration, and GoDaddy Linux VPS. The system contract on main at
+`46e53068235308ff591b3a4e1b1fe8c501dd3af1` remains proposed. Its current scoped
+read, historical receipt and lineage-fence ordering still applies to the
+candidate T8 handoff. Its response-time read fence also applies to delayed
+results such as followups. The synchronous fixture cannot validate that fence
+under concurrency or acquire current Discord membership and channel evidence.
+
+The fixture preserves the lineage and expected generation supplied by the
+caller at first admission. If the first delivery arrives after restore, the
+fixture has no historical admission from which to recover original intent.
+The specification needs a trusted original lineage and generation for that
+case, or a decision to deny when that context cannot be established. A signed
+Discord timestamp alone supplies neither. Source observations remain dated
+2026-10-26.

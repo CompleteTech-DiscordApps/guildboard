@@ -116,7 +116,7 @@ export function dispatch(request, publicKey, authority, options = {}) {
   if (binding.expectedGeneration !== authority.currentGeneration) return denied('policy_stale');
   // Only a hypothetical synchronous critical section. This is NOT a DB transaction
   // or multi-worker fence, and these receipts are NOT durable.
-  const accepted = { revision: authority.effects + 1, lineage: binding.lineage };
+  const accepted = Object.freeze({ revision: authority.effects + 1, lineage: binding.lineage });
   authority.effects += 1;
   authority.audit += 1;
   authority.receipts.set(binding.operationKey, accepted);

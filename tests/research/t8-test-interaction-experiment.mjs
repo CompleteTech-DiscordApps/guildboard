@@ -142,6 +142,21 @@ test('identical retry returns receipt once; signed same-ID different bytes confl
   assert.equal(authority.audit, 1);
 });
 
+test('a returned receipt cannot change the recorded outcome on retry', () => {
+  const pair = keys();
+  const request = envelope(pair.privateKey);
+  const authority = state();
+  const original = dispatch(request, pair.publicKey, authority);
+  assert.equal(original.result, 'new_receipt');
+  assert.equal(Reflect.set(original.receipt, 'revision', 99), false);
+  assert.equal(Reflect.set(original.receipt, 'lineage', 'different'), false);
+  const retry = dispatch(request, pair.publicKey, authority);
+  assert.equal(retry.result, 'existing_receipt');
+  assert.deepEqual(retry.receipt, { revision: 1, lineage: 'current' });
+  assert.equal(authority.effects, 1);
+  assert.equal(authority.audit, 1);
+});
+
 test('retired-lineage readable receipt precedes current write and lineage checks', () => {
   const authority = state();
   const request = signed();
