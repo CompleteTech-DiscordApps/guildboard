@@ -1,0 +1,48 @@
+Recorded 2026-11-16T16:41:04Z; in-process checker calls, no subprocess.
+Initial run (fixture defects retained):
+revision=556dcf68a0d65c5e08fb4aeab2eaf0226f3c16a5; base=8f75fdb398dfb48d577135ee08f295a4c4f634b6
+platform=Linux-7.0.0-38-generic-x86_64-with-glibc2.39; python=3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]
+PASS installed self comparison
+PASS actual first install
+PASS wrong first install base identity
+PASS byte change and exact decision fields
+FAIL rename requires removal and addition decisions: Invalid("cannot safely read apps/api/README.md: [Errno 2] No such file or directory: 'README.md'")
+PASS add boundary
+FAIL remove boundary: Invalid("cannot safely read apps/api/README.md: [Errno 2] No such file or directory: 'README.md'")
+PASS missing policy
+PASS malformed json
+PASS unknown policy shape
+PASS reject symlink
+PASS reject fifo
+PASS reject oversize
+PASS read interruption no success output or writes
+PASS trace missing use_cases
+PASS trace missing interactions
+PASS trace missing canonical_acceptance
+PASS unrelated valid interaction and FID together
+PASS source trees unchanged
+SUMMARY cases=19 passed=17 failed=2
+
+Final run after fixture correction:
+revision=556dcf68a0d65c5e08fb4aeab2eaf0226f3c16a5; base=8f75fdb398dfb48d577135ee08f295a4c4f634b6
+platform=Linux-7.0.0-38-generic-x86_64-with-glibc2.39; python=3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]
+PASS installed self comparison
+PASS actual first install
+PASS wrong first install base identity
+PASS byte change and exact decision fields
+PASS rename requires removal and addition decisions
+PASS add boundary
+PASS remove boundary
+PASS missing policy
+PASS malformed json
+PASS unknown policy shape
+PASS reject symlink
+PASS reject fifo
+PASS reject oversize
+PASS read interruption no success output or writes
+PASS trace missing use_cases
+PASS trace missing interactions
+PASS trace missing canonical_acceptance
+PASS unrelated valid interaction and FID together
+PASS source trees unchanged
+SUMMARY cases=19 passed=19 failed=0
