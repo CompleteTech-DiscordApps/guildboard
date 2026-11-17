@@ -230,3 +230,21 @@ revision and restore epoch, and server-side validation. Native redo in
 this scenario can reintroduce a rejected edit even after an echo-free
 rollback. Preserving accepted undo history through rollback and handling
 revocation, reconnect, restore and concurrent changes remain unresolved.
+
+## Undo button keyboard probe, 2026-11-17
+
+From `research-fixtures/canvas`, with the existing bundle and locked dependencies,
+run `CHROMIUM_PATH=/usr/bin/chromium node probe.mjs`. Use `npm run probe` with
+the same environment variable to rebuild first. On Arch Linux with Node
+26.13.0, Playwright 1.56.1, Excalidraw 0.18.1 and sandbox-enabled headless
+Chromium 155.0.8059.84, Playwright located an enabled, visible button by the
+accessible name Undo. After the probe programmatically focused that button,
+pressing Enter moved focus away and left the prepared edit visible.
+After a pointer click returned focus to the editor, Control+Z removed the
+same prepared edit in the positive control.
+
+This scenario exercises an editor-provided control with an API-prepared edit
+and programmatic focus. It leaves keyboard-only tab order, focus destination
+and restoration, Space activation, screen readers, hardware input and
+Discord Activity clients unverified. For #99, verify keyboard activation and
+focus behavior for the user-facing accepted-intent history controls.
