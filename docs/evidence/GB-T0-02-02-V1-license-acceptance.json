@@ -99,7 +99,8 @@
       "id": "D",
       "log": "out/scenario_results.json",
       "result": "25 scenarios; 25 match after reconciling S17 to documented exit 2",
-      "sha256": "52da6e976690b1af0407a110c2116541b5fde798c059971f21f07b42ae0922c4"
+      "sha256": "52da6e976690b1af0407a110c2116541b5fde798c059971f21f07b42ae0922c4",
+      "note": "The sha256 above is for the original, unsanitized scenario_results.json. The out/ copy and the embedded copy in raw results had <verifier-scratch> paths sanitized, so their digests differ and cannot be re-derived from this tree. The recorded digest was not changed."
     }
   ],
   "coordinator_annotations": [
@@ -121,7 +122,7 @@
     {
       "id": "D2",
       "severity": "environment",
-      "summary": "Test suite and validator write temp files into the working tree; on the read-only export 13 tests error and validator exits 1. Passes in writable copy. Not a code defect of the checker; the verification harness should set a writable temp dir."
+      "summary": "On the read-only export 13 tests in test_requirements_acceptance error and the validator exits 1. The test hard-codes the repository root as its temp dir (TemporaryDirectory(dir=ROOT), tests/verification/test_requirements_acceptance.py:21), so setting a temp dir (for example TMPDIR) does not help; the remedy is a test change that creates temp dirs outside the repository root. Passes in writable copy. Not a code defect of the checker."
     },
     {
       "id": "D3",
@@ -1165,7 +1166,7 @@
   ],
   "tested_revision": "a6c887ebcc0116f35666af382aa065ea1c593b98",
   "unresolved": [
-    "Three review-required exceptions pending owner review: dompurify (MPL-2.0 OR Apache-2.0: owner must elect Apache-2.0 and keep notices), pako ((MIT AND Zlib): Zlib notice obligations), robust-predicates (Unlicense).",
+    "Three review-required exceptions carry coordinator decisions of 2026-11-16 under delegated section authority (not human approval; not legal sign-off; research-only canvas fixture; re-review required before any product distribution): dompurify (Apache-2.0 elected, MPL-2.0 branch not relied on, Apache-2.0 notices retained), pako ((MIT AND Zlib): both notices retained), robust-predicates (Unlicense accepted as a public-domain dedication).",
     "fuzzy 0.1.3 and khroma 2.1.0 verified overrides are evidence recorded by the coordinator with network access outside this gate; not re-verified here (no network) and not legal sign-off.",
     "No registry/tarball verification performed by verifier (no network).",
     "No legal review performed.",

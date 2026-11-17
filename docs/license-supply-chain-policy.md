@@ -1,6 +1,6 @@
 # License and supply-chain policy (GB-T0.02.02.T1, #16)
 
-Status: policy and an offline lockfile gate. It is not legal clearance, not independent review and not evidence that any shipped asset is licensed. A workflow step, `.github/workflows/license-policy.yml`, runs the gate on pull requests and on pushes to main that change a lockfile, the checker, the exceptions file or the workflow. That step exists, but its result is not recorded here and no native CI result is claimed. A PASS from the gate is not approval: the committed exceptions remain pending owner review. Discord, GoDaddy VPS and legal sign-off are out of scope.
+Status: policy and an offline lockfile gate. It is not legal clearance, not independent review and not evidence that any shipped asset is licensed. A workflow step, `.github/workflows/license-policy.yml`, runs the gate on pull requests and on pushes to main that change a lockfile, the checker, the exceptions file or the workflow. That step exists, but its result is not recorded here and no native CI result is claimed. A PASS from the gate is not approval or legal clearance: the three committed canvas exceptions were decided by the coordinator on 2026-11-16 under delegated section authority, scoped to the research-only canvas fixture; they are not legal sign-off and need re-review before any product distribution. Discord, GoDaddy VPS and legal sign-off are out of scope.
 
 Gate: `python3 scripts/verification/check_licenses.py` (stdlib only; run from the repository root). Tests: `python3 -m unittest discover -s tests/verification -v`. Exceptions and verified license overrides: `docs/evidence/license-exceptions.json`.
 
@@ -102,7 +102,7 @@ Any distribution of a package (source, bundle, container image or release asset)
 
 ## Fonts, icons and imported assets
 
-No font, icon, image, sound or other third-party asset is adopted by this change. Independent verification (#17) found one existing raster image, `planning/audit/project-overview.jpg` (sha256 `19abbd313b087bb41d59b6e61c0b6a29925deb17b4320ed9d93559f3cc317b47`). Git history records it in commit `da81125` (2026-10-23, "Publish verified bootstrap report, CI evidence and Project screenshot"), so it is a first-party screenshot of the GitHub Project board. No separate license or source URL is recorded, no code references it, and owner confirmation that it is planning documentation only and not distributed is pending. No fonts, icons or icon-library loads were found. Before any such asset is added, record in the repository:
+No font, icon, image, sound or other third-party asset is adopted by the #16 change. Independent verification (#17) found one existing raster image, `planning/audit/project-overview.jpg` (sha256 `19abbd313b087bb41d59b6e61c0b6a29925deb17b4320ed9d93559f3cc317b47`). Git history records it in commit `da81125` (2026-10-23, "Publish verified bootstrap report, CI evidence and Project screenshot"), and its commit message indicates that it is a screenshot of the project's GitHub Project board, published by the repository team. This rests on the commit message only, and a screenshot of a third-party UI is only partly first-party. No separate license or source URL is recorded, no code references it, and owner confirmation that it is planning documentation only and not distributed is pending. No fonts, icons or icon-library loads were found. Before any such asset is added, record in the repository:
 
 - the asset name and version or revision;
 - the source URL and the date it was retrieved;
@@ -136,5 +136,6 @@ Not verified by this policy or the gate:
 - The two packages with no license field in the canvas research lockfile (`fuzzy` 0.1.3 and `khroma` 2.1.0) are covered by verified overrides. Their evidence came from registry tarball files checked outside this offline gate; the gate does not re-fetch or re-hash them. The overrides are evidence, not legal sign-off.
 - The research fixture is not the application. Whether its dependencies ship is not decided here.
 - Integrity values must be present and well-formed: one or more whitespace-separated `sha512-`, `sha384-` or `sha256-` tokens whose base64 decodes to 64, 48 or 32 bytes. A malformed value fails as `malformed integrity`. Values are checked for format, not cryptographically checked against the registry.
-- The CI step exists but its result is not recorded in this policy. No independent review, protected merge or post-merge check is claimed. A PASS is not owner approval of any license or exception.
+- The gate does not check the `resolved` download URL: an entry whose `resolved` points to a non-registry URL with a well-formed `integrity` passes.
+- The CI step exists but its result is not recorded in this policy. No independent review, protected merge or post-merge check is claimed. A PASS is not owner approval of any license or exception and is not legal clearance.
 - Discord, GoDaddy VPS and legal sign-off are out of scope.

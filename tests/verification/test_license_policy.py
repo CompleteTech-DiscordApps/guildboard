@@ -641,6 +641,39 @@ FORBIDDEN_TOKENS = ('pull_request_target', 'continue-on-error', 'paths-ignore', 
 PATH_ITEM = re.compile(r"-\s+'?([^'\s]+)'?")
 
 
+KEY_LINE = re.compile(r'^(\s*)(- +)?(["\']?)([A-Za-z0-9_\-]+)\3\s*:(.*)$')
+FORBIDDEN_KEYS = ('if', 'shell', 'env', 'ref', 'working-directory', 'defaults')
+STEP_KEYS = ('name', 'uses', 'with', 'run')
+CHECKOUT_WITH = [('persist-credentials', 'false')]
+
+
+def _keys(lines):
+    """(column, lowercase key, value, line) for each key line; a '- ' list marker moves the key right."""
+    found = []
+    for line in lines:
+        match = KEY_LINE.match(line)
+        if match:
+            column = len(match.group(1)) + len(match.group(2) or '')
+            found.append((column, match.group(4).lower(), match.group(5).strip(), line))
+    return found
+
+
+def _step_problems(body, first):
+    """Step keys must be exactly name/uses/with/run; a with: block must be exactly persist-credentials: false."""
+    problems = []
+    for index, line in enumerate(body):
+        for column, key, _value, text in _keys([line]):
+            if column != first + 2:
+                continue
+            if key not in STEP_KEYS:
+                problems.append(f'step key not allowed: {key!r} in {text.strip()}')
+            if key == 'with':
+                pairs = [(k, v) for _c, k, v, _t in _keys(_block_after(body, index))]
+                if pairs != CHECKOUT_WITH:
+                    problems.append(f'with block must be exactly persist-credentials: false, found {pairs}')
+    return problems
+
+
 def uses_refs(text):
     return USES_LINE.findall(text)
 
@@ -682,9 +715,11 @@ def workflow_violations(text):
     for token in FORBIDDEN_TOKENS:
         if token in lowered:
             problems.append(f'forbidden token {token!r}')
-    for line in lines:
-        if re.match(r'^\s*(?:-\s+)?if:', line):
+    for _column, key, _value, line in _keys(lines):
+        if key == 'if':
             problems.append(f'if condition is not allowed: {line.strip()}')
+        elif key in FORBIDDEN_KEYS:
+            problems.append(f'forbidden key {key!r}: {line.strip()}')
 
     on_at = [i for i, line in enumerate(lines) if line == 'on:']
     if len(on_at) != 1:
@@ -745,6 +780,7 @@ def workflow_violations(text):
             count = sum(1 for line in body if _indent(line) == first and line.lstrip().startswith('- '))
             if count != 2:
                 problems.append(f'expected exactly two steps (checkout and gate), found {count}')
+            problems.extend(_step_problems(body, first))
     refs = uses_refs(text)
     if len(refs) != 1:
         problems.append(f'expected exactly one uses: line, found {len(refs)}')
@@ -881,11 +917,43 @@ class WorkflowMutationCases(unittest.TestCase):
         self.assertFlagged(self.mutant('  push:\n', '  workflow_dispatch:\n  push:\n'), 'triggers must be exactly')
 
 
+    def test_quoted_double_key_if_false_on_gate_step_is_flagged(self):
+        self.assertFlagged(self.mutant(self.RUN, '"if": false\n        ' + self.RUN), 'if condition is not allowed')
+
+    def test_quoted_single_key_if_false_on_gate_step_is_flagged(self):
+        self.assertFlagged(self.mutant(self.RUN, "'if': false\n        " + self.RUN), 'if condition is not allowed')
+
+    def test_shell_true_on_gate_step_is_flagged(self):
+        self.assertFlagged(self.mutant(self.RUN, "shell: 'true {0}'\n        " + self.RUN), "forbidden key 'shell'")
+
+    def test_ref_main_under_checkout_with_is_flagged(self):
+        mutated = self.mutant('persist-credentials: false', 'persist-credentials: false\n          ref: main')
+        self.assertFlagged(mutated, "forbidden key 'ref'")
+        self.assertFlagged(mutated, 'with block must be exactly persist-credentials: false')
+
+    def test_checkout_persist_credentials_true_is_flagged(self):
+        self.assertFlagged(self.mutant('persist-credentials: false', 'persist-credentials: true'),
+                           'with block must be exactly persist-credentials: false')
+
+    def test_env_block_on_gate_step_is_flagged(self):
+        self.assertFlagged(self.mutant(self.RUN, 'env:\n          BASH_ENV: /tmp/x\n        ' + self.RUN), "forbidden key 'env'")
+
+    def test_working_directory_on_gate_step_is_flagged(self):
+        self.assertFlagged(self.mutant(self.RUN, 'working-directory: scripts\n        ' + self.RUN), "forbidden key 'working-directory'")
+
+    def test_job_defaults_block_is_flagged(self):
+        self.assertFlagged(self.mutant('timeout-minutes: 10', 'timeout-minutes: 10\n    defaults:\n      run:\n        shell: bash'),
+                           "forbidden key 'defaults'")
+
+    def test_unlisted_step_key_is_flagged(self):
+        self.assertFlagged(self.mutant(self.RUN, 'id: gate\n        ' + self.RUN), "step key not allowed: 'id'")
+
+
 class RepositoryDataCases(unittest.TestCase):
     """Real-data regression check: the committed gate over both default lockfiles.
 
     Runs with default lockfile paths so a root-only exception is never reported stale.
-    PASS here is not approval: the committed exceptions remain pending owner review.
+    PASS here is not approval or legal clearance: the committed exceptions are coordinator decisions scoped to the research-only canvas fixture, not human approval or legal sign-off.
     """
 
     def test_committed_lockfiles_pass_gate(self):
@@ -901,7 +969,7 @@ class RepositoryDataCases(unittest.TestCase):
         self.assertNotIn('missing or unknown license', out)
         self.assertIn('node_modules/fuzzy [fuzzy@0.1.3] verified override applied', out)
         self.assertIn('node_modules/khroma [khroma@2.1.0] verified override applied', out)
-        self.assertIn('excepted review-required', out)  # pending owner review, not approval
+        self.assertIn('excepted review-required', out)  # coordinator decision (research-only), not approval
 
 
 OVERRIDE_LICENSE_CASES = ('GPL-3.0-only', 'GPLv3', 'LGPL-2.1-only', 'AGPLv3', 'SSPL', 'BUSL-1.1',
@@ -1041,6 +1109,140 @@ class VerifiedOverrideCases(CheckerCase):
         code, _, err = self.run_checker([name], exc)
         self.assertEqual(code, 2)
         self.assertIn('must be a list', err)
+
+
+EXCEPTIONS_FILE = REPO / 'docs' / 'evidence' / 'license-exceptions.json'
+ACCEPTANCE_FILE = REPO / 'docs' / 'evidence' / 'GB-T0-02-02-V1-license-acceptance.json'
+RAW_RESULTS_FILE = REPO / 'docs' / 'evidence' / 'GB-T0-02-02-V1-raw-results.txt'
+DECISION_PHRASES = ('Decided by the coordinator on 2026-11-16 under delegated section authority',
+                    'research-only', 'research-fixtures/canvas', 'not legal sign-off',
+                    're-review is required before any product distribution')
+
+
+def _find_command(node, cid):
+    if isinstance(node, dict):
+        if node.get('id') == cid and 'sha256' in node:
+            return node
+        for value in node.values():
+            found = _find_command(value, cid)
+            if found is not None:
+                return found
+    elif isinstance(node, list):
+        for value in node:
+            found = _find_command(value, cid)
+            if found is not None:
+                return found
+    return None
+
+
+class ExceptionDecisionCases(unittest.TestCase):
+    """Coordinator decision of 2026-11-16 for the three canvas exceptions: research-only, not legal sign-off."""
+
+    def setUp(self):
+        self.data = json.loads(EXCEPTIONS_FILE.read_text(encoding='utf-8'))
+        self.reasons = {entry['name']: entry['reason'] for entry in self.data['exceptions']}
+
+    def test_three_exceptions_carry_the_decision_wording(self):
+        self.assertEqual(sorted(self.reasons), ['dompurify', 'pako', 'robust-predicates'])
+        for name, reason in self.reasons.items():
+            with self.subTest(name=name):
+                for phrase in DECISION_PHRASES:
+                    self.assertIn(phrase, reason)
+                self.assertNotIn('pending owner review', reason)
+
+    def test_scope_states_research_only_and_no_legal_signoff(self):
+        scope = self.data['scope']
+        for phrase in ('decided by the coordinator on 2026-11-16 under delegated section authority',
+                       'no human owner approval is recorded or implied',
+                       'research-only canvas fixture (research-fixtures/canvas, not part of product distribution)',
+                       'This is not legal sign-off; re-review is required before any product distribution'):
+            self.assertIn(phrase, scope)
+        self.assertNotIn('pending owner review', scope)
+
+    def test_dompurify_elects_apache_only(self):
+        reason = self.reasons['dompurify']
+        for phrase in ('the Apache-2.0 branch is elected and relied on', 'Apache-2.0 notices are retained',
+                       'the MPL-2.0 branch is not relied on'):
+            self.assertIn(phrase, reason)
+
+    def test_pako_and_robust_predicates_terms(self):
+        self.assertIn('the MIT and Zlib notices both retained', self.reasons['pako'])
+        self.assertIn('accepted as a public-domain dedication', self.reasons['robust-predicates'])
+
+    def test_pass_is_not_legal_clearance_in_policy_and_t0(self):
+        policy = POLICY_DOC.read_text(encoding='utf-8')
+        t0 = TASK_DOC.read_text(encoding='utf-8')
+        self.assertIn('A PASS from the gate is not approval or legal clearance', policy)
+        self.assertIn('A PASS is not owner approval of any license or exception and is not legal clearance.', policy)
+        self.assertIn('PASS is not approval or legal clearance', t0)
+
+    def test_pending_owner_review_wording_is_gone_from_docs(self):
+        for path in (POLICY_DOC, TASK_DOC, EXCEPTIONS_FILE, ACCEPTANCE_FILE):
+            with self.subTest(path=path.name):
+                self.assertNotIn('pending owner review', path.read_text(encoding='utf-8'))
+
+
+class PolicyAssetWordingCases(unittest.TestCase):
+    def test_asset_paragraph_rests_on_commit_message(self):
+        text = POLICY_DOC.read_text(encoding='utf-8')
+        for phrase in ("its commit message indicates that it is a screenshot of the project's GitHub Project board, published by the repository team",
+                       'This rests on the commit message only',
+                       'a screenshot of a third-party UI is only partly first-party',
+                       'No separate license or source URL is recorded'):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+        self.assertNotIn('so it is a first-party screenshot', text)
+
+    def test_adopted_by_change_names_the_16_change(self):
+        text = POLICY_DOC.read_text(encoding='utf-8')
+        self.assertIn('adopted by the #16 change', text)
+        self.assertNotIn('adopted by this change', text)
+
+
+class ResolvedUrlLimitCases(CheckerCase):
+    def test_resolved_url_is_outside_the_gate_and_pinned(self):
+        text = POLICY_DOC.read_text(encoding='utf-8')
+        self.assertIn('The gate does not check the `resolved` download URL: an entry whose `resolved` points to a non-registry URL with a well-formed `integrity` passes.', text)
+        name = self.write('package-lock.json', lockfile({
+            'node_modules/a': pkg('1.0.0', 'MIT', resolved='https://downloads.example.net/a-1.0.0.tgz')}))
+        code, out, err = self.run_checker([name])
+        self.assertEqual(code, 0, out + err)
+        self.assertIn('result: PASS (0 finding(s))', out)
+
+
+class EvidenceRecordCases(unittest.TestCase):
+    def acceptance(self):
+        return json.loads(ACCEPTANCE_FILE.read_text(encoding='utf-8'))
+
+    def test_d2_remedy_names_the_hard_coded_root(self):
+        d2 = next(d for d in self.acceptance()['defects'] if d['id'] == 'D2')['summary']
+        self.assertIn('TemporaryDirectory(dir=ROOT)', d2)
+        self.assertIn('setting a temp dir (for example TMPDIR) does not help', d2)
+        self.assertNotIn('should set a writable temp dir', d2)
+
+    def test_raw_results_line_two_names_the_hard_coded_root(self):
+        line = RAW_RESULTS_FILE.read_text(encoding='utf-8').splitlines()[1]
+        self.assertIn('TemporaryDirectory(dir=ROOT)', line)
+        self.assertIn('so setting TMPDIR does not help', line)
+
+    def test_scenario_digest_unchanged_and_sanitization_noted(self):
+        cmd = _find_command(self.acceptance(), 'D')
+        self.assertIsNotNone(cmd)
+        self.assertEqual(cmd['sha256'], '52da6e976690b1af0407a110c2116541b5fde798c059971f21f07b42ae0922c4')
+        self.assertIn('sanitized', cmd['note'])
+        self.assertIn('not changed', cmd['note'])
+
+    def test_unresolved_exceptions_item_records_the_decision(self):
+        unresolved = self.acceptance()['unresolved']
+        self.assertTrue(any('coordinator decisions of 2026-11-16' in item for item in unresolved))
+        self.assertFalse(any('pending owner review' in item for item in unresolved))
+
+    def test_t0_records_read_only_errors_s17_and_revision_source(self):
+        t0 = TASK_DOC.read_text(encoding='utf-8')
+        for phrase in ('13 read-only errors', 'S17', 'corrected to the documented exit 2',
+                       'was supplied by the coordinator and checked by file digests'):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, t0)
 
 
 if __name__ == '__main__':
