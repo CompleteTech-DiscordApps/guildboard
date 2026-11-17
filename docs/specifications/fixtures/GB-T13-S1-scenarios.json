@@ -1,0 +1,43 @@
+{
+  "coverage": "Synthetic G1 evidence and publication examples. Required evidence models only a selected Discord startup row. No gate approval or live evidence is represented.",
+  "candidate": {
+    "schemaVersion": "1.0.0",
+    "version": "0.1.0-mvp.1",
+    "gate": "GB-T13.G1",
+    "revision": "1111111111111111111111111111111111111111",
+    "artifactSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "notesRef": "synthetic/release-notes.md",
+    "evidence": [
+      {
+        "id": "discord-startup",
+        "issue": "GB-T12.MVP1",
+        "revision": "1111111111111111111111111111111111111111",
+        "date": "2026-11-17",
+        "environment": "synthetic Discord client environment",
+        "level": "real-discord",
+        "result": "pass",
+        "ref": "synthetic/discord-startup.json"
+      }
+    ]
+  },
+  "prior": {
+    "version": "0.1.0-mvp.0",
+    "revision": "2222222222222222222222222222222222222222",
+    "artifactSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "scenarios": [
+    {"id": "accepted-evidence", "expected": "PUBLISHED", "current": "candidate"},
+    {"id": "malformed-version", "candidatePatch": {"version": "0.01.0"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "malformed-digest", "candidatePatch": {"artifactSha256": "truncated"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "unsafe-pointer", "candidatePatch": {"notesRef": "../private/notes.md"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "extra-field", "candidatePatch": {"additional": "synthetic value"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "missing-evidence", "candidatePatch": {"evidence": []}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "missing-native-prerequisite", "nativeReady": false, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "stale-evidence", "recordPatch": {"revision": "2222222222222222222222222222222222222222"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "wrong-level", "recordPatch": {"level": "synthetic"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "failed-evidence", "recordPatch": {"result": "fail"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "precommit-interruption", "interruption": "before", "expected": "PUBLICATION_INTERRUPTED", "current": "prior"},
+    {"id": "postcommit-interruption", "interruption": "after", "expected": "PUBLICATION_UNKNOWN", "current": "candidate"},
+    {"id": "competing-publication", "expectedPriorMatches": false, "expected": "PREVIOUS_PUBLICATION_CHANGED", "current": "prior"}
+  ]
+}

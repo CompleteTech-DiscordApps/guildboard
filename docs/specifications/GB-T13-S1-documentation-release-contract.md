@@ -1,0 +1,170 @@
+# GB-T13.S1 documentation and release contract
+
+Contract version: `1.0.0` (candidate). Scope: [GB-T13.S1 #421][spec],
+following the [GB-T13.R1 journey audit][research]. The version describes the
+evidence format and is independent of the application version. Acceptance
+requires Maintainer & Documentation review and review by the downstream
+engineering and gate consumers before implementation.
+
+## Guide ownership and claims
+
+The maintainer records claims and decisions under [governance][governance].
+Owners below are expertise requirements. A guide has one accountable owner
+and can have multiple reviewers. Closure of a guide task requires its applicable
+verification issue and the repository's [Definition of Done][contributing].
+
+| Guide family | Accountable expertise and review | Evidence to hand off to GB-T13.D1 |
+| --- | --- | --- |
+| Contributor setup and architecture | Maintainer & Documentation, with setup and architecture consumers | Clean-environment steps, tool versions, authoritative configuration, accepted boundaries and exact build/test evidence |
+| Discord Portal and API | Identity & Discord and transport owners, with their client and security consumers | SDK/API/protocol versions, install/launch and OAuth prerequisites, safe configuration and real client/proxy checks for supported claims |
+| GoDaddy and operators | Deployment and operations owners, with data/recovery consumers | Linux VPS requirements, DNS/TLS/WSS, migrations, secrets handling, monitoring, backup/restore and rollback evidence |
+| Guild administrators and moderators | Moderation and policy owners, with T2/T6 consumers | Role mapping, Grant the Pen, requests, lockdown and modes with permitted, denied and interrupted outcomes |
+| End user | Editor and user experience owners, with T3/T5/T7 consumers | Canvas, durable save/history, reconnect feedback and accessible alternatives at the supported client scope |
+| Community policy and release notes | Maintainer & Documentation, with affected engineering, security and release consumers | Contribution and decision paths, supported versions, changelog, known issues, migrations, notices and gate evidence |
+
+Each guide entry identifies a stable GB issue, owned repository path, owner
+expertise, audience, reviewed source revision, claim status and evidence
+references. Use `planned` for intended behavior and `unresolved` for a known
+evidence gap, including its affected scope and next validating owner. Use
+`supported` only with a passing result for the named version, scope and
+environment. Mixed guides mark status per claim. On source or environment
+change, revalidate affected claims or move them to `unresolved` pending review.
+Owners propose changes in the issue and PR, and consumers check the behavior
+and evidence before the maintainer records acceptance.
+
+The [T0 handoff][t0] is foundation evidence. Its accepted server-authoritative
+boundary governs all guides describing permissions, tenant access, save
+receipts and recovery. The journey audit covers four audiences and preserves
+documentary gaps. A historical source hash confirms the audited bytes.
+Supported runtime behavior needs the applicable integrated or real-environment
+result.
+
+## Versioning and community decisions
+
+Product and contract versions use SemVer. Each released public surface (API,
+WS protocol, data/export formats, configuration and documented operator
+interfaces) names its supported ranges and compatibility policy. An
+incompatible change to a stable public surface requires a major version for
+that surface, with the effect on product SemVer recorded. Backward-compatible
+additions take a minor version and backward-compatible corrections a patch.
+A stable deprecation requires notice in a minor release before breaking
+removal in a major release. Announce replacement, affected versions, migration,
+rollback or forward recovery, and any end-of-support decision. Pre-1.0 and
+prerelease artifacts explicitly state which interfaces may change and include
+an upgrade path or a disclosure of incompatibility. Released artifact bytes
+and version identifiers are immutable. Maintain the changelog and show
+compatibility, deprecations, migrations, known issues, support scope, license
+notices, source revision, artifact digests and acceptance evidence in release
+notes. Exact support windows and initial public interface baselines are
+maintainer decisions recorded with the release.
+
+Raise proposed scope, sequencing or acceptance decisions on the issue with
+the stable GB ID. For significant architecture changes, link an ADR with
+alternatives, contract impact and consumer handoffs. The actual maintainer
+resolves escalations and records rationale and affected IDs in the issue,
+ADR or PR. Claim ownership through the maintainer and preserve the issue's
+visibility in the Project. The [Code of Conduct][conduct] and [security
+policy][security] own their private reporting routes. Refer reporters there,
+with a private channel requested without sensitive detail if the conduct
+route lacks a published private contact. Honor existing policy for
+appointments, CODEOWNERS and review routing. Publish only a redacted public
+disposition when appropriate. Support, reporting-route availability and
+response commitments need their own evidence.
+
+## Release evidence schema
+
+All records use bounded input, strict fields and reviewed references.
+Unknown fields, duplicate JSON keys or record IDs, malformed versions and
+digests, unsafe pointers and oversized values are invalid. Limit the manifest to 512 KiB of UTF-8 JSON and at most
+128 evidence entries. Strings have at most 256 characters.
+Use nonempty repository-relative paths without traversal, or canonical
+repository issue, PR, run or commit links without credentials, query or
+fragment. Digests are lowercase SHA-256 hex and source revisions are full
+lowercase Git SHAs in the repository's current SHA-1 format. Date values
+use ISO calendar dates in UTC. Keep free-text findings in reviewed,
+redacted source documents referenced by the record.
+
+| Record | Fields and invariants |
+| --- | --- |
+| Guide entry | `issue`, `path`, `ownerRole`, `audience` (contributor, administrator, moderator, end-user or operator), `revision`, `claimStatus`, `evidenceIds`. For unresolved claims, require `followUpIssue` (stable GB ID). Evidence IDs resolve uniquely in the handoff. |
+| Evidence entry | `id` (lowercase letters, digits and hyphens, starting with a letter), `issue`, `revision`, `date`, `environment`, `level`, `result` (pass, fail or blocked), `ref`. Issue is a canonical stable GB ID. A ref resolves to the actual redacted run, command, review or comparison, including its scope, environment and limitations. |
+| Candidate manifest | `schemaVersion` (this contract version), `version` (SemVer), `gate` (GB-T13.G1, GB-T13.G2 or GB-T13.G3), `revision`, `artifactSha256`, `notesRef`, `evidence`. The reviewed manifest and notes identify the same artifact, version and revision. Full provenance includes build inputs, reproducible build instructions and digests of distributed files. |
+
+Evidence levels are `static`, `synthetic`, `integration`, `independent-review`,
+`real-discord` and `real-godaddy`. Environment identifies the toolchain or
+redacted test environment and platform/client versions. A date and URL
+alone provide no assurance. Consumers check the linked records, verify
+artifacts and approvals, ensure current native dependencies are satisfied,
+and reject stale or wrong-scope evidence. A prerequisite acceptance for a
+different revision needs a documented compatibility assessment and
+verification of affected changes on the candidate. This preserves historical
+acceptance records while grounding release claims in current evidence.
+
+## Gate and publication handoff
+
+| Consumer | Required evidence and resulting scope |
+| --- | --- |
+| [GB-T13.D1 #450][handoff] | Integrate reviewed guides, run instructions and evidence-linked limitations. Keep the native verification prerequisites and document the supported subset. Supply evidence references for G3. |
+| [GB-T13.G1 #456][mvp] | Map every [MVP acceptance row][matrix] to T12 integrated evidence and native prerequisites. Include real Discord startup and authenticated guild context, simultaneous moderators, backend viewer-write denial, canvas, synchronization, save, basic lock, reconnect and fundamental security negatives. Approval applies to the verified MVP scope. [GB-T13.04.01.O1 #471][mvp-publication] is the separate MVP publication step. |
+| [GB-T13.G2 #457][production] | Record dated actual GoDaddy Linux VPS HTTPS/WSS and Discord networking, monitoring, rollback and smoke checks. Link isolated restore of database and assets with measured RPO/RTO and record environment and unresolved findings. |
+| [GB-T13.G3 #472][stable] | Require all native Tier gates, G1/G2, applicable T13 verification, MVP publication and D1. Link full integration, production acceptance, functionality including modes/moderation/import/export/accessibility/recovery, resolved independent security findings, reviewed versioned artifacts, notes and support documentation. Gate approval and [stable publication #473][stable-publication] each have their own evidence record. |
+
+An authorized maintainer accepts the candidate after native prerequisites,
+repository checks and applicable independent and consuming reviews. Before
+any publication, prepare candidate bytes, verify digests and notes, and
+record a reviewed immutable candidate identity and expected previous
+publication. Each identity contains `version`, `revision` and `artifactSha256`.
+Represent the expected prior identity as null only for a first publication. A commit point must make a complete candidate discoverable.
+A consumer sees either the complete prior publication or the complete
+accepted candidate. Require a compare against the expected prior state so a
+competing publisher cannot overwrite a newer publication. Read back and
+verify the exact public identity and digests before reporting success. A
+publication adapter must demonstrate these properties in its own
+verification before use.
+
+| Outcome | Publication requirement |
+| --- | --- |
+| `INVALID_METADATA` | Reject mismatched identity, malformed input, privacy violations or invalid digests. Preserve prior publication and return a safe field name or category. |
+| `PREREQUISITE_UNAVAILABLE` | Keep pending with the missing issue or evidence category when a prerequisite is missing, failed, stale, of insufficient level or unverifiable. Preserve prior publication. |
+| `PUBLICATION_INTERRUPTED` | Interruption before commit preserves the complete prior publication. Keep staging private and retry using the same candidate identity after rechecking prerequisites and prior state. |
+| `PUBLICATION_UNKNOWN` | If interrupted after a possible commit, reconcile authoritative state before reporting success or retrying. The candidate visible with matching digests is evidence of commit. If the prior publication remains current, retry conditionally after verification. A different current publication requires a new decision. |
+| `PREVIOUS_PUBLICATION_CHANGED` | Preserve the observed publication. Replan against the authoritative current state with maintainer review. |
+
+Public evidence may include revision, redacted configuration names, versions,
+outcome and scope. Keep credentials, personal or tenant identifiers, board
+content, private infrastructure details and private reports out of all
+public fields, references and diagnostics. Validate bounded metadata and
+review references for disclosure before release. Evidence access follows
+existing least-privilege policy. This contract governs documentation and
+release evidence. It changes neither product permission behavior nor tenant
+isolation controls. The real Discord iframe/proxy/client checks and GoDaddy
+Linux VPS deployment/recovery evidence belong to their gate owners.
+
+## Verification and review
+
+Run the [synthetic scenarios][fixtures] with
+`python3 -m unittest discover -s tests/verification -p test_t13_release_contract.py -v`.
+The model exercises a valid staged candidate, malformed identity, missing or
+insufficient prerequisites and interrupted publication without modifying the
+prior publication. Maintainer review assesses guide ownership, compatibility
+and community routes against existing policy. D1 and gate consumers review
+their evidence requirements, provenance and failure semantics. Record actual
+reviewers, revision and outcomes on the PR. Repository evidence uses exact
+revision and environment. These fixture results cover the contract examples
+and leave real platform, operational and release verification to G1/G2/G3.
+
+[spec]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/421
+[research]: ../workstreams/T13.md#gb-t13r1-documentation-journey-research-2026-11-17
+[t0]: ../workstreams/T0.md#t0-integration-and-handoff
+[governance]: ../../GOVERNANCE.md
+[contributing]: ../../CONTRIBUTING.md
+[conduct]: ../../CODE_OF_CONDUCT.md
+[security]: ../../SECURITY.md
+[handoff]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/450
+[mvp]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/456
+[mvp-publication]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/471
+[production]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/457
+[stable]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/472
+[stable-publication]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/473
+[matrix]: ../../planning/MVP-ACCEPTANCE.md
+[fixtures]: fixtures/GB-T13-S1-scenarios.json
