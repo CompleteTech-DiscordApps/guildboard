@@ -1,0 +1,1180 @@
+{
+  "acceptance_status": "Independent verification evidence only. Issue #17 acceptance, independent review of this evidence, native CI and the owner review of the three exceptions are not claimed here.",
+  "assets_inventory": {
+    "files": [
+      {
+        "path": "planning/audit/project-overview.jpg",
+        "recorded_license": null,
+        "recorded_source": null,
+        "referenced_by_code": false,
+        "sha256": "19abbd313b087bb41d59b6e61c0b6a29925deb17b4320ed9d93559f3cc317b47"
+      }
+    ],
+    "result": "one raster image found; no fonts, icons, svg/png/ico/webp/gif, no @font-face/CDN font or icon-library loads in app code; project-overview.jpg has no recorded license/source (see defects)"
+  },
+  "checker_counts": {
+    "canvas": {
+      "allowed": 287,
+      "entries": 291,
+      "excepted": 3,
+      "missing_license": 0,
+      "no_integrity": 0,
+      "prohibited": 0,
+      "review_required": 0,
+      "skipped_first_party": 1,
+      "third_party": 290,
+      "verified_overrides_applied": 2
+    },
+    "root": {
+      "allowed": 100,
+      "entries": 117,
+      "excepted": 0,
+      "missing_license": 0,
+      "no_integrity": 0,
+      "prohibited": 0,
+      "review_required": 0,
+      "skipped_first_party": 17,
+      "third_party": 100
+    }
+  },
+  "commands": [
+    {
+      "cmd": "python3 -I -B scripts/verification/check_licenses.py",
+      "cwd": "src",
+      "exit": 0,
+      "id": "A1",
+      "log": "out/logs/A1_check_licenses.txt",
+      "result": "PASS (0 findings)",
+      "sha256": "c6026a81df3829de17ca44abf9e7499bbe7fb1eefde923ccb74d134c531611aa"
+    },
+    {
+      "cmd": "python3 -B -m unittest discover -s tests/verification -v",
+      "cwd": "src (read-only)",
+      "exit": 1,
+      "id": "A2",
+      "log": "out/logs/A2_unittest.txt",
+      "result": "Ran 142; errors=13 (read-only FS writes in test_requirements_acceptance), skipped=8",
+      "sha256": "f549aa61334bfdaaed387da4537f890685705e590a772d1a6668f7e819b89f32"
+    },
+    {
+      "cmd": "python3 -B -m unittest discover -s tests/verification -v",
+      "cwd": "out/work/gb-copy (writable copy)",
+      "exit": 0,
+      "id": "A2b",
+      "log": "out/logs/A2b_unittest_scratchcopy.txt",
+      "result": "Ran 142; OK (skipped=8)",
+      "sha256": "e9fda43b0ee9916326659b240c3248362bac40a287c9edf6a7fd9c0a0e4a1535"
+    },
+    {
+      "cmd": "python3 scripts/github-bootstrap/validate.py",
+      "cwd": "src (read-only)",
+      "exit": 1,
+      "id": "A3",
+      "log": "out/logs/A3_validate.txt",
+      "result": "result=fail: cannot write validation report, Errno 30 read-only FS",
+      "sha256": "40a2640f7cc03d35e19a19eb518d346e4088063d1376d3e1a86139f6d836ceb1"
+    },
+    {
+      "cmd": "python3 -B scripts/github-bootstrap/validate.py (-I omitted: script dir must be on sys.path)",
+      "cwd": "out/work/gb-copy",
+      "exit": 0,
+      "id": "A3b",
+      "log": "out/logs/A3b_validate_scratchcopy.txt",
+      "result": "result=pass, item_count 471",
+      "sha256": "7b98288a45c96f1d3d849b6e885e83947eec2d1d1382d01b7a110c59762e1cb7"
+    },
+    {
+      "cmd": "python3 -I -B out/work/analyze_lock.py <both lockfiles> out/work/license_counts.json (verifier-written stdlib script)",
+      "cwd": "src",
+      "exit": 0,
+      "id": "B",
+      "log": "out/logs/B_analysis.txt",
+      "result": "counts reconciled with checker",
+      "sha256": "c98176dc2ce2e3187d1bc36f448b27daea0d2863621fb3e888641e560d02045d"
+    },
+    {
+      "cmd": "python3 -I -B out/work/scenarios.py <checker> out (25 crafted lockfiles)",
+      "cwd": "out/scenarios",
+      "exit": 0,
+      "id": "D",
+      "log": "out/scenario_results.json",
+      "result": "25 scenarios; 25 match after reconciling S17 to documented exit 2",
+      "sha256": "52da6e976690b1af0407a110c2116541b5fde798c059971f21f07b42ae0922c4",
+      "note": "The sha256 above is for the original, unsanitized scenario_results.json. The out/ copy and the embedded copy in raw results had <verifier-scratch> paths sanitized, so their digests differ and cannot be re-derived from this tree. The recorded digest was not changed."
+    }
+  ],
+  "coordinator_annotations": [
+    {
+      "added_by": "coordinator",
+      "id": "CA1",
+      "note": "git history records this file in commit da81125 (2026-10-23, message: 'Publish verified bootstrap report, CI evidence and Project screenshot'), so it is a first-party screenshot of the GitHub Project board. The commit message is the only provenance evidence; no separate license or source URL was recorded and none is claimed. Verifier found no code reference. Owner confirmation that it is planning-only and not distributed is still pending.",
+      "subject": "planning/audit/project-overview.jpg (verifier defect D1)",
+      "verifier_findings_unchanged": true
+    }
+  ],
+  "counts_reconciliation": "Root: 117 entries = 1 root + 8 workspace paths + 8 links + 100 third-party; all 100 third-party licenses in allowlist (72 MIT, 28 other permissive). Canvas: 290 third-party = 285 allowlisted by declared license + 2 verified overrides (fuzzy, khroma, both MIT) + 3 excepted (dompurify, pako, robust-predicates). Matches checker.",
+  "defects": [
+    {
+      "id": "D1",
+      "severity": "low",
+      "summary": "planning/audit/project-overview.jpg is an image asset in the tree with no recorded license or source. Policy says an asset without recorded license/source is not adoptable. It is in planning docs, not imported by code; no direct evidence it is in product distribution."
+    },
+    {
+      "id": "D2",
+      "severity": "environment",
+      "summary": "On the read-only export 13 tests in test_requirements_acceptance error and the validator exits 1. The test hard-codes the repository root as its temp dir (TemporaryDirectory(dir=ROOT), tests/verification/test_requirements_acceptance.py:21), so setting a temp dir (for example TMPDIR) does not help; the remedy is a test change that creates temp dirs outside the repository root. Passes in writable copy. Not a code defect of the checker."
+    },
+    {
+      "id": "D3",
+      "severity": "note",
+      "summary": "Scenario S17 initial expectation was wrong (verifier error). Documented behaviour is exit 2. Not a checker defect."
+    },
+    {
+      "id": "D4",
+      "severity": "note",
+      "summary": "8 editor-feasibility tests skip because EDITOR14_INPUTS is unset. Not run."
+    }
+  ],
+  "environment": {
+    "network": "none used",
+    "os": "Linux 7.0.0-38-generic x86_64 (Ubuntu 24.04, glibc 2.39)",
+    "python": "3.12.3",
+    "src_mode": "read-only export; writable tests/validator re-run in out/work/gb-copy (copy of src)"
+  },
+  "file_digests_sha256": {
+    "src/.github/workflows/license-policy.yml": "80a767aef1984a9f52bf882e10dbf115f580468151b6cad48f521e19b1333314",
+    "src/docs/evidence/license-exceptions.json": "fec2ec51adb38a38306b82066b7202b6a085b48c9f6334c00490c257f5f43839",
+    "src/docs/license-supply-chain-policy.md": "957ddeff0a7742b478c9326118b29e8fff458258015eaa30b880f5e748ecda3d",
+    "src/docs/workstreams/T0.md": "0915ae22befa0546447cd850b7defd5e73277772677f63e3d087154553d04ec1",
+    "src/package-lock.json": "79b589818e65a2694671013b5460681593dfdd2901ada23664a1549832e79e80",
+    "src/research-fixtures/canvas/package-lock.json": "32fb212e1a50493ad2346fb22722d9351d1d9e8ab902ce0afefbfbfa22ae5cdf",
+    "src/scripts/verification/check_licenses.py": "a919024e9dbd7ac4684172db1c42261b517aaf81dd58c04dc03ceda5b6f176b2",
+    "src/tests/verification/test_license_policy.py": "6f7abf416d26770d5d51d2706d6bf8943b143fc3973dde46a79a904ce88055e4"
+  },
+  "issue": "GitHub #17 GB-T0.02.02.V1 (independent verification, executed by verifier; not an acceptance or CI/merge claim)",
+  "license_counts_verifier": {
+    "package-lock.json": {
+      "entries_total": 117,
+      "license_counts": {
+        "Apache-2.0": 13,
+        "BSD-2-Clause": 6,
+        "BSD-3-Clause": 1,
+        "BlueOak-1.0.0": 3,
+        "ISC": 5,
+        "MIT": 72
+      },
+      "link_entries": 8,
+      "lockfile": "package-lock.json",
+      "missing_license": [],
+      "non_MIT": [
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "eslint-visitor-keys",
+          "path": "node_modules/@eslint-community/eslint-utils/node_modules/eslint-visitor-keys",
+          "version": "3.4.3"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@eslint/config-array",
+          "path": "node_modules/@eslint/config-array",
+          "version": "0.23.6"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@eslint/config-helpers",
+          "path": "node_modules/@eslint/config-helpers",
+          "version": "0.7.0"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@eslint/core",
+          "path": "node_modules/@eslint/core",
+          "version": "1.2.1"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@eslint/object-schema",
+          "path": "node_modules/@eslint/object-schema",
+          "version": "3.0.5"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@eslint/plugin-kit",
+          "path": "node_modules/@eslint/plugin-kit",
+          "version": "0.7.3"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@humanfs/core",
+          "path": "node_modules/@humanfs/core",
+          "version": "0.19.2"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@humanfs/node",
+          "path": "node_modules/@humanfs/node",
+          "version": "0.16.8"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@humanfs/types",
+          "path": "node_modules/@humanfs/types",
+          "version": "0.15.0"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@humanwhocodes/module-importer",
+          "path": "node_modules/@humanwhocodes/module-importer",
+          "version": "1.0.1"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@humanwhocodes/retry",
+          "path": "node_modules/@humanwhocodes/retry",
+          "version": "0.4.3"
+        },
+        {
+          "direct": false,
+          "license": "BlueOak-1.0.0",
+          "name": "@isaacs/nonrecursive-glob-match",
+          "path": "node_modules/@isaacs/nonrecursive-glob-match",
+          "version": "1.1.0"
+        },
+        {
+          "direct": false,
+          "license": "BlueOak-1.0.0",
+          "name": "minimatch",
+          "path": "node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch",
+          "version": "11.0.1"
+        },
+        {
+          "direct": false,
+          "license": "BSD-2-Clause",
+          "name": "eslint-scope",
+          "path": "node_modules/eslint-scope",
+          "version": "9.1.2"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "eslint-visitor-keys",
+          "path": "node_modules/eslint-visitor-keys",
+          "version": "5.0.1"
+        },
+        {
+          "direct": false,
+          "license": "BSD-2-Clause",
+          "name": "espree",
+          "path": "node_modules/espree",
+          "version": "11.2.0"
+        },
+        {
+          "direct": false,
+          "license": "BSD-3-Clause",
+          "name": "esquery",
+          "path": "node_modules/esquery",
+          "version": "1.7.0"
+        },
+        {
+          "direct": false,
+          "license": "BSD-2-Clause",
+          "name": "esrecurse",
+          "path": "node_modules/esrecurse",
+          "version": "4.3.0"
+        },
+        {
+          "direct": false,
+          "license": "BSD-2-Clause",
+          "name": "estraverse",
+          "path": "node_modules/estraverse",
+          "version": "5.3.0"
+        },
+        {
+          "direct": false,
+          "license": "BSD-2-Clause",
+          "name": "esutils",
+          "path": "node_modules/esutils",
+          "version": "2.0.3"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "flatted",
+          "path": "node_modules/flatted",
+          "version": "3.4.4"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "glob-parent",
+          "path": "node_modules/glob-parent",
+          "version": "6.0.2"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "isexe",
+          "path": "node_modules/isexe",
+          "version": "2.0.0"
+        },
+        {
+          "direct": false,
+          "license": "BlueOak-1.0.0",
+          "name": "minimatch",
+          "path": "node_modules/minimatch",
+          "version": "11.0.8"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "semver",
+          "path": "node_modules/semver",
+          "version": "7.8.6"
+        },
+        {
+          "direct": true,
+          "license": "Apache-2.0",
+          "name": "typescript",
+          "path": "node_modules/typescript",
+          "version": "5.9.3"
+        },
+        {
+          "direct": false,
+          "license": "BSD-2-Clause",
+          "name": "uri-js",
+          "path": "node_modules/uri-js",
+          "version": "4.4.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "which",
+          "path": "node_modules/which",
+          "version": "2.0.2"
+        }
+      ],
+      "root_and_workspace_paths": [
+        "apps/activity",
+        "apps/api",
+        "apps/bot",
+        "packages/auth",
+        "packages/canvas",
+        "packages/collaboration",
+        "packages/config",
+        "packages/contracts"
+      ],
+      "third_party": 100,
+      "third_party_direct": 5,
+      "third_party_transitive": 95,
+      "third_party_without_integrity": []
+    },
+    "research-fixtures/canvas/package-lock.json": {
+      "entries_total": 291,
+      "license_counts": {
+        "(MIT AND Zlib)": 1,
+        "(MPL-2.0 OR Apache-2.0)": 1,
+        "0BSD": 1,
+        "<missing>": 2,
+        "Apache-2.0": 12,
+        "BSD-3-Clause": 7,
+        "CC0-1.0": 1,
+        "ISC": 38,
+        "MIT": 226,
+        "Unlicense": 1
+      },
+      "link_entries": 0,
+      "lockfile": "research-fixtures/canvas/package-lock.json",
+      "missing_license": [
+        {
+          "direct": false,
+          "name": "fuzzy",
+          "path": "node_modules/fuzzy",
+          "version": "0.1.3"
+        },
+        {
+          "direct": false,
+          "name": "khroma",
+          "path": "node_modules/khroma",
+          "version": "2.1.0"
+        }
+      ],
+      "non_MIT": [
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@chevrotain/cst-dts-gen",
+          "path": "node_modules/@chevrotain/cst-dts-gen",
+          "version": "11.0.3"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@chevrotain/gast",
+          "path": "node_modules/@chevrotain/gast",
+          "version": "11.0.3"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@chevrotain/regexp-to-ast",
+          "path": "node_modules/@chevrotain/regexp-to-ast",
+          "version": "11.0.3"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@chevrotain/types",
+          "path": "node_modules/@chevrotain/types",
+          "version": "11.0.3"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@chevrotain/utils",
+          "path": "node_modules/@chevrotain/utils",
+          "version": "11.0.3"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "anymatch",
+          "path": "node_modules/anymatch",
+          "version": "3.1.3"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "browser-fs-access",
+          "path": "node_modules/browser-fs-access",
+          "version": "0.29.1"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "chevrotain",
+          "path": "node_modules/chevrotain",
+          "version": "11.0.3"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "crc-32",
+          "path": "node_modules/crc-32",
+          "version": "0.3.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3",
+          "path": "node_modules/d3",
+          "version": "7.9.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-array",
+          "path": "node_modules/d3-array",
+          "version": "3.2.4"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-axis",
+          "path": "node_modules/d3-axis",
+          "version": "3.0.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-brush",
+          "path": "node_modules/d3-brush",
+          "version": "3.0.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-chord",
+          "path": "node_modules/d3-chord",
+          "version": "3.0.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-color",
+          "path": "node_modules/d3-color",
+          "version": "3.1.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-contour",
+          "path": "node_modules/d3-contour",
+          "version": "4.0.2"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-delaunay",
+          "path": "node_modules/d3-delaunay",
+          "version": "6.0.4"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-dispatch",
+          "path": "node_modules/d3-dispatch",
+          "version": "3.0.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-drag",
+          "path": "node_modules/d3-drag",
+          "version": "3.0.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-dsv",
+          "path": "node_modules/d3-dsv",
+          "version": "3.0.1"
+        },
+        {
+          "direct": false,
+          "license": "BSD-3-Clause",
+          "name": "d3-ease",
+          "path": "node_modules/d3-ease",
+          "version": "3.0.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-fetch",
+          "path": "node_modules/d3-fetch",
+          "version": "3.0.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-force",
+          "path": "node_modules/d3-force",
+          "version": "3.0.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-format",
+          "path": "node_modules/d3-format",
+          "version": "3.1.2"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-geo",
+          "path": "node_modules/d3-geo",
+          "version": "3.1.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-hierarchy",
+          "path": "node_modules/d3-hierarchy",
+          "version": "3.1.2"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-interpolate",
+          "path": "node_modules/d3-interpolate",
+          "version": "3.0.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-path",
+          "path": "node_modules/d3-path",
+          "version": "3.1.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-polygon",
+          "path": "node_modules/d3-polygon",
+          "version": "3.0.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-quadtree",
+          "path": "node_modules/d3-quadtree",
+          "version": "3.0.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-random",
+          "path": "node_modules/d3-random",
+          "version": "3.0.1"
+        },
+        {
+          "direct": false,
+          "license": "BSD-3-Clause",
+          "name": "d3-sankey",
+          "path": "node_modules/d3-sankey",
+          "version": "0.12.3"
+        },
+        {
+          "direct": false,
+          "license": "BSD-3-Clause",
+          "name": "d3-array",
+          "path": "node_modules/d3-sankey/node_modules/d3-array",
+          "version": "2.12.1"
+        },
+        {
+          "direct": false,
+          "license": "BSD-3-Clause",
+          "name": "d3-path",
+          "path": "node_modules/d3-sankey/node_modules/d3-path",
+          "version": "1.0.9"
+        },
+        {
+          "direct": false,
+          "license": "BSD-3-Clause",
+          "name": "d3-shape",
+          "path": "node_modules/d3-sankey/node_modules/d3-shape",
+          "version": "1.3.7"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "internmap",
+          "path": "node_modules/d3-sankey/node_modules/internmap",
+          "version": "1.0.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-scale",
+          "path": "node_modules/d3-scale",
+          "version": "4.0.2"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-scale-chromatic",
+          "path": "node_modules/d3-scale-chromatic",
+          "version": "3.1.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-selection",
+          "path": "node_modules/d3-selection",
+          "version": "3.0.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-shape",
+          "path": "node_modules/d3-shape",
+          "version": "3.2.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-time",
+          "path": "node_modules/d3-time",
+          "version": "3.1.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-time-format",
+          "path": "node_modules/d3-time-format",
+          "version": "4.1.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-timer",
+          "path": "node_modules/d3-timer",
+          "version": "3.0.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-transition",
+          "path": "node_modules/d3-transition",
+          "version": "3.0.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "d3-zoom",
+          "path": "node_modules/d3-zoom",
+          "version": "3.0.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "delaunator",
+          "path": "node_modules/delaunator",
+          "version": "5.1.0"
+        },
+        {
+          "direct": false,
+          "license": "(MPL-2.0 OR Apache-2.0)",
+          "name": "dompurify",
+          "path": "node_modules/dompurify",
+          "version": "3.4.17"
+        },
+        {
+          "direct": false,
+          "license": "CC0-1.0",
+          "name": "fractional-indexing",
+          "path": "node_modules/fractional-indexing",
+          "version": "3.2.0"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "glob-parent",
+          "path": "node_modules/glob-parent",
+          "version": "5.1.2"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "inherits",
+          "path": "node_modules/inherits",
+          "version": "2.0.4"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "internmap",
+          "path": "node_modules/internmap",
+          "version": "2.0.3"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "isexe",
+          "path": "node_modules/isexe",
+          "version": "2.0.0"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "@chevrotain/types",
+          "path": "node_modules/mermaid/node_modules/@chevrotain/types",
+          "version": "11.1.2"
+        },
+        {
+          "direct": false,
+          "license": "(MIT AND Zlib)",
+          "name": "pako",
+          "path": "node_modules/pako",
+          "version": "2.0.3"
+        },
+        {
+          "direct": true,
+          "license": "Apache-2.0",
+          "name": "playwright",
+          "path": "node_modules/playwright",
+          "version": "1.56.1"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "playwright-core",
+          "path": "node_modules/playwright-core",
+          "version": "1.56.1"
+        },
+        {
+          "direct": false,
+          "license": "Apache-2.0",
+          "name": "pwacompat",
+          "path": "node_modules/pwacompat",
+          "version": "2.0.17"
+        },
+        {
+          "direct": false,
+          "license": "Unlicense",
+          "name": "robust-predicates",
+          "path": "node_modules/robust-predicates",
+          "version": "3.0.3"
+        },
+        {
+          "direct": false,
+          "license": "BSD-3-Clause",
+          "name": "rw",
+          "path": "node_modules/rw",
+          "version": "1.3.3"
+        },
+        {
+          "direct": false,
+          "license": "BSD-3-Clause",
+          "name": "source-map-js",
+          "path": "node_modules/source-map-js",
+          "version": "1.2.2"
+        },
+        {
+          "direct": false,
+          "license": "0BSD",
+          "name": "tslib",
+          "path": "node_modules/tslib",
+          "version": "2.8.1"
+        },
+        {
+          "direct": false,
+          "license": "ISC",
+          "name": "which",
+          "path": "node_modules/which",
+          "version": "2.0.2"
+        }
+      ],
+      "root_and_workspace_paths": [],
+      "third_party": 290,
+      "third_party_direct": 5,
+      "third_party_transitive": 285,
+      "third_party_without_integrity": []
+    }
+  },
+  "revision_identity_note": "Stated by coordinator. Not independently checked: git use was forbidden, and the export has no .git directory. Compared only file content digests.",
+  "scenario_summary": {
+    "match": 25,
+    "mismatch": 0,
+    "total": 25
+  },
+  "scenarios": [
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "96afd7340bc4e82e36957da7b10d96f73ddae2e56fd7754f8867a333c9d77b57",
+      "scenario": "S01_gpl3_plain",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "2c5d860d5e07ae009e2dc7bc7d01ae9683727b68a6eb8ba5d47671efb53afe97",
+      "scenario": "S02_gpl3_or_later",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "125c1340a3c9afb2212d3977676ce81e21107155e98c8c491100acbb85263248",
+      "scenario": "S03_gpl_with_exception_WITH",
+      "traceback": false
+    },
+    {
+      "actual_exit": 2,
+      "expected_exit": [
+        2
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "input error: exception #0 in out/scenarios/S04_exception_n",
+      "output_sha256": "630843803b9d55444720e91289169b1e8f9b9ca91069a492342715234a88b9c7",
+      "scenario": "S04_exception_names_prohibited_GPL",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "3290ff633e29eab396d5878e24effbc4268bff57ebc340cb5329d5a55a6c836c",
+      "scenario": "S05_missing_license_no_override",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "351786d0c59b92f377f71ffa225a3c485b8c5453c5bf9123a4487910505a1fc6",
+      "scenario": "S06_malformed_integrity",
+      "traceback": false
+    },
+    {
+      "actual_exit": 2,
+      "expected_exit": [
+        2
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "input error: unsafe workspaces pattern 'node_modules/*' in the root entry: node_modules, parent segments, absolute paths, backslashes and wildcard-only patterns are not allowed",
+      "output_sha256": "e452ffe5ca349e09daa71e2002a0e617a40bb8119b4cc6e8733c9a64359b337e",
+      "scenario": "S07_workspaces_node_modules_pattern",
+      "traceback": false
+    },
+    {
+      "actual_exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: PASS (0 finding(s))",
+      "output_sha256": "eafa95bfece29998a7d974e25105d69a1cf15e35d9821a594479ea56ac268de2",
+      "scenario": "S08_nested_path_mit_positive",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "9c1564a44c854c3fd4aca7360d1646ccf28e044eda75805bd2da4b299939a073",
+      "scenario": "S09_alias_name_gpl_real",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1,
+        2
+      ],
+      "match": true,
+      "note": "deep nested value; must not traceback",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "dd3f6fdec78848cc9b08511ed423950b15bf2009446c0d3e26b26cad0236fab6",
+      "scenario": "S10_deep_nesting_license",
+      "traceback": false
+    },
+    {
+      "actual_exit": 2,
+      "expected_exit": [
+        2
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "input error: malformed lockfile (missing packages map): <verifier-scratch>/ou",
+      "output_sha256": "cb685e1a104ebacaa7d1c0eb05bd6613a3bc8a47c61a44f12772dbfa02826b12",
+      "scenario": "S11_empty_packages_map",
+      "traceback": false
+    },
+    {
+      "actual_exit": 2,
+      "expected_exit": [
+        2
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "input error: missing file: out/scenarios/S12_missing_lockf",
+      "output_sha256": "167f2d325ff8647c0b8a8567246e5dddfcc941c8d0a3d86df05adcda5c28c4e1",
+      "scenario": "S12_missing_lockfile_path",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "5d7b64617815eb50f504696bf6b63fe59ffd58292bd91a24218018fe090e0717",
+      "scenario": "S13_stale_exception",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "2a9ed399bb3f79019d22da9f6e7444bf73c3269fc9006b6361dd3c213be2bd3a",
+      "scenario": "S14_stale_override_no_matching_pkg",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (2 finding(s))",
+      "output_sha256": "0721dc044131cc2605d3f6af0a75b5fad0fcda67b64291f04044a400ac735cb2",
+      "scenario": "S15_mismatched_override_integrity",
+      "traceback": false
+    },
+    {
+      "actual_exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: PASS (0 finding(s))",
+      "output_sha256": "5daea793ee7a306abeffb4f058135b1f43c1d291e28dc5bd37d6ba0ec521d1cf",
+      "scenario": "S16_matching_override_positive",
+      "traceback": false
+    },
+    {
+      "actual_exit": 2,
+      "expected_exit": [
+        2
+      ],
+      "expected_exit_initial": [
+        1
+      ],
+      "match": true,
+      "note": "Initial expectation 1 was wrong: policy docs section Verified license overrides says a prohibited override is invalid input (exit 2). Reconciled to documented behaviour.",
+      "output_head": "input error: verified_license_overrides #0 in out/scenario",
+      "output_sha256": "d1274a780476c04ae4b8bc6728af4d110be558537f3544a74b814c905333d2c4",
+      "scenario": "S17_override_license_GPL_not_applied",
+      "traceback": false
+    },
+    {
+      "actual_exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: PASS (0 finding(s))",
+      "output_sha256": "1ff9e00e3b502d6468d9d96e4766b5266581b0d0442bd0e1bf1ca0731d492bbb",
+      "scenario": "S18_review_exception_pinned_positive",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (2 finding(s))",
+      "output_sha256": "9ea65efa27361537b26241b352dc1baeeb586ecc7e2ced7960a6f99920c31a3a",
+      "scenario": "S19_review_exception_wrong_version",
+      "traceback": false
+    },
+    {
+      "actual_exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: PASS (0 finding(s))",
+      "output_sha256": "abe5bf70617ca70e3ad6c48d2030cba6c5593cd45df73d6b3afac36b83436411",
+      "scenario": "S20_apache_mit_positive",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "942efb0d70dd2a1c30da0b29ef19573d6087a89d0c11294f57e41b0ae3fa74a0",
+      "scenario": "S21_unknown_identifier_no_exception",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "f95f0d0233f82b05d8a9528cf75b93bca247c45037b08d2fee7ae0ac5ddbf087",
+      "scenario": "S22_lgpl_prohibited",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "80707699a04eb9b252c2d2911254344aeb789e67c78d4bdb17c000511817ca7f",
+      "scenario": "S23_lowercase_gpl_spelling",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "a478d3fa258e9b0fdb43d27eed70918a12553ea43fb6b8058bbf43dc94e00e6d",
+      "scenario": "S24_prohibited_in_nested_path",
+      "traceback": false
+    },
+    {
+      "actual_exit": 1,
+      "expected_exit": [
+        1
+      ],
+      "match": true,
+      "note": "",
+      "output_head": "result: FAIL (1 finding(s))",
+      "output_sha256": "8412be63a9ac24ad0a92adb7f746ae4219336babc8fe6b02ba491518f2866a46",
+      "scenario": "S25_missing_integrity_third_party",
+      "traceback": false
+    }
+  ],
+  "tested_revision": "a6c887ebcc0116f35666af382aa065ea1c593b98",
+  "unresolved": [
+    "Three review-required exceptions carry coordinator decisions of 2026-11-16 under delegated section authority (not human approval; not legal sign-off; research-only canvas fixture; re-review required before any product distribution): dompurify (Apache-2.0 elected, MPL-2.0 branch not relied on, Apache-2.0 notices retained), pako ((MIT AND Zlib): both notices retained), robust-predicates (Unlicense accepted as a public-domain dedication).",
+    "fuzzy 0.1.3 and khroma 2.1.0 verified overrides are evidence recorded by the coordinator with network access outside this gate; not re-verified here (no network) and not legal sign-off.",
+    "No registry/tarball verification performed by verifier (no network).",
+    "No legal review performed.",
+    "Discord and GoDaddy VPS: out of scope per policy; no pass claimed from mocks or live checks.",
+    "Fonts/icons/imported assets: none adopted; project-overview.jpg has no recorded license/source.",
+    "Scope clause (2) MIT compatibility review of direct/transitive deps is a mechanical allowlist check plus a documented permissive-license reading, not legal review.",
+    "Tests in src not run to pass in the read-only export; passing result is from writable copy only.",
+    "CI workflow result not observed (no GitHub access); workflow file validated by its test only."
+  ],
+  "verifier_claims": "Observed execution only. No acceptance of #17, no CI/merge/independent-review claim."
+}
