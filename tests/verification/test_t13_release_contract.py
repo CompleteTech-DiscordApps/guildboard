@@ -18,6 +18,10 @@ MANIFEST = (IDENTITY - {"manifestSha256"}) | {
 }
 APPROVAL = {"schemaVersion", "gate", "identity", "decision", "decisionRef", "provenanceRef"}
 SCHEMA_VERSION = "1.0.0"
+MAX_VERSION = 128
+INDEX_PATH = "SHA256SUMS"
+ENVELOPE_PATHS = {INDEX_PATH, "manifest.json", "publication-receipt.json"}
+GATES = {"GB-T13.G1", "GB-T13.G2", "GB-T13.G3"}
 REPOSITORY = "https://github.com/CompleteTech-DiscordApps/guildboard"
 DIGEST = re.compile(r"[0-9a-f]{64}")
 RECORD = {"id", "issue", "revision", "date", "environment", "level", "result", "ref"}
@@ -47,19 +51,41 @@ def strings(record, fields):
     return all(isinstance(record[key], str) and 0 < len(record[key]) <= 256 for key in fields)
 
 
+def valid_version(value):
+    return isinstance(value, str) and len(value) <= MAX_VERSION and bool(SEMVER.fullmatch(value))
+
+
+def precedence(version):
+    core, _, pre = version.split("+", 1)[0].partition("-")
+    identifiers = tuple((0, int(part)) if part.isdigit() else (1, part)
+                        for part in pre.split(".")) if pre else ()
+    return tuple(map(int, core.split("."))), not pre, identifiers
+
+
+def release_gate(version):
+    core, final, _ = precedence(version)
+    major = core[0]
+    if major == 0:
+        return "GB-T13.G1"
+    return "GB-T13.G3" if final else None
+
+
 def safe_ref(value):
-    if value.startswith("https://github.com/CompleteTech-DiscordApps/guildboard/"):
+    release_prefix = f"{REPOSITORY}/releases/tag/v"
+    if value.startswith(release_prefix):
+        return bool(valid_version(value.removeprefix(release_prefix)))
+    if value.startswith(REPOSITORY + "/"):
         return bool(re.fullmatch(
-            r"https://github\.com/CompleteTech-DiscordApps/guildboard/"
-            r"(?:(?:issues|pull|actions/runs)/[1-9][0-9]*|commit/[0-9a-f]{40})",
+            re.escape(REPOSITORY) + r"/(?:(?:issues|pull|actions/runs)/[1-9][0-9]*|commit/[0-9a-f]{40})",
             value,
         ))
     return safe_path(value)
 
 
 def safe_path(value):
-    return all(re.fullmatch(r"[A-Za-z0-9_-][A-Za-z0-9_.-]*", part)
-               for part in value.split("/"))
+    return isinstance(value, str) and len(value) <= 256 and all(
+        re.fullmatch(r"[A-Za-z0-9_-][A-Za-z0-9_.-]*", part) for part in value.split("/")
+    )
 
 
 def valid_record(record):
@@ -86,13 +112,13 @@ def valid_manifest(candidate):
         return False
     if not (
         candidate["schemaVersion"] == SCHEMA_VERSION
-        and candidate["gate"] == "GB-T13.G1"
-        and SEMVER.fullmatch(candidate["version"])
+        and candidate["gate"] in GATES
+        and valid_version(candidate["version"])
         and re.fullmatch(r"[0-9a-f]{40}", candidate["revision"])
         and DIGEST.fullmatch(candidate["artifactSha256"])
         and DIGEST.fullmatch(candidate["notesSha256"])
-        and safe_ref(candidate["notesRef"])
-        and safe_ref(candidate["provenanceRef"])
+        and safe_path(candidate["notesRef"])
+        and safe_path(candidate["provenanceRef"])
     ):
         return False
     evidence = candidate["evidence"]
@@ -117,6 +143,7 @@ class Bundle:
     files: dict
     index: bytes
     manifest: bytes
+    notes_path: str
     notes: bytes
 
 
@@ -136,18 +163,57 @@ class State:
     versions: dict
 
 
+def json_object(data, limit):
+    if len(data) <= limit:
+        try:
+            return json.loads(data.decode("utf-8"), object_pairs_hook=strict_object)
+        except (UnicodeError, ValueError, RecursionError):
+            return None
+    return None
+
+
+def valid_build_file(record, files, provenance_path):
+    return (isinstance(record, dict) and record.keys() == {"path", "sha256"}
+            and safe_path(record["path"]) and record["path"] != provenance_path
+            and record["path"] in files and record["sha256"] == digest(files[record["path"]]))
+
+
+def valid_provenance(manifest, files):
+    path = manifest["provenanceRef"]
+    provenance = json_object(files.get(path, b""), 64 * 1024)
+    if (not isinstance(provenance, dict)
+            or provenance.keys() != {"schemaVersion", "sourceRevision", "inputs", "recipe", "checksumIndex"}
+            or provenance["schemaVersion"] != SCHEMA_VERSION
+            or provenance["sourceRevision"] != manifest["revision"]
+            or provenance["checksumIndex"] != INDEX_PATH):
+        return False
+    inputs = provenance["inputs"]
+    return (isinstance(inputs, list) and 1 <= len(inputs) <= 64
+            and all(valid_build_file(record, files, path) for record in inputs)
+            and len({record["path"] for record in inputs}) == len(inputs)
+            and valid_build_file(provenance["recipe"], files, path))
+
+
+def notes_header(manifest):
+    return (f'Version: {manifest["version"]}\nRevision: {manifest["revision"]}\n'
+            f'Artifact SHA-256: {manifest["artifactSha256"]}\n\n')
+
+
 def verified_bundle(bundle):
-    if (len(bundle.manifest) > 512 * 1024 or not bundle.files
-            or any(len(path) > 256 or not safe_path(path) for path in bundle.files)):
+    manifest = json_object(bundle.manifest, 512 * 1024)
+    if (not valid_manifest(manifest) or not bundle.files
+            or any(not safe_path(path) for path in bundle.files)
+            or ENVELOPE_PATHS.intersection(bundle.files) or bundle.notes_path in bundle.files
+            or bundle.notes_path in ENVELOPE_PATHS or bundle.notes_path != manifest["notesRef"]
+            or bundle.index != checksum_index(bundle.files)
+            or manifest["artifactSha256"] != digest(bundle.index)
+            or len(bundle.notes) > 256 * 1024 or manifest["notesSha256"] != digest(bundle.notes)
+            or not valid_provenance(manifest, bundle.files)):
         return None
     try:
-        manifest = json.loads(bundle.manifest.decode("utf-8"), object_pairs_hook=strict_object)
-    except (UnicodeError, ValueError, RecursionError):
-        return None
-    if not valid_manifest(manifest) or bundle.index != checksum_index(bundle.files):
-        return None
-    if (manifest["artifactSha256"] != digest(bundle.index)
-            or manifest["notesSha256"] != digest(bundle.notes)):
+        if not bundle.notes.decode("utf-8").startswith(notes_header(manifest)):
+            return None
+    except UnicodeError:
         return None
     identity = {field: manifest[field] for field in IDENTITY - {"manifestSha256"}}
     identity["manifestSha256"] = digest(bundle.manifest)
@@ -178,12 +244,7 @@ def receipt_for(approval):
 def verified_receipt(state, identity, authoritative_approvals):
     version = identity["version"]
     published = state.versions.get(version)
-    if published is None or state.current is None:
-        return None
-
-    # The pointer must resolve to its own version record, including on historical retries.
-    current = state.versions.get(state.current["version"])
-    if current is None or current.identity != state.current:
+    if published is None:
         return None
 
     verified = verified_bundle(published.bundle)
@@ -192,6 +253,7 @@ def verified_receipt(state, identity, authoritative_approvals):
     manifest, observed_identity = verified
     approval = published.approval
     if (published.identity != identity or observed_identity != identity
+            or manifest["gate"] != release_gate(identity["version"])
             or not valid_approval(approval, manifest, identity)
             or approval not in authoritative_approvals):
         return None
@@ -203,30 +265,45 @@ def verified_receipt(state, identity, authoritative_approvals):
     return receipt
 
 
-def reconcile(state, identity, expected_prior, authoritative_approvals):
-    """Read back an uncertain commit without altering the authoritative state."""
+def valid_current(state, approvals):
     if state is None:
+        return False
+    if state.current is None:
+        return not state.versions
+    if not isinstance(state.current, dict) or state.current.keys() != IDENTITY:
+        return False
+    version = state.current["version"]
+    return (valid_version(version) and verified_receipt(state, state.current, approvals) is not None
+            and all(valid_version(other) and precedence(other) < precedence(version)
+                    for other in state.versions if other != version))
+
+
+def advances(version, state):
+    return state.current is None or precedence(version) > precedence(state.current["version"])
+
+
+def reconcile(state, identity, expected_prior, authoritative_approvals):
+    """Resolve a possibly committed publication against the authoritative state."""
+    if not valid_current(state, authoritative_approvals):
         return "PUBLICATION_UNKNOWN", None
-    receipt = verified_receipt(state, identity, authoritative_approvals)
-    if receipt is not None:
-        return "ALREADY_PUBLISHED", receipt
     if identity["version"] in state.versions:
-        return "PUBLICATION_UNKNOWN", None
-    if state.current is not None and verified_receipt(
-        state, state.current, authoritative_approvals
-    ) is None:
-        return "PUBLICATION_UNKNOWN", None
-    if state.current == expected_prior:
-        return "RETRY_CONDITIONALLY", None
-    return "PREVIOUS_PUBLICATION_CHANGED", None
+        receipt = verified_receipt(state, identity, authoritative_approvals)
+        return ("ALREADY_PUBLISHED", receipt) if receipt else ("PUBLICATION_UNKNOWN", None)
+    if state.current != expected_prior:
+        return "PREVIOUS_PUBLICATION_CHANGED", None
+    if not advances(identity["version"], state):
+        return "VERSION_NOT_FORWARD", None
+    return "RETRY_CONDITIONALLY", None
 
 
 def attempt(bundle, identity, approval, state, expected_prior, *,
             authoritative_approvals, native_ready=True, interruption=None):
-    """Model one G1 evidence row and one atomic version reservation and publication."""
+    """Model a representative evidence row per publication path and atomic commit."""
     verified = verified_bundle(bundle)
     if verified is None or verified[1] != identity:
         return "INVALID_METADATA", state, None
+    if not valid_current(state, authoritative_approvals):
+        return "PUBLICATION_UNKNOWN", state, None
 
     manifest, identity = verified
     version = identity["version"]
@@ -236,19 +313,27 @@ def attempt(bundle, identity, approval, state, expected_prior, *,
         outcome, receipt = reconcile(state, identity, expected_prior, authoritative_approvals)
         return outcome, state, receipt
 
-    if (not valid_approval(approval, manifest, identity)
-            or approval not in authoritative_approvals or not native_ready
+    gate = manifest["gate"]
+    required = {
+        "GB-T13.G1": ("discord-startup", "GB-T12.MVP1", "real-discord"),
+        "GB-T13.G3": ("production-smoke", "GB-T13.G2", "real-godaddy"),
+    }
+    if (gate != release_gate(version) or not native_ready
+            or not valid_approval(approval, manifest, identity)
+            or approval not in authoritative_approvals
+            or (gate == "GB-T13.G3" and not state.versions)
+            or (gate == "GB-T13.G3" and release_gate(state.current["version"]) == "GB-T13.G1"
+                and version != "1.0.0")
             or not any(
-                record["id"] == "discord-startup"
-                and record["issue"] == "GB-T12.MVP1"
-                and record["level"] == "real-discord"
-                and record["revision"] == identity["revision"]
-                and record["result"] == "pass"
+                (record["id"], record["issue"], record["level"]) == required[gate]
+                and record["revision"] == identity["revision"] and record["result"] == "pass"
                 for record in manifest["evidence"]
             )):
         return "PREREQUISITE_UNAVAILABLE", state, None
     if state.current != expected_prior:
         return "PREVIOUS_PUBLICATION_CHANGED", state, None
+    if not advances(version, state):
+        return "VERSION_NOT_FORWARD", state, None
     if interruption == "before":
         return "PUBLICATION_INTERRUPTED", state, None
 
@@ -282,16 +367,27 @@ class ReleaseContractScenarios(unittest.TestCase):
         scenario = scenario or {}
         manifest = deepcopy(self.fixture["manifest"])
         files = {path: content.encode("utf-8") for path, content in self.fixture["files"].items()}
-        notes = (notes if notes is not None else self.fixture["notes"]).encode("utf-8")
-        index = checksum_index(files)
-        manifest.update(artifactSha256=digest(index), notesSha256=digest(notes))
         if version is not None:
             manifest["version"] = version
         manifest.update(scenario.get("candidatePatch", {}))
         if "recordPatch" in scenario:
             manifest["evidence"][0].update(scenario["recordPatch"])
+        provenance = {
+            "schemaVersion": SCHEMA_VERSION, "sourceRevision": manifest["revision"],
+            "inputs": [{"path": "repro/input.lock", "sha256": digest(files["repro/input.lock"])}],
+            "recipe": {"path": "repro/build.txt", "sha256": digest(files["repro/build.txt"])},
+            "checksumIndex": INDEX_PATH,
+        }
+        provenance.update(scenario.get("provenancePatch", {}))
+        files[self.fixture["manifest"]["provenanceRef"]] = json.dumps(provenance).encode("utf-8")
+        files.update({path: content.encode("utf-8") for path, content in scenario.get("filePatch", {}).items()})
+        index = checksum_index(files)
+        manifest.setdefault("artifactSha256", digest(index))
+        notes_identity = {**manifest, **scenario.get("notesIdentityPatch", {})}
+        notes = (notes_header(notes_identity) + (notes or self.fixture["notes"])).encode("utf-8")
+        manifest.setdefault("notesSha256", digest(notes))
         manifest_bytes = json.dumps(manifest, sort_keys=True).encode("utf-8")
-        bundle = Bundle(files, index, manifest_bytes, notes)
+        bundle = Bundle(files, index, manifest_bytes, self.fixture["manifest"]["notesRef"], notes)
         identity = {field: manifest[field] for field in IDENTITY - {"manifestSha256"}}
         identity["manifestSha256"] = digest(manifest_bytes)
         approval = {
@@ -334,77 +430,44 @@ class ReleaseContractScenarios(unittest.TestCase):
                 if expected == self.prior_identity:
                     self.assertIs(state, self.prior)
 
-    def test_current_and_historical_version_conflicts_independent_of_prior(self):
-        _, candidate, _, published = self.commit_candidate()
-        for version in (candidate["version"], self.prior_identity["version"]):
-            changes = (
-                {"notes": "Different notes\n"},
-                {"scenario": {"recordPatch": {"environment": "different synthetic evidence"}}},
-            )
-            for change in changes:
-                bundle, identity, approval = self.stage(version=version, **change)
-                self.assertEqual(identity["artifactSha256"], candidate["artifactSha256"])
-                for expected_matches in (True, False):
-                    with self.subTest(version=version, change=change,
-                                      expected_matches=expected_matches):
-                        snapshot = deepcopy(published)
-                        result = self.publish(bundle, identity, approval, published,
-                                              expected_matches=expected_matches)
-                        self.assertEqual(result, ("VERSION_CONFLICT", snapshot, None))
-                        self.assertIs(result[1], published)
-
-    def test_current_and_historical_exact_retry_preserve_pointer_and_receipts(self):
-        bundle, identity, approval, state = self.commit_candidate()
-        for retry in ((bundle, identity, approval),
+    def test_reserved_versions_reject_alterations_and_allow_exact_retries(self):
+        bundle, current, approval, state = self.commit_candidate()
+        for retry in ((bundle, current, approval),
                       (self.prior_bundle, self.prior_identity, self.prior_approval)):
-            for expected_matches in (True, False):
-                with self.subTest(version=retry[1]["version"], expected_matches=expected_matches):
-                    before = deepcopy(state)
-                    result = self.publish(*retry, state, expected_matches=expected_matches)
-                    self.assertEqual(result, ("ALREADY_PUBLISHED", before, receipt_for(retry[2])))
-                    self.assertIs(result[1], state)
-                    self.assertEqual(state.current, identity)
+            version = retry[1]["version"]
+            changes = ({"notes": "Different notes\n"},
+                       {"scenario": {"recordPatch": {"environment": "different evidence"}}})
+            attempts = [(retry, "ALREADY_PUBLISHED", receipt_for(retry[2]))]
+            for change in changes:
+                changed = self.stage(version=version, **change)
+                self.assertEqual(changed[1]["artifactSha256"], current["artifactSha256"])
+                attempts.append((changed, "VERSION_CONFLICT", None))
+            for staged, outcome, receipt in attempts:
+                for expected_matches in (True, False):
+                    with self.subTest(version=version, outcome=outcome, cas=expected_matches):
+                        before = deepcopy(state)
+                        result = self.publish(*staged, state, expected_matches=expected_matches)
+                        self.assertEqual(result, (outcome, before, receipt))
+                        self.assertIs(result[1], state)
 
-    def test_readback_rejects_altered_manifest_or_notes_with_same_binary(self):
-        _, identity, _, state = self.commit_candidate()
+    def test_changed_candidate_fails_original_approval_and_readback(self):
+        bundle, identity, approval, state = self.commit_candidate()
         version = identity["version"]
         publication = state.versions[version]
-        manifest_only = self.stage(scenario={
-            "recordPatch": {"environment": "different synthetic evidence"}
-        })[0]
-        changed_notes = self.stage(notes="Different notes\n")[0]
-        for bundle in (manifest_only, changed_notes):
-            with self.subTest(identity=verified_bundle(bundle)[1]):
-                self.assertEqual(bundle.files, publication.bundle.files)
-                self.assertEqual(bundle.index, publication.bundle.index)
-                altered = replace(
-                    state, versions={**state.versions, version: replace(publication, bundle=bundle)},
-                )
-                self.assertEqual(
-                    reconcile(altered, identity, self.prior_identity, self.approvals),
-                    ("PUBLICATION_UNKNOWN", None),
-                )
-
-    def test_approval_binds_exact_candidate(self):
-        _, _, approval = self.stage()
-        original_bundle, original_identity, _ = self.stage()
-        bundle = self.stage(notes="Different notes\n")[0]
-        changed_binary = {**original_bundle.files, "dist/client.js": b"new synthetic bytes"}
-        changed_index = checksum_index(changed_binary)
-        binary_manifest = json.loads(original_bundle.manifest)
-        binary_manifest["artifactSha256"] = digest(changed_index)
-        binary_bundle = replace(original_bundle, files=changed_binary, index=changed_index,
-                                manifest=json.dumps(binary_manifest).encode("utf-8"))
-        manifest_bundle = self.stage(scenario={
-            "recordPatch": {"environment": "different synthetic evidence"}
-        })[0]
-        for changed in (bundle, binary_bundle, manifest_bundle):
-            with self.subTest(identity=verified_bundle(changed)[1]):
-                manifest, identity = verified_bundle(changed)
-                self.assertEqual(identity["revision"], original_identity["revision"])
-                self.assertFalse(valid_approval(approval, manifest, identity))
-                self.assertEqual(self.publish(changed, identity, approval, self.prior),
+        changes = ({"notes": "Different notes\n"},
+                   {"scenario": {"recordPatch": {"environment": "different evidence"}}},
+                   {"scenario": {"filePatch": {"dist/client.js": "changed bytes"}}})
+        for change in changes:
+            with self.subTest(change=change):
+                revised_bundle, revised_identity, _ = self.stage(**change)
+                self.assertEqual(revised_identity["revision"], identity["revision"])
+                self.assertEqual(revised_bundle.index == bundle.index, change != changes[-1])
+                self.assertEqual(self.publish(revised_bundle, revised_identity, approval, self.prior),
                                  ("PREREQUISITE_UNAVAILABLE", self.prior, None))
+                history = {**state.versions, version: replace(publication, bundle=revised_bundle)}
+                self.assertEqual(reconcile(replace(state, versions=history), identity,
+                                           self.prior_identity, self.approvals),
+                                 ("PUBLICATION_UNKNOWN", None))
 
     def test_approval_gate_decision_and_provenance_are_checked(self):
         bundle, identity, approval = self.stage()
@@ -444,7 +507,6 @@ class ReleaseContractScenarios(unittest.TestCase):
 
     def test_checksum_index_and_exact_metadata(self):
         bundle, identity, approval = self.stage()
-        self.assertEqual(list(bundle.files), sorted(bundle.files, reverse=True))
         self.assertEqual(bundle.index.splitlines()[0].split(b"  ")[1], b"dist/client.js")
         for files in (
             {**bundle.files, "dist/client.js": b"tampered"},
@@ -473,7 +535,7 @@ class ReleaseContractScenarios(unittest.TestCase):
         self.assertEqual(reconcile(committed, identity, self.prior_identity, self.approvals),
                          ("ALREADY_PUBLISHED", receipt_for(approval)))
 
-        newer_bundle, newer_identity, newer_approval = self.stage(version="0.1.0-mvp.2")
+        newer_bundle, newer_identity, newer_approval = self.stage(version="0.1.0-mvp.12")
         outcome, newer, _ = self.publish(newer_bundle, newer_identity, newer_approval, committed)
         self.assertEqual(outcome, "PUBLISHED")
         self.assertEqual(reconcile(newer, identity, self.prior_identity, self.approvals),
@@ -483,6 +545,50 @@ class ReleaseContractScenarios(unittest.TestCase):
         _, competing, _ = self.publish(newer_bundle, newer_identity, newer_approval, self.prior)
         self.assertEqual(reconcile(competing, identity, self.prior_identity, self.approvals),
                          ("PREVIOUS_PUBLICATION_CHANGED", None))
+
+    def test_inconsistent_current_blocks_mutation_and_reconciliation(self):
+        bundle, identity, approval, published = self.commit_candidate()
+        for state in (None, replace(self.prior, current=None), replace(self.prior, current={}),
+                      replace(self.prior, current=identity),
+                      replace(published, current=self.prior_identity)):
+            with self.subTest(state=state):
+                self.assertEqual(attempt(
+                    bundle, identity, approval, state, None,
+                    authoritative_approvals=self.approvals,
+                ), ("PUBLICATION_UNKNOWN", state, None))
+                self.assertEqual(reconcile(state, identity, None, self.approvals),
+                                 ("PUBLICATION_UNKNOWN", None))
+
+    def test_reapproved_mismatches_in_authoritative_publication(self):
+        _, _, _, state = self.commit_candidate()
+        for patch in (
+            {"candidatePatch": {"notesRef": "synthetic/other.md"}},
+            {"notesIdentityPatch": {"revision": self.fixture["otherRevision"]}},
+            {"notesIdentityPatch": {"artifactSha256": "b" * 64}},
+            {"candidatePatch": {"provenanceRef": "synthetic/other.json"}},
+            {"provenancePatch": {"sourceRevision": self.fixture["otherRevision"]}},
+            {"filePatch": {"repro/build.txt": "different recipe"}},
+        ):
+            with self.subTest(patch=patch):
+                bundle, identity, approval = self.stage(scenario=patch)
+                receipt = receipt_for(approval)
+                version = identity["version"]
+                observed = replace(state.versions[version], bundle=bundle, identity=identity,
+                                   approval=approval, receipt=receipt)
+                history = {**state.versions, version: observed}
+                self.assertEqual(reconcile(State(identity, history), identity, None, self.approvals),
+                                 ("PUBLICATION_UNKNOWN", None))
+
+    def test_canonical_release_reference_and_version_bound(self):
+        record = self.fixture["manifest"]["evidence"][0]
+        link = f'{REPOSITORY}/releases/tag/v{self.prior_identity["version"]}'
+        for suffix in ("", "+build.2", "?raw=1", "#notes", "%2Fextra", "/extra"):
+            with self.subTest(suffix=suffix):
+                self.assertEqual(bool(valid_record({**record, "ref": link + suffix})),
+                                 suffix in ("", "+build.2"))
+        longest = "0.1.0-" + "x" * (MAX_VERSION - len("0.1.0-"))
+        self.assertTrue(safe_ref(f"{REPOSITORY}/releases/tag/v{longest}"))
+        self.assertFalse(safe_ref(f"{REPOSITORY}/releases/tag/v{longest}x"))
 
     def test_duplicate_evidence_ids_and_input_keys(self):
         manifest = deepcopy(self.fixture["manifest"])

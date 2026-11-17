@@ -24,7 +24,9 @@ verification issue and the repository's [Definition of Done][contributing].
 
 Each guide entry identifies a stable GB issue, owned repository path, owner
 expertise, audience, reviewed source revision, claim status and evidence
-references. Use `planned` for intended behavior and `unresolved` for a known
+references. Assign each claim a stable `claimId` tied to an explicit anchor in
+the guide. The pair `path`, `claimId` locates one claim at the reviewed revision.
+Keep the ID across edits to the same claim and forbid reuse for another claim. Use `planned` for intended behavior and `unresolved` for a known
 evidence gap, including its affected scope and next validating owner. Use
 `supported` only with a passing result for the named version, scope and
 environment. Mixed guides mark status per claim. On source or environment
@@ -74,21 +76,25 @@ response commitments need their own evidence.
 ## Release evidence schema
 
 All records use bounded input, strict fields and reviewed references.
-Unknown fields, duplicate JSON keys or record IDs, malformed versions and
-digests, unsafe pointers and oversized values are invalid. Limit the manifest to 512 KiB of UTF-8 JSON and at most
-128 evidence entries. Strings have at most 256 characters.
-Use nonempty repository-relative paths without traversal, or canonical
-repository issue, PR, run, commit or release links without credentials, query or
-fragment. Digests are lowercase SHA-256 hex and source revisions are full
+Reject unknown fields, duplicate JSON keys or record IDs, malformed versions
+and digests, unsafe pointers and oversized values. Limit the UTF-8 JSON manifest
+to 512 KiB and 128 evidence entries. Use at most 128 ASCII characters for
+SemVer and 256 characters for other string fields, including generated refs.
+General references use the safe relative path grammar below or the canonical
+`https://github.com/CompleteTech-DiscordApps/guildboard/` base followed by
+`issues/<number>`, `pull/<number>`, `actions/runs/<number>`, `commit/<revision>`
+or `releases/tag/v<version>`. Numbers are positive decimal integers without
+leading zeroes. Use the literal SemVer including any `+` build separator.
+Credentials, escapes, queries, fragments and extra path segments are invalid. Digests are lowercase SHA-256 hex and source revisions are full
 lowercase Git SHAs in the repository's current SHA-1 format. Date values
 use ISO calendar dates in UTC. Keep free-text findings in reviewed,
 redacted source documents referenced by the record.
 
 | Record | Fields and invariants |
 | --- | --- |
-| Guide entry | `issue`, `path`, `ownerRole`, `audience` (contributor, administrator, moderator, end-user or operator), `revision`, `claimStatus`, `evidenceIds`. For unresolved claims, require `followUpIssue` (stable GB ID). Evidence IDs resolve uniquely in the handoff. |
+| Guide entry | `issue`, `path` (safe repository-relative path), `claimId` (lowercase letters, digits and hyphens, starting with a letter), `ownerRole`, `audience` (contributor, administrator, moderator, end-user or operator), `revision`, `claimStatus`, `evidenceIds`. For unresolved claims, require `followUpIssue` (stable GB ID). Evidence IDs resolve uniquely in the handoff. |
 | Evidence entry | `id` (lowercase letters, digits and hyphens, starting with a letter), `issue`, `revision`, `date`, `environment`, `level`, `result` (pass, fail or blocked), `ref`. Issue is a canonical stable GB ID. A ref resolves to the actual redacted run, command, review or comparison, including its scope, environment and limitations. |
-| Candidate manifest | `schemaVersion` (this contract version), `version` (SemVer), `gate` (GB-T13.G1, GB-T13.G2 or GB-T13.G3), `revision`, `artifactSha256`, `notesRef`, `notesSha256`, `provenanceRef`, `evidence`. The reviewed manifest and notes identify the same artifact, version and revision. Provenance records the source revision, build inputs, reproducible build instructions and checksum index. |
+| Candidate manifest | `schemaVersion` (this contract version), `version` (SemVer), `gate` (GB-T13.G1, GB-T13.G2 or GB-T13.G3), `revision`, `artifactSha256`, `notesRef`, `notesSha256`, `provenanceRef`, `evidence`. `notesRef` and `provenanceRef` use safe relative bundle paths and resolve to the exact artifacts described below. |
 | Candidate identity | `version`, `revision`, `artifactSha256`, `manifestSha256`, `notesSha256`. The publisher derives these fields from the staged bytes. An identity supplied by a caller is valid only when all fields match the derived identity. |
 | Gate approval | `schemaVersion`, `gate`, `identity` (candidate identity), `decision` (`approved`), `decisionRef`, `provenanceRef`. The decision ref resolves to the authoritative maintainer decision under repository governance. Verify who made the decision, their authority for the named gate, the current applicability and outcome of the decision, and all identity fields. Gate and provenance must agree with the candidate manifest. |
 | Public publication receipt | `schemaVersion`, `identity`, `gate`, `decisionRef`, `provenanceRef`, `tagRef`, `releaseRef`. Store the full candidate identity and the gate, decision and provenance references from the verified approval. `tagRef` is a fully qualified Git tag ref in this repository resolving to `identity.revision`. `releaseRef` is the canonical repository release link for that tag, resolving to the complete publication. Verify the tag target and the release bytes through authoritative readback. |
@@ -101,12 +107,26 @@ repository-relative distribution path and one LF. Use the safe path grammar
 component starting with a letter, digit, underscore or hyphen). Sort by path
 in ascending byte order and require one entry per file with no extra entries.
 Verify the index against the complete delivered payload. The index excludes
-itself, the candidate manifest, the release notes and the publication receipt.
-`manifestSha256` and `notesSha256` hash their exact finalized byte streams.
-The manifest records the notes digest and artifact digest. The manifest carries no manifest digest and the notes carry neither a notes
-nor a manifest digest.
-Compute the manifest digest after finalizing the notes and manifest. The
-approval and receipt can then bind all three digests without circular hashes.
+itself (`SHA256SUMS`), the manifest (`manifest.json`), the notes at
+`notesRef` and the receipt (`publication-receipt.json`). These envelope paths
+are distinct and reserved. `provenanceRef` resolves to an indexed payload
+file. Its exact bytes are strict UTF-8 JSON (up to 64 KiB) with fields
+`schemaVersion`, `sourceRevision` (the exact manifest revision), `inputs`
+(1–64 unique records by path), `recipe` (one record) and `checksumIndex`
+(the literal `SHA256SUMS`, resolving to this bundle's verified index).
+Input and recipe records each use `path` and `sha256`, resolving to exact
+indexed payload bytes distinct from the provenance file. Inputs identify
+pinned build dependencies and settings. The recipe contains the reviewed
+reproducible build instructions for that source and those inputs.
+
+After computing the artifact digest, finalize the UTF-8 notes (up to 256 KiB)
+at `notesRef`. Start them with three LF-terminated lines in this order,
+`Version: <version>`, `Revision: <revision>` and
+`Artifact SHA-256: <artifactSha256>`, followed by a blank line and the reviewed
+notes. Compare all three values to the manifest and hash the exact resolved
+notes bytes. Finalize the manifest with the notes and artifact digests and
+hash its exact bytes. This ordering lets approval and receipt bind all three
+digests without circular hashes.
 
 Evidence levels are `static`, `synthetic`, `integration`, `independent-review`,
 `real-discord` and `real-godaddy`. Environment identifies the toolchain or
@@ -123,12 +143,18 @@ acceptance records while grounding release claims in current evidence.
 | Consumer | Required evidence and resulting scope |
 | --- | --- |
 | [GB-T13.D1 #450][handoff] | Integrate reviewed guides, run instructions and evidence-linked limitations. Keep the native verification prerequisites and document the supported subset. Supply evidence references for G3. |
-| [GB-T13.G1 #456][mvp] | Map every [MVP acceptance row][matrix] to T12 integrated evidence and native prerequisites. Include real Discord startup and authenticated guild context, simultaneous moderators, backend viewer-write denial, canvas, synchronization, save, basic lock, reconnect and fundamental security negatives. Approval applies to the verified MVP scope. [GB-T13.04.01.O1 #471][mvp-publication] is the separate MVP publication step. |
-| [GB-T13.G2 #457][production] | Record dated actual GoDaddy Linux VPS HTTPS/WSS and Discord networking, monitoring, rollback and smoke checks. Link isolated restore of database and assets with measured RPO/RTO and record environment and unresolved findings. |
-| [GB-T13.G3 #472][stable] | Require all native Tier gates, G1/G2, applicable T13 verification, MVP publication and D1. Link full integration, production acceptance, functionality including modes/moderation/import/export/accessibility/recovery, resolved independent security findings, reviewed versioned artifacts, notes and support documentation. Gate approval and [stable publication #473][stable-publication] each have their own evidence record. |
+| [GB-T13.G1 #456][mvp] | Map every [MVP acceptance row][matrix] to T12 integrated evidence and native prerequisites. Include real Discord startup and authenticated guild context, simultaneous moderators, backend viewer-write denial, canvas, synchronization, save, basic lock, reconnect and fundamental security negatives. |
+| [GB-T13.G2 #457][production] | Supply production and recovery evidence only. Record dated actual GoDaddy Linux VPS HTTPS/WSS and Discord networking, monitoring, rollback and smoke checks. Link isolated restore of database and assets with measured RPO/RTO, environment and unresolved findings. |
+| [GB-T13.G3 #472][stable] | Require all native Tier gates, G1/G2, applicable T13 verification, MVP publication and D1. Link full integration, production acceptance, functionality including modes/moderation/import/export/accessibility/recovery, resolved independent security findings, reviewed versioned artifacts, notes and support documentation. |
+| [MVP publication #471][mvp-publication] | Publish a 0.x SemVer only after matching G1 approval, accepted [release automation #446][automation], and all native prerequisites and publication criteria. Attach notes, checksums, known limitations and rollback/support guidance. Verify the accepted bytes and record the release URL. |
+| [Stable publication #473][stable-publication] | Publish the first stable version as `1.0.0` after matching G3 approval, accepted [release automation #446][automation], and all native prerequisites and publication criteria. Attach reviewed artifacts, provenance, migration notes, security disposition and operator documentation. Verify checksums and actual production smoke evidence and record release and deployment receipts. |
 
-An authorized maintainer accepts the exact candidate after native prerequisites,
-repository checks and applicable independent and consuming reviews. Stage the
+In both publication paths, an authorized maintainer approves the exact
+candidate after native prerequisites, repository checks and applicable
+independent and consuming reviews pass. Apply [SECURITY.md][security] release
+gate requirements, including threat model review, authorization negative
+tests, dependency and license review, upload and import defenses, secret checks
+and actual independent security review. Stage the
 complete bytes privately and verify their identity, provenance and gate approval.
 Before a new publication, record the expected prior identity, using null only
 when no publication exists.
@@ -142,15 +168,24 @@ regardless of the expected prior identity. An existing reservation with the
 exact identity is a read-only retry. It requires verified readback and never
 advances or rolls back the current pointer, even when a newer publication is
 current. For an unused version, compare against the expected prior identity
-before publishing. Readers see either the complete prior publication or the
-complete accepted candidate with its receipt.
+before publishing. The shared current pointer advances only to strictly
+higher SemVer precedence. Build metadata distinguishes full version
+reservations and has no effect on precedence. Reject an unused version of
+equal or lower precedence, including recovery requests. Record recovery as
+a new, higher-precedence publication, with newly verified evidence. Readers
+see either the complete prior publication or the complete accepted candidate
+with its receipt.
 
 Before reporting success, read the authoritative current pointer and version
 record, retrieve the published files, manifest and notes, recompute their
 identity, and verify the receipt and the resolved tag and release references.
-Require agreement across the verified approval, receipt, resolved source
-revision and recomputed identity. When the version is current, its pointer
-must agree with that same version record. For a historical retry or lost
+Resolve the notes and provenance paths within the observed bundle, verify the
+notes declaration and the indexed provenance and build files, and require
+agreement across approval, receipt, resolved source revision and recomputed
+identity. A null pointer is valid only with empty authoritative history.
+Otherwise the pointer must resolve to a fully verified current publication
+with greater precedence than every historical version. Apply that invariant
+to the atomic prior-state check and reconciliation. For a historical retry or lost
 acknowledgment, require the same authoritative publication and receipt checks
 without changing the current pointer. A publication adapter must demonstrate
 these properties in its own verification before use.
@@ -160,9 +195,10 @@ these properties in its own verification before use.
 | `INVALID_METADATA` | Reject malformed input, mismatched staged identity, privacy violations or invalid digests. Preserve prior publication and return a safe field name or category. |
 | `PREREQUISITE_UNAVAILABLE` | Keep pending with the missing issue or evidence category when a prerequisite or approval is missing, failed, stale, of insufficient level, for a different candidate, or unverifiable. Preserve prior publication. |
 | `VERSION_CONFLICT` | Reject any different identity for a reserved version, before applying the prior-state comparison. Preserve all publications and the current pointer. |
+| `VERSION_NOT_FORWARD` | An unused version has precedence equal to or below the verified current version. Preserve the current pointer and all reservations. |
 | `ALREADY_PUBLISHED` | Return the verified receipt for the exact version and candidate identity as a read-only result, even when a different version is current. |
 | `PUBLICATION_INTERRUPTED` | Interruption before commit preserves the complete prior publication. Keep staging private and retry using the same candidate identity after rechecking prerequisites and prior state. |
-| `PUBLICATION_UNKNOWN` | Reconcile against authoritative readback after a possible commit. An exact, verified version record and receipt establish commit even if the publication is now historical. If the candidate version is absent and the expected prior remains current, retry conditionally after verification. If a different version is current and the candidate version is absent, require a new decision. Keep contradictory or unavailable readback unresolved and do not retry a possible commit blindly. |
+| `PUBLICATION_UNKNOWN` | Reconcile against authoritative readback after a possible commit. An exact, verified version record and receipt establish commit even if the publication is now historical. If the candidate version is absent, the expected prior remains current and the version can advance, retry conditionally after verification. If a different version is current and the candidate version is absent, require a new decision. Keep contradictory or unavailable readback unresolved and do not retry a possible commit blindly. |
 | `PREVIOUS_PUBLICATION_CHANGED` | For an unused version, preserve the observed publication and replan with maintainer review when the expected prior state no longer matches. |
 
 Public evidence may include revision, redacted configuration names, versions,
@@ -197,6 +233,7 @@ and leave real platform, operational and release verification to G1/G2/G3.
 [security]: ../../SECURITY.md
 [handoff]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/450
 [mvp]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/456
+[automation]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/446
 [mvp-publication]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/471
 [production]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/457
 [stable]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/472

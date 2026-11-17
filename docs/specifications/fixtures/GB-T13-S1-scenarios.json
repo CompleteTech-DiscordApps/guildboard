@@ -1,8 +1,8 @@
 {
-  "coverage": "Synthetic G1 publication examples with one modeled Discord startup evidence row, maintainer decisions and public receipts.",
+  "coverage": "Synthetic MVP and stable publication examples with representative evidence rows, maintainer decisions and public receipts.",
   "manifest": {
     "schemaVersion": "1.0.0",
-    "version": "0.1.0-mvp.1",
+    "version": "0.1.0-mvp.11",
     "gate": "GB-T13.G1",
     "revision": "1111111111111111111111111111111111111111",
     "notesRef": "synthetic/release-notes.md",
@@ -22,17 +22,31 @@
   },
   "files": {
     "dist/operator.txt": "synthetic operator instructions\n",
-    "dist/client.js": "synthetic client bytes\n"
+    "dist/client.js": "synthetic client bytes\n",
+    "repro/input.lock": "synthetic pinned build inputs\n",
+    "repro/build.txt": "synthetic reproducible build recipe\n"
   },
   "notes": "Synthetic release notes\n",
   "approval": {
     "schemaVersion": "1.0.0",
     "decision": "approved"
   },
-  "priorVersion": "0.1.0-mvp.0",
+  "priorVersion": "0.1.0-mvp.10",
   "otherRevision": "2222222222222222222222222222222222222222",
   "scenarios": [
     {"id": "accepted-evidence", "expected": "PUBLISHED", "current": "candidate"},
+    {"id": "stable-publication", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.0"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy"}, "expected": "PUBLISHED", "current": "candidate"},
+    {"id": "stable-without-native-prerequisites", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.0"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy"}, "nativeReady": false, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "wrong-first-stable-version", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.1"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "stable-through-mvp", "candidatePatch": {"version": "1.0.0"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "production-is-evidence-only", "candidatePatch": {"gate": "GB-T13.G2", "version": "1.0.0"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "new-lower-version", "candidatePatch": {"version": "0.1.0-mvp.2"}, "expected": "VERSION_NOT_FORWARD", "current": "prior"},
+    {"id": "new-equal-precedence", "candidatePatch": {"version": "0.1.0-mvp.10+rebuilt"}, "expected": "VERSION_NOT_FORWARD", "current": "prior"},
+    {"id": "unresolved-notes", "candidatePatch": {"notesRef": "synthetic/wrong-notes.md"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "wrong-notes-identity", "notesIdentityPatch": {"version": "0.0.0"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "unresolved-provenance", "candidatePatch": {"provenanceRef": "synthetic/wrong-provenance.json"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "wrong-provenance-index", "provenancePatch": {"checksumIndex": "synthetic/wrong-index"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "wrong-provenance-input", "filePatch": {"repro/input.lock": "different pinned input"}, "expected": "INVALID_METADATA", "current": "prior"},
     {"id": "malformed-version", "candidatePatch": {"version": "0.01.0"}, "expected": "INVALID_METADATA", "current": "prior"},
     {"id": "malformed-digest", "candidatePatch": {"artifactSha256": "truncated"}, "expected": "INVALID_METADATA", "current": "prior"},
     {"id": "unsafe-pointer", "candidatePatch": {"notesRef": "../private/notes.md"}, "expected": "INVALID_METADATA", "current": "prior"},
