@@ -215,8 +215,12 @@ required scenarios and class, full candidate SHA, exact environment/build and
 artifact versions, approved scope, method and verifier, run ID, redacted artifact
 reference and digest, supported configuration, approval and freshness interval,
 and authorized prerequisites. Resolve all fields and the current effective
-approval and prerequisites using trusted time. Caller-provided expectations or
-incomplete metadata confer no qualification. An independent result observer and
+approval and prerequisites using trusted time. Each grant resolves through a
+registry that independently selects its permitted issuer by purpose and
+reference. The grant must match that issuer, bind the selected row and
+configuration, and be current both when the check ran and when it is evaluated.
+The evidence freshness deadline also applies when the grant remains current.
+Caller-provided expectations or incomplete metadata confer no qualification. An independent result observer and
 a separate inventory observer each bind their observation to the same
 requirement, row, candidate, environment, run and artifact digest under approved observer identities. The result observer binds
 both execution state and result. Compare them independently of the receipt
@@ -285,12 +289,17 @@ to each input. Resolve the verifier and current approval for the exact tuple,
 scope, run and redacted artifact bytes, including expiry and digest, just as for
 other qualified rows. A standalone authority boolean supplies no evidence.
 
-Use the independent findings registry to identify unresolved critical/high
-findings. Resolve each exact finding and disposition reference as used in
-`findingDispositions` against the candidate, scope, severity, authoritative
-approval and retained observation bytes. A verified closure must bind the
-approved finding and remediation evidence. An exception requires repository
-policy permission and a closed T9 `ExceptionV1` with the approver, rationale,
+Require an independently approved, complete T9 findings inventory for the exact
+candidate, scope, selected matrix keys and resolved receipt digests. Reconcile
+the inventory's finding-to-receipt and disposition references with each linked
+receipt's `findingDispositions`. An empty findings inventory requires the same
+affirmative approval and receipt coverage. Missing or inconsistent inventories
+block release. Resolve each critical or high finding against its exact receipt,
+candidate, scope, severity, current disposition approval and retained
+observations. Closure requires independent remediation verification for that
+finding and hashes of the actual verification bytes. An exception requires a
+separate, current permission from the repository policy authority and a closed
+T9 `ExceptionV1` with the approver, rationale,
 scope, severity, expiry, controls and closure criteria. Independently verify
 current approver authority and the retained observations of controls and closure
 criteria against that exact exception and disposition. A missing, altered,
@@ -299,8 +308,10 @@ unauthorized or expired record blocks release.
 The release matrix records stable requirement ID, scenario and environment IDs,
 native verification issue, required class, responsible verifier role, candidate
 SHA and artifact digest, result and trace receipt, open findings and authorized
-disposition. It accepts only typed qualifier outputs produced for the same
-requirement/row key, candidate, scope and current evaluation. Separate
+disposition. It resolves the full applicable T12/T9 row set from a currently
+approved gate matrix with current native prerequisites. Each assessment
+requalifies the current receipt, artifact, observers and grant for the same
+requirement/row key, candidate, scope and trusted time. Separate
 requirements may share one environment and carry separate receipts. Bare
 status strings cannot substitute for a qualification. Resolve live native
 blockers at approval. QE checks direct and
@@ -314,7 +325,10 @@ approval.
 ### T13 evidence and publication projection
 
 Map the native issue number through the accepted backlog to its canonical
-stable GB ID. For each applicable current qualified pass, supply the T13
+stable GB ID. For each gate-selected projection, re-resolve the current
+approved requirement and row, exact receipt and artifact bytes, freshness,
+prerequisites, and independent result and cleanup observations. Only a current
+qualified pass supplies the T13
 entry's `id`, `issue`, `revision`, UTC `date`, `environment`, `level`, `result`
 and resolving `ref`. Map `fixture` to `synthetic`, `local_integration` and
 `hosted_ci` to `integration`, `independent_review` to `independent-review`,
@@ -328,7 +342,14 @@ execution or review class and method. No separate T13 level grants credit
 for a merge event.
 
 For #456, #457 and #472, apply the corresponding T13 gate and accepted
-requirements to the projected entries. For release automation #446 and
+requirements to the projected entries. Recompute the entries from the approved
+sources and require an exact match to the staged manifest. A caller-supplied
+entry can confer no gate credit even if it equals a manifest entry. G1 requires
+current real Discord startup evidence for GB-T12.MVP1. G2 requires current
+GoDaddy production and recovery evidence. G3 independently requires the
+`production-smoke` GB-T13.G2 `real-godaddy` entry and the authoritative
+historical #471 evidence described below. The complete applicable matrix and
+native prerequisites apply to each gate. For release automation #446 and
 publication #471/#473, resolve actual staged payload, checksum index, build
 provenance, manifest and reviewed notes bytes. T12's digest identifies the
 redacted execution artifact. T13's candidate artifact digest hashes the

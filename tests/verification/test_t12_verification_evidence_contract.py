@@ -84,8 +84,8 @@ def token(value):
     require(type(value) is str and re.fullmatch(TOKEN, value))
 
 
-def unique_array(values, key=None, minimum=0):
-    require(type(values) is list and minimum <= len(values) <= 32)
+def unique_array(values, key=None, minimum=0, maximum=32):
+    require(type(values) is list and minimum <= len(values) <= maximum)
     keys = [value if key is None else value[key] for value in values]
     require(len(set(keys)) == len(keys))
 
@@ -231,14 +231,26 @@ class Qualification:
     receipt_sha256: str
 
 
-def current_grant(grant, subject, current, since=None):
-    if grant is None:
+@dataclass(frozen=True)
+class AuthorityRegistry:
+    # Independently supplied policy selects an issuer for each purpose and grant.
+    issuers: dict
+    grants: dict
+
+
+def current_grant(registry, ref, purpose, subject, current, since=None):
+    if type(registry) is not AuthorityRegistry:
+        return False
+    issuer = registry.issuers.get((purpose, ref))
+    grant = registry.grants.get(ref)
+    if issuer is None or grant is None:
         return False
     closed(grant, "subject authorityRef issuedAt expiresAt decision")
     token(grant["authorityRef"])
     token(grant["decision"])
     require(grant["decision"] in {"approved", "withdrawn"})
-    return (grant["subject"] == subject and grant["decision"] == "approved"
+    return (grant["authorityRef"] == issuer and encode(grant["subject"]) == encode(subject)
+            and grant["decision"] == "approved"
             and instant(grant["issuedAt"]) <= (since or current) <= current < instant(grant["expiresAt"]))
 
 
@@ -251,24 +263,32 @@ def qualifies(data, key, registry, artifact, observation, inventory, trusted_tim
     require(row in CLASS_BY_ROW)
     require(all(item is not None for item in (
         registry, artifact, observation, inventory, trusted_time, authorities)), "DEPENDENCY_UNAVAILABLE")
-    require(type(registry) is dict and key in registry and type(authorities) is dict)
+    require(type(registry) is dict and key in registry and type(authorities) is AuthorityRegistry)
     approval = registry[key]
-    closed(approval, "metadata runId artifactSha256 resultObserver cleanupObserver authorityRef resourceful")
+    closed(approval, "metadata runId artifactSha256 resultObserver cleanupObserver authorityRef resourceful "
+                     "configurationRef supportedConfiguration prerequisiteRefs freshUntil projection")
     validate_metadata(approval["metadata"])
     hex_value(approval["artifactSha256"], 64)
-    for field in ("runId", "resultObserver", "cleanupObserver", "authorityRef"):
+    for field in ("runId", "resultObserver", "cleanupObserver", "authorityRef", "configurationRef"):
         token(approval[field])
     require(approval["resultObserver"] != approval["cleanupObserver"])
     require(approval["metadata"]["verifierRef"] not in
             {approval["resultObserver"], approval["cleanupObserver"]})
-    require(type(approval["resourceful"]) is bool)
-    closed(observation, "requirementId gateRow runId observerRef candidateSha environmentId artifactSha256 executionState result")
-    closed(inventory, "requirementId gateRow runId observerRef candidateSha environmentId artifactSha256 cleanup ownedCreated "
+    require(type(approval["resourceful"]) is bool and type(approval["supportedConfiguration"]) is bool)
+    require(type(approval["prerequisiteRefs"]) is list)
+    for ref in approval["prerequisiteRefs"]:
+        token(ref)
+    unique_array(approval["prerequisiteRefs"], minimum=1)
+    require(type(approval["projection"]) is list and len(approval["projection"]) == 2)
+    token(approval["projection"][0])
+    require(type(approval["projection"][1]) is str and t13.safe_ref(approval["projection"][1]))
+    closed(observation, "requirementId gateRow runId observerRef candidateSha environmentId configurationRef artifactSha256 executionState result")
+    closed(inventory, "requirementId gateRow runId observerRef candidateSha environmentId configurationRef artifactSha256 cleanup ownedCreated "
                       "ownedRemaining foreignSentinel")
     for observed in (observation, inventory):
         hex_value(observed["candidateSha"], 40)
         hex_value(observed["artifactSha256"], 64)
-        for field in ("requirementId", "gateRow", "runId", "observerRef", "environmentId"):
+        for field in ("requirementId", "gateRow", "runId", "observerRef", "environmentId", "configurationRef"):
             token(observed[field])
     for observed, field, allowed in (
         (observation, "executionState", STATES), (observation, "result", RESULTS),
@@ -284,17 +304,22 @@ def qualifies(data, key, registry, artifact, observation, inventory, trusted_tim
     executed = instant(evidence["executedAt"])
     binding = {"requirementId": record["requirementId"], "gateRow": record["gateRow"],
                "runId": record["runId"], "candidateSha": evidence["candidateSha"],
-               "environmentId": record["environmentId"], "artifactSha256": record["artifactSha256"]}
+               "environmentId": record["environmentId"], "configurationRef": approval["configurationRef"],
+               "artifactSha256": record["artifactSha256"]}
     cleanup = "verified" if approval["resourceful"] else "untouched"
-    authority = authorities.get(approval["authorityRef"])
-    require(authority is not None, "DEPENDENCY_UNAVAILABLE")
+    refs = [approval["authorityRef"], *approval["prerequisiteRefs"]]
+    require(all(ref in authorities.grants for ref in refs), "DEPENDENCY_UNAVAILABLE")
     subject = [*key, digest(encode(approval))]
     outcome = Outcome.INELIGIBLE
     if (
         (record["requirementId"], record["gateRow"]) == key
         and evidence["evidenceClass"] == CLASS_BY_ROW[row]
         and encode({key: evidence[key] for key in METADATA.split()}) == encode(approval["metadata"])
-        and current_grant(authority, subject, current, executed)
+        and approval["supportedConfiguration"]
+        and current < instant(approval["freshUntil"])
+        and current_grant(authorities, approval["authorityRef"], "qualification", subject, current, executed)
+        and all(current_grant(authorities, ref, "prerequisite", [ref, *subject], current, executed)
+                for ref in approval["prerequisiteRefs"])
         and record["runId"] == approval["runId"]
         and record["artifactSha256"] == approval["artifactSha256"] == digest(artifact)
         and all(observation[key] == inventory[key] == value for key, value in binding.items())
@@ -310,39 +335,52 @@ def qualifies(data, key, registry, artifact, observation, inventory, trusted_tim
               and inventory["ownedRemaining"] == 0 and inventory["foreignSentinel"] == 1
               and (approval["resourceful"] or inventory["ownedCreated"] == 0)):
             outcome = Outcome.VERIFIED_PASS
-    return Qualification(key, evidence["candidateSha"], evidence["scope"], trusted_time, outcome, digest(encode(record)))
+    return Qualification(key, evidence["candidateSha"], evidence["scope"], trusted_time, outcome, digest(data))
 
 
 def disposition_resolved(finding, candidate, scope, current, records, artifacts, authorities):
-    finding_ref, severity, ref = finding
+    finding_ref, severity, receipt_sha, ref = finding
     record = records.get(ref)
     if record is None:
         return False
-    closed(record, "findingRef candidateSha scope severity approverRef authorityRef evidenceRef "
-                   "evidenceSha256 exceptionRef")
-    for field in ("findingRef", "scope", "severity", "approverRef", "authorityRef", "evidenceRef"):
+    closed(record, "findingRef candidateSha scope severity receiptSha256 approverRef authorityRef "
+                   "evidenceRef evidenceSha256 exceptionRef exceptionPermissionRef")
+    binding = {"findingRef": finding_ref, "candidateSha": candidate, "scope": scope,
+               "severity": severity, "receiptSha256": receipt_sha, "dispositionRef": ref,
+               "approverRef": record["approverRef"]}
+    for field in ("approverRef", "authorityRef", "evidenceRef"):
         token(record[field])
-    hex_value(record["candidateSha"], 40)
-    hex_value(record["evidenceSha256"], 64)
     raw = artifacts.get(record["evidenceRef"])
-    if raw is None:
-        return False
-    if not (record["findingRef"] == finding_ref and record["candidateSha"] == candidate
-            and record["scope"] == scope and record["severity"] == severity
-            and digest(raw) == record["evidenceSha256"]
-            and current_grant(authorities.get(record["authorityRef"]),
+    if not (type(raw) is bytes and digest(raw) == record["evidenceSha256"]
+            and all(record[name] == binding[name] for name in binding if name != "dispositionRef")
+            and record["approverRef"] == authorities.issuers.get(("disposition", record["authorityRef"]))
+            and current_grant(authorities, record["authorityRef"], "disposition",
                               [ref, digest(encode(record))], current)):
         return False
     observed = decode_json(raw, 4096)
-    closed(observed, "findingRef candidateSha scope approverRef state controls closureCriteria exceptionSha256")
-    if not all(observed[name] == record[name]
-               for name in ("findingRef", "candidateSha", "scope", "approverRef")):
-        return False
     if record["exceptionRef"] == "":
-        return observed["state"] == "closed"
-    token(record["exceptionRef"])
+        closed(observed, "binding state remediationRef remediationSha256")
+        token(observed["remediationRef"])
+        remediation = artifacts.get(observed["remediationRef"])
+        if (observed["binding"] != binding or observed["state"] != "closed"
+                or record["exceptionPermissionRef"] != "" or type(remediation) is not bytes
+                or digest(remediation) != observed["remediationSha256"]):
+            return False
+        verified = decode_json(remediation, 4096)
+        closed(verified, "binding result checkRef authorityRef")
+        token(verified["checkRef"])
+        token(verified["authorityRef"])
+        return (
+            verified["binding"] == binding and verified["result"] == "verified-remediated"
+            and authorities.issuers.get(("remediation-review", verified["authorityRef"])) != record["approverRef"]
+            and current_grant(authorities, verified["authorityRef"], "remediation-review",
+                              [observed["remediationRef"], digest(remediation)], current)
+        )
+
+    for name in ("exceptionRef", "exceptionPermissionRef"):
+        token(record[name])
     exception_bytes = artifacts.get(record["exceptionRef"])
-    if exception_bytes is None:
+    if type(exception_bytes) is not bytes:
         return False
     exception = decode_json(exception_bytes, 4096)
     check_depth(exception)
@@ -356,13 +394,19 @@ def disposition_resolved(finding, candidate, scope, current, records, artifacts,
     for control in exception["controls"]:
         token(control)
     unique_array(exception["controls"], minimum=1)
+    closed(observed, "binding state controls closureCriteria exceptionSha256")
+    permission_ref = record["exceptionPermissionRef"]
     return (
-        all(exception[name] == record[name] for name in ("scope", "severity", "approverRef"))
+        all(exception[name] == binding[name] for name in ("scope", "severity", "approverRef"))
         and current < instant(exception["expiresAt"])
+        and observed["binding"] == binding
         and observed["state"] == "exception-verified"
         and observed["controls"] == exception["controls"]
         and observed["closureCriteria"] == exception["closureCriteria"]
         and observed["exceptionSha256"] == digest(exception_bytes)
+        and authorities.issuers.get(("exception-policy", permission_ref)) != record["approverRef"]
+        and current_grant(authorities, permission_ref, "exception-policy",
+                          [binding, digest(exception_bytes)], current)
     )
 
 
@@ -370,25 +414,91 @@ def passing(*args):
     return qualifies(*args).outcome is Outcome.VERIFIED_PASS
 
 
-def matrix_outcome(required_keys, security_keys, qualified, candidate, scope, trusted_time,
-                   findings=(), *, dispositions=None, artifacts=None, authorities=None):
-    """Consume only qualified outcomes from the same assessment and scope."""
-    eligible = {}
-    for key in required_keys | security_keys:
-        item = qualified.get(key)
-        if (type(item) is Qualification and item.key == key and item.candidate == candidate
-                and item.scope == scope and item.checked_at == trusted_time):
+@dataclass(frozen=True)
+class EvidenceSources:
+    registry: dict
+    receipt_refs: dict
+    receipts: dict
+    artifacts: dict
+    observations: dict
+    inventories: dict
+    time: str
+    authorities: AuthorityRegistry
+
+
+def qualified_receipt(key, sources):
+    ref = sources.receipt_refs.get(key)
+    approval = sources.registry.get(key)
+    raw = sources.receipts.get(ref)
+    if raw is None or approval is None:
+        return None, None
+    require(type(approval) is dict and type(approval.get("metadata")) is dict)
+    artifact_ref = approval["metadata"].get("artifactRef")
+    token(artifact_ref)
+    item = qualifies(raw, key, sources.registry, sources.artifacts.get(artifact_ref),
+                     sources.observations.get(key), sources.inventories.get(key), sources.time, sources.authorities)
+    return (item, validate_receipt(raw)) if approval["projection"][1] == ref else (None, None)
+
+
+def findings_resolved(keys, receipts, candidate, scope, sources, findings, dispositions):
+    if type(findings) is not dict:
+        return False
+    closed(findings, "authorityRef candidateSha scope receiptSha256s findings")
+    current = instant(sources.time)
+    require(type(findings["findings"]) is list)
+    token(findings["authorityRef"])
+    refs = {}
+    for receipt_sha, record in receipts:
+        for item in record["evidence"]["findingDispositions"]:
+            identity = (receipt_sha, item["findingRef"])
+            refs[identity] = item["dispositionRef"]
+    expected = {}
+    for item in findings["findings"]:
+        closed(item, "findingRef severity receiptSha256 dispositionRef")
+        for name in ("findingRef", "severity", "dispositionRef"):
+            token(item[name])
+        hex_value(item["receiptSha256"], 64)
+        require(item["severity"] in {"critical", "high", "medium", "low", "informational"})
+        identity = (item["receiptSha256"], item["findingRef"])
+        require(identity not in expected)
+        expected[identity] = item["dispositionRef"]
+    return (
+        findings["candidateSha"] == candidate and findings["scope"] == scope
+        and findings["receiptSha256s"] == [receipt_sha for receipt_sha, _ in receipts]
+        and refs == expected
+        and current_grant(sources.authorities, findings["authorityRef"], "finding-inventory",
+                          [sorted(keys), digest(encode(findings))], current)
+        and all(disposition_resolved((item["findingRef"], item["severity"], item["receiptSha256"],
+                                      item["dispositionRef"]), candidate, scope, current,
+                                     dispositions, sources.artifacts, sources.authorities)
+                for item in findings["findings"] if item["severity"] in {"critical", "high"})
+    )
+
+
+SECURITY_KEYS = {(name, "review" if name == "independent-security-review" else "hosted")
+                 for name in SECURITY_INPUTS}
+
+
+def matrix_outcome(required_keys, sources, candidate, scope, findings, dispositions):
+    """Re-resolve every selected row from the current independent sources."""
+    keys = required_keys | SECURITY_KEYS
+    eligible, receipts = {}, []
+    for key in sorted(keys):
+        try:
+            item, record = qualified_receipt(key, sources)
+        except ValueError:
+            continue
+        if item is not None and item.candidate == candidate and item.scope == scope:
             eligible[key] = item.outcome
+            receipts.append((item.receipt_sha256, record))
     if Outcome.VERIFIED_FAIL in eligible.values():
         return "fail"
-    if any(eligible.get(key) is not Outcome.VERIFIED_PASS for key in required_keys | security_keys):
+    if not required_keys or any(eligible.get(key) is not Outcome.VERIFIED_PASS for key in keys):
         return "blocked"
-    current = instant(trusted_time)
-    if any(finding[1] in {"critical", "high"} and not disposition_resolved(
-        finding, candidate, scope, current, dispositions or {}, artifacts or {}, authorities or {})
-           for finding in findings):
+    try:
+        return "pass" if findings_resolved(keys, receipts, candidate, scope, sources, findings, dispositions) else "blocked"
+    except ValueError:
         return "blocked"
-    return "pass"
 
 
 T13_LEVELS = {
@@ -397,39 +507,99 @@ T13_LEVELS = {
     "real_godaddy": "real-godaddy",
 }
 
+T13_GATE_RECORDS = {
+    "GB-T13.G1": {("discord-startup", "GB-T12.MVP1", "real-discord")},
+    "GB-T13.G2": {("production-smoke", "GB-T13.G2", "real-godaddy"),
+                 ("production-recovery", "GB-T13.G2", "real-godaddy")},
+    "GB-T13.G3": {("production-smoke", "GB-T13.G2", "real-godaddy")},
+}
 
-def t13_projection(identifier, qualification, issue_map, ref, source_records):
-    raw = source_records.get(ref)
-    if (raw is None or type(qualification) is not Qualification
-            or qualification.outcome is not Outcome.VERIFIED_PASS):
+
+def t13_projection(key, candidate, scope, sources, issue_map):
+    try:
+        qualification, record = qualified_receipt(key, sources)
+    except ValueError:
         return None
-    record = validate_receipt(raw)
-    if qualification.receipt_sha256 != digest(encode(record)):
+    if (qualification is None or qualification.outcome is not Outcome.VERIFIED_PASS
+            or qualification.candidate != candidate or qualification.scope != scope):
         return None
     evidence = record["evidence"]
     level = T13_LEVELS.get(evidence["evidenceClass"])
     issue = issue_map.get(evidence["nativeIssue"])
     if level is None or issue is None:
         return None
+    identifier, ref = sources.registry[key]["projection"]
     entry = {"id": identifier, "issue": issue, "revision": evidence["candidateSha"],
              "date": evidence["executedAt"][:10], "environment": evidence["environment"],
              "level": level, "result": "pass", "ref": ref}
     return entry if t13.valid_record(entry) else None
 
 
-def t13_handoff(bundle, evidence, approvals, native_decisions, historical=None):
-    if bundle is None or (verified := t13.verified_bundle(bundle)) is None:
+def t13_handoff(bundle, sources, gate_registry, issue_map, findings, dispositions,
+                approvals, native_decisions, historical):
+    if type(sources) is not EvidenceSources or type(bundle) is not t13.Bundle:
+        return "pending"
+    if (verified := t13.verified_bundle(bundle)) is None:
         return "pending"
     manifest, identity = verified
-    decision = native_decisions.get(identity["manifestSha256"])
-    if (not evidence or manifest["evidence"] != evidence
-            or not all(row["revision"] == identity["revision"] for row in evidence)
-            or not any(t13.valid_approval(approval, manifest, identity) for approval in approvals)
-            or not t13.valid_native_decision(decision, manifest, identity)):
+    gate, candidate = manifest["gate"], identity["revision"]
+    selected = gate_registry.get(gate)
+    if selected is None:
         return "pending"
-    if manifest["gate"] == "GB-T13.G3" and (
-        historical is None or not t13.verified_mvp_publication(historical, manifest)
-    ):
+    try:
+        closed(selected, "authorityRef candidateSha scope matrixKeys projectionKeys prerequisiteRefs")
+        current = instant(sources.time)
+        for name in ("matrixKeys", "projectionKeys"):
+            keys = selected[name]
+            require(type(keys) is list and all(type(key) in {tuple, list} and len(key) == 2 for key in keys))
+            for requirement, row in keys:
+                token(requirement)
+                token(row)
+                require(row in CLASS_BY_ROW)
+            unique_array([tuple(key) for key in keys], minimum=1, maximum=128)
+        require(type(selected["prerequisiteRefs"]) is list)
+        for ref in selected["prerequisiteRefs"]:
+            token(ref)
+        unique_array(selected["prerequisiteRefs"], minimum=1)
+        token(selected["scope"])
+        token(selected["authorityRef"])
+    except ValueError:
+        return "pending"
+    required = {tuple(key) for key in selected["matrixKeys"]}
+    projected = [tuple(key) for key in selected["projectionKeys"]]
+    scope = selected["scope"]
+    matrix_subject = [gate, digest(encode(selected))]
+    if (selected["candidateSha"] != candidate or not projected
+            or not set(projected) <= required
+            or not current_grant(sources.authorities, selected["authorityRef"], "gate-matrix", matrix_subject, current)
+            or not all(current_grant(sources.authorities, ref, "gate-prerequisite", [ref, *matrix_subject], current)
+                       for ref in selected["prerequisiteRefs"])
+            or matrix_outcome(required, sources, candidate, scope, findings, dispositions) != "pass"):
+        return "pending"
+    evidence = [t13_projection(key, candidate, scope, sources, issue_map) for key in projected]
+    if (any(row is None for row in evidence) or manifest["evidence"] != evidence
+            or not T13_GATE_RECORDS[gate] <= {(row["id"], row["issue"], row["level"])
+                                             for key, row in zip(projected, evidence) if key[0] == row["id"]}
+            or len({row["ref"] for row in evidence}) != len(evidence)
+            or (gate != "GB-T13.G2" and t13.release_gate(identity["version"]) != gate)):
+        return "pending"
+    bundle_ref = identity["manifestSha256"]
+    approval = approvals.get(bundle_ref)
+    decision = native_decisions.get(bundle_ref)
+    if (not t13.valid_approval(approval, manifest, identity)
+            or not t13.valid_native_decision(decision, manifest, identity)
+            or not current_grant(sources.authorities, "t13-approval", "release-approval",
+                                 [bundle_ref, digest(encode(approval))], current)
+            or not current_grant(sources.authorities, "t13-native", "native-decision",
+                                 [bundle_ref, digest(encode(decision)), manifest["provenanceRef"]], current)):
+        return "pending"
+    if gate == "GB-T13.G3" and (type(historical) is not t13.State
+            or not t13.valid_current(historical)
+            or not t13.verified_mvp_publication(historical, manifest)
+            or (t13.release_gate(historical.current["version"]) == "GB-T13.G1"
+                and identity["version"] != "1.0.0")
+            or not current_grant(sources.authorities, "t13-mvp", "accepted-mvp",
+                                 historical.designated_mvp, current)):
         return "pending"
     return "verified"
 
@@ -465,7 +635,7 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         return record, artifact
 
     def test_scope_and_contract_references(self):
-        closed(self.fixture, "version status scenarios claims operationControls observations")
+        closed(self.fixture, "version status scenarios claims operationControls observations handoffMatrix")
         self.assertEqual((self.fixture["version"], self.fixture["status"]), (1, "synthetic-only"))
         self.assertEqual(list(self.scenarios), [f"E{index:02}" for index in range(1, 9)])
         self.assertEqual(len(self.scenarios), len(self.fixture["scenarios"]))
@@ -553,22 +723,32 @@ class VerificationEvidenceContractTests(unittest.TestCase):
                 self.assertEqual(assess_fixture(claim, observed, self.scenarios[claim["scenario"]]),
                                  "fail")
 
-    def qualification_inputs(self, requirement="harness", row="offline", scope="test-only", result="pass"):
+    def qualification_inputs(self, requirement="harness", row="offline", scope="test-only",
+                             result="pass", issue=393, finding_refs=None):
         record, artifact = self.receipt()
         record["requirementId"], record["gateRow"] = requirement, row
-        record["evidence"].update(scope=scope, evidenceClass=CLASS_BY_ROW[row], result=result)
+        record["evidence"].update(scope=scope, evidenceClass=CLASS_BY_ROW[row], result=result,
+                                  nativeIssue=issue, artifactRef=f"{requirement}-{row}")
+        if finding_refs is not None:
+            record["evidence"]["findingDispositions"] = finding_refs
         binding = {"requirementId": requirement, "gateRow": row,
                    "runId": record["runId"], "candidateSha": CANDIDATE,
-                   "environmentId": record["environmentId"], "artifactSha256": digest(artifact)}
+                   "environmentId": record["environmentId"], "configurationRef": "approved-configuration",
+                   "artifactSha256": digest(artifact)}
         current = "2026-11-17T00:01:00Z"
         key = (requirement, row)
         approval = {
             "metadata": {name: record["evidence"][name] for name in METADATA.split()},
             "runId": record["runId"], "artifactSha256": digest(artifact),
             "resultObserver": "result-oracle", "cleanupObserver": "cleanup-oracle",
-            "resourceful": True, "authorityRef": "qualification-approval",
+            "resourceful": True, "authorityRef": f"approval-{requirement}-{row}",
+            "configurationRef": binding["configurationRef"], "supportedConfiguration": True,
+            "prerequisiteRefs": [f"prerequisite-{requirement}-{row}"],
+            "freshUntil": "2026-11-17T00:10:00Z",
+            "projection": [requirement, f"synthetic/{requirement}-{row}.json"],
         }
-        authorities = {approval["authorityRef"]: self.grant([*key, digest(encode(approval))])}
+        authorities = AuthorityRegistry({}, {})
+        self.approve_row(authorities, key, approval)
         observation = {**binding, "observerRef": "result-oracle", "result": result,
                        "executionState": "completed"}
         inventory = {**binding, "observerRef": "cleanup-oracle", "cleanup": "verified",
@@ -576,9 +756,43 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         return record, key, {key: approval}, artifact, observation, inventory, current, authorities
 
     @staticmethod
-    def grant(subject):
-        return {"subject": subject, "authorityRef": "approved-owner-policy", "issuedAt": DATE,
-                "expiresAt": "2026-11-17T01:00:00Z", "decision": "approved"}
+    def grant(authorities, purpose, ref, subject, issuer="approved-owner-policy"):
+        authorities.issuers[purpose, ref] = issuer
+        authorities.grants[ref] = {"subject": subject, "authorityRef": issuer, "issuedAt": DATE,
+                                   "expiresAt": "2026-11-17T01:00:00Z", "decision": "approved"}
+
+    def approve_row(self, authorities, key, approval):
+        subject = [*key, digest(encode(approval))]
+        self.grant(authorities, "qualification", approval["authorityRef"], subject)
+        for ref in approval["prerequisiteRefs"]:
+            self.grant(authorities, "prerequisite", ref, [ref, *subject])
+
+    def sources(self, keys, **overrides):
+        sources = EvidenceSources({}, {}, {}, {}, {}, {}, "2026-11-17T00:01:00Z",
+                                  AuthorityRegistry({}, {}))
+        for key in keys | SECURITY_KEYS:
+            record, _, registry, artifact, observed, inventory, _, authorities = self.qualification_inputs(
+                *key, scope="release", **{"finding_refs": [], **overrides.get(key[0], {})})
+            approval = registry[key]
+            ref = approval["projection"][1]
+            sources.registry[key] = approval
+            sources.receipt_refs[key] = ref
+            sources.receipts[ref] = encode(record)
+            sources.artifacts[record["evidence"]["artifactRef"]] = artifact
+            sources.observations[key] = observed
+            sources.inventories[key] = inventory
+            sources.authorities.issuers.update(authorities.issuers)
+            sources.authorities.grants.update(authorities.grants)
+        return sources
+
+    def finding_inventory(self, keys, sources, findings=()):
+        matrix_keys = sorted(keys | SECURITY_KEYS)
+        inventory = {"authorityRef": "complete-findings", "candidateSha": CANDIDATE, "scope": "release",
+                     "receiptSha256s": [qualified_receipt(key, sources)[0].receipt_sha256 for key in matrix_keys],
+                     "findings": list(findings)}
+        self.grant(sources.authorities, "finding-inventory", inventory["authorityRef"],
+                   [matrix_keys, digest(encode(inventory))], "independent-security-inventory")
+        return inventory
 
     def test_exact_environment_and_provenance_are_required(self):
         record, *inputs = self.qualification_inputs()
@@ -628,96 +842,101 @@ class VerificationEvidenceContractTests(unittest.TestCase):
             self.assertFalse(passing(encode(record), row, registry, artifact,
                                        {**observation, field: value}, inventory, current, authorities))
         self.assertFalse(passing(encode(record), row, registry, artifact, observation, inventory,
-                                   authorities["qualification-approval"]["expiresAt"], authorities))
+                                   authorities.grants[registry[row]["authorityRef"]]["expiresAt"], authorities))
         registry[row]["resourceful"] = False
-        authorities["qualification-approval"]["subject"] = [*row, digest(encode(registry[row]))]
+        self.approve_row(authorities, row, registry[row])
         self.assertFalse(passing(encode(untouched), row, registry, artifact, observation,
                                    {**inventory, "cleanup": "untouched"}, current, authorities))
         self.assertTrue(passing(encode(untouched), row, registry, artifact, observation,
                                   {**inventory, "cleanup": "untouched", "ownedCreated": 0}, current, authorities))
-        authorities["qualification-approval"]["decision"] = "withdrawn"
+        authorities.grants[registry[row]["authorityRef"]]["decision"] = "withdrawn"
         self.assertFalse(passing(encode(untouched), row, registry, artifact, observation,
                                    {**inventory, "cleanup": "untouched", "ownedCreated": 0}, current, authorities))
 
     def test_release_gate_distinguishes_verified_failure_and_substitution(self):
-        keys = {("network", "vps-network"), ("smoke", "vps-network")}
-        security_keys = {(name, "review" if name == "independent-security-review" else "hosted")
-                         for name in SECURITY_INPUTS}
-        current = self.qualification_inputs()[-2]
+        network, smoke = ("network", "vps-network"), ("smoke", "vps-network")
+        keys = {network, smoke}
+        sources = self.sources(keys)
+        findings = self.finding_inventory(keys, sources)
 
-        def observed(key, result="pass", mutate=None):
-            record, *inputs = self.qualification_inputs(*key, scope="release", result=result)
-            if mutate:
-                mutate(inputs)
-            return qualifies(encode(record), *inputs)
-
-        outcomes = {key: observed(key) for key in keys | security_keys}
-
-        def outcome(items=outcomes):
-            return matrix_outcome(keys, security_keys, items, CANDIDATE, "release", current)
+        def outcome(current=sources):
+            return matrix_outcome(keys, current, CANDIDATE, "release", findings, {})
 
         self.assertEqual(outcome(), "pass")
-        network, smoke = ("network", "vps-network"), ("smoke", "vps-network")
-        self.assertEqual(outcome({**outcomes, smoke: outcomes[network]}), "blocked")
-        network_record, *_ = self.qualification_inputs(*network, scope="release")
-        _, *smoke_inputs = self.qualification_inputs(*smoke, scope="release")
-        self.assertEqual(qualifies(encode(network_record), *smoke_inputs).outcome, Outcome.INELIGIBLE)
-        self.assertEqual(outcome({**outcomes, smoke: observed(smoke, "fail")}), "fail")
-        for state in ("pass", "fail", Outcome.VERIFIED_PASS, Outcome.VERIFIED_FAIL):
-            self.assertEqual(outcome({**outcomes, smoke: state}), "blocked")
+        self.assertEqual(outcome(replace(sources, receipt_refs={
+            **sources.receipt_refs, smoke: sources.receipt_refs[network],
+        })), "blocked")
+        self.assertEqual(outcome(self.sources(keys, smoke={"result": "fail"})), "fail")
+        for key in keys | SECURITY_KEYS:
+            for field in ("receipts", "artifacts", "observations", "inventories"):
+                changed = copy.deepcopy(sources)
+                source = getattr(changed, field)
+                lookup = {"receipts": sources.receipt_refs[key],
+                          "artifacts": sources.registry[key]["metadata"]["artifactRef"]}
+                source.pop(lookup.get(field, key))
+                self.assertEqual(outcome(changed), "blocked")
 
-        def stale(inputs):
-            inputs[-1]["qualification-approval"]["expiresAt"] = current
-
-        def different_artifact(inputs):
-            inputs[2] += b"other"
-
-        for key in keys | security_keys:
-            for mutation in (stale, different_artifact):
-                self.assertEqual(outcome({**outcomes, key: observed(key, "fail", mutation)}), "blocked")
-            self.assertEqual(outcome({**outcomes, key: None}), "blocked")
-
-    def test_release_disposition_requires_bound_authority_and_exception_evidence(self):
-        scope = "test-only"
-        record, key, *inputs = self.qualification_inputs()
-        qualification = qualifies(encode(record), key, *inputs)
-        current = inputs[-2]
-        finding = ("f1", "high", "d1")
+    def test_release_disposition_requires_inventory_and_exact_evidence(self):
+        key = ("harness", "offline")
+        keys, scope = {key}, "release"
+        finding_ref = {"findingRef": "f1", "dispositionRef": "d1"}
+        sources = self.sources(keys, harness={"finding_refs": [finding_ref]})
+        receipt_sha = qualified_receipt(key, sources)[0].receipt_sha256
+        finding = {**finding_ref, "severity": "high", "receiptSha256": receipt_sha}
+        findings = self.finding_inventory(keys, sources, [finding])
         exception = {"version": 1, "scope": scope, "severity": "high", "approverRef": "approver",
                      "rationale": "Reviewed temporary coverage.", "controls": ["mitigation"],
                      "expiresAt": "2026-11-17T01:00:00Z", "closureCriteria": "remediation-check"}
-        subject = {"findingRef": finding[0], "candidateSha": CANDIDATE, "scope": scope,
-                   "approverRef": exception["approverRef"]}
+        binding = {**finding, "candidateSha": CANDIDATE, "scope": scope, "approverRef": "approver"}
 
-        def outcome(exception_bytes=encode(exception), change=None, displaced=False, closed=False):
-            observed = encode({**subject, "state": "closed" if closed else "exception-verified",
-                               "controls": exception["controls"], "closureCriteria": exception["closureCriteria"],
-                               "exceptionSha256": digest(encode(exception))})
-            disposition = {**subject, "severity": finding[1], "authorityRef": "approval",
-                           "evidenceRef": "observed", "evidenceSha256": digest(observed),
-                           "exceptionRef": "" if closed else "exception"}
-            authority = self.grant([finding[2], digest(encode(disposition))])
-            artifacts = {"observed": observed, "exception": exception_bytes}
-            if change:
-                change(authority, artifacts)
-            if displaced:
-                disposition["findingRef"] = "f2"
-            return matrix_outcome({key}, set(), {key: qualification}, CANDIDATE, scope, current,
-                                  [finding], dispositions={"d1": disposition}, artifacts=artifacts,
-                                  authorities={"approval": authority})
+        def outcome(closed=False, mutation=None, inventory=findings):
+            current = copy.deepcopy(sources)
+            remediation = encode({"binding": binding, "result": "verified-remediated",
+                                  "checkRef": "independent-remediation-check", "authorityRef": "remediation-review"})
+            self.grant(current.authorities, "remediation-review", "remediation-review",
+                       ["remediation", digest(remediation)], "independent-reviewer")
+            observed = {"binding": binding, "state": "closed", "remediationRef": "remediation",
+                        "remediationSha256": digest(remediation)} if closed else {
+                "binding": binding, "state": "exception-verified", "controls": exception["controls"],
+                "closureCriteria": exception["closureCriteria"], "exceptionSha256": digest(encode(exception)),
+            }
+            disposition = {key: value for key, value in binding.items() if key != "dispositionRef"}
+            disposition.update(authorityRef="approval", evidenceRef="observed",
+                               evidenceSha256=digest(encode(observed)), exceptionRef="" if closed else "exception",
+                               exceptionPermissionRef="" if closed else "exception-permission")
+            self.grant(current.authorities, "disposition", "approval", ["d1", digest(encode(disposition))], "approver")
+            self.grant(current.authorities, "exception-policy", "exception-permission",
+                       [binding, digest(encode(exception))], "repository-policy")
+            current.artifacts.update(observed=encode(observed), exception=encode(exception), remediation=remediation)
+            if mutation:
+                mutation(current, disposition)
+            return matrix_outcome(keys, current, CANDIDATE, scope, inventory, {"d1": disposition})
 
         self.assertEqual(outcome(), "pass")
         self.assertEqual(outcome(closed=True), "pass")
-        self.assertEqual(outcome(displaced=True), "blocked")
-        self.assertEqual(outcome(encode({**exception, "expiresAt": current})), "blocked")
+        self.assertEqual(outcome(inventory=None), "blocked")
+        self.assertEqual(outcome(inventory={**findings, "findings": []}), "blocked")
+        empty = self.finding_inventory(keys, sources, [])
+        self.assertEqual(outcome(inventory=empty), "blocked")
+        findings = self.finding_inventory(keys, sources, [finding])
         for change in (
-            lambda grant, _: grant.update(decision="withdrawn"),
-            lambda grant, _: grant.update(expiresAt=current),
-            lambda _, artifacts: artifacts.pop("observed"),
-            lambda _, artifacts: artifacts.update(observed=b"substituted"),
-            lambda _, artifacts: artifacts.pop("exception"),
+            lambda _, record: record.update(findingRef="f2"),
+            lambda _, record: record.update(receiptSha256="a" * 64),
+            lambda current, _: current.authorities.grants["approval"].update(decision="withdrawn"),
+            lambda current, _: current.authorities.grants["approval"].update(authorityRef="wrong-issuer"),
+            lambda current, _: current.authorities.grants["approval"].update(expiresAt=current.time),
+            lambda current, _: current.authorities.grants.pop("exception-permission"),
+            lambda current, _: current.authorities.grants["exception-permission"].update(decision="withdrawn"),
+            lambda current, _: current.artifacts.pop("observed"),
+            lambda current, _: current.artifacts.update(observed=b"substituted"),
+            lambda current, _: current.artifacts.pop("exception"),
+            lambda current, _: current.artifacts.update(exception=encode({**exception, "expiresAt": current.time})),
         ):
-            self.assertEqual(outcome(change=change), "blocked")
+            self.assertEqual(outcome(mutation=change), "blocked")
+        for change in (lambda current, _: current.artifacts.pop("remediation"),
+                       lambda current, _: current.artifacts.update(remediation=b"substituted"),
+                       lambda current, _: current.authorities.grants["remediation-review"].update(decision="withdrawn")):
+            self.assertEqual(outcome(closed=True, mutation=change), "blocked")
 
     def test_wrong_types_in_registry_and_independent_observations_are_controlled(self):
         record, key, registry, artifact, observation, inventory, current, authorities = self.qualification_inputs()
@@ -734,52 +953,140 @@ class VerificationEvidenceContractTests(unittest.TestCase):
                 qualifies(encode(record), key, registry, artifact, {**observation, observation_field: []},
                           inventory, current, authorities)
 
-    def test_t13_projection_and_exact_candidate_handoff(self):
-        record, *inputs = self.qualification_inputs(row="vps-network")
-        qualification = qualifies(encode(record), *inputs)
-        backlog = read_json(ROOT / "planning/guildboard-backlog.json")["items"]
-        issue_map = {item["github"]["number"]: item["id"] for item in backlog}
-        ref = "synthetic/t12-trace.json"
-        source = {ref: encode(record)}
-        entry = t13_projection("t12-probe", qualification, issue_map, ref, source)
+    def test_t13_projection_reresolves_current_sources(self):
+        key = ("t12-probe", "vps-network")
+        sources = self.sources({key})
+        issue_map = self.issue_map()
+        ref = sources.receipt_refs[key]
+
+        def project(current=sources):
+            return t13_projection(key, CANDIDATE, "release", current, issue_map)
+
+        entry = project()
         self.assertEqual(entry, {
             "id": "t12-probe", "issue": issue_map[393], "revision": CANDIDATE,
             "date": "2026-11-17", "environment": "synthetic-v1", "level": "real-godaddy",
             "result": "pass", "ref": ref,
         })
-        self.assertIsNone(t13_projection("t12-probe", qualification, {393: "393"}, ref, source))
-        for changes in ({"method": "replacement"}, {"evidenceClass": "local_integration"}):
-            substituted = {**record, "evidence": {**record["evidence"], **changes}}
-            self.assertIsNone(t13_projection("t12-probe", qualification, issue_map, ref,
-                                             {ref: encode(substituted)}))
-        post_merge, *post_inputs = self.qualification_inputs(row="merged")
-        self.assertIsNone(t13_projection("t12-probe", qualifies(encode(post_merge), *post_inputs),
-                                         issue_map, ref, {ref: encode(post_merge)}))
+        self.assertIsNone(t13_projection(key, CANDIDATE, "release", sources, {393: "393"}))
+        approval = sources.registry[key]
+        authority, prerequisite = approval["authorityRef"], approval["prerequisiteRefs"][0]
+        for mutate in (
+            lambda current: current.authorities.grants[authority].update(decision="withdrawn"),
+            lambda current: current.authorities.grants[authority].update(authorityRef="different-issuer"),
+            lambda current: current.authorities.issuers.pop(("qualification", authority)),
+            lambda current: current.authorities.grants.pop(prerequisite),
+            lambda current: current.authorities.grants[prerequisite].update(decision="withdrawn"),
+            lambda current: current.authorities.grants[prerequisite].update(expiresAt=current.time),
+            lambda current: current.artifacts.update({approval["metadata"]["artifactRef"]: b"substituted"}),
+            lambda current: current.observations[key].update(result="fail"),
+            lambda current: current.observations[key].update(configurationRef="other-configuration"),
+            lambda current: current.inventories[key].update(ownedRemaining=1),
+            lambda current: current.registry[key].update(supportedConfiguration=False),
+        ):
+            changed = copy.deepcopy(sources)
+            mutate(changed)
+            if changed.registry[key] != approval:
+                self.approve_row(changed.authorities, key, changed.registry[key])
+            self.assertIsNone(project(changed))
+        self.assertIsNone(project(replace(sources, time=approval["freshUntil"])))
+        record = validate_receipt(sources.receipts[ref])
+        for update in ({"method": "replacement"}, {"evidenceClass": "local_integration"}):
+            substituted = {**record, "evidence": {**record["evidence"], **update}}
+            self.assertIsNone(project(replace(sources, receipts={ref: encode(substituted)})))
+        self.assertIsNone(project(replace(sources, receipts={ref: encode({**record, "gateRow": "vps-load"})})))
+        merged = ("post-merge", "merged")
+        self.assertIsNone(t13_projection(merged, CANDIDATE, "release", self.sources({merged}), issue_map))
 
+    @staticmethod
+    def issue_map():
+        backlog = read_json(ROOT / "planning/guildboard-backlog.json")["items"]
+        return {item["github"]["number"]: item["id"] for item in backlog}
+
+    def test_t13_handoff_requires_qualified_matrix_gate_evidence_and_authority(self):
+        issue_map = self.issue_map()
         model = t13.ReleaseContractScenarios()
         model.setUp()
-        original_bundle, _, approval = model.stage(scenario={"candidatePatch": {
-            "revision": CANDIDATE, "gate": "GB-T13.G3", "version": "1.0.0",
+        smoke = ("production-smoke", "vps-network")
+        matrix = self.fixture["handoffMatrix"]
+        keys = {tuple(entry["key"]) for entry in matrix}
+        sources = self.sources(keys, **{entry["key"][0]: {"issue": entry["issue"]} for entry in matrix})
+        findings = self.finding_inventory(keys, sources)
+        gate = "GB-T13.G3"
+        policy = {gate: {"authorityRef": "applicable-matrix", "candidateSha": CANDIDATE, "scope": "release",
+                         "matrixKeys": sorted(keys), "projectionKeys": [smoke],
+                         "prerequisiteRefs": ["native-prerequisites"]}}
+        subject = [gate, digest(encode(policy[gate]))]
+        self.grant(sources.authorities, "gate-matrix", "applicable-matrix", subject)
+        self.grant(sources.authorities, "gate-prerequisite", "native-prerequisites",
+                   ["native-prerequisites", *subject])
+        self.grant(sources.authorities, "accepted-mvp", "t13-mvp", model.prior.designated_mvp)
+        original, _, approval = model.stage(scenario={"candidatePatch": {
+            "revision": CANDIDATE, "gate": gate, "version": "1.0.0",
         }})
-        manifest = json.loads(original_bundle.manifest)
-        manifest["evidence"] = [entry]
-        bundle = replace(original_bundle, manifest=encode(manifest))
-        _, identity = t13.verified_bundle(bundle)
-        approval = {**approval, "identity": identity}
-        decision = {"identity": identity, "gate": manifest["gate"], "decision": "accepted",
-                    "authority": t13.NATIVE_AUTHORITY, "decisionRef": "native/stable.json",
-                    "evidenceRefs": [ref], "mvpPublication": manifest["mvpPublication"]}
-        decisions = {identity["manifestSha256"]: decision}
-        self.assertNotEqual(record["artifactSha256"], identity["artifactSha256"])
-        self.assertEqual(t13_handoff(bundle, [entry], [approval], decisions, model.prior), "verified")
-        self.assertEqual(t13_handoff(bundle, [entry], [], decisions, model.prior), "pending")
-        self.assertEqual(t13_handoff(bundle, [entry], [approval], {}, model.prior), "pending")
-        self.assertEqual(t13_handoff(bundle, [entry], [approval], decisions), "pending")
-        for changed in (None, replace(bundle, notes=b"substitution"),
-                        replace(bundle, files={}), replace(bundle, manifest=b"{}"),
-                        replace(bundle, index=b"substitution")):
-            self.assertEqual(t13_handoff(changed, [entry], [approval], decisions, model.prior),
-                             "pending")
+
+        def stage(entries):
+            manifest = {**json.loads(original.manifest), "evidence": entries}
+            bundle = replace(original, manifest=encode(manifest))
+            _, identity = t13.verified_bundle(bundle)
+            approval_record = {**approval, "identity": identity}
+            decision = {"identity": identity, "gate": gate, "decision": "accepted",
+                        "authority": t13.NATIVE_AUTHORITY, "decisionRef": "native/stable.json",
+                        "evidenceRefs": [entry["ref"] for entry in entries],
+                        "mvpPublication": manifest["mvpPublication"]}
+            ref = identity["manifestSha256"]
+            self.grant(sources.authorities, "release-approval", "t13-approval", [ref, digest(encode(approval_record))])
+            self.grant(sources.authorities, "native-decision", "t13-native",
+                       [ref, digest(encode(decision)), manifest["provenanceRef"]])
+            return bundle, {ref: approval_record}, {ref: decision}
+
+        entry = t13_projection(smoke, CANDIDATE, "release", sources, issue_map)
+        bundle, approvals, decisions = stage([entry])
+        orig_approval = sources.authorities.grants["t13-approval"].copy()
+        orig_native = sources.authorities.grants["t13-native"].copy()
+
+        def handoff(candidate=bundle, current=sources, registry=policy, approved=approvals,
+                    native=decisions, historical=model.prior):
+            return t13_handoff(candidate, current, registry, issue_map, findings, {}, approved, native, historical)
+
+        self.assertEqual(handoff(), "verified")
+        self.assertEqual(handoff(approved={}), "pending")
+        self.assertEqual(handoff(native={}), "pending")
+        self.assertEqual(handoff(historical=None), "pending")
+        self.assertEqual(handoff(registry={}), "pending")
+        self.assertEqual(handoff(current=[entry]), "pending")
+        for ref in ("t13-approval", "t13-native", "t13-mvp", "applicable-matrix", "native-prerequisites",
+                    "complete-findings"):
+            current = copy.deepcopy(sources)
+            current.authorities.grants[ref]["decision"] = "withdrawn"
+            self.assertEqual(handoff(current=current), "pending")
+        alternatives = copy.deepcopy(policy)
+        integration = ("integrated", "hosted")
+        alternatives[gate]["projectionKeys"] = [integration]
+        alternate = t13_projection(integration, CANDIDATE, "release", sources, issue_map)
+        altered, approved, native = stage([alternate])
+        other_sources = copy.deepcopy(sources)
+        alternate_subject = [gate, digest(encode(alternatives[gate]))]
+        self.grant(other_sources.authorities, "gate-matrix", "applicable-matrix", alternate_subject)
+        self.grant(other_sources.authorities, "gate-prerequisite", "native-prerequisites",
+                   ["native-prerequisites", *alternate_subject])
+        self.assertEqual(handoff(candidate=altered, approved=approved, native=native, current=other_sources,
+                                 registry=alternatives), "pending")
+        for new_entries in ([], [{**entry, "id": "network"}], [{**entry, "level": "integration"}]):
+            malformed, approved, native = stage(new_entries)
+            self.assertEqual(handoff(candidate=malformed, approved=approved, native=native), "pending")
+        sources.authorities.grants.update({"t13-approval": orig_approval, "t13-native": orig_native})
+        current = copy.deepcopy(sources)
+        current.receipts.pop(current.receipt_refs["integrated", "hosted"])
+        self.assertEqual(handoff(current=current), "pending")
+        current = copy.deepcopy(sources)
+        current.artifacts.pop(current.registry[smoke]["metadata"]["artifactRef"])
+        self.assertEqual(handoff(current=current), "pending")
+        changed = {ref: {**decision, "decisionRef": "native/replacement.json"} for ref, decision in decisions.items()}
+        self.assertEqual(handoff(native=changed), "pending")
+        for changed in (None, replace(bundle, notes=b"substitution"), replace(bundle, files={}),
+                        replace(bundle, manifest=b"{}"), replace(bundle, index=b"substitution")):
+            self.assertEqual(handoff(candidate=changed), "pending")
 
         prior = model.prior
         version = prior.designated_mvp["identity"]["version"]
@@ -787,7 +1094,6 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         for changed in (
             replace(prior, designated_mvp=None),
             replace(prior, designated_mvp={**prior.designated_mvp, "releaseRef": "other"}),
-            replace(prior, designated_mvp={**prior.designated_mvp, "identity": identity}),
             replace(prior, committed_authorizations={}),
             *(replace(prior, versions={version: item}) for item in (
                 replace(published, receipt={}),
@@ -795,7 +1101,7 @@ class VerificationEvidenceContractTests(unittest.TestCase):
                 replace(published, bundle=replace(published.bundle, notes=b"substituted")),
             )),
         ):
-            self.assertEqual(t13_handoff(bundle, [entry], [approval], decisions, changed), "pending")
+            self.assertEqual(handoff(historical=changed), "pending")
 
     def test_strict_envelope_rejects_malformed_records(self):
         record, _ = self.receipt()

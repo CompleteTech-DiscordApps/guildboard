@@ -11,6 +11,26 @@
     {"id": "E07", "verification": 410, "t0": ["F11", "F18", "F19", "F20", "F21", "F22", "F10"], "t9": ["receipt_history", "delete_restore"], "signals": ["committedBeforeFault", "acknowledgedBeforeFault", "restoredReceipts", "restoredAssets", "missingCommittedReceipts", "missingAcknowledgedEffects", "beyondCutReceipts", "oldLineageEffects", "recoveryPointLoss", "rpoExceeded", "lostAckDeliveries", "integratedLossStop"]},
     {"id": "E08", "verification": 417, "t0": [], "t9": ["release_gate", "host_boundary", "internal_records"], "signals": ["missingRows", "staleRows", "classMismatches", "missingRealRows", "missingSecurityInputs", "unresolvedFindings", "verifiedFailures"]}
   ],
+  "handoffMatrix": [
+    {"key": ["harness", "offline"], "issue": 393},
+    {"key": ["browser-e2e", "local"], "issue": 396},
+    {"key": ["release-fence", "hosted"], "issue": 400},
+    {"key": ["isolation", "hosted"], "issue": 403},
+    {"key": ["convergence", "hosted"], "issue": 407},
+    {"key": ["recovery", "vps-recovery"], "issue": 410},
+    {"key": ["accessibility-win", "discord-win"], "issue": 414},
+    {"key": ["accessibility-mac", "discord-mac"], "issue": 414},
+    {"key": ["accessibility-chromium", "discord-web-chromium"], "issue": 414},
+    {"key": ["accessibility-firefox", "discord-web-firefox"], "issue": 414},
+    {"key": ["accessibility-ios", "discord-ios"], "issue": 414},
+    {"key": ["accessibility-android", "discord-android"], "issue": 414},
+    {"key": ["accessibility-previews", "discord-previews"], "issue": 414},
+    {"key": ["platform-network", "vps-network"], "issue": 414},
+    {"key": ["bounded-load", "vps-load"], "issue": 414},
+    {"key": ["regression", "hosted"], "issue": 417},
+    {"key": ["integrated", "hosted"], "issue": 455},
+    {"key": ["production-smoke", "vps-network"], "issue": 457}
+  ],
   "claims": [
     {"id": "valid", "scenario": "E01", "state": "completed", "cleanup": "verified", "expected": [1, 1, 1], "result": "pass"},
     {"id": "invalid", "scenario": "E02", "state": "invalid_configuration", "cleanup": "untouched", "expected": [0, 0, 0], "result": "blocked"},
