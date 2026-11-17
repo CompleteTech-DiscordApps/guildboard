@@ -128,10 +128,10 @@ All runtime assertions below are **pending**, not passed by this document.
 | A02 P0 I3/L3, B2/B6/B7, T2/T5/T8 | Guess foreign board/asset/receipt IDs or share cache/room/idempotency keys across tenants. Scope every lookup, join, cache key, operation identity, object reference, export and recipient. | Matrix across every HTTP/socket/bot/storage route: guild A principal with guild B selectors; same-guild restricted board; colliding operation IDs. Unknown and foreign resource have same safe public outcome; no foreign data/existence leakage or mutation. Trace storage, cache and egress effects. |
 | A03 P0 I3/L3, B1/B2/B4, T1/T8 | Inject/replay a code, fix a session, steal a token via script/log/query or force OAuth exchange from another browser. Bind single-use authorization transaction and session; exact redirect/origin policy; server-only secrets, bounded expiry/rotation, redacted errors. D3/D5/O1. | Wrong/missing/reused/expired state, foreign transaction/code, expired/revoked session, malicious redirect, parallel redemption. Deny without session creation; capture URL/log/export/client-bundle sentinels. Verify actual chosen SDK code-binding and supported PKCE behavior before acceptance. |
 | A04 P0 I3/L3, B2/B3, T1/T8/T10 | Cross-site socket hijack, spoof Origin/Host/forwarded headers, unauthenticated join or direct-origin bypass. Exact observed origin allowlist plus session/CSRF binding; trust only configured proxy hops; all ingress paths authenticate. D2/O2. | Approved Discord clients succeed; hostile/sibling/suffix/null/missing origins and forged proxy headers fail according to explicit transport policy. Non-browser callers cannot gain authority by setting allowed Origin. Test both proxy and public VPS origin with real cookies. |
-| A05 P0 I3/L2, B5/B6, T2/T4/T5/T6 | Revoke a grant, remove membership, expire session or lock board while an edit is queued. Serialize current authority/generation with commit; a later regrant must not revive stale intent. No authorization solely at WSS join. | Deterministic prepare/revoke/commit and prepare/revoke/regrant/commit races; commit-before-revoke valid, commit-after invalid. Barrier-controlled real SQL tests with two workers, stale cache and connected clients. Denied edit causes no new durable content/revision/receipt/outbox; only bounded authorized denial-audit metadata may be added. Local model below is partial reasoning only. |
+| A05 P0 I3/L2, B5/B6, T2/T4/T5/T6 | Revoke a grant, remove membership, expire session or lock board while an edit is queued. Serialize current authority/generation with commit; a later regrant must not revive stale intent. No authorization solely at WSS join. | Deterministic prepare/revoke/commit and prepare/revoke/regrant/commit races; commit-before-revoke valid, commit-after invalid. Barrier-controlled SQL tests with two workers and connected clients. Exercise the pending commit failure cases below and assert no new durable content, revision, receipt or outbox entry on denial. |
 | A06 P0 I3/L2, B5/B6, T2/T6/T8 | Writer self-grants or moderator changes admin mapping, unlocks emergency lockdown or abuses presenter mode. Enumerate actions/capabilities; unknown actions deny; bot and HTTP use same policy. | Role/action matrix including self-approval, moderator-to-admin, expired grants, all modes and lockdown override. Assert legitimate administrative transition plus unauthorized transition denial, consistent policy generation and audit. |
 | A07 P0 I3/L3, B1/B2/B7, T3/T5/T7 | Stored XSS in labels/usernames/imported elements; malicious URL, SVG, polyglot, path traversal, SQL injection or SSRF via asset fetch. Safe rendering, typed bounded schemas, parameterized SQL, opaque scoped assets, quarantine and no arbitrary remote fetch. D2/O3. | Hostile text/URLs rendered inert; active content and mismatched/decoded oversized files rejected before publication; traversal/SQL sentinels produce no filesystem/SQL effects. SSRF tests cover redirects, private/link-local addresses and DNS changes if fetching is enabled; otherwise prove no fetch path. |
-| A08 P0 I3/L2, B6, T4/T5/T8 | Retry a committed operation with changed payload, reuse another actor's receipt, acknowledge before commit, release a response after read authority is revoked, or replay stale lineage after restore. Scope identity/digest; atomic durable operation+receipt+event; serialize each protected release with current session, membership and read authority. | Lost ACK/concurrent duplicate/crash/rollback tests; current identity/tenant/read checks precede receipt or digest disclosure; an identical retained receipt, including one from retired lineage after restore, settles without another mutation; changed digest conflicts; only an absent receipt proceeds to active-lineage/new-write checks, where retired lineage fails. Use ordering and backpressure cases for queued ACKs, receipts, digest-dependent conflicts, live/replay events, snapshot metadata and chunks, and asset delivery. If revocation, expiry or invalidation wins, suppress the result and later queued chunks without leaking receipt or digest information. Missing or stale required evidence or trusted time also denies release. Preserve an already-accepted write when ACK delivery is denied. Confirm that authorized release ordered first may complete and returning a retained receipt applies no content. Receipt, delivery and durability evidence remains pending. |
+| A08 P0 I3/L2, B6/B7, T4/T5/T8 | Retry a committed operation with changed payload, reuse another actor's receipt, acknowledge before commit, release protected data after read authority is revoked, or replay stale lineage after restore. Scope identity and digest, atomically commit the operation, receipt and event, and serialize each protected release with current session, membership and scoped read authority. | Lost ACK, concurrent duplicate, crash and rollback tests. Exercise the pending receipt, delivery ordering, and scoped asset and export cases below. |
 | A09 P1 I2/L3, B2/B3/B7, T4/T5/T8/T10/T11 | Flood connections/messages/uploads, decompression bombs, slow consumers, full disk or amplification through exports. Bound bytes/decoded work, rates, queues, connections, time and storage at user/board/guild/global levels; isolate cleanup. O2/O3/N1. | Agreed finite limits at below/at/above boundary, compressed and slow requests. Reject/close over-budget work and recover clients; unaffected guild retains agreed service under declared load; accepted durable edits preserved. Numerical budgets remain a specification/load gate. |
 | A10 P0 I3/L2, B3/B8, T10/T11 | Internet reaches SQL/debug/admin services, leaked .env or asset directory; weak SSH/provider account, vulnerable package or stale TLS renewal compromises host. Private listeners, firewall allowlist, non-root services, protected secrets, patched pinned dependencies, verified renewal and operator access. G1/N1. | Authorized external IPv4/IPv6 port inventory against exact VPS; only approved public services reachable, SQL/assets/debug private. Verify file permissions and redacted config, DNS/mappings, TLS chain/renewal, WSS idle/reconnect, operator MFA/SSH and rollback. Record plan/image/package versions; vendor help is not deployment proof. |
 | A11 P0 I3/L2, B6/B7/B8, T5/T9/T11 | Moderator edits audit trail; tokens/content leak in logs/backups; deletion leaves assets/exports/snapshots accessible; restore revives deleted data. Append-restricted audit, minimal collection, scoped access, explicit deletion/retention and recovery policy. | Credential/content sentinels absent from diagnostics; unauthorized audit read/write denied; deletion inventory tracks live objects, replicas, caches and backup expiry; restored isolated system reapplies deletion/revocation requirements. Actual restore/access drill and retention decisions still required. |
@@ -140,6 +140,42 @@ Safe denials must not leak payloads, secrets, SQL details or foreign resource
 existence. A denial can emit minimal protected security metadata; "no side effects"
 here means no unauthorized product/durable/broadcast effect, not prohibition of
 the security audit itself. Audit write failures need an explicit fail/queue policy.
+
+### Pending A05 and A08 verification
+
+- **A05 commit failures.** At commit, exercise missing and stale required policy
+  and membership evidence, unavailable or stale trusted time, and an unavailable
+  commit fence. Deny each mutation even after successful preparation or socket
+  authorization. Assert no new durable content, revision, receipt or outbox
+  entry. Any denial audit is bounded and authorized.
+- **A08 receipt and denial semantics.** Show that a caller with current read
+  authority and denied write authority can settle an identical retained
+  receipt, including one from retired lineage after restore, without another
+  mutation. With read authority, a changed digest conflicts. Only an absent
+  receipt proceeds to active-lineage and new-write checks, where retired
+  lineage fails. When release is denied, compare absent, matching and
+  mismatching receipt cases for the same denial reason. The safe public outcome
+  (`UNAUTHENTICATED`, `NOT_FOUND`/`FORBIDDEN` or `DEPENDENCY_UNAVAILABLE`, as
+  applicable) is independent of receipt existence and digest match. It reveals
+  no receipt, digest result, lineage or revision and leaves an unknown outcome
+  unsettled.
+- **A08 release ordering.** Exercise both orderings with queued ACKs, receipts,
+  digest-dependent conflicts, live and replay events, and snapshot metadata
+  and chunks. At each release, serialize current session validity, membership
+  freshness and scoped read authority with revocation, expiry and invalidation.
+  Missing or stale required evidence or trusted time denies release. An
+  authorized release ordered first may complete. If revocation, expiry or
+  invalidation wins, suppress the protected output and subsequent queued
+  chunks. Verify that backpressure cannot bypass the fence and that a durable
+  edit remains accepted if its ACK is denied.
+- **A08 assets and exports.** Apply the same serialization and backpressure
+  cases to asset and export metadata and every queued asset or export chunk.
+  Check the board and each included asset's current scoped read authority at
+  each protected release. Include an export with a denied asset and revocation
+  while chunks are queued. Deny the affected data if the release fence is
+  unavailable, including through direct storage or pre-signed URLs that cannot
+  enforce the fence. A one-time authorization at URL issuance or stream start
+  cannot protect later releases.
 
 ## Alternatives and recommended direction
 
@@ -176,8 +212,9 @@ valid writes, no preparation, repeated commit, revocation/regrant, rejected-stat
 preservation and exhaustive experiment totals. They establish this finite model's
 behavior only. It has one actor/object, no tenant implementation, no SQL lock,
 session, clock expiry, network, Discord callback or crash. Atomicity is assumed;
-neither linearizability nor product enforcement is proven. The model covers the abstract A05 write ordering only. The tests are run by
-the explicit command above; this proposal does not change hosted CI workflows.
+neither linearizability nor product enforcement is proven. The model covers
+the abstract A05 write ordering only. The A05 commit-failure cases and every
+A08 case remain unexecuted. The tests are run by the explicit command above; this proposal does not change hosted CI workflows.
 
 Local execution: Windows PowerShell, Python 3.14.3, 2026-10-25 UTC. All eight
 research tests passed. Across 1,364 traces per design the prepare-only negative
