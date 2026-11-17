@@ -248,3 +248,24 @@ and programmatic focus. It leaves keyboard-only tab order, focus destination
 and restoration, Space activation, screen readers, hardware input and
 Discord Activity clients unverified. For #99, verify keyboard activation and
 focus behavior for the user-facing accepted-intent history controls.
+
+## Opaque image file reference probe, 2026-11-17
+
+From `research-fixtures/canvas` with a built bundle and locked dependencies,
+run `CHROMIUM_PATH=/usr/bin/chromium node probe.mjs`. On Arch Linux with Node
+26.13.0, Playwright 1.56.1, Excalidraw 0.18.1 and sandbox-enabled Chromium
+155.0.8059.84, `updateScene` preserved the image element's synthetic file ID
+while `getFiles` returned no data for the missing reference. Supplying a
+one-pixel GIF through `addFiles` made `getFiles` return the same ID, MIME
+type, data URL and creation timestamp. The scene retained its file reference.
+No requests attempted to cross the loopback origin boundary during the probe.
+The initial browser run closed before the scene loaded while the default
+temporary volume was over quota. The successful run supplied a writable
+local `TMPDIR` and kept Chromium sandboxing enabled.
+
+This measures in-memory file registration and retrieval through the pinned
+editor's [public API](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/types.ts).
+It leaves rendered pixels, serialized export/import, validation of malformed
+or oversized content, private asset authorization, and Discord/VPS delivery
+unverified. For #99, treat asset references and file data as distinct contract
+inputs and define the outcome when the reference cannot be resolved.
