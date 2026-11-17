@@ -4,17 +4,23 @@ import argparse
 import collections
 import json
 import os
+import re
 import secrets
 import stat
 from pathlib import Path
 
-from api import ROOT
+from api import ROOT, STATE, TRANSFERRED_REPOSITORY, canonicalize_transferred_links, issue_url
 
 REQUIRED_FIELDS = (
     'Tier', 'Work Type', 'Priority', 'Readiness', 'Status', 'Dependency Status',
     'Release Target', 'Risk', 'Effort', 'Owner Role', 'Research Confidence',
     'Verification Status',
 )
+DEFAULT_MANIFEST = ROOT / 'planning/guildboard-backlog.json'
+REPOSITORY = re.compile(r'[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+')
+GENERATED_DOCUMENTS = tuple(ROOT / 'planning' / name for name in (
+    'TRACEABILITY.md', 'DEPENDENCIES.md', 'RISKS.md', 'MILESTONES.md',
+    'MVP-ACCEPTANCE.md', 'BOOTSTRAP-REPORT.md'))
 CRITICAL_PATH_NOTE = (
     'Longest unweighted dependency chain, not a duration forecast. '
     'Parallel branches and role availability also constrain release.'
@@ -69,6 +75,10 @@ def validate_manifest(manifest, schema):
         return report
     items = manifest['items']
     report['item_count'] = len(items)
+    repository = manifest.get('repository')
+    if not isinstance(repository, str) or not REPOSITORY.fullmatch(repository):
+        errors.append('manifest: missing/invalid repository')
+        repository = None
     if not isinstance(schema, dict):
         errors.append('schema: expected an object')
         return report
@@ -156,6 +166,12 @@ def validate_manifest(manifest, schema):
                       identity + ': incorrectly ready with unresolved blockers')
         if item.get('work_type') in ('Epic', 'Capability', 'Feature'):
             check(fields.get('Readiness') != 'Ready', identity + ': broad parent marked ready')
+        if 'github' in item and repository is not None:
+            github = item['github']
+            number = github.get('number') if isinstance(github, dict) else None
+            check(type(number) is int and number > 0
+                  and github.get('url') == issue_url(number, repository),
+                  identity + ': GitHub mapping URL does not derive from manifest repository')
         labels = item.get('labels')
         if not isinstance(labels, list):
             errors.append(identity + ': labels must be an array')
@@ -199,6 +215,25 @@ def validate_manifest(manifest, schema):
     report['mvp_prerequisite_closure'] = len(closure)
     report['result'] = 'fail' if errors else 'pass'
     return report
+
+
+def repository_identity_errors(manifest, state, documents):
+    """Compare the manifest and generated text against the pinned canonical repository.
+
+    documents maps a display name to text. Pure: never reads files or calls GitHub.
+    """
+    if not isinstance(state, dict) or not isinstance(state.get('repo'), str) \
+            or not REPOSITORY.fullmatch(state['repo']):
+        return ['state: missing/invalid repo']
+    repo = state['repo']
+    errors = []
+    if isinstance(manifest, dict) and manifest.get('repository') != repo:
+        errors.append('manifest: repository ' + repr(manifest.get('repository'))
+                      + ' differs from state repo ' + repr(repo))
+    for name, text in documents.items():
+        if canonicalize_transferred_links(text, repo) != text:
+            errors.append(f'{name}: links name non-canonical repository {TRANSFERRED_REPOSITORY}')
+    return errors
 
 
 def unique_object(pairs):
@@ -487,15 +522,33 @@ def close_report_directory(directory):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--manifest', type=Path, default=ROOT / 'planning/guildboard-backlog.json')
+    parser.add_argument('--manifest', type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument('--schema', type=Path, default=ROOT / 'planning/project-schema.json')
     parser.add_argument('--report', type=Path, default=ROOT / 'planning/audit/local-validation.json')
+    parser.add_argument('--state', type=Path, help='check repository identity against a pinned state file')
+    parser.add_argument('--generated', type=Path, action='append',
+                        help='generated document to scan for transfer-era links '
+                             '(repeatable; default: planning reports for the canonical manifest)')
     args = parser.parse_args(argv)
+    try:
+        check_canonical = args.manifest.samefile(DEFAULT_MANIFEST)
+    except FileNotFoundError:
+        check_canonical = False
+    except (OSError, ValueError) as exc:
+        print(json.dumps({'result': 'fail', 'errors': ['manifest identity: ' + str(exc)]}, indent=2))
+        return 1
+    state_path = args.state or (STATE if check_canonical or args.generated else None)
+    document_paths = args.generated or (GENERATED_DOCUMENTS if check_canonical else ())
+    inputs = (args.manifest, args.schema, *document_paths)
+    if state_path is not None:
+        inputs += (state_path,)
+    if check_canonical:
+        inputs += (STATE, *GENERATED_DOCUMENTS)
     directory_fd = None
     try:
         directory_fd = open_report_directory(args.report.parent)
-        if report_aliases_input(directory_fd, args.report.name, (args.manifest, args.schema)):
-            raise ValueError('report must not alias the manifest or schema; inputs preserved')
+        if report_aliases_input(directory_fd, args.report.name, inputs):
+            raise ValueError('report must not alias a validation input; inputs preserved')
     except (OSError, ValueError, RuntimeError) as exc:
         if directory_fd is not None:
             close_report_directory(directory_fd)
@@ -507,6 +560,16 @@ def main(argv=None):
             manifest = json.loads(args.manifest.read_text(), object_pairs_hook=unique_object)
             schema = json.loads(args.schema.read_text(), object_pairs_hook=unique_object)
             report = validate_manifest(manifest, schema)
+            if state_path is not None:
+                state = json.loads(state_path.read_text(encoding='utf-8'), object_pairs_hook=unique_object)
+                documents = {
+                    str(path.relative_to(ROOT) if path.is_relative_to(ROOT) else path): path.read_text(encoding='utf-8')
+                    for path in document_paths
+                }
+                identity_errors = repository_identity_errors(manifest, state, documents)
+                if identity_errors:
+                    report['errors'].extend(identity_errors)
+                    report['result'] = 'fail'
         except (OSError, UnicodeError, ValueError, RecursionError) as exc:
             report = {'result': 'fail', 'errors': ['input: ' + str(exc)]}
         try:

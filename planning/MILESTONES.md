@@ -12,8 +12,8 @@ Milestones express sequence; none has a due date. Implementation and independent
 - **M7 — Stable v1.0 Release**: 27 work items.
 - **Post-v1.0 — Enhancements and Maintenance**: 3 work items.
 
-- MVP: [GB-T13.G1](https://github.com/CompleteDotTech/guildboard/issues/456)
-- Production recovery/GoDaddy: [GB-T13.G2](https://github.com/CompleteDotTech/guildboard/issues/457)
-- Stable v1.0: [GB-T13.G3](https://github.com/CompleteDotTech/guildboard/issues/472)
+- MVP: [GB-T13.G1](https://github.com/CompleteTech-DiscordApps/guildboard/issues/456)
+- Production recovery/GoDaddy: [GB-T13.G2](https://github.com/CompleteTech-DiscordApps/guildboard/issues/457)
+- Stable v1.0: [GB-T13.G3](https://github.com/CompleteTech-DiscordApps/guildboard/issues/472)
 
 A merged PR is not production acceptance. Security and backup restore verification block release.

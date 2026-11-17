@@ -1,6 +1,9 @@
 // Local fixture only. No Discord, server authorization or production claims.
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
+import {probeCompound} from './compound-probe.mjs';
+import {probeAsset} from './asset-probe.mjs';
+import {probeHydration} from './hydration-probe.mjs';
 import {browserLaunchOptions, isFixtureNetworkRequest, startFixtureServer} from './fixture-runtime.mjs';
 
 const server = await startFixtureServer(process.cwd());
@@ -81,9 +84,41 @@ try {
   await page.keyboard.press('Control+z');
   await page.waitForFunction(() => window.editor.getSceneElements().length === 1);
   assert.deepEqual(await page.evaluate(() => window.editor.getSceneElements().map(element => element.id)), ['remote-baseline']);
+  const hydration = await probeHydration(page, frame);
+  await page.evaluate(() => window.editor.history.clear());
+  const keyboardEdit = 'keyboard-undo-control';
+  await addLocalHistory(keyboardEdit);
+  await page.waitForFunction(id => window.editor.getSceneElements().some(element => element.id === id), keyboardEdit);
+  await frame();
+  const undo = page.getByRole('button', {name: 'Undo', exact: true});
+  await undo.waitFor({state: 'visible'});
+  const enabled = await undo.isEnabled();
+  assert.equal(enabled, true);
+  await undo.focus();
+  assert.equal(await undo.evaluate(button => document.activeElement === button), true);
+  await page.keyboard.press('Enter');
+  await frame();
+  const activatedWithEnter = await page.evaluate(id =>
+    !window.editor.getSceneElements().some(element => element.id === id), keyboardEdit);
+  const keyboardControl = {
+    accessibleName: 'Undo',
+    enabled,
+    activatedWithEnter,
+    focusRetained: await undo.evaluate(button => document.activeElement === button),
+  };
+  assert.equal(keyboardControl.activatedWithEnter, false);
+  assert.equal(keyboardControl.focusRetained, false);
+  // Positive control: the same edit is undoable via the editor shortcut.
+  await page.locator(".excalidraw").click({position: {x: 1000, y: 650}});
+  await page.keyboard.press('Control+z');
+  await page.waitForFunction(id => !window.editor.getSceneElements().some(element => element.id === id), keyboardEdit);
+  keyboardControl.shortcutUndidEdit = true;
+  const assets = await probeAsset(page, frame);
+  const compound = await probeCompound(page, frame);
+  assert.deepEqual(blockedRequests, []);
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({
-    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks,
+    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks, hydration, keyboardControl, assets, compound,
     checks: ['remote ID preserved', 'NEVER remote baseline survives local undo',
       'view-mode Delete with selected content leaves scene unchanged',
       'view-mode undo with retained local history leaves scene unchanged',
@@ -91,7 +126,7 @@ try {
       're-enabled undo removes the prepared local-history edit'],
     blockedRequests,
     limitations: ['Not yet tested in Discord', 'No server permission checks',
-      'No touch/stylus or accessibility acceptance', 'No concurrent remote overwrite/rollback coverage',
+      'No touch/stylus or accessibility acceptance', 'No concurrent remote overwrites or rollback after reconnect or permission changes',
       'Selection is supplied through the editor API; paste/drop/text/context-menu controls remain untested'],
   }, null, 2));
 } finally {
