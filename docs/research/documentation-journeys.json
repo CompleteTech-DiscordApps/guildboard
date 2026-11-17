@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "evaluated_revision": "da811252acc975a0e5a1b087ab653b523443f3fa",
+  "evaluated_date": "2026-10-25",
+  "journeys": [
+    {
+      "persona": "contributor",
+      "steps": [
+        {
+          "action": "Discover actual implementation state",
+          "state": "documented",
+          "finding": "README explicitly distinguishes planned capabilities from a running application.",
+          "next_validation": "Recheck release-state wording whenever runnable artifacts ship.",
+          "evidence": [
+            {
+              "path": "README.md",
+              "sha256": "e307c5077d1dbf450b041e42cbaa5a9c019b272df4c43863eed21e6a539987dd"
+            }
+          ]
+        },
+        {
+          "action": "Run local planning validation",
+          "state": "partial",
+          "finding": "Python command is documented; application setup is intentionally unavailable. A planning pass is not application setup acceptance.",
+          "next_validation": "Run the documented command in a clean Python 3.11+ environment and separately test runtime setup after dependency adoption.",
+          "evidence": [
+            {
+              "path": "docs/development.md",
+              "sha256": "4da6ae5bd7af6ca4cd96c9f51b6e1c2c4d8e4056bd623480237196e0a575f3d4"
+            },
+            {
+              "path": "package.json",
+              "sha256": "338676ad27c6b6a35dbe79e06263e919fcf7889043f85c7e002911ea88a244e2"
+            }
+          ]
+        },
+        {
+          "action": "Choose work and obtain review",
+          "state": "partial",
+          "finding": "Ready/Done gates and expertise are documented, but only one maintainer is named; independent review availability is not guaranteed.",
+          "next_validation": "Verify live readiness and arrange a genuine independent reviewer without fabricating approval.",
+          "evidence": [
+            {
+              "path": "CONTRIBUTING.md",
+              "sha256": "b55ba5f7827f5745fa85c11a38dd35bfee00a3475024f615aaf5ae7b3c656936"
+            },
+            {
+              "path": "GOVERNANCE.md",
+              "sha256": "b65bc2c1a7f0cb0fbd3db3549bdce8f27a2428968b3c077ef9da16d2a98805ac"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "persona": "administrator",
+      "steps": [
+        {
+          "action": "Install the Activity and bot",
+          "state": "blocked",
+          "finding": "There is no production installation link or accepted runtime implementation.",
+          "next_validation": "After T1/T8 gates, validate actual OAuth scope consent, guild installation and denied-access recovery on real Discord clients.",
+          "evidence": [
+            {
+              "path": "README.md",
+              "sha256": "e307c5077d1dbf450b041e42cbaa5a9c019b272df4c43863eed21e6a539987dd"
+            },
+            {
+              "path": "docs/workstreams/T1.md",
+              "sha256": "375efecaee75c278df06dd8770e680181a6625010cfeef14186d7a965bfd4a59"
+            },
+            {
+              "path": "docs/workstreams/T8.md",
+              "sha256": "cf42599a5495219d990509b30ec37d3cf413a48b9784bfbdbf3049fe43cc17ce"
+            }
+          ]
+        },
+        {
+          "action": "Deploy and recover service",
+          "state": "blocked",
+          "finding": "GoDaddy VPS is mandatory; provisioning, deployment and recovery runbooks remain unperformed.",
+          "next_validation": "Execute documented deployment and rollback plus backup restoration on an authorized GoDaddy VPS, recording exact versions and failures.",
+          "evidence": [
+            {
+              "path": "infra/godaddy/README.md",
+              "sha256": "5ca15c3f8873bc1cfd317d362fc159c6feefbc5f7ecd29d8af6ed42f99e3e750"
+            },
+            {
+              "path": "docs/runbooks/README.md",
+              "sha256": "d76f87f3ff76eb2475a9819d315d4a268a183eaedc9c78cd9e856f68045cefbf"
+            }
+          ]
+        },
+        {
+          "action": "Configure roles and escalate incidents",
+          "state": "partial",
+          "finding": "Security reporting cautions exist, but a dedicated contact/SLA and working role-configuration guide do not.",
+          "next_validation": "Verify private reporting is enabled or an actual maintainer contact is reachable; exercise role changes and incident handoff without publishing secrets.",
+          "evidence": [
+            {
+              "path": "SECURITY.md",
+              "sha256": "2b022bbabd47f6ee0ce92d10861107a4bda555dc6489368eb4ecbc29b4c19f5c"
+            },
+            {
+              "path": "docs/workstreams/T2.md",
+              "sha256": "47b06ec0975d4009259a27571f361ee046395e3aa402655c73d707fcf792f667"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "persona": "moderator",
+      "steps": [
+        {
+          "action": "Grant and revoke the pen",
+          "state": "blocked",
+          "finding": "Permission and grant capabilities are requirements, not an implemented manual or UI.",
+          "next_validation": "Validate documented grant, expiry and revoke flows against an implemented server, including in-flight edits and stale sessions.",
+          "evidence": [
+            {
+              "path": "docs/workstreams/T2.md",
+              "sha256": "47b06ec0975d4009259a27571f361ee046395e3aa402655c73d707fcf792f667"
+            },
+            {
+              "path": "docs/architecture.md",
+              "sha256": "9faea8d7358105087ef134359597d075e326f0f8fe52e7e915ff012e0494e68c"
+            }
+          ]
+        },
+        {
+          "action": "Use presentation and lockdown",
+          "state": "blocked",
+          "finding": "Mode and emergency controls remain roadmap capabilities.",
+          "next_validation": "Test role-aware procedures including revocation, presenter disconnect and local navigation across supported clients.",
+          "evidence": [
+            {
+              "path": "docs/workstreams/T6.md",
+              "sha256": "92fe9a32afd3091da2151fbe8e82a63f7e8572d5d03219a8181cab8261a238bf"
+            },
+            {
+              "path": "docs/workstreams/T2.md",
+              "sha256": "47b06ec0975d4009259a27571f361ee046395e3aa402655c73d707fcf792f667"
+            }
+          ]
+        },
+        {
+          "action": "Explain errors and support participants",
+          "state": "blocked",
+          "finding": "Accessible permission explanations and stable moderation feedback are required but no operating manual exists.",
+          "next_validation": "Observe keyboard-only moderator and participant recovery from denied, offline and expired-grant states.",
+          "evidence": [
+            {
+              "path": "docs/workstreams/T7.md",
+              "sha256": "f53c27a020749d07f8b9de7e425aa63b8a6403833089e45458befda19f6a303d"
+            },
+            {
+              "path": "docs/workstreams/T13.md",
+              "sha256": "6afc1a5984563ced571f5ae3f211428378a9532ad4fa22b55e0ee44a3a072643"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "persona": "end-user",
+      "steps": [
+        {
+          "action": "Join and understand permission",
+          "state": "blocked",
+          "finding": "The repository offers no joinable application; viewer/edit indicators remain requirements.",
+          "next_validation": "On supported Discord clients test joining, denied context, role changes and understandable permission feedback.",
+          "evidence": [
+            {
+              "path": "README.md",
+              "sha256": "e307c5077d1dbf450b041e42cbaa5a9c019b272df4c43863eed21e6a539987dd"
+            },
+            {
+              "path": "docs/workstreams/T7.md",
+              "sha256": "f53c27a020749d07f8b9de7e425aa63b8a6403833089e45458befda19f6a303d"
+            }
+          ]
+        },
+        {
+          "action": "Draw and know work is saved",
+          "state": "blocked",
+          "finding": "Canvas and durable-save behavior are specified only as intended capabilities.",
+          "next_validation": "Verify saved-state wording against durable server receipt and reconnect recovery; never equate local canvas edits with persistence.",
+          "evidence": [
+            {
+              "path": "docs/workstreams/T3.md",
+              "sha256": "8461b2a2854632dd432d6bd1dcdac2da44d60620795e901666f747c2fff61eda"
+            },
+            {
+              "path": "docs/workstreams/T5.md",
+              "sha256": "e945bb8eee1ccd6e53d1e0c369f5ec1a02bde8c6daa3f50b2ef5dd4839ed90cd"
+            },
+            {
+              "path": "docs/workstreams/T7.md",
+              "sha256": "f53c27a020749d07f8b9de7e425aa63b8a6403833089e45458befda19f6a303d"
+            }
+          ]
+        },
+        {
+          "action": "Use accessible alternatives and get help",
+          "state": "blocked",
+          "finding": "Accessibility alternatives and end-user manuals remain future acceptance work.",
+          "next_validation": "Run keyboard and screen-reader journeys with real participants, document unsupported canvas interactions and verify a usable help route.",
+          "evidence": [
+            {
+              "path": "docs/workstreams/T7.md",
+              "sha256": "f53c27a020749d07f8b9de7e425aa63b8a6403833089e45458befda19f6a303d"
+            },
+            {
+              "path": "docs/workstreams/T13.md",
+              "sha256": "6afc1a5984563ced571f5ae3f211428378a9532ad4fa22b55e0ee44a3a072643"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

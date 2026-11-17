@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {probeCompound} from './compound-probe.mjs';
 import {probeAsset} from './asset-probe.mjs';
 import {probeHydration} from './hydration-probe.mjs';
+import {probeKeyboardUndo} from './keyboard-undo-probe.mjs';
 import {browserLaunchOptions, isFixtureNetworkRequest, startFixtureServer} from './fixture-runtime.mjs';
 
 const server = await startFixtureServer(process.cwd());
@@ -115,10 +116,11 @@ try {
   keyboardControl.shortcutUndidEdit = true;
   const assets = await probeAsset(page, frame);
   const compound = await probeCompound(page, frame);
+  const keyboardNavigation = await probeKeyboardUndo(browser, origin);
   assert.deepEqual(blockedRequests, []);
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({
-    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks, hydration, keyboardControl, assets, compound,
+    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks, hydration, keyboardControl, keyboardNavigation, assets, compound,
     checks: ['remote ID preserved', 'NEVER remote baseline survives local undo',
       'view-mode Delete with selected content leaves scene unchanged',
       'view-mode undo with retained local history leaves scene unchanged',
