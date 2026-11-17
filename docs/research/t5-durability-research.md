@@ -212,7 +212,10 @@ return. The failed report records `cleanup.unresolved_creation` and
 `cleanup.observed_absence_at_final_inventory`. A null settled absence means the
 probe could not establish that cleanup was final. If container creation remains
 unresolved, cleanup retains its data volume because a late run could mount or
-recreate it. A nonzero create or run client response is also an unresolved outcome until daemon evidence settles it. Reconcile on the recorded Docker context using the exact
+recreate it. Creation remains unresolved until the caller receives a confirmed success or
+daemon evidence establishes the effect. This covers a timeout, a lost response
+or a caller interruption. An interrupted run records failure and returns 130.
+Reconcile on the recorded Docker context using the exact
 `<run_id>-db` and `<run_id>-data` names. Inspect the exact resources and confirm
 that the value of `tech.complete.guildboard.t5.run` equals the reported run ID
 before removing anything. Handle the verified container before its verified

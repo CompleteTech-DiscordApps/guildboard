@@ -19,7 +19,7 @@ spec.loader.exec_module(module)
 
 class FakeDocker:
     def __init__(self, probe, volume_owner=None, timeout_after_create=False,
-                 delayed_creation=None, delayed_transport_failure=False):
+                 delayed_creation=None, delayed_transport_failure=False, interrupt_delayed_creation=False):
         self.probe = probe
         self.volumes = {} if volume_owner is None else {probe.volume: volume_owner}
         self.containers = {}
@@ -27,6 +27,7 @@ class FakeDocker:
         self.timeout_after_create = timeout_after_create
         self.delayed_creation = delayed_creation
         self.delayed_transport_failure = delayed_transport_failure
+        self.interrupt_delayed_creation = interrupt_delayed_creation
         self.pending_creation = None
         self.calls = []
         self.sql_calls = []
@@ -95,6 +96,8 @@ class FakeDocker:
     def delay_if_requested(self, kind, resources, name):
         if self.delayed_creation == kind:
             self.pending_creation = (resources, name)
+            if self.interrupt_delayed_creation:
+                raise KeyboardInterrupt
             if self.delayed_transport_failure:
                 raise subprocess.CalledProcessError(1, "docker create", stderr="response lost")
             raise subprocess.TimeoutExpired("docker create", 90)
@@ -168,6 +171,24 @@ class OwnershipTests(unittest.TestCase):
                 self.assertEqual(p.report["cleanup"]["unresolved_creation"], [])
                 self.assertTrue(p.report["cleanup"]["container_absent"])
                 self.assertTrue(p.report["cleanup"]["volume_absent"])
+
+    def test_interrupted_run_keeps_volume_and_reports_unresolved_creation(self):
+        p, fake = self.make_probe(delayed_creation="container", interrupt_delayed_creation=True)
+        code, report = self.run_main(p, start=True)
+        self.assertEqual(code, 130)
+        self.assertEqual(report["result"], "fail")
+        self.assertEqual(report["error_type"], "KeyboardInterrupt")
+        cleanup = report["cleanup"]
+        self.assertEqual(cleanup["unresolved_creation"], ["container"])
+        self.assertTrue(cleanup["observed_absence_at_final_inventory"]["container_absent"])
+        self.assertIsNone(cleanup["container_absent"])
+        self.assertIsNone(cleanup["volume_absent"])
+        self.assertEqual(fake.volumes, {p.volume: p.run_id})
+        self.assertFalse(any(call[:2] == ("volume", "rm") for call in fake.calls))
+        fake.complete_pending_creation()
+        p.cleanup()
+        self.assertTrue(p.report["cleanup"]["container_absent"])
+        self.assertTrue(p.report["cleanup"]["volume_absent"])
 
     def test_transport_failure_does_not_settle_unobserved_creation(self):
         p, fake = self.make_probe(delayed_creation="volume", delayed_transport_failure=True)

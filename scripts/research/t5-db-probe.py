@@ -112,12 +112,12 @@ class Probe:
         )
 
     def create_resource(self, kind: str, *args: str) -> subprocess.CompletedProcess:
-        try:
-            return self.command(*args)
-        except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
-            # The client may have lost a response after the daemon received it.
-            self.unresolved_creation.add(kind)
-            raise
+        # Keep creation unsettled until the caller receives confirmed success.
+        # The daemon may still act after the client is interrupted or loses its reply.
+        self.unresolved_creation.add(kind)
+        result = self.command(*args)
+        self.unresolved_creation.discard(kind)
+        return result
 
     def verify_owner(self, kind: str, identity: str) -> None:
         inspected = json.loads(self.command(kind, "inspect", identity).stdout)[0]
@@ -423,23 +423,31 @@ def main() -> int:
     probe = Probe(args.engine, args.image,
                   exclusive_disposable_daemon=args.exclusive_disposable_daemon)
     failed = False
+    interrupted = False
     try:
         probe.start()
         probe.exercise()
         probe.report["result"] = "pass"
+    except KeyboardInterrupt:
+        failed = interrupted = True
+        probe.report.update(result="fail", error_type="KeyboardInterrupt",
+                            error="research run interrupted")
     except Exception as error:
         failed = True
         probe.report.update(result="fail", error_type=type(error).__name__, error=str(error))
     finally:
         try:
             probe.cleanup()
+        except KeyboardInterrupt:
+            failed = interrupted = True
+            probe.report.update(result="fail", cleanup_error="cleanup interrupted before verification")
         except Exception as error:
             failed = True
             probe.report.update(result="fail", cleanup_error=str(error))
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_bytes((json.dumps(probe.report, indent=2, sort_keys=True) + "\n").encode())
     print(probe.engine + ": " + probe.report["result"], flush=True)
-    return int(failed)
+    return 130 if interrupted else int(failed)
 
 
 if __name__ == "__main__":
