@@ -167,7 +167,7 @@ class OperationsContractTest(unittest.TestCase):
                 )
 
     def test_unknown_commit_requires_authorized_lookup_and_serialized_release(self):
-        fields = {"lookup_read", "release_read", "write", "receipt", "lineage"}
+        fields = {"lookup_read", "release_read", "write", "receipt", "lineage", "cut_validated"}
         for case in self.cases("reconcile", fields):
             with self.subTest(case=case["case"]):
                 for field in ("lookup_read", "release_read", "write"):
@@ -176,6 +176,11 @@ class OperationsContractTest(unittest.TestCase):
                     "matching", "conflict", "unavailable", "no_match", "nonrecoverable",
                 })
                 self.assertIn(case["lineage"], {"active", "retired"})
+                self.assertIs(type(case["cut_validated"]), bool)
+                for field in ("looked_up", "current_saved"):
+                    self.assertIs(type(case["expected"][field]), bool)
+                for field in ("retransmissions", "mutations", "revisions", "broadcasts"):
+                    self.assertIs(type(case["expected"][field]), int)
                 looked_up = case["lookup_read"] == "allowed"
                 released = "none"
                 if looked_up and case["release_read"] == "allowed":
@@ -184,7 +189,8 @@ class OperationsContractTest(unittest.TestCase):
                 self.assertEqual(
                     {"outcome": outcome if released == "receipt" else "unknown",
                      "looked_up": looked_up, "released": released,
-                     "current_saved": released == "receipt" and case["lineage"] == "active",
+                     "current_saved": (released == "receipt" and case["lineage"] == "active"
+                                       and case["cut_validated"]),
                      "retransmissions": 0, "mutations": 0, "revisions": 0, "broadcasts": 0},
                     case["expected"],
                 )

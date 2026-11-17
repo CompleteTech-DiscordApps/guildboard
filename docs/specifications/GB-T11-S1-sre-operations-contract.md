@@ -174,8 +174,9 @@ applying mutations. Demonstrate an isolation marker inside the authorized
 target and verify source/production-equivalent guard markers remain unchanged.
 A name, claimed flag or mount label alone cannot prove isolation. Apply the
 governing accepted [system contract](GB-T0-S1-system-contract.md) and the
-security contract once accepted ([#534](https://github.com/CompleteTech-DiscordApps/guildboard/pull/534),
-informational handoff). Do not probe production to prove a drill target's isolation.
+[GB-T9.S1 deletion and recovery contract](GB-T9-S1-security-privacy-contract.md#deletion-and-recovery-policy)
+merged through [#534](https://github.com/CompleteTech-DiscordApps/guildboard/pull/534).
+Prove isolation using authorized non-production resources and independent guards.
 
 Before exposure, reconcile authoritative deletion markers and their high-water
 mark from an independent source. Verify contiguous coverage from the backup's
