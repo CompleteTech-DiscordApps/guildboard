@@ -412,9 +412,13 @@ Fresh independent full-head review and native specification gates remain require
 A socket inactivity timeout does not bound total duration when bytes keep arriving.
 Each public GET now runs in an owned disposable Python subprocess with a
 15-second elapsed-time limit, under a shared 60-second collection budget. The
-parent kills and reaps a timed-out child before starting fallback. DNS, redirects
-and body reading occur inside the bounded worker; normal process startup/cleanup
-adds small scheduling overhead. Expired collection budgets return failed attempt
+parent kills and reaps a timed-out child before starting fallback. DNS and body
+reading occur inside the bounded worker. Normal process startup and cleanup add
+scheduling overhead. The current collector records a redirect as a failed
+attempt. It leaves the intermediate body unread and uses only the separately
+listed source URLs and the explicit pinned Discord fallback. A daemon-free
+transport test covers 301, 302, 303, 307 and 308 with zero follow-up requests.
+The historical successful final URLs equal their requested attempt URLs. Expired collection budgets return failed attempt
 rows without launching more children. At most four workers run concurrently.
 
 A loopback source sends bytes every 20ms, below the socket timeout. At the
@@ -430,9 +434,11 @@ observations are preserved, with no new public-source or platform acceptance cla
 ### Catchable source-collection cancellation — 2026-11-13 UTC
 
 Code/test revision `b4ba0adcf6d3da878a19510591ff20b23e40ddb0` handles SIGTERM and SIGINT during
-collection. Cancellation stops new fetch children, kills and reaps each active
-owned direct child, preserves already completed healthy/fallback observations,
-and emits structured partial results with nonzero exit status (143/130).
+collection. A fetch attempt checks cancellation before starting a child.
+Cancellation can arrive during a launch already in progress. The parent checks
+again and reaps that child through the same owned-child cleanup path as active
+fetches. It preserves completed healthy and fallback observations and returns
+structured partial results with nonzero exit status (143/130).
 Cancelled attempts carry `CaptureCancelled` and no content hash. Prior signal
 handlers are restored, including on collection exceptions. Main-thread collection
 installs handlers; background library callers can supply their own cancellation.

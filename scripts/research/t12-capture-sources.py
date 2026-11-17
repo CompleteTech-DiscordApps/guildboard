@@ -39,6 +39,13 @@ CLEANUP_SECONDS = 1
 _fetch_context = threading.local()
 
 
+class RejectRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Return the original response as an HTTP error without reading its
+        # body or starting a request to a destination outside the source list.
+        return None
+
+
 class CaptureCancelled(OSError):
     """Catchable cancellation is a failed observation, never a content hash."""
 
@@ -62,7 +69,7 @@ class FetchFailure(OSError):
 
 
 def fetch(url, timeout):
-    """A disposable process bounds DNS, redirects and trickling response bodies."""
+    """A disposable process bounds DNS and trickling response bodies."""
     cancellation = getattr(_fetch_context, "cancellation", None)
     def check_cancelled():
         if cancellation is not None and cancellation.event.is_set():
@@ -105,7 +112,8 @@ def fetch(url, timeout):
 
 def fetch_worker(url):
     try:
-        with urllib.request.urlopen(url, timeout=15) as response:
+        opener = urllib.request.build_opener(RejectRedirects())
+        with opener.open(url, timeout=ATTEMPT_SECONDS) as response:
             payload = response.read(MAX_BYTES + 1)
             if len(payload) > MAX_BYTES:
                 raise ValueError("response budget exceeded")

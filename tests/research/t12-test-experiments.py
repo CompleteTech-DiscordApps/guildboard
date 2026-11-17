@@ -1,4 +1,7 @@
 """Test oracle sensitivity, reproducibility and honest matrix evidence boundaries."""
+from contextlib import redirect_stdout
+from email.message import Message
+import io
 import os
 from queue import Queue
 import signal
@@ -14,6 +17,8 @@ from pathlib import Path
 import subprocess
 import sys
 import unittest
+import urllib.request
+from urllib.response import addinfourl
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -335,6 +340,38 @@ class SourceCaptureRegression(unittest.TestCase):
             b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\nConnection: close\r\n\r\nshort",
             b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok"])
         self.assert_failed_then_success(result)
+
+    def test_source_redirect_is_failed_without_body_read_or_second_request(self):
+        initial = "http://source.invalid/initial"
+        opened = []
+
+        class RedirectTransport(urllib.request.HTTPHandler):
+            def http_open(self, request):
+                opened.append(request.full_url)
+                return response
+
+        build_opener = urllib.request.build_opener
+        for code in (301, 302, 303, 307, 308):
+            with self.subTest(code=code):
+                opened.clear()
+                headers = Message()
+                headers["Location"] = "http://redirect.invalid/next"
+                body = mock.Mock()
+                response = addinfourl(body, headers, initial, code)
+                response.msg = "Redirect"
+                output = io.StringIO()
+                with mock.patch.object(urllib.request, "build_opener",
+                                       side_effect=lambda *handlers: build_opener(RedirectTransport(), *handlers)), \
+                     mock.patch.object(urllib.request, "urlopen", side_effect=AssertionError("unexpected global opener")), \
+                     redirect_stdout(output):
+                    self.capture_module.fetch_worker(initial)
+
+                self.assertEqual(opened, [initial])
+                body.read.assert_not_called()
+                envelope = json.loads(output.getvalue())
+                self.assertNotIn("result", envelope)
+                self.assertEqual(envelope["error"]["type"], "HTTPError")
+                self.assertEqual(envelope["error"]["http_status"], code)
 
     def test_broken_chunk_is_failure_and_other_source_survives(self):
         result = self.collect([
