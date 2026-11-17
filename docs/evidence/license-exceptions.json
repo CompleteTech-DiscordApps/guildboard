@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "scope": "GB-T0.02.02.T1 (#16). Exceptions cover only review-required licenses, pinned by exact name, version and license string. They never cover prohibited, missing or unknown licenses. Entries are agent-proposed from lockfile metadata and are pending owner review; they are not legal clearance.",
+  "exceptions": [
+    {
+      "name": "dompurify",
+      "version": "3.4.17",
+      "license": "(MPL-2.0 OR Apache-2.0)",
+      "reason": "Dual-licensed. The checker's conservative OR rule does not select a branch, so the expression is review-required. Apache-2.0 is allowlisted and is the branch this entry relies on; the owner must record that election and retain Apache-2.0 notices. If MPL-2.0 were relied on instead, its file-level copyleft terms would apply to modified MPL files. Reached from research-fixtures/canvas (no dev flag in the lockfile). Proposed; owner review pending."
+    },
+    {
+      "name": "pako",
+      "version": "2.0.3",
+      "license": "(MIT AND Zlib)",
+      "reason": "Conjunctive expression: MIT is allowlisted, but Zlib is review-listed and not on the allowlist, so both terms apply. Zlib is a permissive license; it is not added to the allowlist. Reached from research-fixtures/canvas (no dev flag in the lockfile). Proposed; owner review of Zlib notice obligations pending."
+    },
+    {
+      "name": "robust-predicates",
+      "version": "3.0.3",
+      "license": "Unlicense",
+      "reason": "Unlicense is a public-domain dedication with no attribution obligation, but it is review-listed rather than allowlisted, so the owner must accept it explicitly. Reached from research-fixtures/canvas (no dev flag in the lockfile). Proposed; owner review pending."
+    }
+  ]
+}
