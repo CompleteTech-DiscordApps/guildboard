@@ -195,8 +195,13 @@ container. A name-list snapshot taken without an inspected ID records only
 whether the name was absent at that moment. Confirmation also requires evidence
 that the container was registered and that the Docker client was reaped. With
 either missing, an empty listing yields `owned_container_absent: null` and a
-failed report. Cleanup errors are also emitted on stdout so a report write
-failure cannot hide them. Existing workloads and WSL were not targets.
+failed report. The stdout fallback preserves cleanup errors, the generated
+container name, exact run label and a SHA-256 digest of the selected context
+name if report publication fails. For reconciliation, hash the operator's
+context name as UTF-8 after trimming surrounding whitespace and match the
+recorded digest. Inspect that invocation's exact label and full container ID
+before any removal. This allows correlation while keeping the raw context
+name out of the fallback. Existing workloads and WSL were not targets.
 No image pull is performed; a missing image is an explicit local blocker.
 
 Environment: Windows PowerShell/Python **3.14.3**; MCP server

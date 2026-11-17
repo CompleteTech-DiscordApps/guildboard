@@ -276,7 +276,7 @@ class ReportPublicationFailures(unittest.TestCase):
             with patch.object(sys, 'argv', ['probe', '--output', str(output)]), \
                  patch.object(PROBE.subprocess, 'check_output', side_effect=check_output), \
                  patch.object(PROBE.subprocess, 'run', side_effect=run), \
-                 patch.object(PROBE.subprocess, 'Popen', return_value=process), \
+                 patch.object(PROBE.subprocess, 'Popen', return_value=process) as launch, \
                  patch.object(Path, 'write_bytes', write), contextlib.redirect_stdout(io.StringIO()) as stdout:
                 self.assertEqual(PROBE.main(), 1)
             summary = json.loads(stdout.getvalue())
@@ -284,6 +284,12 @@ class ReportPublicationFailures(unittest.TestCase):
             if cleanup_unconfirmed:
                 self.assertIn('startup was not observed', summary['cleanup_error'])
                 self.assertIsNone(summary['owned_container_absent'])
+                invoked = launch.call_args.args[0]
+                invocation_name = invoked[invoked.index('--name') + 1]
+                self.assertEqual(summary['container'], invocation_name)
+                self.assertEqual(summary['ownership_label'], invoked[invoked.index('--label') + 1])
+                self.assertEqual(summary['context_sha256'], hashlib.sha256(b'test-context').hexdigest())
+                self.assertNotIn('context', summary)
             self.assertEqual(output.read_text(), old_report)
             self.assertEqual(old_image.read_bytes(), b'old screenshot')
             self.assertEqual(list(Path(directory).glob('.t7-report-*')), [])

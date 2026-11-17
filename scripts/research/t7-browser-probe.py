@@ -172,8 +172,14 @@ def main() -> int:
                 staged.replace(args.output)
         except OSError as error:
             failed=True;report.update(result='blocked-or-failed',report_write_error=str(error)[:4000])
-    print(json.dumps({k:report.get(k) for k in ('result','owned_container_absent','error',
-                                                'process_cleanup_error','cleanup_error','report_write_error')}))
+    summary_keys = ("result", "container", "owned_container_absent", "error",
+                    "process_cleanup_error", "cleanup_error", "report_write_error")
+    summary = {key: report.get(key) for key in summary_keys}
+    if name is not None:
+        summary["ownership_label"] = f"{label}={name}"
+    if "context" in report:
+        summary["context_sha256"] = hashlib.sha256(report["context"].encode("utf-8")).hexdigest()
+    print(json.dumps(summary))
     return int(failed)
 
 
