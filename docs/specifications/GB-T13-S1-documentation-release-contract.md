@@ -197,7 +197,8 @@ identity. Verify both the stored commit authorization and its exact
 reservation-bound seal as evidence of the historical decision. Subsequent
 changes to live authorization govern new commits.
 Historical readback continues to validate against the durable proof captured
-at the original commit. A null pointer is valid only with empty authoritative history.
+at the original commit. Return detached receipt data on public reads and
+idempotent retries. A null pointer is valid only with empty authoritative history.
 Otherwise the pointer must resolve to a fully verified current publication
 with greater precedence than every historical version. Apply that invariant
 to the atomic prior-state check and reconciliation. For a historical retry or lost

@@ -263,7 +263,7 @@ def valid_approval(approval, manifest, identity):
 
 
 def receipt_for(approval):
-    receipt = {field: approval[field] for field in APPROVAL - {"decision"}}
+    receipt = deepcopy({field: approval[field] for field in APPROVAL - {"decision"}})
     tag = f'v{approval["identity"]["version"]}'
     receipt["tagRef"] = f"refs/tags/{tag}"
     receipt["releaseRef"] = f"{REPOSITORY}/releases/tag/{tag}"
@@ -763,6 +763,17 @@ class ReleaseContractScenarios(unittest.TestCase):
                     authorization_at_commit=change_commit_inputs,
                 ), (expected, self.prior, None))
                 self.assertNotIn(identity["version"], self.prior.versions)
+
+    def test_public_receipts_are_detached_from_committed_state(self):
+        bundle, identity, approval = self.stage()
+        outcome, committed, receipt = self.publish(bundle, identity, approval, self.prior)
+        self.assertEqual(outcome, "PUBLISHED")
+        receipt["identity"]["revision"] = self.fixture["otherRevision"]
+        outcome, retry = reconcile(committed, identity, self.prior_identity)
+        self.assertEqual((outcome, retry), ("ALREADY_PUBLISHED", receipt_for(approval)))
+        retry["identity"]["revision"] = self.fixture["otherRevision"]
+        self.assertEqual(reconcile(committed, identity, self.prior_identity),
+                         ("ALREADY_PUBLISHED", receipt_for(approval)))
 
     def test_native_registry_rejects_unverified_evidence_reference(self):
         bundle, identity, approval = self.stage(scenario={
