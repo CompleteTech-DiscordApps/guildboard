@@ -22,6 +22,199 @@ MANIFEST = json.loads((ROOT / 'planning/guildboard-backlog.json').read_text())
 SCHEMA = json.loads((ROOT / 'planning/project-schema.json').read_text())
 
 
+class ReconciliationPreviewTests(unittest.TestCase):
+    def test_dry_run_counts_candidate_and_edited_bodies_without_writes(self):
+        import contextlib
+        import hashlib
+        import io
+        import runpy
+
+        import api
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            planning = root / 'planning'
+            planning.mkdir()
+            manifest = planning / 'guildboard-backlog.json'
+            state = planning / 'github-state.json'
+            repo = 'example/guildboard'
+            state.write_text(json.dumps({'repo': repo, 'project': {'id': 'synthetic-project'}}))
+            original = ('<!-- guildboard-id:GB-SYNTHETIC-1 -->\n'
+                        'https://github.com/CompleteDotTech/guildboard/blob/main/manifest.json\n')
+            hashes = (hashlib.sha256(original.encode()).hexdigest(), '0' * 64, '0' * 64)
+            items = [{
+                'id': f'GB-SYNTHETIC-{number}', 'title': 'Synthetic planning item',
+                'work_type': 'Task', 'workstream': 'T0', 'fields': {'Tier': 'Fixture', 'Owner Role': 'Fixture'},
+                'parent_id': None, 'dependencies': [], 'milestone': 'Fixture',
+                'requirements': ['Synthetic requirement'], 'acceptance_criteria': [],
+                'expected_tests': [], 'documentation_artifacts': ['docs/synthetic.md'],
+                'body_hash': body_hash,
+                'github': {'number': number, 'id': f'synthetic-{number}'},
+            } for number, body_hash in enumerate(hashes, 1)]
+            manifest.write_text(json.dumps({'items': items}))
+            bodies = [
+                {'number': 1, 'node_id': 'synthetic-1', 'body': original},
+                {'number': 2, 'node_id': 'synthetic-2',
+                 'body': 'Maintainer edit removed the stable marker.'},
+            ]
+            argv = ['reconcile.py', '--phase', 'comments', '--dry-run']
+            output = io.StringIO()
+            before = manifest.read_bytes()
+            with mock.patch.multiple(api, ROOT=root, STATE=state), \
+                    mock.patch.object(api, 'api', return_value=bodies) as request, \
+                    mock.patch.object(api, 'save') as save, \
+                    mock.patch.object(sys, 'argv', argv), mock.patch.object(sys, 'dont_write_bytecode'), \
+                    contextlib.redirect_stdout(output):
+                with self.assertRaises(SystemExit) as exit_result:
+                    runpy.run_path(str(SCRIPTS / 'reconcile.py'), run_name='__main__')
+            self.assertIsNone(exit_result.exception.code)
+            request.assert_called_once_with(f'repos/{repo}/issues?state=all&per_page=100&page=1', quiet_get=True)
+            save.assert_not_called()
+            self.assertEqual(manifest.read_bytes(), before)
+            self.assertNotIn('Maintainer edit.', output.getvalue())
+            self.assertEqual(json.loads(output.getvalue()), {
+                'mode': 'dry-run', 'repository': repo, 'would_rewrite': 1,
+                'rewrites_beyond_repository_identity': ['GB-SYNTHETIC-1'], 'already_current': 0,
+                'skipped_maintainer_edited': 1, 'skipped_missing': 1,
+            })
+
+    def test_dry_run_rejects_copied_markers_and_wrong_number_or_node(self):
+        import contextlib
+        import io
+        import runpy
+
+        import api
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            planning = root / 'planning'
+            planning.mkdir()
+            manifest = planning / 'guildboard-backlog.json'
+            manifest.write_text(json.dumps({'items': [{
+                'id': 'GB-PRIVATE-SYNTHETIC',
+                'github': {'number': 42, 'id': 'synthetic-node'},
+            }]}))
+            state = planning / 'github-state.json'
+            state.write_text('{"repo":"example/guildboard","project":{"id":"synthetic-project"}}')
+            expected_body = '<!-- guildboard-id:GB-PRIVATE-SYNTHETIC -->'
+            argv = ['reconcile.py', '--phase', 'comments', '--dry-run']
+            for number, node_id, body in (
+                (43, 'a-different-node', expected_body),
+                (43, 'synthetic-node', ''),
+                (42, 'a-different-node', expected_body),
+                (42, 'a-different-node', ''),
+                (42, 'synthetic-node', '<!-- guildboard-id:GB-WRONG -->'),
+                (42, 'synthetic-node', expected_body + '\n' + expected_body),
+            ):
+                with self.subTest(number=number, node_id=node_id, body=body):
+                    output = io.StringIO()
+                    before = manifest.read_bytes()
+                    with mock.patch.multiple(api, ROOT=root, STATE=state), \
+                            mock.patch.object(api, 'api', return_value=[
+                                {'number': number, 'node_id': node_id, 'body': body},
+                            ]), mock.patch.object(api, 'save') as save, \
+                            mock.patch.object(sys, 'argv', argv), mock.patch.object(sys, 'dont_write_bytecode'), \
+                            contextlib.redirect_stdout(output):
+                        with self.assertRaises(SystemExit) as exit_result:
+                            runpy.run_path(str(SCRIPTS / 'reconcile.py'), run_name='__main__')
+                    self.assertEqual(exit_result.exception.code, 'Dry run stopped: issue identity mismatch.')
+                    self.assertEqual(output.getvalue(), '')
+                    self.assertEqual(manifest.read_bytes(), before)
+                    save.assert_not_called()
+
+    def test_dry_run_failed_get_keeps_diagnostics_and_files_unchanged(self):
+        import contextlib
+        import io
+        import runpy
+
+        import api
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            planning = root / 'planning'
+            audit = planning / 'audit'
+            audit.mkdir(parents=True)
+            manifest = planning / 'guildboard-backlog.json'
+            manifest.write_text('{"items": []}')
+            state = planning / 'github-state.json'
+            state.write_text('{"repo": "example/guildboard", "project": {"id": "synthetic-project"}}')
+            failure_log = audit / 'failures.jsonl'
+            failure_log.write_text('existing audit entry\n')
+            before = {p: p.read_bytes() for p in root.rglob('*') if p.is_file()}
+            argv = ['reconcile.py', '--phase', 'comments', '--dry-run']
+            failed_get = subprocess.CompletedProcess(
+                args=['gh'], returncode=1, stdout='synthetic-sensitive-response',
+                stderr='synthetic-sensitive-stderr',
+            )
+            output = io.StringIO()
+            with mock.patch.multiple(api, ROOT=root, STATE=state), \
+                    mock.patch.object(api.subprocess, 'run', return_value=failed_get) as request, \
+                    mock.patch.object(sys, 'argv', argv), mock.patch.object(sys, 'dont_write_bytecode'), \
+                    contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+                with self.assertRaises(SystemExit) as exit_result:
+                    runpy.run_path(str(SCRIPTS / 'reconcile.py'), run_name='__main__')
+            self.assertEqual(exit_result.exception.code, 'Dry run stopped: GitHub issues could not be read.')
+            self.assertEqual(output.getvalue(), '')
+            request.assert_called_once_with(
+                ['gh', 'api', 'repos/example/guildboard/issues?state=all&per_page=100&page=1',
+                 '--method', 'GET', '--include'], input=None, capture_output=True, text=True,
+            )
+            self.assertEqual({p: p.read_bytes() for p in root.rglob('*') if p.is_file()}, before)
+
+
+class BootstrapReportTests(unittest.TestCase):
+    def test_repository_association_matches_the_audited_repository(self):
+        import contextlib
+        import io
+        import runpy
+        import shutil
+
+        import api
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            planning = root / 'planning'
+            audit = planning / 'audit'
+            audit.mkdir(parents=True)
+            for name in ('guildboard-backlog.json', 'workstreams.json'):
+                shutil.copyfile(ROOT / 'planning' / name, planning / name)
+            source = json.loads((ROOT / 'planning/audit/remote-audit.json').read_text())
+            audited_repo = 'CompleteDotTech/guildboard'
+            for associated, other_count, observed, confirmed in (
+                ([], 0, 'None observed', False),
+                (['example/unrelated'], 1, 'None observed', False),
+                ([audited_repo], 0, f'`{audited_repo}`', True),
+                ([audited_repo, 'example/unrelated'], 1, f'`{audited_repo}`', True),
+            ):
+                with self.subTest(associated=associated):
+                    source['project']['repositories']['nodes'] = [
+                        {'nameWithOwner': repository} for repository in associated
+                    ]
+                    if 'example/unrelated' in associated:
+                        source['findings'] = [{'kind': 'foreign_project_item', 'id': 'synthetic',
+                                               'detail': {'repository': 'example/unrelated'}}]
+                    else:
+                        source['findings'] = []
+                    (audit / 'remote-audit.json').write_text(json.dumps(source))
+                    with mock.patch.object(api, 'ROOT', root), \
+                            mock.patch.object(api, 'api', return_value={
+                                'secrets': [{'name': 'GUILDBOARD_PROJECT_TOKEN'}],
+                            }), mock.patch.object(api.subprocess, 'check_output',
+                                                   side_effect=['synthetic-commit\n', '2026-01-01\nFixture\n']), \
+                            contextlib.redirect_stdout(io.StringIO()):
+                        runpy.run_path(str(SCRIPTS / 'final_report.py'), run_name='__main__')
+                    report = (planning / 'BOOTSTRAP-REPORT.md').read_text()
+                    self.assertIn('- Audited repository owner: `CompleteDotTech`', report)
+                    self.assertIn(f'Observed audited repository association: {observed}.', report)
+                    self.assertIn(f'Other Project repository associations observed: {other_count}.', report)
+                    self.assertNotIn('example/unrelated', report)
+                    self.assertNotIn('example/unrelated', (audit / 'final-summary.json').read_text())
+                    result = 'Confirmed' if confirmed else 'Unconfirmed'
+                    self.assertIn(f'Audited repository association: {result} for `{audited_repo}`.', report)
+                    final_status = 'Complete and verified' if confirmed else 'Partially complete'
+                    self.assertIn(f'**Final status: {final_status}.**', report)
+
+
 class ValidatorTests(unittest.TestCase):
     def setUp(self):
         self.manifest = copy.deepcopy(MANIFEST)
@@ -166,6 +359,52 @@ class ValidatorTests(unittest.TestCase):
     def test_mvp_cannot_depend_on_later_milestone(self):
         next(x for x in self.manifest['items'] if x['id'] == 'GB-T13.G1')['milestone'] = 'M4 — Later'
         self.fails_with('MVP approval depends on a later release phase')
+
+    def test_github_mapping_urls_derive_from_manifest_repository(self):
+        mapped = next(x for x in self.manifest['items'] if 'github' in x)
+        number = mapped['github']['number']
+        mapped['github']['url'] = f'https://github.com/CompleteDotTech/guildboard/issues/{number}'
+        self.fails_with('GitHub mapping URL does not derive from manifest repository')
+        mapped['github']['url'] = f'https://github.com/{self.manifest["repository"]}/issues/{number + 1}'
+        self.fails_with('GitHub mapping URL does not derive from manifest repository')
+
+    def test_invalid_manifest_repository(self):
+        for invalid in (None, '', 'no-slash', 'a/b/c', 7):
+            with self.subTest(invalid=invalid):
+                self.manifest['repository'] = invalid
+                self.fails_with('manifest: missing/invalid repository')
+
+    def test_repository_identity_against_pinned_state(self):
+        state = json.loads((ROOT / 'planning/github-state.json').read_text())
+        repo = state['repo']
+        canonical = (f'[x](https://github.com/{repo}/issues/1) '
+                     '[p](https://github.com/users/Example/projects/7) '
+                     '[upstream](https://github.com/external/project/issues/9) '
+                     '[similar](https://github.com/CompleteDotTech/guildboard-example/issues/1)')
+        self.assertEqual(validator.repository_identity_errors(self.manifest, state, {'doc.md': canonical}), [])
+        stale = canonical + ' [y](https://github.com/CompleteDotTech/guildboard/issues/2)'
+        errors = validator.repository_identity_errors(self.manifest, state, {'doc.md': stale})
+        self.assertEqual(errors, ['doc.md: links name non-canonical repository CompleteDotTech/guildboard'])
+        self.manifest['repository'] = 'CompleteDotTech/guildboard'
+        self.assertTrue(any('differs from state repo' in e for e in
+                            validator.repository_identity_errors(self.manifest, state, {})))
+        self.assertEqual(validator.repository_identity_errors(self.manifest, {'repo': 'bad'}, {}),
+                         ['state: missing/invalid repo'])
+
+    def test_issue_mapping_uses_number_and_pinned_repository(self):
+        from api import issue_mapping
+
+        issue = {'number': 42, 'node_id': 'synthetic-node',
+                 'html_url': 'https://github.com/CompleteDotTech/guildboard/issues/42'}
+        repo = 'example/guildboard'
+        self.assertEqual(issue_mapping(issue, repo), {
+            'number': 42, 'id': 'synthetic-node', 'url': f'https://github.com/{repo}/issues/42',
+        })
+
+    def test_current_generated_documents_use_canonical_repository(self):
+        state = json.loads((ROOT / 'planning/github-state.json').read_text())
+        documents = {str(p): p.read_text(encoding='utf-8') for p in validator.GENERATED_DOCUMENTS}
+        self.assertEqual(validator.repository_identity_errors(MANIFEST, state, documents), [])
 
     def test_fanout_limit(self):
         for i in range(101):
@@ -472,6 +711,52 @@ class CliTests(unittest.TestCase):
         code, report = self.run_cli(json.dumps(MANIFEST))
         self.assertEqual(code, 0)
         self.assertEqual(report['result'], 'pass')
+
+    def test_canonical_manifest_relative_path_and_hardlink_protect_inputs(self):
+        import contextlib
+        import io
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            root = Path(directory)
+            manifest = root / 'canonical-manifest.json'
+            manifest.write_text(json.dumps(MANIFEST))
+            alias = root / 'manifest-alias.json'
+            alias.hardlink_to(manifest)
+            state = root / 'state.json'
+            state.write_text(json.dumps({'repo': MANIFEST['repository']}))
+            document = root / 'generated.md'
+            document.write_text('Generated fixture.')
+            with mock.patch.multiple(validator, DEFAULT_MANIFEST=manifest, STATE=state,
+                                     GENERATED_DOCUMENTS=(document,)):
+                for selected in (Path(os.path.relpath(manifest)), alias):
+                    for target in (state, document):
+                        with self.subTest(manifest=selected.name, target=target.name):
+                            output = io.StringIO()
+                            before = target.read_bytes()
+                            with contextlib.redirect_stdout(output):
+                                result = validator.main(['--manifest', str(selected), '--report', str(target)])
+                            self.assertEqual(result, 1)
+                            self.assertIn('report must not alias', output.getvalue())
+                            self.assertEqual(target.read_bytes(), before)
+
+    def test_cli_report_aliases_preserve_state_and_generated_document(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state = root / 'state.json'
+            state.write_text(json.dumps({'repo': MANIFEST['repository']}))
+            document = root / 'generated.md'
+            document.write_text('Generated fixture.')
+            for validation_input in (state, document):
+                with self.subTest(validation_input=validation_input.name):
+                    before = validation_input.read_bytes()
+                    proc = subprocess.run(
+                        [sys.executable, str(SCRIPTS / 'validate.py'), '--state', str(state),
+                         '--generated', str(document), '--report', str(validation_input)],
+                        capture_output=True, text=True, timeout=30,
+                    )
+                    self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+                    self.assertIn('report must not alias', proc.stdout)
+                    self.assertEqual(validation_input.read_bytes(), before)
 
     def test_cli_report_input_aliases_preserve_manifest_and_schema(self):
         for source_name in ('manifest.json', 'schema.json'):

@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security reporting
-    url: https://github.com/CompleteDotTech/guildboard/security/policy
+    url: https://github.com/CompleteTech-DiscordApps/guildboard/security/policy
     about: Report vulnerabilities privately; do not disclose exploit details publicly.
