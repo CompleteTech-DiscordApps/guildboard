@@ -5,7 +5,9 @@ The native [#388 research](../research/t12-quality-engineering-research.md) is
 closed following #498. Use the accepted [T0 disposition](../workstreams/T0.md#deliverable-disposition)
 and [system scenarios](fixtures/GB-T0-S1-scenarios.json), the merged
 [T9 control and evidence contract](GB-T9-S1-security-privacy-contract.md), and
-the applicable domain contracts for expected behavior. Quality Engineering,
+the applicable domain contracts for expected behavior. The merged
+[T13 documentation and release contract](GB-T13-S1-documentation-release-contract.md)
+governs release bundles, approvals and publication evidence. Quality Engineering,
 Security Engineering for trust boundaries, and consuming engineering must
 review the exact change before downstream implementation depends on this
 contract. Native approval and release decisions follow repository governance. The
@@ -74,15 +76,20 @@ included in this specification.
 | --- | --- |
 | E01/E02/E03 | Valid owned setup reaches the harness. Invalid configuration and unavailable setup prerequisites cause zero creates, binds or outbound calls. Separately observe F12’s unavailable privileged-action membership evidence and absence of privilege extension or accepted effects. Interruption reaps owned work and preserves the unrelated sentinel. Observe finite queue/quota and isolated slow-consumer recovery under T9’s resource profile. |
 | E04 | Observe the actual decoder, ingress, protected lookup and policy boundaries. Compare authorized and denied viewer, expired/replayed session, stale role, forged claim and foreign guild/board/asset/receipt decisions; no durable or peer side effects on denial. Exercise accepted inert/bounded input controls and generic response equivalence for missing and foreign selectors. |
-| E05 | Establish successful preparation, then withdraw each required commit-stage authority or dependency independently. Observe zero accepted effects. For independently ordered commit and revocation, cover both sides of the fence; confirm rollback and retained acceptance when delivery fails. Duplicate digest yields one durable effect, changed digest conflicts only after current read authorization. Same-object/disjoint/compound operations and reconnect/late join converge to accepted revision and canonical projection. |
+| E05 | Establish successful preparation, then withdraw each required commit-stage authority or dependency independently. Observe zero accepted effects. For independently ordered commit and revocation, cover both sides of the fence; confirm rollback and retained acceptance when delivery fails. Retry of the same verified scoped operation identity with the same canonical intent digest yields one durable effect. A changed digest on that identity conflicts only after current read authorization. Distinct operation IDs with the same digest can each produce a durable effect when authorized. Same-object/disjoint/compound operations and reconnect/late join converge to accepted revision and canonical projection. |
 | E06 | Observe the serialized transport handoff and authority transition in both orders. Cover ACKs, current and historical receipt/digest/lineage results, events, replay, metadata and each snapshot, asset and export chunk. Observe protected bytes independently. Enqueue or preparation grants no release authority. A valid handoff ordered first may complete. Revocation, session expiry, membership invalidation or unavailable authority ordered first suppresses that output and all remaining queued protected bytes in the delivery. Preserve durable acceptance when ACK release is denied. Incomplete/quarantined asset read and reference produce no bytes or content write (F15). |
 | E07 | Cover the three separate recovery cases below, including failed complete snapshot validation (F10), read denial after restore, historical receipt retry, digest conflict and unknown retired lineage. Verify each recovered boundary against independent SQL, receipt/outbox and persistent asset inventories. Compare canonical hashes and revisions and fence old writers. |
 | E08 | Resolve actual release artifacts and required rows against current approval. Stale, missing or ineligible evidence remains pending or blocked. Keep verified failures visible separately. Review complete T9 security inputs and disposition evidence below.
 
-Capture the scoped committed operation and receipt inventory independently of
+Use T0 scoping for the operation identity, including guild, board and operation
+ID, and the original author binding where required. Capture the scoped
+committed operation and receipt inventory independently of
 application state, and independently observe ACKs actually handed off before
 the fault. Retain both before recovery with the fault boundary, lineage,
 revision and identifiers so missing evidence can be measured by set comparison.
+Report lost ACK deliveries independently of missing acknowledged operations.
+An original committed receipt can remain durable when its ACK is fenced or
+lost in delivery.
 For **process restart with intact durable storage**, require zero acknowledged
 operations lost, no missing committed receipt and identical authorized retry
 for commit-before-ACK. For **document restore**, restore the approved content
@@ -91,9 +98,11 @@ that cut. Historical acceptance settles only the original pending operation.
 For **disaster recovery**, require an approved recovery point objective and
 isolated restore. Compare the actual recovered cut to the pre-fault inventories,
 report possible and observed loss and achieved RPO/RTO with measurement
-boundaries, and leave missing prior outcomes unknown. Apply the research stop on a missing acknowledged operation and retain the
-observation before comparing isolated disaster-recovery loss to its approved
-boundary. Require zero acknowledged loss for restart with intact storage. |
+boundaries, and leave missing prior outcomes unknown. Assess isolated disaster
+restore against the explicitly approved RPO and recovery criteria. The integrated
+workload or authorized crash/recovery run stops on any missing acknowledged
+operation under the research rules. Retain and report that failure even if a
+separate isolated disaster-recovery exercise meets its approved RPO.
 
 ## Environment and load matrix
 
@@ -150,8 +159,9 @@ timeout/loss/conflict/reject/throttle counts and generator scheduling lag.
 Retain proposed 70% CPU maximum, 20% available memory/free data disk minimum,
 10% unexplained post-drain RSS growth maximum, 50ms event-loop p99 maximum and
 0.1% unexplained error fraction maximum. Stop on the research stop conditions;
-unauthorized effects, tenant disclosure and acknowledged loss outside an approved
-disaster-recovery boundary are integrity failures. T11 owns operational SLOs, T10 deployment measurement and T5
+unauthorized effects, tenant disclosure and acknowledged loss in the integrated
+workload are integrity failures. Record isolated disaster-recovery loss separately
+against its own approved boundary. T11 owns operational SLOs, T10 deployment measurement and T5
 data recovery parameters. These values describe an experimental workload and
 candidate budgets. Hardware capacity, supported clients, freshness SLA and
 numerical recovery objectives remain open.
@@ -160,8 +170,11 @@ numerical recovery objectives remain open.
 
 `VerificationReceiptV1` is an internal, strict UTF-8 JSON object. Maximum
 16,384 encoded bytes, depth six with root at depth one, and 32 elements per
-array. Reject duplicate keys at decode time, unknown fields, JSON coercions,
-nonfinite or floating numbers, and malformed encoding. Common opaque tokens
+array. Global bounds apply before interpreting versions. Object keys are
+opaque tokens. JSON values are objects, arrays, ASCII strings of up to 240
+characters, or signed 32-bit integers. Reject duplicate keys at decode time,
+coercions, nulls, booleans, nonfinite or floating numbers and malformed encoding.
+V1 rejects unknown fields. Common opaque tokens
 use 1–96 ASCII characters from letters, digits, period, underscore and hyphen;
 tokens begin with an alphanumeric. Digests are 64 lowercase hexadecimal
 characters (SHA-256) and full Git commits are 40 lowercase hexadecimal
@@ -175,7 +188,7 @@ The envelope has the following fields.
 | Field | Type and meaning |
 | --- | --- |
 | `version` | Integer 1. |
-| `gateRow`, `environmentId`, `runId` | Registered row, registered exact environment reference, and unique run token. |
+| `requirementId`, `gateRow`, `environmentId`, `runId` | Registered requirement and row, registered exact environment reference, and unique run token. |
 | `executionState` | `completed`, `invalid_configuration`, `prerequisite_unavailable`, or `interrupted`. |
 | `cleanup` | `verified`, `untouched`, `pending`, or `failed`, backed by an independent inventory observation. |
 | `artifactSha256` | Digest of the exact redacted bytes located by the nested artifact reference. |
@@ -204,9 +217,10 @@ reference and digest, supported configuration, approval and freshness interval,
 and authorized prerequisites. Resolve all fields and the current effective
 approval and prerequisites using trusted time. Caller-provided expectations or
 incomplete metadata confer no qualification. An independent result observer and
-a separate inventory observer each bind their observation to the same candidate,
-environment, run and artifact digest under approved observer identities. Compare
-result independently of claim and expected dataset. Require verified cleanup and
+a separate inventory observer each bind their observation to the same
+requirement, row, candidate, environment, run and artifact digest under approved observer identities. The result observer binds
+both execution state and result. Compare them independently of the receipt
+claim and expected dataset. Require verified cleanup and
 preservation of the unrelated sentinel for completed resourceful runs. Accept
 untouched only for a resource-free completed check with independently observed
 zero resource creation and zero owned remnants.
@@ -217,13 +231,18 @@ failed. Unavailable prerequisites and interruption cannot yield a passing target
 receipt. Maintain detection-sensitive positive and negative observations.
 
 Reject malformed input, wrong scope and unregistered rows, tokens or references
-as `INVALID_RECORD`. A valid bounded JSON object with a positive bounded
+as `INVALID_RECORD`. A globally valid bounded JSON object with a positive bounded
 integer version field other than 1 returns
 `UNSUPPORTED_RECORD_VERSION` after structural decoding and before interpreting
 version-specific fields. A missing registry, authority, artifact or trustworthy
 time produces `DEPENDENCY_UNAVAILABLE`. Stale evidence and class substitution
-cannot qualify. Missing real-environment evidence stays pending. A verified
-failure on a required row remains visible and blocks. An exact-scope
+cannot qualify. Missing real-environment evidence stays pending. At evaluation time, a matching completed target observation yields a typed
+verified pass or verified fail. A pass also requires successful cleanup. A
+verified failure remains visible even if separately observed cleanup is pending
+or failed. Stale, substituted, or incomplete observations yield ineligible
+evidence. Missing dependencies and invalid records keep their controlled
+qualification diagnostics and block credit. A verified failure on a required
+row fails the matrix even alongside pending evidence. An exact-scope
 non-applicability decision uses a separate recorded owner rationale with
 approved alternate coverage when applicable. It cannot waive a mandatory
 external row or create a passing receipt. Use T9's separate exception contract
@@ -261,22 +280,72 @@ supply the evidence. E08 checks qualification of those receipts.
 T9 security inputs require exact-candidate threat model review, authorization
 negative tests, maintained dependency, license and lockfile provenance review,
 secret and static checks with triage, upload/import controls and actual independent
-security review. Bind each to its authorized exact-scope artifact, verifier and
-current evidence. Unresolved critical/high findings block release. A referenced
-disposition must be independently resolved and authorized for the scope and
-severity. Verify its controls, expiry and closure criteria under T9 when an
-exception applies. Missing, unauthorized or expired dispositions confer no credit.
+security review. Evaluate these as required keys with class and method appropriate
+to each input. Resolve the verifier and current approval for the exact tuple,
+scope, run and redacted artifact bytes, including expiry and digest, just as for
+other qualified rows. A standalone authority boolean supplies no evidence.
+
+Use the independent findings registry to identify unresolved critical/high
+findings. Resolve each exact finding and disposition reference as used in
+`findingDispositions` against the candidate, scope, severity, authoritative
+approval and retained observation bytes. A verified closure must bind the
+approved finding and remediation evidence. An exception requires repository
+policy permission and a closed T9 `ExceptionV1` with the approver, rationale,
+scope, severity, expiry, controls and closure criteria. Independently verify
+current approver authority and the retained observations of controls and closure
+criteria against that exact exception and disposition. A missing, altered,
+unauthorized or expired record blocks release.
 
 The release matrix records stable requirement ID, scenario and environment IDs,
 native verification issue, required class, responsible verifier role, candidate
 SHA and artifact digest, result and trace receipt, open findings and authorized
-disposition. Resolve live native blockers at approval. QE checks direct and
+disposition. It accepts only typed qualifier outputs produced for the same
+requirement/row key, candidate, scope and current evaluation. Separate
+requirements may share one environment and carry separate receipts. Bare
+status strings cannot substitute for a qualification. Resolve live native
+blockers at approval. QE checks direct and
 integrated coverage, Security verifies security effects and dispositions,
 platform/Accessibility verify their own environment evidence, and the
 maintainer/T13 verify applicable review and release authority. An independent
 review receipt carries actual reviewer identity, full reviewed head, scope,
 checks, findings and limitations. Review requests and stale reviews supply no
 approval.
+
+### T13 evidence and publication projection
+
+Map the native issue number through the accepted backlog to its canonical
+stable GB ID. For each applicable current qualified pass, supply the T13
+entry's `id`, `issue`, `revision`, UTC `date`, `environment`, `level`, `result`
+and resolving `ref`. Map `fixture` to `synthetic`, `local_integration` and
+`hosted_ci` to `integration`, `independent_review` to `independent-review`,
+`real_discord` to `real-discord`, and `real_godaddy` to `real-godaddy`.
+The linked original receipt retains its exact method, class, scope, limitations
+and evidence digest, with the actual redacted observation bytes available
+for verification. Both integration classes retain their source provenance.
+`post_merge` contributes timing and revision provenance only. For an
+applicable post-merge check retain and qualify a receipt with its underlying
+execution or review class and method. No separate T13 level grants credit
+for a merge event.
+
+For #456, #457 and #472, apply the corresponding T13 gate and accepted
+requirements to the projected entries. For release automation #446 and
+publication #471/#473, resolve actual staged payload, checksum index, build
+provenance, manifest and reviewed notes bytes. T12's digest identifies the
+redacted execution artifact. T13's candidate artifact digest hashes the
+verified complete payload checksum index. Derive the complete candidate
+identity from staged bytes, including exact manifest and notes hashes.
+Resolve current native decisions and the actual authorized maintainer approval
+for that gate, version, revision and all three digests, with matching
+provenance and evidence references.
+
+For stable #472, resolve accepted #471 evidence from its authoritative source
+independently of the #472 candidate. Use the G1 MVP publication receipt,
+candidate identity and canonical release URL designated there. Match both
+candidate `mvpPublication` fields to that designation, recompute the historical
+identity from the actual published bytes, and verify the historical G1 approval,
+receipt, tag target and release bytes. Unavailable, substituted or unverifiable
+evidence leaves #472 pending. An accepted #472 decision is a prerequisite for
+the separate #473 publication.
 
 On change of candidate, fixture, observed environment/build, policy, or
 required prerequisites, mark affected rows pending and record impact,

@@ -8,7 +8,7 @@
     {"id": "E04", "verification": 403, "t0": ["F01", "F02", "F03", "F14"], "t9": ["membership", "tenant_scope", "auth_transaction", "policy_matrix", "bounded_content", "audit_integrity", "receipt_lookup", "malformed_command", "ingress"], "signals": ["durableEffects", "egressEvents", "foreignIdentifiers"]},
     {"id": "E05", "verification": 407, "t0": ["F04", "F05", "F06", "F07", "F08", "F09", "F16", "F17"], "t9": ["commit_order", "durable_retry", "commit_dependencies"], "signals": ["durableEffects", "acceptedReceipts", "egressEvents"]},
     {"id": "E06", "verification": 400, "t0": ["F15", "F23", "F24", "F25", "F26", "F27", "F28", "F29", "F30", "F31", "F32", "F33", "F34", "F35", "F36"], "t9": ["release_order", "asset_export_release", "receipt_release_denial"], "signals": ["durableEffects", "queuedChunks", "handoffSequence", "revocationSequence", "protectedBytes", "bytesAfterRevocation"]},
-    {"id": "E07", "verification": 410, "t0": ["F11", "F18", "F19", "F20", "F21", "F22", "F10"], "t9": ["receipt_history", "delete_restore"], "signals": ["committedBeforeFault", "acknowledgedBeforeFault", "restoredReceipts", "restoredAssets", "missingCommittedReceipts", "missingAcknowledgedEffects", "beyondCutReceipts", "oldLineageEffects", "recoveryPointLoss", "rpoExceeded"]},
+    {"id": "E07", "verification": 410, "t0": ["F11", "F18", "F19", "F20", "F21", "F22", "F10"], "t9": ["receipt_history", "delete_restore"], "signals": ["committedBeforeFault", "acknowledgedBeforeFault", "restoredReceipts", "restoredAssets", "missingCommittedReceipts", "missingAcknowledgedEffects", "beyondCutReceipts", "oldLineageEffects", "recoveryPointLoss", "rpoExceeded", "lostAckDeliveries", "integratedLossStop"]},
     {"id": "E08", "verification": 417, "t0": [], "t9": ["release_gate", "host_boundary", "internal_records"], "signals": ["missingRows", "staleRows", "classMismatches", "missingRealRows", "missingSecurityInputs", "unresolvedFindings", "verifiedFailures"]}
   ],
   "claims": [
@@ -19,12 +19,14 @@
     {"id": "allowed", "scenario": "E04", "state": "completed", "cleanup": "verified", "expected": [1, 1, 0], "result": "pass"},
     {"id": "denied", "scenario": "E04", "state": "completed", "cleanup": "verified", "expected": [0, 0, 0], "result": "pass"},
     {"id": "duplicate", "scenario": "E05", "state": "completed", "cleanup": "verified", "expected": [1, 1, 2], "result": "pass"},
+    {"id": "distinct-id-same-digest", "scenario": "E05", "state": "completed", "cleanup": "verified", "expected": [2, 2, 2], "result": "pass"},
     {"id": "ack-fenced", "scenario": "E06", "state": "completed", "cleanup": "verified", "expected": [1, 2, 0, 1, 0, 0], "result": "pass"},
     {"id": "handoff-before-revoke", "scenario": "E06", "state": "completed", "cleanup": "verified", "expected": [1, 2, 1, 2, 32, 0], "result": "pass"},
     {"id": "enqueue-only", "scenario": "E06", "state": "completed", "cleanup": "verified", "expected": [1, 2, 1, 2, 32, 0], "result": "fail"},
-    {"id": "restart", "scenario": "E07", "state": "completed", "cleanup": "verified", "expected": [3, 2, 3, 2, 0, 0, 0, 0, 0, 0], "result": "pass"},
-    {"id": "document-restore", "scenario": "E07", "state": "completed", "cleanup": "verified", "expected": [3, 2, 3, 2, 0, 0, 2, 0, 0, 0], "result": "pass"},
-    {"id": "disaster-recovery", "scenario": "E07", "state": "completed", "cleanup": "verified", "expected": [3, 2, 2, 2, 1, 1, 0, 0, 1, 0], "result": "pass"},
+    {"id": "restart", "scenario": "E07", "state": "completed", "cleanup": "verified", "expected": [3, 2, 3, 2, 0, 0, 0, 0, 0, 0, 1, 0], "result": "pass"},
+    {"id": "document-restore", "scenario": "E07", "state": "completed", "cleanup": "verified", "expected": [3, 2, 3, 2, 0, 0, 2, 0, 0, 0, 0, 0], "result": "pass"},
+    {"id": "disaster-recovery", "scenario": "E07", "state": "completed", "cleanup": "verified", "expected": [3, 2, 2, 2, 1, 1, 0, 0, 1, 0, 0, 0], "result": "pass"},
+    {"id": "integrated-loss-stop", "scenario": "E07", "state": "completed", "cleanup": "verified", "expected": [3, 2, 2, 2, 1, 1, 0, 0, 1, 0, 0, 1], "result": "fail"},
     {"id": "matrix-valid", "scenario": "E08", "state": "completed", "cleanup": "untouched", "expected": [0, 0, 0, 0, 0, 0, 0], "result": "pass"},
     {"id": "matrix-missing", "scenario": "E08", "state": "completed", "cleanup": "untouched", "expected": [1, 0, 0, 0, 0, 0, 0], "result": "blocked"},
     {"id": "matrix-stale", "scenario": "E08", "state": "completed", "cleanup": "untouched", "expected": [0, 1, 0, 0, 0, 0, 0], "result": "blocked"},
@@ -35,6 +37,16 @@
     {"id": "matrix-verified-failure", "scenario": "E08", "state": "completed", "cleanup": "untouched", "expected": [0, 0, 0, 0, 0, 0, 1], "result": "fail"},
     {"id": "matrix-unauthorized-disposition", "scenario": "E08", "state": "completed", "cleanup": "untouched", "expected": [0, 0, 0, 0, 0, 1, 0], "result": "blocked"}
   ],
+  "operationControls": {
+    "duplicate": [
+      {"guild": "synthetic-guild", "board": "synthetic-board", "author": "synthetic-writer", "operationId": "op1", "payload": "shared-payload"},
+      {"guild": "synthetic-guild", "board": "synthetic-board", "author": "synthetic-writer", "operationId": "op1", "payload": "shared-payload"}
+    ],
+    "distinct-id-same-digest": [
+      {"guild": "synthetic-guild", "board": "synthetic-board", "author": "synthetic-writer", "operationId": "op1", "payload": "shared-payload"},
+      {"guild": "synthetic-guild", "board": "synthetic-board", "author": "synthetic-writer", "operationId": "op2", "payload": "shared-payload"}
+    ]
+  },
   "observations": [
     {"run": "valid", "signalSource": "synthetic-resource-observer", "values": {"creates": 1, "binds": 1, "adapterCalls": 1}},
     {"run": "invalid", "signalSource": "synthetic-resource-observer", "values": {"creates": 0, "binds": 0, "adapterCalls": 0}},
@@ -43,12 +55,14 @@
     {"run": "allowed", "signalSource": "synthetic-boundary-observer", "values": {"durableEffects": 1, "egressEvents": 1, "foreignIdentifiers": 0}},
     {"run": "denied", "signalSource": "synthetic-boundary-observer", "values": {"durableEffects": 0, "egressEvents": 0, "foreignIdentifiers": 0}},
     {"run": "duplicate", "signalSource": "synthetic-boundary-observer", "values": {"durableEffects": 1, "acceptedReceipts": 1, "egressEvents": 2}},
+    {"run": "distinct-id-same-digest", "signalSource": "synthetic-boundary-observer", "values": {"durableEffects": 2, "acceptedReceipts": 2, "egressEvents": 2}},
     {"run": "ack-fenced", "signalSource": "synthetic-transport-observer", "values": {"durableEffects": 1, "queuedChunks": 2, "handoffSequence": 0, "revocationSequence": 1, "protectedBytes": 0, "bytesAfterRevocation": 0}},
     {"run": "handoff-before-revoke", "signalSource": "synthetic-transport-observer", "values": {"durableEffects": 1, "queuedChunks": 2, "handoffSequence": 1, "revocationSequence": 2, "protectedBytes": 32, "bytesAfterRevocation": 0}},
     {"run": "enqueue-only", "signalSource": "synthetic-transport-observer", "values": {"durableEffects": 1, "queuedChunks": 2, "handoffSequence": 0, "revocationSequence": 2, "protectedBytes": 0, "bytesAfterRevocation": 0}},
-    {"run": "restart", "signalSource": "synthetic-recovery-observer", "values": {"committedBeforeFault": 3, "acknowledgedBeforeFault": 2, "restoredReceipts": 3, "restoredAssets": 2, "missingCommittedReceipts": 0, "missingAcknowledgedEffects": 0, "beyondCutReceipts": 0, "oldLineageEffects": 0, "recoveryPointLoss": 0, "rpoExceeded": 0}},
-    {"run": "document-restore", "signalSource": "synthetic-recovery-observer", "values": {"committedBeforeFault": 3, "acknowledgedBeforeFault": 2, "restoredReceipts": 3, "restoredAssets": 2, "missingCommittedReceipts": 0, "missingAcknowledgedEffects": 0, "beyondCutReceipts": 2, "oldLineageEffects": 0, "recoveryPointLoss": 0, "rpoExceeded": 0}},
-    {"run": "disaster-recovery", "signalSource": "synthetic-recovery-observer", "values": {"committedBeforeFault": 3, "acknowledgedBeforeFault": 2, "restoredReceipts": 2, "restoredAssets": 2, "missingCommittedReceipts": 1, "missingAcknowledgedEffects": 1, "beyondCutReceipts": 0, "oldLineageEffects": 0, "recoveryPointLoss": 1, "rpoExceeded": 0}},
+    {"run": "restart", "signalSource": "synthetic-recovery-observer", "values": {"committedBeforeFault": 3, "acknowledgedBeforeFault": 2, "restoredReceipts": 3, "restoredAssets": 2, "missingCommittedReceipts": 0, "missingAcknowledgedEffects": 0, "beyondCutReceipts": 0, "oldLineageEffects": 0, "recoveryPointLoss": 0, "rpoExceeded": 0, "lostAckDeliveries": 1, "integratedLossStop": 0}},
+    {"run": "document-restore", "signalSource": "synthetic-recovery-observer", "values": {"committedBeforeFault": 3, "acknowledgedBeforeFault": 2, "restoredReceipts": 3, "restoredAssets": 2, "missingCommittedReceipts": 0, "missingAcknowledgedEffects": 0, "beyondCutReceipts": 2, "oldLineageEffects": 0, "recoveryPointLoss": 0, "rpoExceeded": 0, "lostAckDeliveries": 0, "integratedLossStop": 0}},
+    {"run": "disaster-recovery", "signalSource": "synthetic-recovery-observer", "values": {"committedBeforeFault": 3, "acknowledgedBeforeFault": 2, "restoredReceipts": 2, "restoredAssets": 2, "missingCommittedReceipts": 1, "missingAcknowledgedEffects": 1, "beyondCutReceipts": 0, "oldLineageEffects": 0, "recoveryPointLoss": 1, "rpoExceeded": 0, "lostAckDeliveries": 0, "integratedLossStop": 0}},
+    {"run": "integrated-loss-stop", "signalSource": "synthetic-recovery-observer", "values": {"committedBeforeFault": 3, "acknowledgedBeforeFault": 2, "restoredReceipts": 2, "restoredAssets": 2, "missingCommittedReceipts": 1, "missingAcknowledgedEffects": 1, "beyondCutReceipts": 0, "oldLineageEffects": 0, "recoveryPointLoss": 1, "rpoExceeded": 0, "lostAckDeliveries": 0, "integratedLossStop": 1}},
     {"run": "matrix-valid", "signalSource": "synthetic-gate-observer", "values": {"missingRows": 0, "staleRows": 0, "classMismatches": 0, "missingRealRows": 0, "missingSecurityInputs": 0, "unresolvedFindings": 0, "verifiedFailures": 0}},
     {"run": "matrix-missing", "signalSource": "synthetic-gate-observer", "values": {"missingRows": 1, "staleRows": 0, "classMismatches": 0, "missingRealRows": 0, "missingSecurityInputs": 0, "unresolvedFindings": 0, "verifiedFailures": 0}},
     {"run": "matrix-stale", "signalSource": "synthetic-gate-observer", "values": {"missingRows": 0, "staleRows": 1, "classMismatches": 0, "missingRealRows": 0, "missingSecurityInputs": 0, "unresolvedFindings": 0, "verifiedFailures": 0}},
