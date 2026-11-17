@@ -94,10 +94,11 @@ redacted source documents referenced by the record.
 | --- | --- |
 | Guide entry | `issue`, `path` (safe repository-relative path), `claimId` (lowercase letters, digits and hyphens, starting with a letter), `ownerRole`, `audience` (contributor, administrator, moderator, end-user or operator), `revision`, `claimStatus`, `evidenceIds`. For unresolved claims, require `followUpIssue` (stable GB ID). Evidence IDs resolve uniquely in the handoff. |
 | Evidence entry | `id` (lowercase letters, digits and hyphens, starting with a letter), `issue`, `revision`, `date`, `environment`, `level`, `result` (pass, fail or blocked), `ref`. Issue is a canonical stable GB ID. A ref resolves to the actual redacted run, command, review or comparison, including its scope, environment and limitations. |
-| Candidate manifest | `schemaVersion` (this contract version), `version` (SemVer), `gate` (GB-T13.G1, GB-T13.G2 or GB-T13.G3), `revision`, `artifactSha256`, `notesRef`, `notesSha256`, `provenanceRef`, `evidence`. `notesRef` and `provenanceRef` use safe relative bundle paths and resolve to the exact artifacts described below. |
+| Candidate manifest | `schemaVersion` (this contract version), `version` (SemVer), `gate` (GB-T13.G1, GB-T13.G2 or GB-T13.G3), `revision`, `artifactSha256`, `notesRef`, `notesSha256`, `provenanceRef`, `evidence`. `notesRef` and `provenanceRef` use safe relative bundle paths and resolve to the exact artifacts described below. G3 publication also requires `mvpPublication`, an object containing the exact published MVP candidate `identity` and canonical `releaseRef` from #471. |
 | Candidate identity | `version`, `revision`, `artifactSha256`, `manifestSha256`, `notesSha256`. The publisher derives these fields from the staged bytes. An identity supplied by a caller is valid only when all fields match the derived identity. |
 | Gate approval | `schemaVersion`, `gate`, `identity` (candidate identity), `decision` (`approved`), `decisionRef`, `provenanceRef`. The decision ref resolves to the authoritative maintainer decision under repository governance. Verify who made the decision, their authority for the named gate, the current applicability and outcome of the decision, and all identity fields. Gate and provenance must agree with the candidate manifest. |
 | Public publication receipt | `schemaVersion`, `identity`, `gate`, `decisionRef`, `provenanceRef`, `tagRef`, `releaseRef`. Store the full candidate identity and the gate, decision and provenance references from the verified approval. `tagRef` is a fully qualified Git tag ref in this repository resolving to `identity.revision`. `releaseRef` is the canonical repository release link for that tag, resolving to the complete publication. Verify the tag target and the release bytes through authoritative readback. |
+| Internal commit authorization | Bind the verified approval and applicable native prerequisite decisions to the exact candidate and committed version reservation. Store immutable proof of the decision, its authority and applicability at commit, and the verified evidence references. Redact private inputs before making any public receipt. |
 
 The artifact digest is SHA-256 of the UTF-8 checksum index, including for a
 single distributed file. For every file in the distributed payload, record
@@ -109,7 +110,9 @@ in ascending byte order and require one entry per file with no extra entries.
 Verify the index against the complete delivered payload. The index excludes
 itself (`SHA256SUMS`), the manifest (`manifest.json`), the notes at
 `notesRef` and the receipt (`publication-receipt.json`). These envelope paths
-are distinct and reserved. `provenanceRef` resolves to an indexed payload
+are distinct and reserved. Every payload and envelope file path is a leaf.
+Reject a path that is an ancestor of another declared file path.
+`provenanceRef` resolves to an indexed payload
 file. Its exact bytes are strict UTF-8 JSON (up to 64 KiB) with fields
 `schemaVersion`, `sourceRevision` (the exact manifest revision), `inputs`
 (1–64 unique records by path), `recipe` (one record) and `checksumIndex`
@@ -145,7 +148,8 @@ acceptance records while grounding release claims in current evidence.
 | [GB-T13.D1 #450][handoff] | Integrate reviewed guides, run instructions and evidence-linked limitations. Keep the native verification prerequisites and document the supported subset. Supply evidence references for G3. |
 | [GB-T13.G1 #456][mvp] | Map every [MVP acceptance row][matrix] to T12 integrated evidence and native prerequisites. Include real Discord startup and authenticated guild context, simultaneous moderators, backend viewer-write denial, canvas, synchronization, save, basic lock, reconnect and fundamental security negatives. |
 | [GB-T13.G2 #457][production] | Supply production and recovery evidence only. Record dated actual GoDaddy Linux VPS HTTPS/WSS and Discord networking, monitoring, rollback and smoke checks. Link isolated restore of database and assets with measured RPO/RTO, environment and unresolved findings. |
-| [GB-T13.G3 #472][stable] | Require all native Tier gates, G1/G2, applicable T13 verification, MVP publication and D1. Link full integration, production acceptance, functionality including modes/moderation/import/export/accessibility/recovery, resolved independent security findings, reviewed versioned artifacts, notes and support documentation. |
+| [GB-T13.G3 #472][stable] | Require all native Tier gates, G1/G2, applicable T13 verification, MVP publication and D1. Link full integration, production acceptance, functionality including modes/moderation/import/export/accessibility/recovery, resolved independent security findings, reviewed versioned artifacts, notes and support documentation. Require the `mvpPublication` identity and reference to the #471 receipt. Recompute the historical MVP bundle identity and verify its actual G1 decision, receipt, tag target and release bytes. Evidence for a missing, mismatched or unverified MVP receipt leaves G3 pending. |
+| [GB-T13.04.01.V1 #446][automation] | Exercise accepted and rejected dry runs that leave tags and public releases untouched. Hand the publication work items a staged versioned candidate, exact manifest and notes, checksums, build provenance, and raw dry-run evidence tied to the tested revision and environment. Record verification outcomes and approval of the automation handoff. |
 | [MVP publication #471][mvp-publication] | Publish a 0.x SemVer only after matching G1 approval, accepted [release automation #446][automation], and all native prerequisites and publication criteria. Attach notes, checksums, known limitations and rollback/support guidance. Verify the accepted bytes and record the release URL. |
 | [Stable publication #473][stable-publication] | Publish the first stable version as `1.0.0` after matching G3 approval, accepted [release automation #446][automation], and all native prerequisites and publication criteria. Attach reviewed artifacts, provenance, migration notes, security disposition and operator documentation. Verify checksums and actual production smoke evidence and record release and deployment receipts. |
 
@@ -159,9 +163,12 @@ complete bytes privately and verify their identity, provenance and gate approval
 Before a new publication, record the expected prior identity, using null only
 when no publication exists.
 
-The commit point must atomically check version history and the expected prior
-identity, reserve the candidate version permanently, and make the complete
-candidate and its receipt discoverable. Key the version reservation by the
+The commit point must atomically check version history, the expected prior
+identity and the current applicability of the exact approval and required
+prerequisite evidence. Fence commit against intervening changes to those
+decisions, including supersession or withdrawal. Reserve the candidate
+version permanently and make the complete candidate and its receipt
+discoverable with a durable commit authorization. Key the version reservation by the
 full released SemVer string. Any existing reservation for that version with a
 different candidate identity fails, whether current or historical and
 regardless of the expected prior identity. An existing reservation with the
@@ -182,7 +189,10 @@ identity, and verify the receipt and the resolved tag and release references.
 Resolve the notes and provenance paths within the observed bundle, verify the
 notes declaration and the indexed provenance and build files, and require
 agreement across approval, receipt, resolved source revision and recomputed
-identity. A null pointer is valid only with empty authoritative history.
+identity. Verify the stored commit authorization as evidence of the historical
+decision. Subsequent changes to live authorization govern new commits.
+Historical readback continues to validate against the durable proof captured
+at the original commit. A null pointer is valid only with empty authoritative history.
 Otherwise the pointer must resolve to a fully verified current publication
 with greater precedence than every historical version. Apply that invariant
 to the atomic prior-state check and reconciliation. For a historical retry or lost

@@ -1,11 +1,11 @@
 """Declarative GB-T13.S1 examples with an in-memory publication model."""
 
 from copy import deepcopy
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date
 from hashlib import sha256
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import unittest
 
@@ -17,6 +17,7 @@ MANIFEST = (IDENTITY - {"manifestSha256"}) | {
     "schemaVersion", "gate", "notesRef", "provenanceRef", "evidence",
 }
 APPROVAL = {"schemaVersion", "gate", "identity", "decision", "decisionRef", "provenanceRef"}
+MVP_PUBLICATION = {"identity", "releaseRef"}
 SCHEMA_VERSION = "1.0.0"
 MAX_VERSION = 128
 INDEX_PATH = "SHA256SUMS"
@@ -107,7 +108,10 @@ def valid_record(record):
 
 
 def valid_manifest(candidate):
-    if (not isinstance(candidate, dict) or candidate.keys() != MANIFEST
+    if not isinstance(candidate, dict):
+        return False
+    optional = {"mvpPublication"} if candidate.get("gate") == "GB-T13.G3" else set()
+    if (candidate.keys() - optional != MANIFEST
             or not strings(candidate, MANIFEST - {"evidence"})):
         return False
     if not (
@@ -126,6 +130,22 @@ def valid_manifest(candidate):
         isinstance(evidence, list) and len(evidence) <= 128
         and all(valid_record(record) for record in evidence)
         and len({record["id"] for record in evidence}) == len(evidence)
+        and ("mvpPublication" not in candidate or valid_mvp_reference(candidate["mvpPublication"]))
+    )
+
+def valid_mvp_reference(reference):
+    if not isinstance(reference, dict) or reference.keys() != MVP_PUBLICATION:
+        return False
+    identity = reference["identity"]
+    if (not isinstance(identity, dict) or identity.keys() != IDENTITY
+            or not strings(identity, IDENTITY)):
+        return False
+    version = identity["version"]
+    return (
+        valid_version(version) and release_gate(version) == "GB-T13.G1"
+        and re.fullmatch(r"[0-9a-f]{40}", identity["revision"])
+        and all(DIGEST.fullmatch(identity[key]) for key in IDENTITY if key.endswith("Sha256"))
+        and reference["releaseRef"] == f"{REPOSITORY}/releases/tag/v{version}"
     )
 
 
@@ -161,6 +181,7 @@ class Publication:
 class State:
     current: dict | None
     versions: dict
+    committed_authorizations: dict = field(default_factory=dict)
 
 
 def json_object(data, limit):
@@ -204,7 +225,11 @@ def verified_bundle(bundle):
     if (not valid_manifest(manifest) or not bundle.files
             or any(not safe_path(path) for path in bundle.files)
             or ENVELOPE_PATHS.intersection(bundle.files) or bundle.notes_path in bundle.files
-            or bundle.notes_path in ENVELOPE_PATHS or bundle.notes_path != manifest["notesRef"]
+            or bundle.notes_path in ENVELOPE_PATHS or bundle.notes_path != manifest["notesRef"]):
+        return None
+    paths = {*bundle.files, *ENVELOPE_PATHS, bundle.notes_path}
+    parents = {str(parent) for path in paths for parent in PurePosixPath(path).parents}
+    if (paths.intersection(parents)
             or bundle.index != checksum_index(bundle.files)
             or manifest["artifactSha256"] != digest(bundle.index)
             or len(bundle.notes) > 256 * 1024 or manifest["notesSha256"] != digest(bundle.notes)
@@ -241,7 +266,7 @@ def receipt_for(approval):
     return receipt
 
 
-def verified_receipt(state, identity, authoritative_approvals):
+def verified_receipt(state, identity):
     version = identity["version"]
     published = state.versions.get(version)
     if published is None:
@@ -255,7 +280,7 @@ def verified_receipt(state, identity, authoritative_approvals):
     if (published.identity != identity or observed_identity != identity
             or manifest["gate"] != release_gate(identity["version"])
             or not valid_approval(approval, manifest, identity)
-            or approval not in authoritative_approvals):
+            or state.committed_authorizations.get(version) != approval):
         return None
 
     receipt = receipt_for(approval)
@@ -265,15 +290,16 @@ def verified_receipt(state, identity, authoritative_approvals):
     return receipt
 
 
-def valid_current(state, approvals):
+def valid_current(state):
     if state is None:
         return False
     if state.current is None:
-        return not state.versions
+        return not state.versions and not state.committed_authorizations
     if not isinstance(state.current, dict) or state.current.keys() != IDENTITY:
         return False
     version = state.current["version"]
-    return (valid_version(version) and verified_receipt(state, state.current, approvals) is not None
+    return (valid_version(version) and verified_receipt(state, state.current) is not None
+            and state.committed_authorizations.keys() == state.versions.keys()
             and all(valid_version(other) and precedence(other) < precedence(version)
                     for other in state.versions if other != version))
 
@@ -282,12 +308,12 @@ def advances(version, state):
     return state.current is None or precedence(version) > precedence(state.current["version"])
 
 
-def reconcile(state, identity, expected_prior, authoritative_approvals):
+def reconcile(state, identity, expected_prior):
     """Resolve a possibly committed publication against the authoritative state."""
-    if not valid_current(state, authoritative_approvals):
+    if not valid_current(state):
         return "PUBLICATION_UNKNOWN", None
     if identity["version"] in state.versions:
-        receipt = verified_receipt(state, identity, authoritative_approvals)
+        receipt = verified_receipt(state, identity)
         return ("ALREADY_PUBLISHED", receipt) if receipt else ("PUBLICATION_UNKNOWN", None)
     if state.current != expected_prior:
         return "PREVIOUS_PUBLICATION_CHANGED", None
@@ -296,13 +322,22 @@ def reconcile(state, identity, expected_prior, authoritative_approvals):
     return "RETRY_CONDITIONALLY", None
 
 
+def verified_mvp_publication(state, manifest):
+    reference = manifest.get("mvpPublication")
+    if not valid_mvp_reference(reference):
+        return False
+    receipt = verified_receipt(state, reference["identity"])
+    return receipt is not None and receipt["releaseRef"] == reference["releaseRef"]
+
+
 def attempt(bundle, identity, approval, state, expected_prior, *,
-            authoritative_approvals, native_ready=True, interruption=None):
+            authoritative_approvals, native_ready=True, interruption=None,
+            authorization_at_commit=None):
     """Model a representative evidence row per publication path and atomic commit."""
     verified = verified_bundle(bundle)
     if verified is None or verified[1] != identity:
         return "INVALID_METADATA", state, None
-    if not valid_current(state, authoritative_approvals):
+    if not valid_current(state):
         return "PUBLICATION_UNKNOWN", state, None
 
     manifest, identity = verified
@@ -310,7 +345,7 @@ def attempt(bundle, identity, approval, state, expected_prior, *,
     if version in state.versions:
         if state.versions[version].identity != identity:
             return "VERSION_CONFLICT", state, None
-        outcome, receipt = reconcile(state, identity, expected_prior, authoritative_approvals)
+        outcome, receipt = reconcile(state, identity, expected_prior)
         return outcome, state, receipt
 
     gate = manifest["gate"]
@@ -321,7 +356,7 @@ def attempt(bundle, identity, approval, state, expected_prior, *,
     if (gate != release_gate(version) or not native_ready
             or not valid_approval(approval, manifest, identity)
             or approval not in authoritative_approvals
-            or (gate == "GB-T13.G3" and not state.versions)
+            or (gate == "GB-T13.G3" and not verified_mvp_publication(state, manifest))
             or (gate == "GB-T13.G3" and release_gate(state.current["version"]) == "GB-T13.G1"
                 and version != "1.0.0")
             or not any(
@@ -337,13 +372,21 @@ def attempt(bundle, identity, approval, state, expected_prior, *,
     if interruption == "before":
         return "PUBLICATION_INTERRUPTED", state, None
 
+    if authorization_at_commit is not None:
+        current_approvals, current_prerequisites = authorization_at_commit()
+        if not current_prerequisites or approval not in current_approvals:
+            return "PREREQUISITE_UNAVAILABLE", state, None
+
     receipt = receipt_for(approval)
     publication = Publication(identity, bundle, approval, receipt, identity["revision"],
                               receipt["tagRef"])
-    committed = deepcopy(State(identity, {**state.versions, version: publication}))
+    committed = deepcopy(State(
+        identity, {**state.versions, version: publication},
+        {**state.committed_authorizations, version: approval},
+    ))
     if interruption == "after":
         return "PUBLICATION_UNKNOWN", committed, None
-    readback = verified_receipt(committed, identity, authoritative_approvals)
+    readback = verified_receipt(committed, identity)
     if readback is None:
         return "PUBLICATION_UNKNOWN", committed, None
     return "PUBLISHED", committed, readback
@@ -372,6 +415,11 @@ class ReleaseContractScenarios(unittest.TestCase):
         manifest.update(scenario.get("candidatePatch", {}))
         if "recordPatch" in scenario:
             manifest["evidence"][0].update(scenario["recordPatch"])
+        if manifest["gate"] == "GB-T13.G3" and scenario.get("includeMvp", True):
+            manifest["mvpPublication"] = {
+                "identity": {**self.prior_identity, **scenario.get("mvpIdentityPatch", {})},
+                "releaseRef": receipt_for(self.prior_approval)["releaseRef"],
+            }
         provenance = {
             "schemaVersion": SCHEMA_VERSION, "sourceRevision": manifest["revision"],
             "inputs": [{"path": "repro/input.lock", "sha256": digest(files["repro/input.lock"])}],
@@ -466,7 +514,7 @@ class ReleaseContractScenarios(unittest.TestCase):
                                  ("PREREQUISITE_UNAVAILABLE", self.prior, None))
                 history = {**state.versions, version: replace(publication, bundle=revised_bundle)}
                 self.assertEqual(reconcile(replace(state, versions=history), identity,
-                                           self.prior_identity, self.approvals),
+                                           self.prior_identity),
                                  ("PUBLICATION_UNKNOWN", None))
 
     def test_approval_gate_decision_and_provenance_are_checked(self):
@@ -501,7 +549,7 @@ class ReleaseContractScenarios(unittest.TestCase):
             with self.subTest(observation=observation):
                 corrupted = replace(state, versions={**state.versions, version: observation})
                 self.assertEqual(
-                    reconcile(corrupted, identity, self.prior_identity, self.approvals),
+                    reconcile(corrupted, identity, self.prior_identity),
                     ("PUBLICATION_UNKNOWN", None),
                 )
 
@@ -519,31 +567,35 @@ class ReleaseContractScenarios(unittest.TestCase):
                                  ("INVALID_METADATA", self.prior, None))
         self.assertEqual(self.publish(bundle, self.prior_identity, approval, self.prior),
                          ("INVALID_METADATA", self.prior, None))
+        for path in ("dist", "manifest.json/extra"):
+            staged = self.stage(scenario={"filePatch": {path: "path collision"}})
+            self.assertEqual(self.publish(*staged, self.prior),
+                             ("INVALID_METADATA", self.prior, None))
 
     def test_precommit_retry_and_postcommit_reconciliation(self):
         bundle, identity, approval = self.stage()
         early = self.publish(bundle, identity, approval, self.prior, interruption="before")
         self.assertEqual(early, ("PUBLICATION_INTERRUPTED", self.prior, None))
-        self.assertEqual(reconcile(early[1], identity, self.prior_identity, self.approvals),
+        self.assertEqual(reconcile(early[1], identity, self.prior_identity),
                          ("RETRY_CONDITIONALLY", None))
         outcome, committed, receipt = self.publish(
             bundle, identity, approval, early[1], interruption="after",
         )
         self.assertEqual((outcome, receipt), ("PUBLICATION_UNKNOWN", None))
-        self.assertEqual(reconcile(None, identity, self.prior_identity, self.approvals),
+        self.assertEqual(reconcile(None, identity, self.prior_identity),
                          ("PUBLICATION_UNKNOWN", None))
-        self.assertEqual(reconcile(committed, identity, self.prior_identity, self.approvals),
+        self.assertEqual(reconcile(committed, identity, self.prior_identity),
                          ("ALREADY_PUBLISHED", receipt_for(approval)))
 
         newer_bundle, newer_identity, newer_approval = self.stage(version="0.1.0-mvp.12")
         outcome, newer, _ = self.publish(newer_bundle, newer_identity, newer_approval, committed)
         self.assertEqual(outcome, "PUBLISHED")
-        self.assertEqual(reconcile(newer, identity, self.prior_identity, self.approvals),
+        self.assertEqual(reconcile(newer, identity, self.prior_identity),
                          ("ALREADY_PUBLISHED", receipt_for(approval)))
         self.assertEqual(newer.current, newer_identity)
 
         _, competing, _ = self.publish(newer_bundle, newer_identity, newer_approval, self.prior)
-        self.assertEqual(reconcile(competing, identity, self.prior_identity, self.approvals),
+        self.assertEqual(reconcile(competing, identity, self.prior_identity),
                          ("PREVIOUS_PUBLICATION_CHANGED", None))
 
     def test_inconsistent_current_blocks_mutation_and_reconciliation(self):
@@ -556,7 +608,7 @@ class ReleaseContractScenarios(unittest.TestCase):
                     bundle, identity, approval, state, None,
                     authoritative_approvals=self.approvals,
                 ), ("PUBLICATION_UNKNOWN", state, None))
-                self.assertEqual(reconcile(state, identity, None, self.approvals),
+                self.assertEqual(reconcile(state, identity, None),
                                  ("PUBLICATION_UNKNOWN", None))
 
     def test_reapproved_mismatches_in_authoritative_publication(self):
@@ -576,8 +628,46 @@ class ReleaseContractScenarios(unittest.TestCase):
                 observed = replace(state.versions[version], bundle=bundle, identity=identity,
                                    approval=approval, receipt=receipt)
                 history = {**state.versions, version: observed}
-                self.assertEqual(reconcile(State(identity, history), identity, None, self.approvals),
+                self.assertEqual(reconcile(replace(state, current=identity, versions=history), identity, None),
                                  ("PUBLICATION_UNKNOWN", None))
+
+    def test_live_approval_fence_preserves_historical_commit_proof(self):
+        bundle, identity, approval = self.stage()
+        for commit_state in (([approval], False), ([], True)):
+            with self.subTest(commit_state=commit_state):
+                self.assertEqual(self.publish(
+                    bundle, identity, approval, self.prior,
+                    authorization_at_commit=lambda: commit_state,
+                ), ("PREREQUISITE_UNAVAILABLE", self.prior, None))
+        _, committed, _ = self.publish(bundle, identity, approval, self.prior, interruption="after")
+        self.approvals.clear()
+        self.assertEqual(reconcile(committed, identity, self.prior_identity),
+                         ("ALREADY_PUBLISHED", receipt_for(approval)))
+        later = self.stage(version="0.1.0-mvp.12")
+        result, current, _ = self.publish(*later, committed)
+        self.assertEqual(result, "PUBLISHED")
+        self.assertEqual(reconcile(current, identity, self.prior_identity),
+                         ("ALREADY_PUBLISHED", receipt_for(approval)))
+
+    def test_stable_requires_verified_historical_mvp_receipt(self):
+        scenario = next(row for row in self.fixture["scenarios"] if row["id"] == "stable-publication")
+        stable = self.stage(scenario=scenario)
+        outcome, current, _ = self.publish(*stable, self.prior)
+        self.assertEqual(outcome, "PUBLISHED")
+        later_scenario = {**scenario, "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.1"}}
+        later = self.stage(scenario=later_scenario)
+        self.assertEqual(self.publish(*later, current)[0], "PUBLISHED")
+
+        mvp_version = self.prior_identity["version"]
+        mvp = current.versions[mvp_version]
+        corrupted = replace(current, versions={**current.versions, mvp_version: replace(mvp, receipt={})})
+        self.assertEqual(self.publish(*later, corrupted),
+                         ("PREREQUISITE_UNAVAILABLE", corrupted, None))
+        for change in ({"includeMvp": False}, {"mvpIdentityPatch": {"manifestSha256": "a" * 64}}):
+            with self.subTest(change=change):
+                wrong = self.stage(scenario={**later_scenario, **change})
+                self.assertEqual(self.publish(*wrong, current),
+                                 ("PREREQUISITE_UNAVAILABLE", current, None))
 
     def test_canonical_release_reference_and_version_bound(self):
         record = self.fixture["manifest"]["evidence"][0]
