@@ -9,7 +9,7 @@ TRANSFERRED_REPOSITORY_LINK = re.compile(
 )
 def save(path,data):
  path=pathlib.Path(path); tmp=path.with_suffix(path.suffix+'.tmp');tmp.write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n');tmp.replace(path)
-def api(path,method='GET',data=None,*,quiet_get=False):
+def api(path,method='GET',data=None,*,quiet_get=False,redact_failure=False):
  if quiet_get and (method != 'GET' or data is not None):
   raise ValueError('quiet transport only supports GET without a body')
  if method!='GET' and path.startswith('repos/Pick-Your-AI/'):
@@ -30,9 +30,9 @@ def api(path,method='GET',data=None,*,quiet_get=False):
    result=json.loads(payload) if payload.strip() else {}
    if not isinstance(result,dict) or not result.get('errors'): return result
   else: result={'stderr':p.stderr,'response':payload,'rate':{k:response_headers.get(k) for k in ['retry-after','x-ratelimit-remaining','x-ratelimit-reset']}}
-  if quiet_get:
-   # A preview must leave no local trace or reveal the failed response.
-   raise RuntimeError('GitHub issue read failed')
+  if quiet_get or redact_failure:
+   # Scoped callers must leave no local trace or reveal the failed response.
+   raise RuntimeError('GitHub request failed')
   (ROOT/'planning/audit/failures.jsonl').open('a').write(json.dumps({'time':datetime.datetime.now(datetime.timezone.utc).isoformat(),'endpoint':path,'method':method,'error':result})+'\n')
   retryable=any(t in json.dumps(result).lower() for t in ['rate limit','secondary','502','503','timeout'])
   read_query=path=='graphql' and data and data.get('query','').lstrip().startswith('query')
