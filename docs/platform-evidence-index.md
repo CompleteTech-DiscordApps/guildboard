@@ -9,3 +9,5 @@ These primary pages were inspected during bootstrap. They establish where to beg
 - [Project filtering](https://docs.github.com/en/issues/planning-and-tracking-with-projects/customizing-views-in-your-project/filtering-projects): filter field values independently and combine same-field alternatives with commas. Live GitHub autocomplete verified `work-type:`, `dependency-status:` and `release-target:` qualifiers.
 
 Accessed during the 2026-10-23 America/New_York bootstrap session (2026-10-24 UTC). Platform docs may change; refresh evidence before implementation.
+
+Focused research: [GB-T0.R1](research/GB-T0-R1-feasibility.md) adds version-pinned static package evidence and dated platform-source hashes. Its runtime and license-distribution limitations remain explicit.
