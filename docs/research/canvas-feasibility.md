@@ -102,7 +102,7 @@ conversion is exercised by the browser probe. The full matrix below remains open
 
 1. Remote hydration with NEVER: preserve IDs/tombstones; observe callback counts/origin; prove repeated accepted state does not emit proposed writes.
 2. Local edit A then remote edit B then undo/redo: preserve B, express only accepted A inverse, reject stale revisions and prevent forbidden resurrection. Current probe passes only a simpler remote baseline/local-history undo scenario; it does not test concurrent remote overwrites or server-fenced inverse intent.
-3. Reject optimistic local change and rollback; repeat after role revocation/epoch change, reconnect and restore. No accidental re-proposal or polluted undo history.
+3. Reject optimistic local change and rollback; repeat after role revocation/epoch change, reconnect and restore. The bounded local rollback below filters the hydration echo and reproduces a native undo/redo failure. Accepted-intent history and session-change paths remain open.
 4. Viewer keyboard shortcuts, pointer drag, delete, paste, drop, text input, context menu and imperative hydration; navigation remains available, server denies every forged mutation. The current local probe supplies selected content through the API and retained history for Delete/undo controls, with a writable undo positive control. Real user selection, paste/drop/text/context-menu paths and every server denial remain unverified.
 5. Asset add/roundtrip/export, missing files, excessive data, malformed imports, external URL requests, fonts/CSP and private-file denial.
 6. Keyboard-only/assistive technology, touch and real stylus; drag interruption, focus restoration and repeated controls.
@@ -144,3 +144,153 @@ The accepted T0 direction in [ADR 0001](../adr/0001-editor-activity-vps-directio
 ### Sandbox-capable runner follow-through, 2026-11-16
 
 [The Ubuntu 24.04 successor run](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/43972072293) on `e266879ce55f7205d7ecbf17c1177b9184471557` installed managed Chromium and passed unit tests, full audit and bundle build, then failed browser launch with `No usable sandbox`. Its network controls were skipped. The job now uses `ubuntu-22.04`, listed by [GitHub's runner images](https://github.com/actions/runner-images#available-images) and the pinned Playwright platform classifier. This is a supported runner choice: it adds no privileged steps, AppArmor/sysctl changes, custom browser flags or sandbox bypass. `chromiumSandbox: true` remains required. A successful native successor run must establish actual launch and probe results; neither failed run establishes browser behavior. The successor-run outcome is recorded in the [Isolated Linux CI prerequisite, 2026-11-16](#isolated-linux-ci-prerequisite-2026-11-16) section above.
+
+## Hydration echo experiment, 2026-11-17
+
+The fixture adds a bounded comparison for synthetic rectangle scenes. The
+browser probe registers an in-memory observer on the real Excalidraw 0.18.1
+`onChange` callback, records an accepted projection before each
+`updateScene` with `CaptureUpdateAction.NEVER`, and exercises an initial
+snapshot, a replay with freshly converted objects, and a changed snapshot.
+Each includes an explicit tombstone. The probe asserts the expected element
+IDs, geometry and deletion flags after hydration and zero candidate writes.
+A pointer-drawn rectangle is the positive control for a candidate observation.
+The fixture counts candidates in memory and sends no mutations. The accepted
+snapshots are synthetic, with no backing server, permissions or revisions.
+
+From `research-fixtures/canvas`, run `npm ci --ignore-scripts --no-audit`,
+`npm test`, `CHROMIUM_PATH=/usr/bin/chromium npm run probe` and
+`CHROMIUM_PATH=/usr/bin/chromium npm run probe:network` for the Linux run.
+Omit `CHROMIUM_PATH` when using provisioned Playwright Chromium.
+
+On Arch Linux with Node 26.13.0, npm 11.20.0, Playwright 1.56.1 and
+sandbox-enabled Chromium 155.0.8059.84, the build and editor probe passed.
+Initial, replayed and changed hydration each delivered one real callback and
+zero in-memory candidates, preserving the two IDs, geometry and tombstone.
+The pointer gesture added a rectangle and delivered nine callbacks and six
+candidate observations in this run. Candidate counts can vary during drawing
+and require aggregation before they can represent a gesture. The earlier six
+editor checks and four isolated network controls also passed. The editor
+probe reported zero blocked requests and no page errors. The historical aggregate keeps the source hashes and results
+for its earlier runs.
+
+All three new unit tests passed. The full fixture suite passed 15 of 17 tests
+on this host, including when run serially with Node 24.18.0. Two existing
+lodash-es dependency probes hit their three-second timeouts. Running the
+unmodified base revision's dependency test file with the same locked
+dependencies reproduced both timeouts. Planning validation and JavaScript
+syntax checks passed.
+
+The observer compares a projection of IDs, scene order, type, rectangle
+geometry and deletion flags with the current accepted and most recently
+observed projections. Node tests use synthetic observations to check
+duplicate suppression and demonstrate two limits: removing or reviving a
+tombstone changes the projection, and a delayed older callback yields a
+candidate after a newer accepted scene has been observed. Candidate detection
+can only justify further validation. The experiment omits bindings, text,
+styles, assets and any other element types, and does not model interleaved local
+and remote state, stale or reordered hydration, rollback, or accepted-intent
+undo.
+
+For #99, the contract should require a revision and restore-epoch fence on
+accepted hydration, explicit local intent, and server validation before any
+mutation. Research still needs to establish callback behavior during rejected
+optimistic edits, revocation, reconnect and concurrent overwrites. Collect
+Discord iframe/proxy behavior in supported clients, screen-reader and
+touch/stylus results with actual assistive technology and hardware, and
+applicable GoDaddy staging evidence separately. The partial fixture provides
+no external acceptance. #98 remains open and #99 remains blocked.
+
+## Rejected optimistic edit rollback, 2026-11-17
+
+The local probe clears the earlier smoke-test history, draws a rectangle
+with a real pointer gesture, and records the new ID. It then simulates
+a rejected mutation by restoring the existing accepted snapshot via
+`updateScene` with `CaptureUpdateAction.NEVER`. The rollback asserts
+the same IDs, geometry, scene order and deletion flags as the accepted
+snapshot. The probe next runs native keyboard undo and redo against the
+writable editor, following the pinned [history action](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/actions/actionHistory.tsx#L48-L75).
+
+From `research-fixtures/canvas` with the existing locked dependencies and
+provisioned Chromium, run `CHROMIUM_PATH=/usr/bin/chromium npm run probe`.
+On Arch Linux with Node 26.13.0, Playwright 1.56.1, Excalidraw 0.18.1 and
+sandbox-enabled Chromium 155.0.8059.84, restoration delivered one real
+callback and zero further in-memory candidates. Native undo then introduced
+the rejected ID as a tombstone. Native redo restored the rejected rectangle
+as a live element under the same ID. Each shortcut delivered three callbacks
+and one candidate in this run. The probe asserts the history effects and
+candidate presence. Counts describe the observed run.
+
+The rejection and accepted snapshot are simulated. The pointer input,
+imperative rollback, editor scene and native keyboard history effects are
+measured in Chromium. The observer sends no writes. For #99, restore the
+accepted scene on rejection and fence native history from the mutation
+path. A proposed inverse needs accepted local intent, the current board
+revision and restore epoch, and server-side validation. Native redo in
+this scenario can reintroduce a rejected edit even after an echo-free
+rollback. Preserving accepted undo history through rollback and handling
+revocation, reconnect, restore and concurrent changes remain unresolved.
+
+## Undo button keyboard probe, 2026-11-17
+
+From `research-fixtures/canvas`, with the existing bundle and locked dependencies,
+run `CHROMIUM_PATH=/usr/bin/chromium node probe.mjs`. Use `npm run probe` with
+the same environment variable to rebuild first. On Arch Linux with Node
+26.13.0, Playwright 1.56.1, Excalidraw 0.18.1 and sandbox-enabled headless
+Chromium 155.0.8059.84, Playwright located an enabled, visible button by the
+accessible name Undo. After the probe programmatically focused that button,
+pressing Enter moved focus away and left the prepared edit visible.
+After a pointer click returned focus to the editor, Control+Z removed the
+same prepared edit in the positive control.
+
+This scenario exercises an editor-provided control with an API-prepared edit
+and programmatic focus. It leaves keyboard-only tab order, focus destination
+and restoration, Space activation, screen readers, hardware input and
+Discord Activity clients unverified. For #99, verify keyboard activation and
+focus behavior for the user-facing accepted-intent history controls.
+
+## Opaque image file reference probe, 2026-11-17
+
+From `research-fixtures/canvas` with a built bundle and locked dependencies,
+run `CHROMIUM_PATH=/usr/bin/chromium node probe.mjs`. On Arch Linux with Node
+26.13.0, Playwright 1.56.1, Excalidraw 0.18.1 and sandbox-enabled Chromium
+155.0.8059.84, `updateScene` preserved the image element's synthetic file ID
+while `getFiles` returned no data for the missing reference. Supplying a
+one-pixel GIF through `addFiles` made `getFiles` return the same ID, MIME
+type, data URL and creation timestamp. The scene retained its file reference.
+No requests attempted to cross the loopback origin boundary during the probe.
+The initial browser run closed before the scene loaded while the default
+temporary volume was over quota. The successful run supplied a writable
+local `TMPDIR` and kept Chromium sandboxing enabled.
+
+This measures in-memory file registration and retrieval through the pinned
+editor's [public API](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/types.ts).
+It leaves rendered pixels, serialized export/import, validation of malformed
+or oversized content, private asset authorization, and Discord/VPS delivery
+unverified. For #99, treat asset references and file data as distinct contract
+inputs and define the outcome when the reference cannot be resolved.
+
+## Compound note projection and rollback, 2026-11-17
+
+From `research-fixtures/canvas` with a built bundle and locked dependencies,
+run `CHROMIUM_PATH=/usr/bin/chromium node probe.mjs`. Use a writable local
+`TMPDIR` if the default temporary volume is over quota.
+
+The fixture converts a synthetic rectangle and text element with distinct IDs,
+gives them the same group ID, and stages both in one `updateScene` call with
+`CaptureUpdateAction.NEVER`. After a simulated denial, it replaces the scene
+with the earlier accepted snapshot in another `NEVER` update. Assertions
+require the staging callback to include both live members with the shared
+group ID, the rollback callback to include neither member, and the final
+scene to match the accepted snapshot. The probe checks each observed callback
+within the fixture's two-frame window after each update.
+
+On Arch Linux with Node 26.13.0, Playwright 1.56.1, Excalidraw 0.18.1
+and sandbox-enabled Chromium 155.0.8059.84, the probe observed one staging
+callback with both members, one rollback callback with neither member,
+and zero partial callbacks. The accepted snapshot matched after rollback.
+This exercises grouping and scene projection in a local browser. The denial is injected by the fixture. The result leaves actual
+moderation, database atomicity, concurrent edits, bound-text behavior and
+client delivery unverified. For #99, use stable member IDs and define a
+single operation with server-side validation of every member before
+publishing or rolling back a compound change.
