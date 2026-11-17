@@ -169,12 +169,13 @@ settings for throughput without an explicit accepted loss policy.
    retained boards and active/retired lineages under #481. This proposal authorizes
    no receipt expiry or physical purge.
 
-Retention conflicts need a T5/T9 decision: retry horizons, board deletion, personal
-data minimization, backup expiry, incident/legal holds where applicable and client
-behavior when commit evidence is unavailable. Deletion must revoke active access,
-record propagation through caches/files/exports/backups and ensure a restore
-reapplies deletion requirements. No indefinite retention guarantee or silent
-deletion policy is manufactured by this research.
+Retention conflicts need a T5/T9 decision on retry horizons, board deletion,
+personal data minimization, backup expiry, applicable incident or legal holds,
+and client behavior when commit evidence is unavailable. Deletion revokes
+active access and tracks propagation through caches, files, exports and backups.
+The merged [GB-T9.S1 deletion and recovery contract](../specifications/GB-T9-S1-security-privacy-contract.md#deletion-and-recovery-policy)
+sets the restore exposure requirements. Retention periods and hold profiles
+remain owner decisions.
 
 ## Board scale and bounded admission
 
@@ -243,8 +244,11 @@ Windows PowerShell/Python 3.14.3. No image pull, port, host mount or shared netw
 Each invocation creates its own labeled container and named data volume, capped
 at 1 CPU/768 MiB/256 PIDs, one engine at a time. Synthetic no-password root is
 confined to network=none and never a production credential recommendation.
-Mutation/cleanup checks the exact invocation label; evidence confirms both
-containers and volumes absent afterwards. Existing workloads were not targets.
+The historical probe checked the invocation label for its owned crash and
+cleanup operations. It addressed SQL by container name and mounted the named
+volume before verifying a volume label. Its reports record both containers and
+volumes absent afterward. The current runner's stronger ownership checks have
+separate mocked evidence.
 
 The historical database commands below refer to that pinned revision. Write
 fresh reports to separate paths when running the current fixture to preserve
@@ -299,7 +303,16 @@ checks; passing these checks does not complete the remaining runtime gates.
 An actual restore drill must use an isolated target and verify the complete
 manifest/hash set, schema/tool compatibility, tenant constraints, snapshot plus
 gap-free tail, retained receipt identity/digest/history, current policy/deletion
-fences and asset accessibility. Exercise crash/retry at publication boundaries,
+fences and asset accessibility. Verify the current accepted deletion watermark
+against an authoritative source independent of the restored copy. Prove
+uninterrupted marker coverage through an exposure boundary ordered against
+new deletions and apply all accepted markers. Keep the target isolated when the
+source or proof is unavailable, stale, invalid or gapped, or a newer marker
+remains unapplied. Verify that affected content, assets, exports and references
+stay hidden and that audit verification uses the independently anchored accepted
+head defined by T9.
+
+Exercise crash/retry at publication boundaries,
 unknown outcomes beyond backup cut, pending outbox delivery, corrupted/missing
 files/logs, unavailable keys and a partially uploaded backup. Keep the previous
 recoverable lineage until reviewed acceptance; do not mutate production during
