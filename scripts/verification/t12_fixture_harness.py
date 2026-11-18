@@ -1,6 +1,7 @@
 """Offline fixture support for GB-T12.01.01.T1."""
 
 import os
+import signal
 import stat
 import subprocess
 import sys
@@ -20,6 +21,25 @@ class InvalidConfiguration(ValueError):
 
 class PrerequisiteUnavailable(RuntimeError):
     """A real integration target requires capabilities outside this harness."""
+
+
+@contextmanager
+def _defer_sigint():
+    """Defer SIGINT on the synchronous caller thread, without changing handlers."""
+    # Read before changing the mask so even a failed block restores caller state.
+    previous = signal.pthread_sigmask(signal.SIG_BLOCK, set())
+    try:
+        signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT})
+        yield
+    finally:
+        try:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+        except BaseException:
+            # Restoration can raise before applying the mask or after dispatching
+            # a pending Python handler. One idempotent retry preserves either
+            # outcome's original exception when restoration succeeds.
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+            raise
 
 
 class FixtureClock:
@@ -139,6 +159,7 @@ class _FixtureRun:
         self.identity = FakeDiscordIdentity(fixture)
         self._cleanup_timeout = config.cleanup_timeout_seconds
         self._worker = None
+        self._worker_acquisition_pending = False
         self._active = True
         self._root_fd = root_fd
         self._namespace_name = f"t12-fixture-{uuid4().hex}"
@@ -178,31 +199,40 @@ class _FixtureRun:
 
     def start_worker(self) -> int:
         """Start the single owned lifecycle probe and return its PID."""
-        if not self._active or self._worker is not None:
+        if not self._active or self._worker is not None or self._worker_acquisition_pending:
             raise RuntimeError("worker")
-        self._worker = subprocess.Popen(
-            [sys.executable, "-I", "-S", "-c", "import sys; sys.stdin.buffer.read()"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            cwd=f"/proc/self/fd/{self._namespace_fd}",
-            pass_fds=(self._namespace_fd,),
-            env={},
-        )
+        with _defer_sigint():
+            # An exception without a returned handle does not prove zero children.
+            self._worker_acquisition_pending = True
+            self._worker = subprocess.Popen(
+                [sys.executable, "-I", "-S", "-c", "import sys; sys.stdin.buffer.read()"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                cwd=f"/proc/self/fd/{self._namespace_fd}",
+                pass_fds=(self._namespace_fd,),
+                env={},
+            )
+            self._worker_acquisition_pending = False
         return self._worker.pid
 
     def _close(self) -> None:
         self._active = False
         try:
-            if self._worker is not None:
-                # The process has no descendants and is the only handle we signal.
-                try:
-                    self._worker.kill()
-                    self._worker.wait(timeout=self._cleanup_timeout)
-                finally:
-                    self._worker.stdin.close()
-            # A failed reap or unexpected contents leave the namespace for inspection.
-            self._remove_namespace(os.fstat(self._namespace_fd))
+            with _defer_sigint():
+                if self._worker is not None:
+                    # The process has no descendants and is the only handle we signal.
+                    try:
+                        self._worker.kill()
+                        self._worker.wait(timeout=self._cleanup_timeout)
+                    except Exception as error:
+                        raise RuntimeError("fixture worker cleanup outcome unknown") from error
+                    finally:
+                        self._worker.stdin.close()
+                if self._worker_acquisition_pending:
+                    raise RuntimeError("fixture worker acquisition outcome unknown")
+                # A failed reap or unexpected contents retain the namespace.
+                self._remove_namespace(os.fstat(self._namespace_fd))
         finally:
             os.close(self._namespace_fd)
 
@@ -217,5 +247,15 @@ def fixture_run(config: HarnessConfig):
         run = _FixtureRun(config, _make_fixture(config.seed), root_fd)
         try:
             yield run
-        finally:
+        except BaseException as error:
+            try:
+                run._close()
+            except BaseException as cleanup_error:
+                if isinstance(error, (KeyboardInterrupt, SystemExit)):
+                    # Preserve cancellation while reporting the failed cleanup.
+                    error.add_note("fixture cleanup failed; resources may remain")
+                    raise error from cleanup_error
+                raise
+            raise
+        else:
             run._close()

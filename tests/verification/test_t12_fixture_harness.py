@@ -4,6 +4,7 @@ import socket
 import subprocess
 import sys
 import unittest
+from contextlib import ExitStack
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,6 +33,32 @@ class FixtureHarnessTests(unittest.TestCase):
     def assert_sentinel_only(self):
         self.assertEqual(tuple(self.root.iterdir()), (self.sentinel,))
         self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+
+    def reap_owned_child(self, child):
+        """Bound test fallback cleanup even if an assertion or injected fault fails."""
+        try:
+            if child.poll() is None:
+                child.kill()
+            child.wait(timeout=5)
+        finally:
+            child.stdin.close()
+
+    def capture_children(self, children, after_spawn=lambda child: None):
+        popen = subprocess.Popen
+
+        def start(*args, **kwargs):
+            child = popen(*args, **kwargs)
+            children.append(child)
+            self.addCleanup(self.reap_owned_child, child)
+            after_spawn(child)
+            return child
+
+        return patch.object(subprocess, "Popen", side_effect=start)
+
+    def assert_reaped(self, child):
+        self.assertIsNotNone(child.returncode)
+        with self.assertRaises(ChildProcessError):
+            os.waitpid(child.pid, os.WNOHANG)
 
     def test_valid_runs_have_repeatable_seed_data_and_independent_state(self):
         with fixture_run(self.config) as first, fixture_run(self.config) as second:
@@ -183,6 +210,237 @@ class FixtureHarnessTests(unittest.TestCase):
         namespace = namespaces.pop()
         self.assertEqual((namespace / "untracked").read_bytes(), b"untracked")
         self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+
+    def test_successful_worker_is_reaped_before_namespace_removal(self):
+        children = []
+        with self.capture_children(children), fixture_run(self.config) as run:
+            pid = run.start_worker()
+            self.assertEqual(os.waitpid(pid, os.WNOHANG), (0, 0))
+            remove = run._remove_namespace
+
+            def observe_remove(expected):
+                self.assert_reaped(children[0])
+                self.assertTrue(children[0].stdin.closed)
+                remove(expected)
+
+            run._remove_namespace = observe_remove
+        self.assert_sentinel_only()
+
+    def test_sigint_after_spawn_before_registration_reaps_only_owned_child(self):
+        children = []
+        unrelated = subprocess.Popen(
+            [sys.executable, "-I", "-S", "-c", "import sys; sys.stdin.buffer.read()"],
+            stdin=subprocess.PIPE, env={},
+        )
+        self.addCleanup(self.reap_owned_child, unrelated)
+        previous = signal.pthread_sigmask(signal.SIG_BLOCK, set())
+        handler = signal.getsignal(signal.SIGINT)
+
+        def interrupt(child):
+            self.assertIsNone(run._worker)
+            self.assertEqual(os.waitpid(child.pid, os.WNOHANG), (0, 0))
+            signal.raise_signal(signal.SIGINT)
+            self.assertIn(signal.SIGINT, signal.sigpending())
+
+        with self.capture_children(children, interrupt):
+            with self.assertRaises(KeyboardInterrupt), fixture_run(self.config) as run:
+                remove = run._remove_namespace
+
+                def observe_remove(expected):
+                    self.assert_reaped(children[0])
+                    remove(expected)
+
+                run._remove_namespace = observe_remove
+                run.start_worker()
+                self.fail("pending SIGINT was lost")
+        self.assert_reaped(children[0])
+        self.assertIsNone(unrelated.poll())
+        self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, set()), previous)
+        self.assertIs(signal.getsignal(signal.SIGINT), handler)
+        self.assert_sentinel_only()
+
+    def test_caller_handler_and_preexisting_signal_mask_are_preserved(self):
+        children, handled = [], []
+        previous = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGUSR1})
+        handler = signal.getsignal(signal.SIGINT)
+
+        def observe_interrupt(signum, frame):
+            handled.append(signum)
+            self.assertIs(run._worker, children[-1])
+            self.assertFalse(run._worker_acquisition_pending)
+
+        try:
+            signal.signal(signal.SIGINT, observe_interrupt)
+            with self.capture_children(children, lambda child: signal.raise_signal(signal.SIGINT)):
+                with fixture_run(self.config) as run:
+                    run.start_worker()
+                    self.assertEqual(handled, [signal.SIGINT])
+                    self.assertEqual(
+                        signal.pthread_sigmask(signal.SIG_BLOCK, set()),
+                        previous | {signal.SIGUSR1},
+                    )
+            self.assertIs(signal.getsignal(signal.SIGINT), observe_interrupt)
+            self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, set()), previous | {signal.SIGUSR1})
+            self.assert_reaped(children[0])
+        finally:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+            signal.signal(signal.SIGINT, handler)
+        self.assert_sentinel_only()
+
+    def test_preblocked_sigint_stays_pending_until_caller_unblocks(self):
+        children, handled = [], []
+        handler = signal.getsignal(signal.SIGINT)
+        previous = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT})
+        try:
+            signal.signal(signal.SIGINT, lambda signum, frame: handled.append(signum))
+            with self.capture_children(children, lambda child: signal.raise_signal(signal.SIGINT)):
+                with fixture_run(self.config) as run:
+                    run.start_worker()
+            self.assertEqual(handled, [])
+            self.assertIn(signal.SIGINT, signal.sigpending())
+            self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, set()), previous | {signal.SIGINT})
+            self.assert_reaped(children[0])
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+            self.assertEqual(handled, [signal.SIGINT])
+        finally:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+            signal.signal(signal.SIGINT, handler)
+        self.assert_sentinel_only()
+
+    def test_startup_failure_retains_namespace_and_restores_mask(self):
+        previous = signal.pthread_sigmask(signal.SIG_BLOCK, set())
+        with self.assertRaisesRegex(RuntimeError, "^fixture worker acquisition outcome unknown$") as raised:
+            with fixture_run(self.config) as run:
+                with patch.object(harness.sys, "executable", str(self.root / "missing-executable")):
+                    run.start_worker()
+        self.assertIsInstance(raised.exception.__context__, FileNotFoundError)
+        self.assertTrue(run.namespace.is_dir())
+        self.assertEqual(tuple(run.namespace.iterdir()), ())
+        self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, set()), previous)
+        self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+
+    def test_unexpected_acquisition_exception_quarantines_unknown_child(self):
+        children = []
+        failure = RuntimeError("injected acquisition failure")
+
+        def fail_after_spawn(child):
+            raise failure
+
+        with self.capture_children(children, fail_after_spawn):
+            with self.assertRaisesRegex(RuntimeError, "^fixture worker acquisition outcome unknown$") as raised:
+                with fixture_run(self.config) as run:
+                    with self.assertRaises(RuntimeError) as startup:
+                        run.start_worker()
+                    self.assertIs(startup.exception, failure)
+                    with self.assertRaisesRegex(RuntimeError, "^worker$"):
+                        run.start_worker()
+        self.assertIsNone(raised.exception.__context__)
+        self.assertTrue(run.namespace.is_dir())
+        self.assertIsNone(children[0].poll())
+        self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+        self.reap_owned_child(children[0])
+
+    def test_unknown_reap_preserves_namespace_and_original_interrupt(self):
+        children = []
+        interruption = KeyboardInterrupt("caller interruption")
+        with self.capture_children(children), ExitStack() as stack:
+            with self.assertRaises(KeyboardInterrupt) as raised:
+                with fixture_run(self.config) as run:
+                    run.start_worker()
+                    stack.enter_context(patch.object(
+                        children[0], "wait",
+                        side_effect=subprocess.TimeoutExpired("owned-worker", 1),
+                    ))
+                    raise interruption
+        self.assertIs(raised.exception, interruption)
+        self.assertRegex(str(raised.exception.__cause__), "^fixture worker cleanup outcome unknown$")
+        self.assertIn("fixture cleanup failed; resources may remain", raised.exception.__notes__)
+        self.assertTrue(run.namespace.is_dir())
+        self.assertTrue(children[0].stdin.closed)
+        self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+        self.reap_owned_child(children[0])
+
+    def test_sigint_during_reap_is_delivered_after_cleanup(self):
+        children = []
+        with self.capture_children(children), ExitStack() as stack:
+            with self.assertRaises(KeyboardInterrupt), fixture_run(self.config) as run:
+                run.start_worker()
+                wait = children[0].wait
+
+                def interrupt_reap(*args, **kwargs):
+                    signal.raise_signal(signal.SIGINT)
+                    self.assertTrue(run.namespace.is_dir())
+                    return wait(*args, **kwargs)
+
+                stack.enter_context(patch.object(children[0], "wait", side_effect=interrupt_reap))
+        self.assert_reaped(children[0])
+        self.assert_sentinel_only()
+
+    def test_direct_cancellation_during_acquisition_reports_unknown_outcome(self):
+        for interruption in (KeyboardInterrupt(), SystemExit(7)):
+            with self.subTest(interruption=type(interruption).__name__):
+                children = []
+
+                def cancel_after_spawn(child):
+                    raise interruption
+
+                with self.capture_children(children, cancel_after_spawn):
+                    with self.assertRaises(type(interruption)) as raised:
+                        with fixture_run(self.config) as run:
+                            run.start_worker()
+                self.assertIs(raised.exception, interruption)
+                self.assertEqual(
+                    str(raised.exception.__cause__), "fixture worker acquisition outcome unknown"
+                )
+                self.assertTrue(run.namespace.is_dir())
+                self.assertIsNone(children[0].poll())
+                self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+                self.reap_owned_child(children[0])
+
+    def test_failed_sigint_block_restores_mask_before_propagating(self):
+        sigmask = signal.pthread_sigmask
+        previous = sigmask(signal.SIG_BLOCK, set())
+        failure = RuntimeError("injected block failure")
+        calls = 0
+
+        def fail_after_block(how, mask):
+            nonlocal calls
+            calls += 1
+            result = sigmask(how, mask)
+            if calls == 2:
+                raise failure
+            return result
+
+        with patch.object(signal, "pthread_sigmask", side_effect=fail_after_block):
+            with self.assertRaises(RuntimeError) as raised, fixture_run(self.config) as run:
+                run.start_worker()
+        self.assertIs(raised.exception, failure)
+        self.assertIsNone(run._worker)
+        self.assertEqual(sigmask(signal.SIG_BLOCK, set()), previous)
+        self.assert_sentinel_only()
+
+    def test_transient_mask_restore_failure_retries_without_losing_worker(self):
+        children = []
+        sigmask = signal.pthread_sigmask
+        previous = sigmask(signal.SIG_BLOCK, set())
+        failure = OSError("injected restore failure")
+        failed = False
+
+        def fail_first_restore(how, mask):
+            nonlocal failed
+            if how == signal.SIG_SETMASK and not failed:
+                failed = True
+                raise failure
+            return sigmask(how, mask)
+
+        with self.capture_children(children):
+            with patch.object(signal, "pthread_sigmask", side_effect=fail_first_restore):
+                with self.assertRaises(OSError) as raised, fixture_run(self.config) as run:
+                    run.start_worker()
+        self.assertIs(raised.exception, failure)
+        self.assert_reaped(children[0])
+        self.assertEqual(sigmask(signal.SIG_BLOCK, set()), previous)
+        self.assert_sentinel_only()
 
     @unittest.skipUnless(os.name == "posix", "requires waitpid on an owned POSIX child")
     def test_interruption_reaps_only_owned_worker_and_preserves_sentinel(self):
