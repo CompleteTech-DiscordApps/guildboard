@@ -14,6 +14,7 @@ const projects = [
   "apps/bot",
 ];
 const output = "engineering-build";
+const recipe = "scripts/engineering/build.mjs";
 const hash = (file) => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 function files(dir) {
   return fs
@@ -41,13 +42,18 @@ try {
   }
   const compiler = "node_modules/typescript/bin/tsc";
   if (!fs.existsSync(compiler)) throw new Error("missing TypeScript compiler");
-  const inputs = [
-    "package.json",
-    "package-lock.json",
-    "tsconfig.base.json",
-    ...projects.flatMap(files),
-  ].sort();
+  const inputPaths = () =>
+    [
+      "package.json",
+      "package-lock.json",
+      "tsconfig.base.json",
+      recipe,
+      ...projects.flatMap(files),
+    ].sort();
+  const inputs = inputPaths();
   const inputHashes = Object.fromEntries(inputs.map((file) => [file, hash(file)]));
+  if (hash(new URL(import.meta.url)) !== inputHashes[recipe])
+    throw new Error("executed recipe differs from build input");
   for (const project of projects) {
     const result = spawnSync(process.execPath, [compiler, "-p", project], { stdio: "inherit" });
     if (result.error || result.status !== 0)
@@ -55,15 +61,7 @@ try {
   }
   if (
     inputs.some((file) => hash(file) !== inputHashes[file]) ||
-    JSON.stringify(inputs) !==
-      JSON.stringify(
-        [
-          "package.json",
-          "package-lock.json",
-          "tsconfig.base.json",
-          ...projects.flatMap(files),
-        ].sort(),
-      )
+    JSON.stringify(inputs) !== JSON.stringify(inputPaths())
   )
     throw new Error("inputs changed during build");
   const outputs = projects.flatMap((project) => files(`${project}/dist`)).sort();
