@@ -572,12 +572,14 @@ def gate_coverage(gate, clients, selected=()):
         **{("discord-startup", row): (455, {"activity-startup", "authenticated-guild"}) for row in clients},
     }
     production = {
-        ("production-network", "vps-network"): (353, {"https", "wss", "heartbeat", "private-data-plane"}),
+        ("production-network", "vps-network"): (353, {"https", "wss", "heartbeat", "private-data-plane",
+            "tls-chain", "tls-renewal", "idle-below-threshold", "idle-above-threshold", "reconnect-restart",
+            "firewall-isolation", "sql-asset-isolation"}),
         ("production-smoke", "vps-network"): (457, {"https-wss", "monitoring", "rollback", "smoke"}),
         ("production-recovery", "vps-recovery"): (457, {"isolated-restore", "rpo-rto", "continuity"}),
         ("credentials-recovery", "vps-recovery"): (378, {"credential-restore", "retired-credential-denied"}),
-        ("platform-network", "vps-network"): (414, {"platform-network"}),
-        ("bounded-load", "vps-load"): (414, {"bounded-load"}),
+        ("platform-network", "vps-network"): (414, {"platform-network", "https", "wss", "idle-below-threshold", "idle-above-threshold"}),
+        ("bounded-load", "vps-load"): (414, {"bounded-load", "resource-budget", "safety-stop"}),
         ("deployed-build-smoke", "vps-network"): (417, {"verified-build", "smoke"}),
         **{("production-discord", row): (353, {"mapped-proxy", "upgrade", "reconnect",
               "large-message", "oversize-denial", "resync-without-acceptance"}) for row in clients},
@@ -600,7 +602,7 @@ def gate_coverage(gate, clients, selected=()):
         ("release-fence", "hosted"): (400, {"release-fence"}),
         ("regression", "hosted"): (417, {"regression"}),
         **{("accessibility-" + row.removeprefix("discord-web-").removeprefix("discord-"), row):
-           (414, {"manual-at", "accessible-task-coverage"}) for row in clients},
+           (414, {"manual-at", "keyboard", "screen-reader", "accessible-task-coverage"}) for row in clients},
     }
 
 
@@ -1167,6 +1169,10 @@ class VerificationEvidenceContractTests(unittest.TestCase):
             ("GB-T13.G2", ("production-discord", "discord-win"), "oversize-denial"),
             ("GB-T13.G2", ("credentials-recovery", "vps-recovery"), "retired-credential-denied"),
             ("GB-T13.G2", ("production-network", "vps-network"), "private-data-plane"),
+            ("GB-T13.G2", ("production-network", "vps-network"), "tls-renewal"),
+            ("GB-T13.G2", ("production-network", "vps-network"), "idle-above-threshold"),
+            ("GB-T13.G2", ("platform-network", "vps-network"), "idle-below-threshold"),
+            ("GB-T13.G2", ("bounded-load", "vps-load"), "resource-budget"),
             ("GB-T13.G2", ("deployed-client-smoke", "discord-win"), "deployed-client-journey"),
         ):
             with self.subTest(gate=gate, omitted=omitted, scenario=scenario):
