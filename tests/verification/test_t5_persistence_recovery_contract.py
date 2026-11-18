@@ -56,6 +56,8 @@ class AllocatorAuthority:
     """The current fenced allocator, outside the recoverable board history."""
 
     generation: str = "generation-a"
+    serving_lineage: str = "lineage-a"
+    serving_revision: int = 7
     epoch: int = 1
     issuer: str = "independent-allocator"
     current: bool = True
@@ -71,6 +73,8 @@ class AllocatorAuthority:
     def consume(self, guild, board, lineage, disaster):
         self.consumed |= {(guild, board, lineage)}
         self.epoch += 1
+        self.serving_lineage = lineage
+        self.serving_revision = 0
         if disaster:
             self.generation = f"generation-{lineage}"
 
@@ -213,7 +217,7 @@ def model_witness(case, history, revision):
 
 
 def command_result(case, receipts=ORIGINAL_RECEIPTS, history=History(), witness=MODEL_STORE, *,
-                   revision=8, release_denial="NOT_FOUND"):
+                   revision=8, release_denial="NOT_FOUND", write_fence=True, receipt_lineage=None):
     """Evaluate one decision without modifying the supplied receipt store."""
     if not case.valid:
         return "INVALID_MESSAGE", []
@@ -228,8 +232,11 @@ def command_result(case, receipts=ORIGINAL_RECEIPTS, history=History(), witness=
         if case.digest != digest:
             outcome = "IDEMPOTENCY_CONFLICT"
         else:
-            receipt_kind = "CURRENT" if case.lineage == active_lineage else "HISTORICAL"
+            current_lineage = active_lineage if receipt_lineage is None else receipt_lineage
+            receipt_kind = "CURRENT" if case.lineage == current_lineage else "HISTORICAL"
             outcome = f"ACK_{receipt_kind}_{revision}"
+    elif not write_fence:
+        outcome = "DEPENDENCY_UNAVAILABLE"
     elif case.lineage != active_lineage:
         incomplete = history.disaster_seen and case.lineage not in history.complete_retired
         outcome = "DEPENDENCY_UNAVAILABLE" if incomplete else "LINEAGE_CHANGED"
@@ -393,12 +400,16 @@ def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState(), reserva
                     witness=MODEL_STORE, *, allocator=None):
     receipts = dict(ORIGINAL_RECEIPTS)
     receipts.update(state.receipts)
+    history = state.history
+    current_serving = allocator is not None and allocator.current
+    write_fence = current_serving and (
+        history.storage_generation, history.active, state.revision
+    ) == (allocator.generation, allocator.serving_lineage, allocator.serving_revision)
     final_revision = state.revision + 1
-    # A recovered cut can describe an older generation than the current write fence.
-    commit_history = state.history
-    if allocator is not None and allocator.current:
-        commit_history = replace(commit_history, storage_generation=allocator.generation)
-    outcome, effects = command_result(command, receipts, commit_history, witness, revision=final_revision)
+    outcome, effects = command_result(
+        command, receipts, history, witness, revision=final_revision, write_fence=write_fence,
+        receipt_lineage=allocator.serving_lineage if current_serving else None,
+    )
     if not effects:
         return outcome, [], state
 
@@ -409,7 +420,7 @@ def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState(), reserva
     if next_history is None:
         return ("DEPENDENCY_UNAVAILABLE" if command.release else "NOT_FOUND"), [], state
     content, references = projection
-    transaction = model_witness(command, commit_history, final_revision).event_transaction
+    transaction = model_witness(command, history, final_revision).event_transaction
     final_cut = (command.guild, command.board, command.lineage, final_revision)
     artifacts = RestoreArtifacts(
         final_cut=final_cut,
@@ -545,7 +556,8 @@ class ContractScenarios(unittest.TestCase):
         ):
             with self.subTest(commit=commit):
                 command = replace(RESTORE_COMMAND, commit=commit)
-                self.assertEqual(restore_attempt(case, command, allocator=AllocatorAuthority()),
+                allocator = AllocatorAuthority()
+                self.assertEqual(restore_attempt(case, command, allocator=allocator),
                                  ("DEPENDENCY_UNAVAILABLE", expected_effects, expected_state))
                 self.assertEqual(restore_attempt(case, replace(command, release=False), allocator=AllocatorAuthority()),
                                  ("NOT_FOUND", expected_effects, expected_state))
@@ -553,7 +565,7 @@ class ContractScenarios(unittest.TestCase):
                 retry = replace(command, commit="durable")
                 expected = (("ACK_HISTORICAL_8", [], reopened) if expected_effects
                             else ("RESTORED", committed_effects, committed))
-                self.assertEqual(restore_attempt(case, retry, reopened, allocator=AllocatorAuthority()), expected)
+                self.assertEqual(restore_attempt(case, retry, reopened, allocator=allocator), expected)
 
     def test_restore_retains_scoped_artifacts_and_never_reuses_retired_lineages(self):
         first = RESTORE_COMMAND
@@ -648,7 +660,7 @@ class ContractScenarios(unittest.TestCase):
         allocator = AllocatorAuthority()
         promoted = former.promote("lineage-b", FIXTURE_RESERVATION, set(), allocator=allocator)
         history = replace(promoted, known_lineages=promoted.known_lineages - {omitted}).restart()
-        state = RestoreState(history=history)
+        state = RestoreState(history=history, revision=0)
         old = Command(lineage=omitted, operation="unresolved-old-operation")
         command = replace(RESTORE_COMMAND, lineage=history.active)
         self.assertNotIn(omitted, history.known_lineages)
@@ -709,15 +721,37 @@ class ContractScenarios(unittest.TestCase):
                                  ("ISOLATED", [], recovered))
                 self.assertEqual(source, before)
 
+        restore = Restore(target_lineage="lineage-c")
+        serving_state = RestoreState(history=previous, revision=0)
+        serving_command = replace(RESTORE_COMMAND, lineage="lineage-b")
+        for stale_state, command in (
+            (state, RESTORE_COMMAND),
+            (replace(serving_state, history=replace(previous, storage_generation="generation-a")),
+             serving_command),
+            (replace(serving_state, history=replace(previous, active="lineage-a")), RESTORE_COMMAND),
+            (replace(serving_state, revision=1), serving_command),
+        ):
+            with self.subTest(stale_state=stale_state):
+                before = replace(allocator)
+                self.assertEqual(restore_attempt(restore, command, stale_state, fresh, allocator=allocator),
+                                 ("DEPENDENCY_UNAVAILABLE", [], stale_state))
+                self.assertEqual(restore_attempt(restore, replace(command, release=False), stale_state, fresh,
+                                                 allocator=allocator), ("NOT_FOUND", [], stale_state))
+                self.assertEqual(allocator, before)
+        self.assertEqual(restore_attempt(restore, Command(), state, fresh, allocator=allocator),
+                         ("ACK_HISTORICAL_7", [], state))
+
         # Fork the authority fixture to exercise two alternative cutovers.
         restore_allocator = replace(allocator)
-        outcome, effects, restored = restore_attempt(Restore(target_lineage="lineage-c"), state=state,
-                                                     reservation=fresh, allocator=restore_allocator)
+        outcome, effects, restored = restore_attempt(restore, serving_command, serving_state,
+                                                     fresh, allocator=restore_allocator)
         self.assertEqual(outcome, "RESTORED")
         self.assertIn("receipt", effects)
         self.assertEqual(restored.history.active, "lineage-c")
         self.assertEqual(restored.history.storage_generation, fresh.generation)
-        self.assertEqual(restored.artifacts[0].receipt_transaction[0], fresh.generation)
+        self.assertEqual(restored.artifacts[0].receipt_transaction,
+                         (fresh.generation, identity(serving_command), 1))
+        self.assertEqual(restored.receipts, ((identity(serving_command), (serving_command.digest, 1)),))
         self.assertIn(("guild-a", "board-a", "lineage-c"), restore_allocator.consumed)
 
         outcome, effects, promoted = disaster_attempt(Disaster(), recovered, "lineage-c",
@@ -729,6 +763,7 @@ class ContractScenarios(unittest.TestCase):
     def test_current_commit_witness_binds_scope_intent_and_atomic_records(self):
         allocator = AllocatorAuthority()
         history = History().promote("lineage-b", FIXTURE_RESERVATION, set(), allocator=allocator)
+        allocator.serving_revision = 7
         state = RestoreState(history=history)
         command = replace(RESTORE_COMMAND, lineage=history.active)
         restore = Restore(target_lineage="lineage-c")
@@ -746,17 +781,18 @@ class ContractScenarios(unittest.TestCase):
                          (transaction, transaction, transaction))
 
         next_state = replace(state, revision=8)
+        next_allocator = replace(allocator, serving_revision=8)
         next_witness = model_witness(command, history, revision=9)
         next_outcome, next_effects, next_commit = restore_attempt(
-            restore, command, next_state, reservation, next_witness, allocator=replace(allocator),
+            restore, command, next_state, reservation, next_witness, allocator=replace(next_allocator),
         )
         self.assertEqual((next_outcome, next_effects), ("RESTORED", effects))
         self.assertEqual(next_commit.receipts, ((identity(command), (command.digest, 9)),))
         self.assertEqual(restore_attempt(restore, command, next_state, reservation, witness,
-                                         allocator=replace(allocator)),
+                                         allocator=replace(next_allocator)),
                          ("DEPENDENCY_UNAVAILABLE", effects, next_commit))
         self.assertEqual(restore_attempt(restore, replace(command, release=False), next_state,
-                                         reservation, witness, allocator=replace(allocator)),
+                                         reservation, witness, allocator=replace(next_allocator)),
                          ("NOT_FOUND", effects, next_commit))
 
         for unproven in (
