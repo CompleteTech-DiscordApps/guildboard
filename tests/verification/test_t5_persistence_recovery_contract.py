@@ -149,11 +149,11 @@ def command_result(case, receipts=ORIGINAL_RECEIPTS, history=History()):
         incomplete = history.disaster_seen and case.lineage not in history.complete_retired
         outcome = "DEPENDENCY_UNAVAILABLE" if incomplete else "LINEAGE_CHANGED"
     elif not case.write:
-        return "FORBIDDEN", []
+        outcome = "FORBIDDEN"
     elif not case.policy_current:
-        return "POLICY_STALE", []
+        outcome = "POLICY_STALE"
     elif not case.capacity:
-        return "RATE_LIMITED", []
+        outcome = "RATE_LIMITED"
     elif case.commit != "durable":
         effects = EFFECTS if case.commit == "unknown_committed" else []
         outcome = "DEPENDENCY_UNAVAILABLE"
@@ -364,6 +364,18 @@ class ContractScenarios(unittest.TestCase):
                 retry = Command(operation=attempt.operation)
                 expected = ("ACK_CURRENT_8", []) if committed else ("ACK_NEW", EFFECTS)
                 self.assertEqual(command_result(retry, reopened), expected)
+
+    def test_egress_denial_conceals_receipt_and_commit_precondition_branches(self):
+        for blocked, code in (({"write": False}, "FORBIDDEN"),
+                              ({"policy_current": False}, "POLICY_STALE"),
+                              ({"capacity": False}, "RATE_LIMITED")):
+            attempt = Command(**blocked)
+            self.assertEqual(command_result(attempt, {}), (code, []))
+            conflicting = {identity(attempt): ("different", 7)}
+            for receipts in ({}, ORIGINAL_RECEIPTS, conflicting):
+                with self.subTest(code=code, receipts=receipts):
+                    denied = replace(attempt, release=False)
+                    self.assertEqual(command_result(denied, receipts), ("NOT_FOUND", []))
 
     def test_lost_restore_ack_returns_former_lineage_receipt_without_republishing(self):
         command = replace(RESTORE_COMMAND, lost_ack=True)
