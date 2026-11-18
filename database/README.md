@@ -66,8 +66,10 @@ procedure with a declared loss cut and T9 fences. v0 is empty. There is no
 historical nonempty release upgrade, backfill, or contraction in migration 0001.
 
 Run the focused tests on a **disposable SQL instance** with
-`GB_SCHEMA_CLIENT`, `GB_SCHEMA_SOCKET` and `GB_SCHEMA_USER` set. The tests
-create and drop uniquely named synthetic databases.
+`GB_SCHEMA_CLIENT`, `GB_SCHEMA_SOCKET` and `GB_SCHEMA_USER` set. Use an
+isolated fixture administrator. The tests create and drop uniquely named
+synthetic databases and a read-only fixture account, and verify that the
+read-only principal cannot create any migration object.
 
 ```bash
 python3 -B -m unittest discover -s tests/verification -p test_t5_initial_schema.py -v

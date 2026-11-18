@@ -102,6 +102,24 @@ class EngineTests(unittest.TestCase):
         self.sql("UPDATE schema_installation SET migration_digest=REPEAT('x',32)")
         self.verify(apply=True, error="identity, generation")
 
+    def test_read_only_principal_cannot_install_schema(self):
+        observer = "gbro_" + uuid.uuid4().hex[:20]
+        account = f"'{observer}'@'localhost'"
+        self.sql(f"CREATE USER {account}", use_database=False)
+        self.addCleanup(self.sql, f"DROP USER {account}", use_database=False)
+        self.sql(f"GRANT SELECT ON `{self.db}`.* TO {account}", use_database=False)
+
+        denied = list(self.tool)
+        denied[denied.index("--user") + 1] = observer
+        result = subprocess.run(
+            [*denied, "--generation", GENERATION, "--apply"],
+            text=True, capture_output=True, timeout=60,
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("schema fenced", result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(self.sql("SHOW TABLES"), "")
+
     def test_interrupted_alter_resumes_exactly_one_unjournaled_step(self):
         # End the owner session immediately after the implicit DDL commit,
         # deliberately leaving the previous journal count.
