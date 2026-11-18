@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "1.0.0",
+  "guides": [
+    {
+      "issue": "GB-T13.02.01.T1",
+      "path": "docs/godaddy-operations-guide.md",
+      "claimId": "godaddy-runtime-evidence",
+      "ownerRole": "Deployment and operations owners, with data/recovery consumers",
+      "audience": "operator",
+      "revision": "1fbc8ae8fe9f0c8a2fdb6c347a781c402d824c76",
+      "claimStatus": "unresolved",
+      "evidenceIds": [],
+      "followUpIssue": "GB-T13.02.01.V1"
+    },
+    {
+      "issue": "GB-T13.02.01.T1",
+      "path": "docs/godaddy-operations-guide.md",
+      "claimId": "initial-schema-local",
+      "ownerRole": "Deployment and operations owners, with data/recovery consumers",
+      "audience": "operator",
+      "revision": "1fbc8ae8fe9f0c8a2fdb6c347a781c402d824c76",
+      "claimStatus": "supported",
+      "evidenceIds": [
+        "initial-schema-independent-local"
+      ]
+    },
+    {
+      "issue": "GB-T13.02.01.T1",
+      "path": "docs/godaddy-operations-guide.md",
+      "claimId": "preflight-planned",
+      "ownerRole": "Deployment and operations owners, with data/recovery consumers",
+      "audience": "operator",
+      "revision": "1fbc8ae8fe9f0c8a2fdb6c347a781c402d824c76",
+      "claimStatus": "planned",
+      "evidenceIds": []
+    },
+    {
+      "issue": "GB-T13.02.01.T1",
+      "path": "docs/godaddy-operations-guide.md",
+      "claimId": "dns-tls-wss-planned",
+      "ownerRole": "Deployment and operations owners, with data/recovery consumers",
+      "audience": "operator",
+      "revision": "1fbc8ae8fe9f0c8a2fdb6c347a781c402d824c76",
+      "claimStatus": "planned",
+      "evidenceIds": []
+    },
+    {
+      "issue": "GB-T13.02.01.T1",
+      "path": "docs/godaddy-operations-guide.md",
+      "claimId": "private-state-planned",
+      "ownerRole": "Deployment and operations owners, with data/recovery consumers",
+      "audience": "operator",
+      "revision": "1fbc8ae8fe9f0c8a2fdb6c347a781c402d824c76",
+      "claimStatus": "planned",
+      "evidenceIds": []
+    },
+    {
+      "issue": "GB-T13.02.01.T1",
+      "path": "docs/godaddy-operations-guide.md",
+      "claimId": "staged-release-planned",
+      "ownerRole": "Deployment and operations owners, with data/recovery consumers",
+      "audience": "operator",
+      "revision": "1fbc8ae8fe9f0c8a2fdb6c347a781c402d824c76",
+      "claimStatus": "planned",
+      "evidenceIds": []
+    },
+    {
+      "issue": "GB-T13.02.01.T1",
+      "path": "docs/godaddy-operations-guide.md",
+      "claimId": "recovery-planned",
+      "ownerRole": "Deployment and operations owners, with data/recovery consumers",
+      "audience": "operator",
+      "revision": "1fbc8ae8fe9f0c8a2fdb6c347a781c402d824c76",
+      "claimStatus": "planned",
+      "evidenceIds": []
+    },
+    {
+      "issue": "GB-T13.02.01.T1",
+      "path": "docs/godaddy-operations-guide.md",
+      "claimId": "monitoring-planned",
+      "ownerRole": "Deployment and operations owners, with data/recovery consumers",
+      "audience": "operator",
+      "revision": "1fbc8ae8fe9f0c8a2fdb6c347a781c402d824c76",
+      "claimStatus": "planned",
+      "evidenceIds": []
+    },
+    {
+      "issue": "GB-T13.02.01.T1",
+      "path": "docs/godaddy-operations-guide.md",
+      "claimId": "verification-unresolved",
+      "ownerRole": "Deployment and operations owners, with data/recovery consumers",
+      "audience": "operator",
+      "revision": "1fbc8ae8fe9f0c8a2fdb6c347a781c402d824c76",
+      "claimStatus": "unresolved",
+      "evidenceIds": [],
+      "followUpIssue": "GB-T13.02.01.V1"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "initial-schema-independent-local",
+      "issue": "GB-T5.02.01.V1",
+      "revision": "6f5e0b24f2e50fdca5e218a75bf0fd4266a21ef9",
+      "date": "2026-11-18",
+      "environment": "Isolated x86_64 Linux (Omarchy); Python 3.14.8; MySQL Community 8.4.11 and MariaDB 11.4.13-MariaDB-ubu2404; private Unix sockets, TCP disabled",
+      "level": "integration",
+      "result": "pass",
+      "ref": "docs/evidence/GB-T5-02-01-V1-schema.md"
+    }
+  ]
+}
