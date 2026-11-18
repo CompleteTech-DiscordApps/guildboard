@@ -178,11 +178,16 @@ lineage inventory. A durable allocator in a separately fenced namespace may supp
 that reservation. Missing or mismatched evidence keeps the candidate isolated.
 For an ordinary document restore attempt or retry, first verify current scoped
 read authority. Before consulting receipts or their coverage, also verify that
-the inventory belongs to the independently established current serving
-generation, lineage and revision. A stale or unverifiable inventory yields safe
-`DEPENDENCY_UNAVAILABLE` semantics, subject to the T0/T9 release fence. It
-cannot produce an acknowledgment, digest conflict or absence result. An eligible
-retained receipt in the current inventory settles only its original operation.
+the inventory belongs to the current serving generation, lineage and revision
+for the exact verified guild and board. Verify that cut against a current,
+trusted issuer independently established outside the recoverable state. The
+inventory's reported cut and issuer are insufficient evidence. A stale or
+unverifiable inventory yields safe `DEPENDENCY_UNAVAILABLE` semantics, subject
+to the T0/T9 release fence. It cannot produce an acknowledgment, digest conflict
+or absence result. Consult only the verified serving inventory for retained
+receipts. An eligible retained receipt settles only its original operation.
+When a receipt is missing there, apply the persisted coverage rule without
+falling back to a separate receipt set.
 
 A document restore changes the document and active lineage
 while preserving all existing receipt evidence and uncertainty. Its source
@@ -278,8 +283,12 @@ evidence for authorized operators.
 
 [Typed bounded fixtures](fixtures/GB-T5-S1-scenarios.json) and the offline
 verification test exercise the logical rules with synthetic identities and an
-in-memory oracle. Actual T5 implementation remains gated on Data Engineering,
-security and consuming engineering review and repository gates. Retention
+in-memory oracle. The checkpoint projection vectors model applied-cut claims,
+synthetic content and reference rows. Verification of proof binding to a
+concrete scoped checkpoint identity, source lineage and revision, and immutable
+asset bytes is downstream evidence. Actual T5 implementation remains gated on
+Data Engineering, security and consuming engineering review and repository
+gates. Retention
 durations, holds, quota policy and RPO/RTO objectives require designated owner
 approval. Actual engine behavior, filesystem durability, migration interruption,
 independent backup/restore and GoDaddy operation require downstream evidence.
