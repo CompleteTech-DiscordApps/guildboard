@@ -1,12 +1,15 @@
 # GoDaddy deployment and troubleshooting guide
 
-**Status: planned procedure.** The mandatory production target is a GoDaddy
-Linux VPS with Nginx HTTPS/WSS, private SQL and persistent private assets.
+<a id="godaddy-runtime-evidence"></a>
+**Status: mixed; actual GoDaddy runtime evidence unresolved.** The mandatory
+production target is a GoDaddy Linux VPS with Nginx HTTPS/WSS, private SQL and persistent private assets.
 The [repository foundation](../README.md#foundation-status) has a workspace
 build and pure configuration parser. Activity, API and bot entry points,
-production Nginx and service definitions, migration tooling and deployable
-Guildboard artifacts still require implementation and verification. Record
-documentation work in [#431](https://github.com/CompleteTech-DiscordApps/guildboard/issues/431)
+production Nginx and service definitions, and deployable Guildboard artifacts
+still require implementation and verification. The bounded initial-schema
+installer has accepted local evidence, described [below](#initial-schema-local);
+that evidence does not verify deployment or runtime migration integration.
+Record documentation work in [#431](https://github.com/CompleteTech-DiscordApps/guildboard/issues/431)
 and execute the acceptance procedure under
 [#432](https://github.com/CompleteTech-DiscordApps/guildboard/issues/432).
 See the [T10 infrastructure](workstreams/T10.md), [T11 operations](workstreams/T11.md),
@@ -20,6 +23,30 @@ All operator commands in this guide are illustrative and unexecuted. Fill in
 environment-specific values in the restricted change record and run checks
 only under approved staging or production authority.
 
+## Claim status and evidence handoff
+
+The [versioned claim handoff](evidence/GB-T13-02-01-T1-guide-claims.json)
+uses the T13 contract's guide and evidence entries. Each guide entry names the
+immutable source revision containing its claim anchor; the PR records the exact
+candidate head and documentation checks. This is a source comparison, not
+independent acceptance of this guide. Claim IDs remain stable across edits to
+the same claim. Revalidate affected claims when source or environment changes.
+Deployment and operations owners are accountable, with data/recovery consumer
+review and Maintainer & Documentation coordination.
+
+| Claim anchor | Status and evidence scope | Next validating owner / follow-up |
+| --- | --- | --- |
+| [godaddy-runtime-evidence](#godaddy-runtime-evidence) | `unresolved`: actual GoDaddy host, application startup, networking and operational acceptance remain unverified | Deployment and operations owners, GB-T13.02.01.V1 (#432); production/recovery gate GB-T13.G2 (#457) |
+| [initial-schema-local](#initial-schema-local) | `supported`: historical isolated empty-v0→v1 SQL fixture only, on the exact engines and source below | Data/recovery consumers revalidate changed bytes, versions or scope |
+| [preflight-planned](#preflight-planned) | `planned`: prerequisite and ownership procedure | Hosting, platform, release and database operators; #432 |
+| [dns-tls-wss-planned](#dns-tls-wss-planned) | `planned`: DNS/TLS/WSS procedure and illustrative diagnostics | DNS, platform and Discord application owners; #432 |
+| [private-state-planned](#private-state-planned) | `planned`: SQL, asset and secret handling procedure | Database, platform and security owners; #432 |
+| [staged-release-planned](#staged-release-planned) | `planned`: rollout and runtime migration integration procedure | Release and database operators; #432 |
+| [recovery-planned](#recovery-planned) | `planned`: coordinated backup, isolated restore and rollback procedure; no measured recovery result | Backup operator and on-call verifier; #432 and #457 |
+| [monitoring-planned](#monitoring-planned) | `planned`: monitoring and failure response procedure | Operations and incident-response owners; #432 |
+| [verification-unresolved](#verification-unresolved) | `unresolved`: the real-environment acceptance scenarios below lack results | Named verifiers under GB-T13.02.01.V1 (#432) |
+
+<a id="preflight-planned"></a>
 ## Preflight and stage ownership
 
 | Responsible role | Required inputs before deployment |
@@ -36,6 +63,7 @@ and asset storage. Prove the full sequence on staging before requesting a
 production change window. The [infrastructure scaffold](../infra/godaddy/README.md)
 leaves service supervisor selection to T10.
 
+<a id="dns-tls-wss-planned"></a>
 ## DNS, HTTPS and Activity WSS
 
 1. Publish the approved A record at the authoritative DNS provider. Publish an
@@ -89,6 +117,7 @@ Repeat TLS checks over each published address family, corroborate local
 listener scope with authorized external reachability checks, and verify
 HTTP redirect behavior and mapped WSS separately.
 
+<a id="private-state-planned"></a>
 ## Private SQL, assets and secrets
 
 - Use a local socket, loopback or a restricted private database interface.
@@ -114,6 +143,34 @@ HTTP redirect behavior and mapped WSS separately.
   applicable, and remove old credentials after authorized validation. Follow
   [private security reporting](../SECURITY.md) for suspected exposure.
 
+<a id="initial-schema-local"></a>
+### Accepted local initial-schema evidence
+
+[GB-T5.02.01.V1](evidence/GB-T5-02-01-V1-schema.md) records a passing
+2026-11-18 independent local run of source
+`6f5e0b24f2e50fdca5e218a75bf0fd4266a21ef9`: eight tests per engine, zero skips,
+on MySQL Community **8.4.11** and MariaDB **11.4.13-MariaDB-ubu2404**.
+The [installer](../database/verify_initial_schema.py),
+[migration 0001](../database/migrations/0001_initial_innodb.sql),
+[isolation instructions](../database/README.md) and
+[fixture suite](../tests/verification/test_t5_initial_schema.py) are byte-identical
+between that accepted source and this correction's comparison base
+`57ad491cc1df755061187a10f52df4586862416c`. This documentation change leaves
+those files unchanged and preserves only the historical scope; no SQL engine
+test was rerun for this correction.
+
+The installer supports **empty v0 → v1 only**, on a dedicated generation
+isolated from application access, using the exact supported engine's trusted
+client and private Unix socket with TCP disabled. The recorded fixtures cover
+clean activation, repeat apply, verify-only checks, migration-client interruption
+and retry, fencing, scoped SQL integrity and insufficient privileges.
+Use the database instructions for the bounded fixture procedure. These results
+do not cover engine crash/outage durability, nonempty upgrades or backfills,
+serving startup or authorization, disaster restore, or actual GoDaddy/Discord
+operation. The planned release procedure below still requires integrated and
+real-environment verification.
+
+<a id="staged-release-planned"></a>
 ## Staged release and migrations
 
 1. Verify artifact identity and compatibility with the running build, protocol,
@@ -141,6 +198,7 @@ HTTP redirect behavior and mapped WSS separately.
    application, proxy and migration telemetry before broadening traffic.
    Stop rollout if a smoke check, error budget or integrity check fails.
 
+<a id="recovery-planned"></a>
 ## Backups, recovery and rollback
 
 - Capture a consistent SQL recovery point together with required log ranges,
@@ -170,6 +228,7 @@ HTTP redirect behavior and mapped WSS separately.
   readiness, TLS/WSS/reconnect, authorization and data integrity before
   reopening traffic, and record the selected procedure and outcome.
 
+<a id="monitoring-planned"></a>
 ## Monitoring and failure handling
 
 Assign owners, alert thresholds and response windows using measured staging
@@ -190,6 +249,7 @@ unnecessary board content and unnecessary user identifiers.
 | Backup too old, corrupt or unrestorable | Hold promotion, alert the backup owner and reconcile recovery point, key access, logs and assets. Demonstrate a new isolated restore before relying on the backup. |
 | Unauthorized room access, unexpected writes or suspected disclosure | Contain the affected path, preserve restricted evidence and use the private security route. Check for durable and broadcast side effects and tenant scope before resuming. [Security policy](../SECURITY.md) |
 
+<a id="verification-unresolved"></a>
 ## Verification handoff
 
 All scenarios below are pending under
