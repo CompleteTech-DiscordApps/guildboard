@@ -17,9 +17,7 @@ const build = spawnSync(
   { encoding: "utf8" },
 );
 assert.equal(build.status, 0, build.stderr + build.stdout);
-const { evaluateResourceAdmission } = await import(
-  pathToFileURL(path.join(output, "resource-admission.js"))
-);
+const { evaluateResourceAdmission } = await import(pathToFileURL(path.join(output, "index.js")));
 
 const allow = { ok: true };
 const unavailable = { ok: false, code: "DEPENDENCY_UNAVAILABLE" };
