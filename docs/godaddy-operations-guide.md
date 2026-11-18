@@ -153,12 +153,14 @@ HTTP redirect behavior and mapped WSS separately.
 - Restore into an isolated clean environment with no production write access.
   Verify backup digests and key access, restore the base and replay approved
   logs to the selected cut, restore matching assets, and check migrations,
-  revisions, durable receipts, tenant authorization and asset hashes. Measure
-  data-loss window as incident time minus the latest consistent recovered
-  commit time. Record any lost acknowledged operations. Measure recovery
-  duration from incident declaration through verified service recovery.
-  Compare these results with the approved recovery point objective (RPO)
-  and recovery time objective (RTO). [T11 recovery research and proposed targets](research/t11-sre-objectives.md)
+  revisions, durable receipts, tenant authorization and asset hashes. For
+  the recovery point measurement, use fault time minus the original durable
+  commit time of the latest corroborated pre-fault canary that matches the
+  exact restored scope, lineage and cut. Keep the measurement unknown if
+  qualifying evidence is unavailable. Compare independent acknowledgment
+  and recovery inventories for losses. Measure recovery duration separately
+  from declaration through verified service, and compare with approved
+  objectives. [Accepted T11 backup and restore requirements](specifications/GB-T11-S1-sre-operations-contract.md#independent-backup-and-restore-acceptance)
 - If rollback is required, stop promotion, gate affected writes and retain
   evidence. Use the previous verified artifact and config only if they are
   compatible with the live schema, assets and protocol. With an incompatible
