@@ -1,0 +1,82 @@
+{
+  "evidence_kind": "primary-document-response-observations-not-discord-verification",
+  "sources": [
+    {
+      "bytes": 583854,
+      "document_version": "rolling official Discord documentation; no live API/client version evaluated",
+      "final_url": "https://docs.discord.com/developers/topics/permissions",
+      "http_status": 200,
+      "id": "D1",
+      "observed_at_utc": "2026-10-26T00:10:27.868103+00:00",
+      "sha256": "62cde587e71f49b0154fc078d20c2800f8f01fbe4baa4c280de45672d47a2263",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/topics/permissions"
+    },
+    {
+      "bytes": 1239753,
+      "document_version": "rolling official Discord documentation; no live API/client version evaluated",
+      "final_url": "https://docs.discord.com/developers/resources/guild",
+      "http_status": 200,
+      "id": "D2",
+      "observed_at_utc": "2026-10-26T00:10:27.868627+00:00",
+      "sha256": "9817620b0e80002bca09f56a88fce81aaea94b04a7ae767586863d64b7a8d394",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/resources/guild"
+    },
+    {
+      "bytes": 561089,
+      "document_version": "rolling official Discord documentation; no live API/client version evaluated",
+      "final_url": "https://docs.discord.com/developers/resources/user",
+      "http_status": 200,
+      "id": "D3",
+      "observed_at_utc": "2026-10-26T00:10:27.868966+00:00",
+      "sha256": "1942b533c0ba7736d591d1be67e7656511261bb0190b606541ba0cca8bf9406a",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/resources/user"
+    },
+    {
+      "bytes": 793497,
+      "document_version": "rolling official Discord documentation; no live API/client version evaluated",
+      "final_url": "https://docs.discord.com/developers/events/gateway",
+      "http_status": 200,
+      "id": "D4",
+      "observed_at_utc": "2026-10-26T00:10:27.869356+00:00",
+      "sha256": "2e9bb5c32a4263b4f69bf23608d2fd71ebab37a4d417700aa67b07a844532f1a",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/events/gateway"
+    },
+    {
+      "bytes": 1227312,
+      "document_version": "rolling official Discord documentation; no live API/client version evaluated",
+      "final_url": "https://docs.discord.com/developers/events/gateway-events",
+      "http_status": 200,
+      "id": "D5",
+      "observed_at_utc": "2026-10-26T00:10:28.165949+00:00",
+      "sha256": "d93303fd107cc135eac346021e6b797dc7e2c61821cbcc3105471dd5c97f05f1",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/events/gateway-events"
+    },
+    {
+      "bytes": 750916,
+      "document_version": "rolling official Discord documentation; no live API/client version evaluated",
+      "final_url": "https://docs.discord.com/developers/topics/oauth2",
+      "http_status": 200,
+      "id": "D6",
+      "observed_at_utc": "2026-10-26T00:10:28.203635+00:00",
+      "sha256": "78a017c6d24ab7662dfca0d453084e1d55301123b5ac031123b82274bd587e25",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/topics/oauth2"
+    },
+    {
+      "bytes": 408912,
+      "document_version": "rolling official Discord documentation; no live API/client version evaluated",
+      "final_url": "https://docs.discord.com/developers/topics/rate-limits",
+      "http_status": 200,
+      "id": "D7",
+      "observed_at_utc": "2026-10-26T00:10:28.252573+00:00",
+      "sha256": "f65a032a75509d4a509271cd53ecb5857b48f2a8fd684de02c1cc6fa2667492c",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/topics/rate-limits"
+    }
+  ]
+}

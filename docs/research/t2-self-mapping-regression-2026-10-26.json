@@ -1,0 +1,55 @@
+{
+  "observed_at_utc": "2026-10-26T00:31:31.209489+00:00",
+  "base_commit": "ee88f134ae272a88956ff07c559a17d84b26f169",
+  "python": "3.14.3",
+  "comment_id": 4373071176,
+  "evidence_kind": "focused-test-mutation-validation-not-policy-or-platform-acceptance",
+  "test": "PolicyResearchTests.test_unknown_action_and_self_mapping_deny",
+  "mutation": {
+    "before": "return \"control_allowed\" if \"admin\" in f.roles and not f.self_target else \"control_denied\"",
+    "after": "return \"control_allowed\" if \"admin\" in f.roles else \"control_denied\"",
+    "mutant_sha256": "7ef907618a620240c2fa87547eef1cbef8892e97925e55a700ab7bdea8ef959d",
+    "location": "Temporary separate tree outside committed source; retained local raw logs"
+  },
+  "legacy_suite_on_mutant": {
+    "exit_code": 0,
+    "tests": 15,
+    "result": "pass; blind spot reproduced"
+  },
+  "strengthened_test_on_mutant": {
+    "exit_code": 1,
+    "tests": 1,
+    "failures": 1,
+    "failure": "control_allowed != control_denied"
+  },
+  "strengthened_suite_on_original_candidate": {
+    "exit_code": 0,
+    "tests": 15,
+    "result": "pass"
+  },
+  "source_hashes": {
+    "candidate_model_unchanged": "4ce8b087674702fcfec15da281ad94c4d198da7c90036d50eeb28ac21c0eb2f0",
+    "legacy_test_at_base_commit": "3539bca80a56e0ed85167b5ff85a510a56cb13340e545ed3c66e71088fa144cc",
+    "strengthened_test": "ae3412c25a8f4a0585ad79cb035f77a844c5cf654d3fa795e16d8daf2464b84f",
+    "deterministic_report_unchanged": "1826d9f1a64f7672334dce54c47cba81b55d0f771edd465d0dfe230c9db1b757",
+    "source_observations_unchanged": "313d04c8acf23dd9fe47c5cfdb7ddfe82a9402af23e648238b44c33fbedb8c9f"
+  },
+  "report_check": "Fresh original-candidate CLI bytes exactly match the existing deterministic report",
+  "source_observation_check": "7 existing response-metadata entries validate structurally; no source response was refetched or redated",
+  "limitations": [
+    "Hypothetical model only; candidate behavior unchanged",
+    "Mutation only removes one administrator self-target guard",
+    "No Discord API, grant/mapping persistence, SQL, client, GoDaddy or production authorization acceptance"
+  ],
+  "commands": {
+    "original_candidate_full_suite": "python tests/research/t2-test-policy-model.py -v",
+    "selected_test_in_temporary_mutant_tree": "python tests/research/t2-test-policy-model.py PolicyResearchTests.test_unknown_action_and_self_mapping_deny -v",
+    "deterministic_report": "python scripts/research/t2-policy-model.py",
+    "planning": "python scripts/github-bootstrap/validate.py"
+  },
+  "planning_validation": {
+    "result": "pass",
+    "items": 471,
+    "errors": []
+  }
+}
