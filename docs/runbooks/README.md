@@ -90,8 +90,10 @@ headroom before lifting restrictions. [Monitoring and failure handling][monitori
    from an independently established earlier cut or keep the target isolated.
    Apply authoritative, contiguous deletion markers through a serialized
    exposure fence or reconcile again at an equivalent fence. Reapply current
-   revocations and verify deleted content, assets, exports and references
-   remain inaccessible. Verify audit continuity and integrity against
+   revocations and verify that deleted or revoked content, assets, exports and
+   references remain inaccessible, including reads from a previously authorized
+   session. Exercise negative cross-guild and cross-board reads and writes and
+   verify denial leaves no durable or delivery effect. Verify audit continuity against
    protected independent anchors through the accepted head, including the
    active tail. Missing, stale or gapped evidence, an unapplied deletion,
    or an unverified audit head keeps the target isolated. [T5 disaster recovery][disaster] · [T9 deletion policy][deletion]
@@ -104,7 +106,10 @@ headroom before lifting restrictions. [Monitoring and failure handling][monitori
    approved post-cut boundary, and record missing coverage. Measure the
    recovery point from the original verified pre-fault canary commit to
    fault time and recovery time from declaration through verified service.
-   Compare with approved objectives and record unknowns.
+   Compare each result with its separately approved objective. Keep the target
+   isolated when required coverage or timing is unknown, an objective is
+   breached, or the drill verdict is failed or undetermined. Record the
+   evidence gap and the independent decision before retry.
    [Independent backup and restore acceptance][recovery]
 
 ## Outage triage and handoff
