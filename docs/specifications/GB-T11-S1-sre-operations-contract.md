@@ -152,7 +152,9 @@ evidence keeps the alert open.
 
 For both backup and backup integrity recovery, record the expected job identity,
 completion time and timestamp of the independently verified recoverable point
-for that job's deployment and profile. Use the job's completion time to check its
+for that job's deployment and profile. The verification must bind the point's
+job, deployment and profile independently of the alert observation envelope.
+Use the job's completion time to check its
 approved finish deadline. Completion must follow the last breach and occur no
 later than the approved evidence observation. Use the evaluation time minus the
 recoverable point timestamp to check the approved maximum recovery-point age.

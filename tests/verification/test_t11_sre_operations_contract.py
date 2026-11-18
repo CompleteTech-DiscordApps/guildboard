@@ -516,7 +516,11 @@ class OperationsContractTest(unittest.TestCase):
                         self.assertIs(type(backup["chain_verified"]), bool)
                         recovery_point = backup["recovery_point"]
                         if recovery_point is not None:
-                            self.assertEqual(set(recovery_point), {"second", "independently_verified"})
+                            self.assertEqual(
+                                set(recovery_point), {"job", "deployment", "profile", "second", "independently_verified"},
+                            )
+                            for field in ("job", "deployment", "profile"):
+                                self.synthetic_identity(recovery_point[field])
                             self.bounded_integer(recovery_point["second"], 86400)
                             self.assertIs(type(recovery_point["independently_verified"]), bool)
                 else:
@@ -535,6 +539,9 @@ class OperationsContractTest(unittest.TestCase):
                     and case["last_breach_second"] < backup["completed_second"] <= observed
                     and backup["completed_second"] <= schedule["finish_deadline"]
                     and recovery_point is not None and recovery_point["independently_verified"]
+                    and recovery_point["job"] == schedule["job"]
+                    and recovery_point["deployment"] == case["active"]["deployment"]
+                    and recovery_point["profile"] == case["active"]["profile"]
                     and recovery_point["second"] <= backup["completed_second"]
                     and case["evaluated_second"] - recovery_point["second"] <= schedule["max_recovery_point_age"]
                 )
