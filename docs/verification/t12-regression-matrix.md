@@ -30,9 +30,42 @@ workstream and feature, verification issue IDs and documentation handoff.
 The [backlog](../../planning/guildboard-backlog.json) supplies the linked native
 issues, expected tests and documentation artifacts. An issue-level observation
 link identifies the group of rows owned by that verification issue. Scoped
-links identify the specific browser/SDK or deployed smoke observations where
-the planning requirement names that boundary. Each planning requirement's
-evidence stays pending until its scope has a qualifying receipt. The [T0 criteria and measured
+links identify exact row/environment/native-issue/contract identities and only
+the case subsets relevant to the complete clause. `requirementSource` on each
+scoped link resolves to that clause's current traceability JSON entry; observation
+`source` and `environmentSource` retain their separate contract and environment
+provenance. A missing or renamed mapped clause, mismatched verification owner,
+wrong row/source, or absent canonical case fails the offline audit.
+
+The report currently has **seven explicitly mapped clauses and 298 unmapped
+clauses**. `scopeMappingStatus` describes this coverage plan; it never supplies
+execution credit. All `scopeEvidenceStatus` values remain `pending`, and all
+observation rows remain `pending` or `blocked`. An issue-level link or documentation
+handoff alone leaves `scopeObservationLinks` empty. Broad or partially represented
+requirements remain unmapped rather than borrowing every case of a related row.
+For example, harness setup cases do not enumerate all shared-contract/auth/policy/
+storage/bot API coverage, and recovery inventories alone do not enumerate every
+crash/ACK/tenant/asset outcome. Those requirements need further reviewed coverage
+and qualifying receipts.
+
+| Traceability clause | Specific planned observations | Accepted source and limit |
+| --- | --- | --- |
+| T9 dependency/secret/static checks with triage | #318 hosted `dependency-license-lockfile` and `secret-static-triage` cases. | T9 security inputs; no completed scan or triage is claimed. |
+| T9 lockfile provenance/license obligations | #318 hosted `dependency-license-lockfile` only. | T9 provenance/license input; unrelated secret/static cases are excluded. |
+| T10 external HTTPS/WSS/reconnect/large-message/idle/renewal tests | #353 GoDaddy network: `https`, `wss`, `reconnect-restart`, `large-message`, both idle thresholds and `tls-renewal`. | T12 operational crosswalk and environment registry; real VPS execution is blocked. |
+| T10 firewall/database isolation and Discord launch | #353 GoDaddy `firewall-isolation`/`sql-asset-isolation`; separate `activity-startup` on each registered Discord row. | T12 production networking crosswalk; platform evidence remains blocked. |
+| T12 controlled UI launch/ready/auth/navigation and separate real supported clients | #396 browser: `controlled-launch`, `ready`, `auth`, `navigation`; each actual SDK row: `actual-launch`, `sdk-compatibility`. | T12 browser/SDK crosswalk; cancellation, drafts and other browser cases remain in the broader issue-level link. |
+| T12 keyboard/screen-reader, load/resource and GoDaddy HTTPS/WSS/idle checks | #414 each client: `keyboard`, `screen-reader`; VPS load: `bounded-load`, `resource-budget`; VPS network: `https`, `wss`, both idle thresholds. | T12 client/AT and platform crosswalk; client support decisions and actual platform receipts remain unavailable. |
+| T12 production smoke after deployment | #417 GoDaddy: `verified-build`, `smoke`, `https-wss`; each Discord row: `verified-build`, `deployed-client-journey`. | T12 regression/smoke crosswalk; an approved deployed candidate is required. |
+
+Client expansion retains all seven registered client environments as planned rows.
+It does not activate Firefox or preview support or establish compatibility. The
+candidate-scoped support decision and independent receipts still control active
+coverage. The focused tests pin exact clause identities, relevant case subsets and
+client expansion, so silently widening a scope link to an entire observation row
+fails regression checks even when all those cases are valid for the owning issue.
+They also reject stale/missing clauses, duplicate targets, case loss/invention and
+native issue, gate, handoff or source substitution. The [T0 criteria and measured
 objectives](../requirements/GB-T0-01-01-requirements.md) supply the requirement
 outcomes and operational denominators for the linked tests.
 
