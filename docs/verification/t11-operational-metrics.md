@@ -86,3 +86,79 @@ Evidence covers record validation and offline specification scenarios. Live coll
 measured alert configuration for #363, approval of bucket layouts and
 operational thresholds, protected sink setup, and Discord and GoDaddy
 acceptance for #364 require separate evidence.
+
+## Private offline interval recorder
+
+The internal `apps/api/src/operational-metric-recorder.ts` helper adds bounded
+accumulation for the [maintainer design claim](https://github.com/CompleteTech-DiscordApps/guildboard/issues/363#issuecomment-6970252911).
+It has no package entrypoint export, producers, timers, host probes or sink.
+`createOperationalMetricRecorderV1(startUtc, endUtc, approvedBuckets?, maxSeries?)`
+returns `undefined` for invalid setup. Both endpoints must satisfy the existing
+v1 parser. One recorder owns exactly that supplied interval; create a new one
+for a new interval. No clock, interval rotation, finalization or schedule is
+inferred. The caller remains responsible for trusted timing and interval use.
+
+The helper reuses `OPERATIONAL_METRICS_V1` and
+`createOperationalMetricParserV1`. The configured layouts are validated and
+copied at construction; later caller changes cannot enable a histogram or
+change its buckets. Omitted layouts disable their histograms. Synthetic
+one-bucket layouts are used internally only to validate rejected disabled
+histograms' labels, never to enable recording or populate a snapshot.
+Explicit synthetic mechanics profiles in tests are not approval of production
+bucket sizing, collection or thresholds.
+
+| Method | Local behavior |
+| --- | --- |
+| `increment(signal, dimensions, amount = 1)` | Add a nonnegative safe integer to a counter. |
+| `setGauge(signal, dimensions, value)` | Replace a gauge with a nonnegative safe integer; boolean gauges accept only 0 or 1. |
+| `observe(signal, dimensions, sample, occurrences = 1)` | Add a nonnegative safe integer millisecond sample, optionally repeated a positive safe integer number of times. Each inclusive finite bound at or above the sample increases by `occurrences`; total increases even above the last bound. |
+| `reportMissing(observations = 1)` | Record a positive safe integer number of caller-known missing observations. This never creates a successful metric. |
+| `snapshot()` | Return a frozen array of detached, frozen existing `OperationalMetricV1` records for allocated series. |
+| `status()` | Return frozen local accounting with fixed fields and rejection classes; this is not a metric wire record or an SLI verdict. |
+
+Updates return `true` when applied and `false` on rejection. Signal kind,
+exact dimensions and values are checked before retaining any new series.
+Nonplain, accessor and proxy inputs are rejected without invoking caller code.
+Overflow, invalid input and capacity rejection leave every retained metric
+unchanged. Gauges replace values rather than adding them. Counter zero updates
+are permitted. Histograms reject zero occurrences. Retained series are keyed
+by the signal and parser-normalized label tuple, so dimension property order
+cannot create duplicates.
+
+The optional `maxSeries` is a nonnegative safe integer no larger than the sum
+of the registry's published series bounds; its default is that sum. Zero
+rejects all new series. Reaching the cap leaves existing series updateable.
+All layouts have the parser's existing maximum of 32 finite buckets. The
+recorder cannot extend registry cardinality or add labels, identifiers or
+arbitrary metadata. Snapshot copies are bounded by the same retained series
+and bucket limits; callers own the number of snapshots they retain.
+
+Status reports `allocatedSeries`, `maxSeries`, `acceptedUpdates`,
+`reportedMissing`, fixed `rejected` counts (`invalid`, `disabled`, `capacity`,
+`overflow`), `lossDetected`, `accountingSaturated` and `coverage`. Accepted and
+rejected counts measure method calls, not inferred journey counts or histogram
+multiplicities; `reportedMissing` measures explicitly reported observations.
+Accounting saturates at `Number.MAX_SAFE_INTEGER` with sticky
+`accountingSaturated = true` if an addition would overflow. Any rejection or
+reported missing observation sets sticky `lossDetected = true`. Successful
+updates cannot clear it. Accounting contains no supplied labels or values.
+`coverage` always remains `unknown`: an empty snapshot is not observed zero,
+and a recorder cannot establish expected observations, eligibility,
+deduplication, successful delivery or complete coverage. Callers must report
+known gaps and independently establish all coverage required by the accepted
+T11 contract. Losing the recorder itself also loses its local accounting;
+there is no persistence, flush, export or crash-survival claim.
+
+Run `npm run build`, then
+`node --test tests/engineering/t11-operational-metric-recorder.test.mjs` and the
+existing parser test above. The focused suite checks inclusive boundaries,
+above-last totals, disabled histograms, full finite tuple enumeration, capacity,
+invalid shapes/values, atomic overflow rejection, immutable interval snapshots,
+configuration isolation and saturating loss accounting. Its restricted-process
+case exercises offline mechanics with synthetic ambient-call guards. These
+checks establish no real producer, collector, retention/access policy,
+production bucket approval, measured alert budget, SLO, Discord or GoDaddy
+behavior. Actual instrumentation, approved collection/retention/bucket/alert
+policies and real delivery remain blocked. Fresh review, architecture-control
+integration, native CI and post-merge acceptance remain separate gates; this
+partial slice does not complete or close #363.

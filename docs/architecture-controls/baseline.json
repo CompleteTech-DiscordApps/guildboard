@@ -13,6 +13,7 @@
     "apps/api/src/index.ts": "7aa8c92f286ad06f8124f99b5023b3c33992d737c2039e1fa342bfbefe08f73c",
     "apps/api/src/operational-log-reporter.ts": "3dd2b1689a9916fec809be58a524e7cf15c43c9335b2d15256c04917ba6411e2",
     "apps/api/src/operational-logs.ts": "8dd0ed4248638dd0c9a302ea34e0744b09f51f830bd1ac9e329fa9495c2d06b0",
+    "apps/api/src/operational-metric-recorder.ts": "4dbd7ad7d03f9e5f83dc4102c40ad06e2056f732153584a5ce3c975d3d06911b",
     "apps/api/src/operational-metrics.ts": "c84c441c3a6f6f77d86e48104ba2706e7420a269c02e7cbefde244b0d3b65ff7",
     "apps/api/src/private-asset-publication.ts": "129e4bd9fa8492308de2515bb620cedf89d4f65935e91ee4413419f1e910c2af",
     "apps/api/src/resource-admission.ts": "c3ab811fb93596b8c00e4a8c102e67994d22bc3cd287515a44978cebb46efd64",
