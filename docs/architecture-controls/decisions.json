@@ -189,6 +189,42 @@
       "test_evidence": [
         "tests/engineering/t5-private-asset-publication.test.mjs"
       ]
+    },
+    {
+      "id": "DEC-0017",
+      "revision": 1,
+      "boundary": "apps/api/src/operational-metrics.ts",
+      "old_sha256": null,
+      "new_sha256": "c84c441c3a6f6f77d86e48104ba2706e7420a269c02e7cbefde244b0d3b65ff7",
+      "rationale": "Validate the fixed metric registry, finite dimensions and immutable approved histogram layouts.",
+      "alternatives": [
+        "Keep metric validation unavailable until the approved runtime signals and collector are wired."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-operational-metrics.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0018",
+      "revision": 1,
+      "boundary": "apps/api/src/index.ts",
+      "old_sha256": "a01e9df258113c5788e7de603bb9a3388f8cee2362cf7dbe0a6142b8c3eb3270",
+      "new_sha256": "b8ab297e1383e8a559d9936faf883e76e274a0908ded163ff4ade0cf0b9bf4ca",
+      "rationale": "Expose the bounded metric validation boundary for future authorized server telemetry consumers.",
+      "alternatives": [
+        "Keep metric validation unavailable until the approved runtime signals and collector are wired."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-operational-metrics.test.mjs"
+      ]
     }
   ]
 }
