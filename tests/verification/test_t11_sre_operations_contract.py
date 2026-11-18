@@ -84,7 +84,7 @@ def consistent_canary_times(candidates, acknowledged, restored, eligible=None):
     commits_by_position = {}
     positions_by_operation = {}
     operations_by_position = {}
-    contradiction = False
+    disputed_positions = set()
     for entry in acknowledged | restored:
         positions_by_operation.setdefault(entry[:-1], set()).add(entry[-1])
         operations_by_position.setdefault((*entry[:3], entry[-1]), set()).add(entry[:-1])
@@ -92,14 +92,15 @@ def consistent_canary_times(candidates, acknowledged, restored, eligible=None):
         known_positions = positions_by_operation.get(operation, {position})
         known_operations = operations_by_position.get((*operation[:3], position), {operation})
         if known_positions != {position} or known_operations != {operation}:
-            contradiction = True
+            disputed_positions.update(known_positions | {position})
             continue
         if (*operation, position) not in restored:
             continue
         commits_by_position.setdefault(position, set()).add((operation, timestamp))
-    times = [timestamp for position, matches in commits_by_position.items() if len(matches) == 1
+    times = [timestamp for position, matches in commits_by_position.items()
+             if position not in disputed_positions and len(matches) == 1
              for operation, timestamp in matches if eligible is None or (operation, position, timestamp) in eligible]
-    return times, contradiction
+    return times, bool(disputed_positions)
 
 
 class OperationsContractTest(unittest.TestCase):
@@ -409,6 +410,12 @@ class OperationsContractTest(unittest.TestCase):
         self.assertEqual(consistent_canary_times([(original, 8, 5)], evidence, set()), ([], False))
         for contradicts in ((other, 8, 9), (original, 9, 9)):
             self.assertEqual(consistent_canary_times([contradicts], evidence, evidence), ([], True))
+            self.assertEqual(consistent_canary_times([(original, 8, 5), contradicts], evidence, evidence),
+                             ([], True))
+        unaffected = (*scope, "actor_c", "operation_c")
+        expanded = evidence | {(*unaffected, 10)}
+        self.assertEqual(consistent_canary_times([(original, 8, 5), (other, 8, 9), (unaffected, 10, 7)],
+                                                 expanded, expanded), ([7], True))
 
     def test_canary_timestamp_consistency_precedes_temporal_eligibility(self):
         original = ("guild_a", "board_a", "lineage_a", "actor_a", "operation_a")
@@ -464,9 +471,17 @@ class OperationsContractTest(unittest.TestCase):
                 self.synthetic_identity(case["approved_source"])
                 rule = case["active"]["rule"]
                 integrity = case["integrity_recovery"]
+                backup = None
                 if rule == "backup_integrity":
-                    self.assertEqual(set(integrity), integrity_fields)
-                    self.assertTrue(all(type(value) is bool for value in integrity.values()))
+                    self.assertEqual(set(integrity), integrity_fields | {"backup"})
+                    self.assertTrue(all(type(integrity[field]) is bool for field in integrity_fields))
+                    backup = integrity["backup"]
+                    if backup is not None:
+                        self.assertEqual(set(backup), {"job", "completed_second", "deadline_second", "chain_verified"})
+                        self.synthetic_identity(backup["job"])
+                        self.bounded_integer(backup["completed_second"], 86400)
+                        self.bounded_integer(backup["deadline_second"], 86400)
+                        self.assertIs(type(backup["chain_verified"]), bool)
                 else:
                     self.assertIsNone(integrity)
                 self.assertIn(case["signal"], set(signals.values()) | {None})
@@ -476,12 +491,19 @@ class OperationsContractTest(unittest.TestCase):
                     self.bounded_integer(case[field], 86400)
                 observed = case["observed_second"]
                 self.bounded_integer(observed, 86400, nullable=True)
+                integrity_ready = integrity is None or (
+                    all(integrity[field] for field in integrity_fields)
+                    and backup is not None and backup["chain_verified"] and observed is not None
+                    and case["last_breach_second"] < backup["completed_second"] <= observed
+                    and backup["completed_second"] <= backup["deadline_second"]
+                    and case["evaluated_second"] - backup["completed_second"] <= case["freshness_seconds"]
+                )
                 clear = (
                     case["approved"] and case["sufficient"] and case["signal"] == signals[rule]
                     and case["active"]["journey"] in applicable.get(rule, {"none"})
                     and all(case["active"][key] == case["evidence"][key] for key in scope_fields)
                     and case["evidence"]["source"] == case["approved_source"]
-                    and (integrity is None or all(integrity.values()))
+                    and integrity_ready
                     and observed is not None
                     and case["last_breach_second"] < observed <= case["evaluated_second"]
                     and case["evaluated_second"] - observed <= case["freshness_seconds"]
