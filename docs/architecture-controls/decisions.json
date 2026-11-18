@@ -366,6 +366,26 @@
       "test_evidence": [
         "tests/engineering/t9-import-content.test.mjs"
       ]
+    },
+    {
+      "id": "DEC-0022",
+      "revision": 1,
+      "boundary": "apps/api/src/operational-metric-recorder.ts",
+      "old_sha256": null,
+      "new_sha256": "4dbd7ad7d03f9e5f83dc4102c40ad06e2056f732153584a5ce3c975d3d06911b",
+      "rationale": "Add an internal bounded recorder for one caller-supplied UTC interval using the accepted fixed metric registry and parser. Safe counter, gauge and cumulative histogram updates retain finite immutable series and explicit loss accounting. Missing histogram layouts stay disabled; local mechanics do not select production buckets, collect signals or infer journey coverage, alert acceptance or delivery.",
+      "alternatives": [
+        "Leave recording to each future producer, duplicating overflow and series-bound controls.",
+        "Select a live telemetry collector and interval policy before the required runtime producers, retention profile and measured workload evidence exist."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-operational-metric-recorder.test.mjs",
+        "tests/engineering/t11-operational-metrics.test.mjs"
+      ]
     }
   ]
 }
