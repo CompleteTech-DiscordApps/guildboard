@@ -421,6 +421,28 @@ release.stage(Path(sys.argv[3]), bundle)
         self.assertEqual(new_identity, release.verify_bundle(bundle)[1])
         self.assertEqual(release.stage(self.output, bundle), new_identity)
 
+    def test_syncs_every_staged_directory_before_promotion(self):
+        bundle = self.assemble()
+        identity = release.verify_bundle(bundle)[1]
+        candidate = self.output / identity["version"]
+        expected = {parent for member in bundle for parent in Path(member).parents}
+        synced = []
+        real_sync = release.sync_directory
+
+        def record_sync(staged, directory):
+            self.assertFalse(candidate.exists())
+            synced.append(directory)
+            real_sync(staged, directory)
+
+        with patch.object(release, "sync_directory", side_effect=OSError("staged directory unavailable")):
+            with self.assertRaisesRegex(OSError, "staged directory unavailable"):
+                release.stage(self.output, bundle)
+        self.assertFalse(candidate.exists())
+        with patch.object(release, "sync_directory", side_effect=record_sync):
+            self.assertEqual(release.stage(self.output, bundle), identity)
+        self.assertEqual(synced, sorted(expected, key=lambda path: (-len(path.parts), path)))
+        self.assertEqual(synced[-1], Path("."))
+
     def test_retry_syncs_promoted_candidate_after_staging_root_sync_failure(self):
         bundle = self.assemble()
         identity = release.verify_bundle(bundle)[1]

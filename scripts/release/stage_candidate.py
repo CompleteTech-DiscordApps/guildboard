@@ -427,8 +427,8 @@ def read_bundle(root, version):
         return file_bytes(private, scan(private))
 
 
-def sync_directory(path):
-    with directory(path) as descriptor:
+def sync_directory(root, path):
+    with directories(root, path.parts) as descriptor:
         os.fsync(descriptor)
 
 
@@ -457,16 +457,21 @@ def stage(output, bundle):
         root_path = Path(f"/proc/self/fd/{root}")
         with tempfile.TemporaryDirectory(prefix=".stage-", dir=root_path) as name:
             temporary = Path(name)
+            staged_directories = set()
             for member, data in sorted(bundle.items()):
-                target = temporary / member
+                relative = Path(member)
+                target = temporary / relative
+                staged_directories.update(relative.parents)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with target.open("xb") as stream:
                     stream.write(data)
                     stream.flush()
                     os.fsync(stream.fileno())
-            # Resolve the controlled temporary path before the no-link directory walk.
-            for parent, _, _ in os.walk(temporary.resolve(), topdown=False):
-                sync_directory(Path(parent))
+            # Durability requires every known parent, including the stage root.
+            # Derive them from the verified members so listing errors cannot omit a sync.
+            with directories(root, (temporary.name,)) as staged:
+                for parent in sorted(staged_directories, key=lambda path: (-len(path.parts), path)):
+                    sync_directory(staged, parent)
             os.rename(temporary.name, version, src_dir_fd=root, dst_dir_fd=root)
             os.fsync(root)
     return identity
