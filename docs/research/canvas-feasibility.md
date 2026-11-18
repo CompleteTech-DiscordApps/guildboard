@@ -194,8 +194,9 @@ undo.
 
 For #99, the contract should require a revision and restore-epoch fence on
 accepted hydration, explicit local intent, and server validation before any
-mutation. Research still needs to establish callback behavior during rejected
-optimistic edits, revocation, reconnect and concurrent overwrites. Collect
+mutation. The local rejection probe below adds a bounded callback sequence.
+Research still needs callback evidence for revocation, reconnect and concurrent
+overwrites. Collect
 Discord iframe/proxy behavior in supported clients, screen-reader and
 touch/stylus results with actual assistive technology and hardware, and
 applicable GoDaddy staging evidence separately. The partial fixture provides
@@ -294,3 +295,44 @@ moderation, database atomicity, concurrent edits, bound-text behavior and
 client delivery unverified. For #99, use stable member IDs and define a
 single operation with server-side validation of every member before
 publishing or rolling back a compound change.
+
+
+## Ordinary keyboard navigation to Undo, 2026-11-17
+
+Run `npm run probe` from `research-fixtures/canvas` after the locked install.
+The [navigation probe](../../research-fixtures/canvas/keyboard-undo-probe.mjs)
+seeds a baseline and one undoable synthetic edit. Each of the four combinations
+starts in a fresh browser page with a 1200×800 viewport. Keyboard traversal and
+activation use ordinary key presses. The probe records any scene and focus
+change and checks that the same synthetic history can be undone with a separate
+Tab-to-editor and Control+Z control.
+
+| Route from the document body | Presses to Undo | Enter on a fresh edit | Space on a separate fresh edit |
+| --- | ---: | --- | --- |
+| Tab | 10 | Removed the edit and focused the body | Retained the visible scene and Undo focus |
+| Shift+Tab | 2 | Removed the edit and focused the body | Retained the visible scene and Undo focus |
+
+Local evidence used Node 24.22.3, sandboxed Chromium 155.0.8059.84 and pinned
+Excalidraw 0.18.1. The shortcut control preserved the baseline and removed the
+edit after one Tab from the body to the editor. The browser recorded zero page
+errors and zero blocked requests. The earlier programmatic-focus experiment had
+a different Enter result under its separate setup. The combined evidence informs
+#99's keyboard and focus-restoration requirements. Screen-reader announcements,
+actual participant accessibility, physical input and Discord clients need their
+own evidence.
+
+## Synthetic asset serialization, 2026-11-17
+
+The [asset fixture](../../research-fixtures/canvas/asset-probe.mjs) passes a
+one-pixel synthetic GIF through the editor's `serializeAsJSON` and `loadFromBlob`.
+Each import receives no supplemental live editor state. Local JSON round trips
+preserved the registered file's ID, MIME type, bytes and timestamp. Local JSON
+before file registration and database-mode JSON after registration both
+preserved the scene's file reference with no bytes. A separate network control
+confirmed that the secondary loopback server received zero requests.
+
+The two browser commands `npm run probe` and `npm run probe:network` passed
+after a clean locked install using sandboxed Chromium 155.0.8059.84. #99 can use
+these results to distinguish its scene contract from authorized file delivery.
+Decoded rendering, malformed or oversized content, private authorization, and
+real delivery remain open.
