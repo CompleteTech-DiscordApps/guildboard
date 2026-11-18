@@ -103,7 +103,7 @@ conversion is exercised by the browser probe. The full matrix below remains open
 1. Remote hydration with NEVER: preserve IDs/tombstones; observe callback counts/origin; prove repeated accepted state does not emit proposed writes.
 2. Local edit A then remote edit B then undo/redo: preserve B, express only accepted A inverse, reject stale revisions and prevent forbidden resurrection. Current probe passes only a simpler remote baseline/local-history undo scenario; it does not test concurrent remote overwrites or server-fenced inverse intent.
 3. Reject optimistic local change and rollback; repeat after role revocation/epoch change, reconnect and restore. The bounded local rollback below filters the hydration echo and reproduces a native undo/redo failure. Accepted-intent history and session-change paths remain open.
-4. Viewer keyboard shortcuts, pointer drag, delete, paste, drop, text input, context menu and imperative hydration; navigation remains available, server denies every forged mutation. The earlier smoke supplies selected content through the API and retained history for Delete/undo controls, with a writable undo positive control. The 2026-11-18 fresh-page input matrix below adds pointer/keyboard selection, drag, Delete and existing-text trials; its local browser launch is blocked and observed results require the native fixture run. Paste/drop/context-menu, text creation and every server denial remain unverified.
+4. Viewer keyboard shortcuts, pointer drag, delete, paste, drop, text input, context menu and imperative hydration; navigation remains available, server denies every forged mutation. The earlier smoke supplies selected content through the API and retained history for Delete/undo controls, with a writable undo positive control. The 2026-11-18 fresh-page input matrix below observes pointer/keyboard selection, drag, Delete and existing-text trials in native fixture Chromium, with matching writable controls and separate navigation. Paste/drop/context-menu, text creation and every server denial remain unverified.
 5. Asset add/roundtrip/export, missing files, excessive data, malformed imports, external URL requests, fonts/CSP and private-file denial.
 6. Keyboard-only/assistive technology, touch and real stylus; drag interruption, focus restoration and repeated controls.
 7. Compound groups/arrows/text/sticky-note representation; deterministic IDs/bindings, multi-element atomicity and concurrent changes.
@@ -394,9 +394,8 @@ its subsequent crash handler also reported a denied ptrace. No browser input,
 new selection behavior, callback count or viewer success is claimed for this
 attempt. The existing path-triggered Canvas feasibility fixture workflow runs
 the expanded `npm run probe` on Ubuntu 22.04 / Node 24 with managed Chromium.
-Its actual PR-head outcome and emitted browser version must be read before
-accepting the new matrix as runtime evidence. The local syntax/unit/planning
-passes do not substitute for that browser result.
+Its native browser outcomes are recorded below. The local syntax/unit/planning
+passes do not substitute for browser evidence.
 
 The [first native candidate run](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/44359238646)
 at head `9d2634a247475018413c9459c7ac4c3b7dafdf98` installed dependencies,
@@ -409,6 +408,38 @@ trials and network controls did not complete in that run. The recorder now uses
 `structuredClone` to preserve the complete element fields on both sides of the
 same strict comparison; no scene field or invariant was removed. A successor
 native run is required.
+
+The [successful successor run](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/44359529217/job/134996732255)
+at PR #581 head `48f0ea0c323732b3afb737b9a6d73ed5bcd8ba08` checked out
+synthetic merge `ea8ec11134a60c7692a3224247a2af0839b28086` into baseline
+`17d97f4d1b5bcf97e8a8494d25db17480efe21e9`. On Ubuntu **22.04.5**, Node
+**24.22.2**, npm **11.19.1** and sandbox-enabled managed Chromium
+**141.0.7390.37** (Playwright build **1194**), `npm ci --ignore-scripts`,
+`npm test` (17 passes, zero skips), `npm audit --audit-level=low` (zero
+reported vulnerabilities), browser installation, `npm run probe` and
+`npm run probe:network` all exited 0. The full before/after scenes and callback
+sequences are in that job's output under `viewerInput`; these are synthetic
+browser observations, not production or server evidence.
+
+| Observed fresh-page input | Writable result / callbacks | Viewer result / callbacks |
+| --- | --- | --- |
+| Pointer selection then Delete | Selected `input-rectangle`; that ID became a tombstone / 4 | No selected ID; full scene unchanged / 4 |
+| Control+A then Delete | Selected both live IDs; both became tombstones / 4 | No selected IDs; full scene unchanged / 0 |
+| Pointer drag | `input-rectangle` moved from (400, 280) to (480, 320) / 7 | Scene unchanged; scroll changed from (0, 0) to (80, 40) / 8 |
+| Double-click text then type | Text editor opened; `input-text` became `Changed synthetic text` / 30 | No text editor; full scene unchanged / 7 |
+| Independent wheel pan | Scene unchanged; scrollY 0 → -120, zoom 1 / 1 | Scene unchanged; scrollY 0 → -120, zoom 1 / 1 |
+
+Every trial retained all three IDs. `input-tombstone` remained deleted with
+identical complete element fields. Viewer scenes retained the live rectangle
+at (400, 280), live text at (650, 280) with `Synthetic input text`, and deleted
+rectangle at (200, 280). Every recorded viewer callback matched its trial's
+complete baseline scene, including version and deletion fields. Callback
+counts are this run's observations; the assertions require complete scene
+invariants and effective writable controls, not fixed counts. Both the new
+input probe and earlier aggregate checks reported zero page errors and zero
+blocked requests. The separate network controls passed and the secondary
+loopback server received zero requests. UI and navigation callbacks can occur
+without a scene mutation; they are not authenticated write intent.
 
 For #99, matching writable controls distinguish an ignored event from an
 effective editing path, and complete deleted-element/callback observations
