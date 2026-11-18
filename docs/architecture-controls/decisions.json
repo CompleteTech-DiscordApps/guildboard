@@ -191,6 +191,57 @@
       ]
     },
     {
+      "id": "DEC-0012",
+      "revision": 1,
+      "boundary": "database/README.md",
+      "old_sha256": "90b6d0f88ca03152dfa97c2011af690872cac859fa666aadb18128bf60cfdea7",
+      "new_sha256": "d5c508d75ecd576024f59451ad25f79bccdb0d1eccd76397da885f750af08a98",
+      "rationale": "Describe tenant-safe isolated migration, exact supported engines and the verified recovery boundary.",
+      "alternatives": [
+        "Retain the empty database scaffold until a supported exact-schema and interruption fixture is available."
+      ],
+      "controls": [
+        "docs/specifications/GB-T5-S1-persistence-recovery-contract.md"
+      ],
+      "test_evidence": [
+        "tests/verification/test_t5_initial_schema.py"
+      ]
+    },
+    {
+      "id": "DEC-0013",
+      "revision": 1,
+      "boundary": "database/migrations/0001_initial_innodb.sql",
+      "old_sha256": null,
+      "new_sha256": "045a76201bd00c399905a7e19b4f50c74dd141d00ca06eded8f3225c91987f8d",
+      "rationale": "Install the accepted T5 v1 relations with scoped InnoDB keys and hard references.",
+      "alternatives": [
+        "Retain the empty database scaffold until a supported exact-schema and interruption fixture is available."
+      ],
+      "controls": [
+        "docs/specifications/GB-T5-S1-persistence-recovery-contract.md"
+      ],
+      "test_evidence": [
+        "tests/verification/test_t5_initial_schema.py"
+      ]
+    },
+    {
+      "id": "DEC-0014",
+      "revision": 1,
+      "boundary": "database/verify_initial_schema.py",
+      "old_sha256": null,
+      "new_sha256": "b71760dfd3ee9da6ad35d09958fbe024a0b27275ca6307c6a45be979268602dd",
+      "rationale": "Verify the exact catalog and generation before installing or resuming a bounded initial migration.",
+      "alternatives": [
+        "Retain the empty database scaffold until a supported exact-schema and interruption fixture is available."
+      ],
+      "controls": [
+        "docs/specifications/GB-T5-S1-persistence-recovery-contract.md"
+      ],
+      "test_evidence": [
+        "tests/verification/test_t5_initial_schema.py"
+      ]
+    },
+    {
       "id": "DEC-0017",
       "revision": 1,
       "boundary": "apps/api/src/operational-metrics.ts",
