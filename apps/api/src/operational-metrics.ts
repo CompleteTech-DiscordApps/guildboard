@@ -174,30 +174,36 @@ function parseLabels(value: unknown, domains: Dimensions): MetricLabels | undefi
   return Object.freeze(result);
 }
 
-function approvedLayout(value: unknown, name: OperationalMetricNameV1): number[] | undefined {
-  const layouts = dataRecord(value);
-  if (
-    !layouts ||
-    Object.keys(layouts).some(
-      (key) => !isMetricName(key) || OPERATIONAL_METRICS_V1[key].kind !== "histogram",
-    )
-  )
-    return;
-  const bounds = numberList(layouts[name]);
-  if (!bounds) return;
-  let previous = -1;
-  for (const bound of bounds) {
-    if (bound <= previous) return;
-    previous = bound;
+type BucketLayouts = Readonly<Partial<Record<OperationalMetricNameV1, readonly number[]>>>;
+
+export function createOperationalMetricParserV1(
+  approvedBuckets: unknown = {},
+): ((input: unknown) => OperationalMetricV1 | undefined) | undefined {
+  const layouts = dataRecord(approvedBuckets);
+  if (!layouts) return;
+  const approved = Object.create(null) as Partial<
+    Record<OperationalMetricNameV1, readonly number[]>
+  >;
+  for (const [name, layout] of Object.entries(layouts)) {
+    if (!isMetricName(name) || OPERATIONAL_METRICS_V1[name].kind !== "histogram") return;
+    const bounds = numberList(layout);
+    if (!bounds) return;
+    let previous = -1;
+    for (const bound of bounds) {
+      if (bound <= previous) return;
+      previous = bound;
+    }
+    approved[name] = Object.freeze(bounds);
   }
-  return bounds;
+  const fixedLayouts = Object.freeze(approved);
+  return (input) => parseOperationalMetricV1(input, fixedLayouts);
 }
 
 const headerFields = ["version", "startUtc", "endUtc", "signal", "unit", "kind", "dimensions"];
 
-export function parseOperationalMetricV1(
+function parseOperationalMetricV1(
   input: unknown,
-  approvedBuckets?: unknown,
+  approvedBuckets: BucketLayouts,
 ): OperationalMetricV1 | undefined {
   const record = dataRecord(input);
   if (!record || record.version !== 1 || !isMetricName(record.signal)) return;
@@ -231,7 +237,7 @@ export function parseOperationalMetricV1(
     if (!validCount(record.value) || (definition.unit === "boolean" && record.value > 1)) return;
     return Object.freeze({ ...header, kind: definition.kind, value: record.value });
   }
-  const expected = approvedLayout(approvedBuckets, record.signal);
+  const expected = approvedBuckets[record.signal];
   const buckets = numberList(record.buckets);
   const counts = numberList(record.counts);
   if (!expected || !buckets || !counts || !validCount(record.total)) return;

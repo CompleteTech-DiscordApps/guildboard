@@ -5,13 +5,15 @@ defines the API record boundary for [#363](https://github.com/CompleteTech-Disco
 The [T9 privacy inventory](../specifications/GB-T9-S1-security-privacy-contract.md#privacy-inventory)
 governs access, retention and incident holds.
 
-Call `parseOperationalMetricV1(record, approvedBuckets)` with decoded,
-ingress-bounded plain data. It returns a frozen record with copied dimensions
-and histogram arrays, or `undefined` on rejection. Consumers can count
-rejections independently with fixed classifications. Capture both interval
-endpoints as UTC calendar timestamps with seconds and optional three-digit
-milliseconds. The end must follow the start. The signal and its declared
-label tuple identify the series.
+Create one parser per collection and export configuration with
+`createOperationalMetricParserV1(approvedBuckets)`. The factory returns
+`undefined` if any layout is invalid. A successful parser accepts one argument,
+a decoded, ingress-bounded plain-data record, and returns a frozen record
+with copied dimensions and histogram arrays, or `undefined` on rejection.
+Consumers can count rejections independently with fixed classifications.
+Capture both interval endpoints as UTC calendar timestamps with seconds and
+optional three-digit milliseconds. The end must follow the start. The signal
+and its declared label tuple identify the series.
 
 ## Registry
 
@@ -53,8 +55,10 @@ values, maximum finite bucket count and series bound for each signal.
 
 Counters and gauges carry a nonnegative safe integer `value`. Histograms
 carry `buckets`, `counts` and `total`. The caller supplies the independently
-approved bucket layout by histogram signal from trusted configuration. Hold
-that layout fixed for the lifetime of a collection and export configuration.
+approved bucket layouts by histogram signal from trusted configuration at
+setup. The factory copies and freezes the layouts for the lifetime of the
+parser. Histograms require a configured layout for their signal. Omit the
+configuration or pass an empty object to accept counters and gauges only.
 Each layout has 1 to 32 strictly increasing nonnegative safe integer upper
 bounds in milliseconds. The record must reproduce the approved layout in
 order. Counts are cumulative through their inclusive bound. The total
@@ -76,9 +80,9 @@ python3 -B tests/verification/test_t11_sre_operations_contract.py -v
 
 The tests enumerate the registry against independent per-signal series
 counts, reject dynamic identifiers and malformed records, check histogram
-consistency, and exercise import and parsing with restricted local process
-permissions and synthetic ambient-call guards. Evidence covers record
-validation and offline specification scenarios. Live collectors and
+consistency and fixed layouts across records, and exercise import and parsing
+with restricted local process permissions and synthetic ambient-call guards.
+Evidence covers record validation and offline specification scenarios. Live collectors and
 measured alert configuration for #363, approval of bucket layouts and
 operational thresholds, protected sink setup, and Discord and GoDaddy
 acceptance for #364 require separate evidence.

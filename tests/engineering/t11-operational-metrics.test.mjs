@@ -18,9 +18,8 @@ const build = spawnSync(
 );
 assert.equal(build.status, 0, build.stderr + build.stdout);
 const moduleUrl = pathToFileURL(path.join(output, "operational-metrics.js"));
-const { OPERATIONAL_METRICS_V1: registry, parseOperationalMetricV1: parse } = await import(
-  moduleUrl
-);
+const { OPERATIONAL_METRICS_V1: registry, createOperationalMetricParserV1: createParser } =
+  await import(moduleUrl);
 
 const window = {
   version: 1,
@@ -36,6 +35,7 @@ const count = {
   value: 2,
 };
 const layout = { operation_latency: [10, 20, 100] };
+const parse = createParser(layout);
 const histogram = {
   ...window,
   signal: "operation_latency",
@@ -76,6 +76,13 @@ test("registry defines an exact, frozen set of signal names and finite label pro
   };
   assert.deepEqual(Object.keys(registry).sort(), Object.keys(series).sort());
   assert.ok(Object.isFrozen(registry));
+  const parseRegistryMetric = createParser(
+    Object.fromEntries(
+      Object.entries(registry)
+        .filter(([, definition]) => definition.kind === "histogram")
+        .map(([name]) => [name, [10]]),
+    ),
+  );
   for (const [signal, definition] of Object.entries(registry)) {
     assert.equal(definition.seriesUpperBound, series[signal], signal);
     assert.ok(Object.isFrozen(definition) && Object.isFrozen(definition.dimensions));
@@ -93,7 +100,7 @@ test("registry defines an exact, frozen set of signal names and finite label pro
       const measurement =
         kind === "histogram" ? { buckets: [10], counts: [0], total: 0 } : { value: 0 };
       const record = { ...window, signal, kind, unit, dimensions, ...measurement };
-      assert.deepEqual(parse(record, { [signal]: [10] }), record);
+      assert.deepEqual(parseRegistryMetric(record), record);
     }
   }
   assert.throws(() => registry.board_open_outcome.dimensions.cohort.push("dynamic"), TypeError);
@@ -101,7 +108,7 @@ test("registry defines an exact, frozen set of signal names and finite label pro
 
 test("returns immutable values detached from input and accepts a safe integer maximum", () => {
   const input = { ...histogram, dimensions: { ...histogram.dimensions }, counts: [0, 2, 2] };
-  const result = parse(input, layout);
+  const result = parse(input);
   assert.deepEqual(result, histogram);
   assert.ok(Object.isFrozen(result));
   assert.ok(Object.isFrozen(result.dimensions));
@@ -190,8 +197,8 @@ test("rejects invalid intervals, values, record types and mismatched units", () 
 });
 
 test("cumulative finite histogram counts stay within an independently supplied total", () => {
-  assert.deepEqual(parse(histogram, layout), histogram);
-  assert.deepEqual(parse({ ...histogram, counts: [1, 2, 3] }, layout), {
+  assert.deepEqual(parse(histogram), histogram);
+  assert.deepEqual(parse({ ...histogram, counts: [1, 2, 3] }), {
     ...histogram,
     counts: [1, 2, 3],
   });
@@ -211,32 +218,60 @@ test("cumulative finite histogram counts stay within an independently supplied t
     { buckets: [10, 10, 100] },
     { value: 2 },
   ]) {
-    assert.equal(parse({ ...histogram, ...patch }, layout), undefined);
+    assert.equal(parse({ ...histogram, ...patch }), undefined);
   }
+  const maximum = Array.from({ length: 32 }, (_, i) => i);
+  const wide = { ...histogram, buckets: maximum, counts: maximum.map(() => 0), total: 0 };
+  const parseWide = createParser({ operation_latency: maximum });
+  assert.deepEqual(parseWide(wide), wide);
+  const tooWide = [...maximum, 32];
+  assert.equal(parseWide({ ...wide, buckets: tooWide, counts: tooWide.map(() => 0) }), undefined);
+  assert.equal(createParser({ operation_latency: tooWide }), undefined);
+});
+
+test("validates every configured histogram layout during setup", () => {
   for (const invalid of [
-    undefined,
-    {},
+    null,
     { operation_latency: [] },
     { operation_latency: [10, 20, Infinity] },
     { operation_latency: [10, 10, 100] },
     { operation_latency: [10, 100, 20] },
-    { operation_latency: [10, 20, 101] },
-    { operation_latency: [10, 20, 100], active_sockets: [10] },
-    { operation_latency: [10, 20, 100], "synthetic-0017": [10] },
+    { ...layout, probe_latency: [-1] },
+    { ...layout, active_sockets: [10] },
+    { ...layout, "synthetic-0017": [10] },
   ]) {
-    assert.equal(parse(histogram, invalid), undefined);
+    assert.equal(createParser(invalid), undefined);
   }
-  const maximum = Array.from({ length: 32 }, (_, i) => i);
-  const wide = { ...histogram, buckets: maximum, counts: maximum.map(() => 0), total: 0 };
-  assert.deepEqual(parse(wide, { operation_latency: maximum }), wide);
-  const tooWide = [...maximum, 32];
+  for (const parseWithoutLayouts of [createParser(), createParser({})]) {
+    assert.equal(parseWithoutLayouts(histogram), undefined);
+    assert.deepEqual(parseWithoutLayouts(count), count);
+  }
+});
+
+test("uses the configured layout throughout the parser lifetime", () => {
+  const bounds = [...histogram.buckets];
+  const configuration = { operation_latency: bounds };
+  const parseConfigured = createParser(configuration);
+  const differentLayout = { operation_latency: [10, 20, 101] };
+  const differentHistogram = { ...histogram, buckets: differentLayout.operation_latency };
+
+  assert.deepEqual(parseConfigured(histogram), histogram);
+  bounds[2] = 101;
+  configuration.operation_latency = differentLayout.operation_latency;
+  configuration.probe_latency = [10];
+  assert.equal(parseConfigured(differentHistogram, differentLayout), undefined);
+  assert.deepEqual(parseConfigured(histogram, differentLayout), histogram);
   assert.equal(
-    parse(
-      { ...wide, buckets: tooWide, counts: tooWide.map(() => 0) },
-      { operation_latency: tooWide },
-    ),
+    parseConfigured({ ...histogram, signal: "probe_latency", buckets: [10], counts: [0] }),
     undefined,
   );
+  const nextWindow = {
+    ...histogram,
+    startUtc: window.endUtc,
+    endUtc: "2024-02-29T12:02:00Z",
+    counts: [1, 2, 3],
+  };
+  assert.deepEqual(parseConfigured(nextWindow), nextWindow);
 });
 
 test("rejects non-data shapes before invoking accessors, proxies or value coercion", () => {
@@ -246,6 +281,12 @@ test("rejects non-data shapes before invoking accessors, proxies or value coerci
   const revoked = Proxy.revocable([], {});
   revoked.revoke();
   const accessorArray = Object.defineProperty([10, 20, 100], 1, { get: unexpected });
+  assert.equal(
+    createParser(Object.defineProperty({}, "operation_latency", { get: unexpected })),
+    undefined,
+  );
+  assert.equal(createParser({ operation_latency: accessorArray }), undefined);
+  assert.equal(createParser(new Proxy(layout, { ownKeys: unexpected })), undefined);
   const coerced = { [Symbol.toPrimitive]: unexpected };
   const inherited = Object.create(count);
   for (const input of [
@@ -260,7 +301,7 @@ test("rejects non-data shapes before invoking accessors, proxies or value coerci
     assert.equal(parse(input), undefined);
   }
   for (const counts of [accessorArray, revoked.proxy, new Proxy([], { ownKeys: unexpected })]) {
-    assert.equal(parse({ ...histogram, counts }, layout), undefined);
+    assert.equal(parse({ ...histogram, counts }), undefined);
   }
 });
 
@@ -283,11 +324,12 @@ test("import and validation need no ambient facilities", () => {
        net.Server.prototype.listen = hostCall;
        dgram.createSocket = hostCall;
        syncBuiltinESMExports();
-       const { parseOperationalMetricV1 } = await import(${JSON.stringify(moduleUrl.href)});
-       if (!parseOperationalMetricV1(${JSON.stringify(histogram)}, ${JSON.stringify(layout)})) {
+       const { createOperationalMetricParserV1 } = await import(${JSON.stringify(moduleUrl.href)});
+       const parse = createOperationalMetricParserV1(${JSON.stringify(layout)});
+       if (!parse(${JSON.stringify(histogram)})) {
          process.exitCode = 1;
        }
-       if (parseOperationalMetricV1({ ...${JSON.stringify(count)}, signal: "dynamic" })) {
+       if (parse({ ...${JSON.stringify(count)}, signal: "dynamic" })) {
          process.exitCode = 1;
        }`,
     ],
