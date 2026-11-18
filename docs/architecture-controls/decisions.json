@@ -17,6 +17,40 @@
       "test_evidence": [
         "tests/architecture-controls/test_gate.py"
       ]
+    },
+    {
+      "id": "DEC-0004",
+      "revision": 1,
+      "boundary": "packages/canvas/src/import-content.ts",
+      "old_sha256": null,
+      "new_sha256": "4952e6d44db782f3bab1d448d46cd4491e2e3b97bffdb54b67afe70e25cf809b",
+      "rationale": "Define a bounded browser-compatible import validation and inert text projection seam. Link metadata uses exact HTTPS policy and asset references are opaque. Actual import authorization, database access and deployed policy require verified consumers.",
+      "alternatives": [
+        "Defer reusable validation until a consumer is available."
+      ],
+      "controls": [
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t9-import-content.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0005",
+      "revision": 1,
+      "boundary": "packages/canvas/src/index.ts",
+      "old_sha256": "9bc09c5598267291cd1ee9db2c66e83c50d173f82cd3ae08753478ad1f68e67d",
+      "new_sha256": "2b126be3af5b456be888c206f2c3e19f3eb23f86840f45fac7b14e8267c2af0e",
+      "rationale": "Expose the bounded parser and inert text projection through the public canvas package module.",
+      "alternatives": [
+        "Require consumers to use an internal module path."
+      ],
+      "controls": [
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t9-import-content.test.mjs"
+      ]
     }
   ]
 }
