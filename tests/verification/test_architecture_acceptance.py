@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -116,6 +117,8 @@ class Acceptance(unittest.TestCase):
         finally: v.verify = old
 
 class ControlsProjection(unittest.TestCase):
+    seed_build_output = False
+
     def setUp(self):
         spec = importlib.util.spec_from_file_location('controls_acceptance', ROOT / 'scripts/verification/verify_architecture_controls.py')
         self.h = importlib.util.module_from_spec(spec); spec.loader.exec_module(self.h)
@@ -123,18 +126,55 @@ class ControlsProjection(unittest.TestCase):
         self.h.g = importlib.util.module_from_spec(spec); spec.loader.exec_module(self.h.g)
         self.tmp = tempfile.TemporaryDirectory()
         self.tree = Path(self.tmp.name) / 'tree'
-        self.h.copy_projection(ROOT, self.tree)
-    def tearDown(self): self.tmp.cleanup()
+        self.original_source = self.h.snapshot(ROOT)
+        self.source = Path(self.tmp.name) / 'source'
+        self.h.copy_projection(ROOT, self.source)
+        if self.seed_build_output:
+            output = self.source / 'apps/api/dist'
+            output.mkdir(exist_ok=True)
+            (output / 'fixture-build-output.js').write_text('// synthetic build output\n')
+        # Qualify only the owned test fixture before injecting invalid entries.
+        # Include copied build outputs rather than filtering protected names.
+        # This synthetic witness never changes the checkout's accepted baseline.
+        witness = self.source / 'docs/architecture-controls/baseline.json'
+        data = json.loads(witness.read_text())
+        names = set(data['boundaries'])
+        for folder in ('apps', 'packages', 'database', 'infra/godaddy'):
+            names.update(str(p.relative_to(self.source))
+                         for p in (self.source / folder).rglob('*') if p.is_file())
+        data['boundaries'] = {
+            name: hashlib.sha256((self.source / name).read_bytes()).hexdigest()
+            for name in sorted(names)
+        }
+        witness.write_text(json.dumps(data, indent=2) + '\n')
+        self.h.copy_projection(self.source, self.tree)
+    def tearDown(self):
+        try:
+            self.assertEqual(self.original_source, self.h.snapshot(ROOT))
+        finally:
+            self.tmp.cleanup()
     def test_protected_generated_names_preserved_and_rejected_by_gate(self):
+        self.h.g.check(self.source, self.tree)
+        original = self.h.snapshot(self.tree)
         for name in ('dist', 'node_modules', '.git', '__pycache__'):
             p = self.tree / 'apps/api' / name
-            p.mkdir(); (p / 'hidden').write_text('unrecorded')
-            with self.assertRaises(self.h.g.Invalid): self.h.g.check(ROOT, self.tree)
-            out = Path(self.tmp.name) / ('copy-' + name)
-            self.h.copy_projection(self.tree, out)
-            self.assertEqual((out / 'apps/api' / name / 'hidden').read_text(), 'unrecorded')
-            with self.assertRaises(self.h.g.Invalid): self.h.g.check(ROOT, out)
-            shutil.rmtree(p)
+            existed = p.exists()
+            p.mkdir(exist_ok=True)
+            hidden = p / 'hidden'
+            self.assertFalse(hidden.exists())
+            try:
+                hidden.write_text('unrecorded')
+                with self.assertRaises(self.h.g.Invalid): self.h.g.check(self.source, self.tree)
+                out = Path(self.tmp.name) / ('copy-' + name)
+                self.h.copy_projection(self.tree, out)
+                self.assertEqual((out / 'apps/api' / name / 'hidden').read_text(), 'unrecorded')
+                with self.assertRaises(self.h.g.Invalid): self.h.g.check(self.source, out)
+            finally:
+                hidden.unlink(missing_ok=True)
+                if not existed:
+                    p.rmdir()
+            self.assertEqual(original, self.h.snapshot(self.tree))
+            self.h.g.check(self.source, self.tree)
         before = self.h.snapshot(self.tree)
         for name in ('.git', 'node_modules', 'dist'):
             p = self.tree / name; p.mkdir(); (p / 'junk').write_text('outside roots')
@@ -202,12 +242,20 @@ class ControlsProjection(unittest.TestCase):
         before = self.h.snapshot(self.tree)
         for kind in ('symlink', 'fifo'):
             p = self.tree / ('apps/api/dist' if kind == 'symlink' else 'apps/api/node_modules')
-            if kind == 'symlink': p.symlink_to('README.md')
-            else: os.mkfifo(p)
-            with self.assertRaises((ValueError, OSError, self.h.g.Invalid)):
-                self.h.copy_projection(self.tree, Path(self.tmp.name) / ('out-' + kind))
-            self.assertFalse((Path(self.tmp.name) / ('out-' + kind)).exists())
-            p.unlink()
+            saved = Path(self.tmp.name) / ('saved-' + kind)
+            existed = p.exists()
+            if existed:
+                p.rename(saved)
+            try:
+                if kind == 'symlink': p.symlink_to('README.md')
+                else: os.mkfifo(p)
+                with self.assertRaises((ValueError, OSError, self.h.g.Invalid)):
+                    self.h.copy_projection(self.tree, Path(self.tmp.name) / ('out-' + kind))
+                self.assertFalse((Path(self.tmp.name) / ('out-' + kind)).exists())
+            finally:
+                p.unlink(missing_ok=True)
+                if existed:
+                    saved.rename(p)
             self.assertEqual(before, self.h.snapshot(self.tree))
     def test_write_failure_cleans_staging(self):
         out = Path(self.tmp.name) / 'write-failure'
@@ -220,5 +268,11 @@ class ControlsProjection(unittest.TestCase):
         self.assertEqual(self.h.revision('a' * 40), 'a' * 40)
         for value in ('abc', 'A' * 40, 'g' * 40, 'a' * 41):
             with self.assertRaises(self.h.argparse.ArgumentTypeError): self.h.revision(value)
+
+
+class BuiltControlsProjection(ControlsProjection):
+    """Run the same controls with pre-existing projected build output."""
+    seed_build_output = True
+
 
 if __name__ == '__main__': unittest.main()
