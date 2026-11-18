@@ -1,0 +1,209 @@
+"""Owned ephemeral Docker Playwright MCP stdio research; no HTTP service/install.
+
+Uses the existing cached image, network=none, no host mounts or shared session.
+Only the exact invocation's labeled container may be removed. No volume exists.
+"""
+
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import queue
+import re
+import platform
+import subprocess
+import threading
+import tempfile
+import uuid
+
+
+IMAGE = 'mcp/playwright@sha256:8771dc4666e7c11440bfc6a0c6b00480e9a15b8891b45f29a52d7d995f8d1492'
+
+
+def main() -> int:
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output',type=Path,required=True)
+    args=parser.parse_args()
+    name=None
+    label='tech.complete.guildboard.t7.run'
+    process=None
+    docker=None
+    report={'image':IMAGE,
+            'limits':{'network':'none','cpus':1,'memory_mib':768,'pids':256,'host_mounts':False},
+            'browser_sandbox':'Cached image entrypoint explicitly uses --no-sandbox; not production isolation evidence.'}
+    lines=queue.Queue()
+    def read():
+        for line in process.stdout:
+            try: lines.put(json.loads(line))
+            except json.JSONDecodeError: pass
+        lines.put(None)
+    serial=0
+    def request(method,params):
+        nonlocal serial
+        serial+=1
+        process.stdin.write(json.dumps({'jsonrpc':'2.0','id':serial,'method':method,'params':params})+'\n')
+        process.stdin.flush()
+        while True:
+            message=lines.get(timeout=45)
+            if message is None: raise RuntimeError('owned MCP process exited')
+            if message.get('id')==serial:
+                if 'error' in message: raise RuntimeError(str(message['error']))
+                return message['result']
+    failed=False
+    startup_confirmed=False
+    try:
+        report['stage']='initialization'
+        report['observed_at_utc']=datetime.now(timezone.utc).isoformat()
+        name='guildboard-t7-'+uuid.uuid4().hex[:12]
+        report['container']=name
+        report['stage']='read-fixtures'
+        root=Path(__file__).resolve().parents[2]
+        html=(root/'docs/research/t7-outline-prototype.html').read_text(encoding='utf-8')
+        tests=(root/'tests/research/t7-browser-checks.js').read_text(encoding='utf-8')
+        report['prototype_sha256']=hashlib.sha256(html.encode()).hexdigest()
+        report['checks_sha256']=hashlib.sha256(tests.encode()).hexdigest()
+        report['stage']='environment-discovery'
+        report['environment']={'platform':platform.platform(),'python':platform.python_version()}
+        report['stage']='git-discovery'
+        report['tested_head']=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True,stderr=subprocess.PIPE,timeout=15).strip()
+        report['stage']='docker-discovery'
+        docker_env = os.environ.copy()
+        context = subprocess.check_output(
+            ['docker', 'context', 'show'], env=docker_env, text=True, stderr=subprocess.DEVNULL, timeout=15
+        ).strip()
+        report['stage'] = 'docker-context-verification'
+        if not context or any(character.isspace() for character in context):
+            raise RuntimeError('Docker context name is missing or invalid')
+        try:
+            endpoint = subprocess.check_output(
+                ['docker', 'context', 'inspect', '--format', '{{ (index .Endpoints "docker").Host }}', '--', context],
+                env=docker_env, text=True, stderr=subprocess.DEVNULL, timeout=15
+            ).removesuffix('\n')
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, UnicodeError):
+            raise RuntimeError('Docker context endpoint could not be verified') from None
+        if not re.fullmatch(r'unix:///(?!/)[^%?#\x00-\x20\x7f]+', endpoint):
+            raise RuntimeError('Docker context must use an absolute local Unix socket')
+        host_override = docker_env.get('DOCKER_HOST')
+        if context == 'default' and host_override and host_override != endpoint:
+            raise RuntimeError('Docker host override does not match the verified default context endpoint')
+        report['context'] = context
+        # Pin the inspected endpoint even if the context metadata changes during the run.
+        docker_env.pop('DOCKER_CONTEXT', None)
+        docker_env.pop('DOCKER_HOST', None)
+        docker = ['docker', '--host', endpoint]
+        report['stage'] = 'docker-image-preflight'
+        subprocess.run([*docker,'image','inspect',IMAGE],env=docker_env,check=True,capture_output=True,text=True,timeout=15)
+        report['stage']='browser-session'
+        process=subprocess.Popen([*docker,'run','--pull=never','--rm','--init','-i','--name',name,
+                                  '--label',label+'='+name,'--network=none','--cpus=1',
+                                  '--memory=768m','--pids-limit=256',IMAGE],
+                                 env=docker_env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,
+                                 text=True,encoding='utf-8',bufsize=1)
+        threading.Thread(target=read,daemon=True).start()
+        init=request('initialize',{'protocolVersion':'2024-11-05','capabilities':{},'clientInfo':{'name':'guildboard-t7-research','version':'1'}})
+        startup_confirmed=True
+        report['mcp_server']=init.get('serverInfo')
+        process.stdin.write(json.dumps({'jsonrpc':'2.0','method':'notifications/initialized'})+'\n');process.stdin.flush()
+        names=[t['name'] for t in request('tools/list',{})['tools']]
+        tool=next(n for n in ('browser_run_code','browser_run_code_unsafe') if n in names)
+        code='async (page) => { await page.setContent('+json.dumps(html)+'); return await ('+tests+')(page); }'
+        result=request('tools/call',{'name':tool,'arguments':{'code':code}})
+        text='\n'.join(c.get('text','') for c in result.get('content',[]) if c['type']=='text')
+        if result.get('isError'): raise RuntimeError(text[:2000])
+        marker='### Result\n'
+        if marker not in text: raise RuntimeError('MCP did not return structured browser result: '+text[:1000])
+        payload=text.split(marker,1)[1].split('\n### ',1)[0].strip()
+        report['browser_result']=json.loads(payload)
+        if report['browser_result'].get('result')!='pass': raise RuntimeError('browser result failed')
+        report['stage']='screenshot-copy'
+        target=args.output.with_name(args.output.name+'.'+uuid.uuid4().hex+'.png')
+        target.parent.mkdir(parents=True,exist_ok=True)
+        # Stage on the destination filesystem, then publish only after a complete copy.
+        with tempfile.TemporaryDirectory(prefix='.t7-screenshot-',dir=target.parent) as staging:
+            staged=Path(staging)/'screenshot.png'
+            subprocess.run([*docker,'cp',name+':/tmp/guildboard-t7-fixture.png',str(staged)],env=docker_env,check=True,capture_output=True,timeout=15)
+            screenshot_sha256=hashlib.sha256(staged.read_bytes()).hexdigest()
+            # Hard-link publication refuses collisions and never replaces older evidence.
+            os.link(staged,target)
+        report['screenshot_path']=str(target)
+        report['screenshot_sha256']=screenshot_sha256
+        report['result']='pass'
+    except Exception as error:
+        failed=True;report.update(result='blocked-or-failed',error_type=type(error).__name__,error=str(error)[:4000])
+        if isinstance(error,subprocess.CalledProcessError):
+            stderr=error.stderr
+            report['command_stderr']=(stderr.decode('utf-8',errors='replace') if isinstance(stderr,bytes) else stderr)
+            if report['command_stderr'] is not None: report['command_stderr']=report['command_stderr'][:4000]
+    finally:
+        if process is None:
+            report['owned_container_absent']=True
+            report['cleanup_note']='No container process was started; preflight failed.'
+        else:
+            report['owned_container_absent']=None
+            process_reaped=False
+            try:
+                process.terminate()
+                try: process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+                process_reaped=True
+            except Exception as error:
+                failed=True;report.update(result='blocked-or-failed',process_cleanup_error=str(error)[:4000])
+            try:
+                inspect=subprocess.run([*docker,'container','inspect',name],env=docker_env,capture_output=True,text=True,timeout=15)
+                if inspect.returncode==0:
+                    container=json.loads(inspect.stdout)[0]
+                    owner=container['Config']['Labels'].get(label)
+                    if owner!=name: raise RuntimeError('refusing cleanup without exact ownership label')
+                    container_id=container.get('Id')
+                    if not isinstance(container_id,str) or not re.fullmatch(r'[0-9a-f]{64}',container_id):
+                        raise RuntimeError('refusing cleanup without a full container ID')
+                    # --rm can remove this container and free its name before rm runs.
+                    subprocess.run([*docker,'rm','--force',container_id],env=docker_env,capture_output=True,timeout=15)
+                    remaining=subprocess.check_output([*docker,'ps','-a','--no-trunc','--format','{{.ID}}'],env=docker_env,text=True,timeout=15).splitlines()
+                    id_absent=container_id not in remaining
+                    report['owned_container_id_absent_at_check']=id_absent
+                    if not id_absent:
+                        report['owned_container_absent']=False
+                        raise RuntimeError('owned container remains after cleanup')
+                    startup_confirmed=True
+                else:
+                    # Without an inspected ID, a successful listing can only establish name absence.
+                    remaining=subprocess.check_output([*docker,'ps','-a','--format','{{.Names}}'],env=docker_env,text=True,timeout=15).splitlines()
+                    name_absent=name not in remaining
+                    report['container_name_absent_at_check']=name_absent
+                    if not name_absent:
+                        raise RuntimeError('container name is still listed and ownership is unconfirmed')
+                # The daemon can register a pending create after an empty listing.
+                if not process_reaped:
+                    raise RuntimeError('container cleanup is unconfirmed because the Docker client was not reaped')
+                if not startup_confirmed:
+                    raise RuntimeError('container cleanup is unconfirmed because startup was not observed')
+                report['owned_container_absent']=True
+            except Exception as error:
+                failed=True;report.update(result='blocked-or-failed',cleanup_error=str(error)[:4000])
+        try:
+            args.output.parent.mkdir(parents=True,exist_ok=True)
+            # A report is visible only once all its bytes have been written.
+            with tempfile.TemporaryDirectory(prefix='.t7-report-',dir=args.output.parent) as staging:
+                staged=Path(staging)/'report.json'
+                staged.write_bytes((json.dumps(report,indent=2,sort_keys=True)+'\n').encode())
+                staged.replace(args.output)
+        except OSError as error:
+            failed=True;report.update(result='blocked-or-failed',report_write_error=str(error)[:4000])
+    summary_keys = ("result", "container", "owned_container_absent", "error",
+                    "process_cleanup_error", "cleanup_error", "report_write_error")
+    summary = {key: report.get(key) for key in summary_keys}
+    if name is not None:
+        summary["ownership_label"] = f"{label}={name}"
+    if "context" in report:
+        summary["context_sha256"] = hashlib.sha256(report["context"].encode("utf-8")).hexdigest()
+    print(json.dumps(summary))
+    return int(failed)
+
+
+if __name__=='__main__':
+    raise SystemExit(main())
