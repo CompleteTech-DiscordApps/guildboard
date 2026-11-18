@@ -38,6 +38,11 @@ a generated distinct `localhost` principal granted only `SELECT` on this run's
 database and uses its own client process/connection. Callers seed accepted scoped
 rows through existing domain fixtures and independently observe their results;
 this helper invents no auth, policy, API, storage, bot or transaction interface.
+Database names contain only the `gb12` prefix and hexadecimal characters. This
+keeps database-level grant scope exact without relying on wildcard escaping or
+MySQL `partial_revokes`; identifier quoting alone does not make `_` or `%`
+literal in those grants. See the
+[MySQL 8.4 GRANT rules](https://dev.mysql.com/doc/refman/8.4/en/grant.html).
 
 Children have an empty environment, `--no-defaults`, MySQL `--no-login-paths`,
 explicit socket/user/database, disabled reconnect and a one-second connect
@@ -56,6 +61,15 @@ cancelled CREATE is unknown and is preserved, even if the engine may have
 committed it. Exceptions expose a local `inventory` tuple of resource kind,
 synthetic name and ownership state for authorized reconciliation. Migration
 failure remains unknown/fenced; it does not produce a usable fixture.
+Sessions enter the owned inventory before process startup and pipe setup. If
+setup and child teardown both fail, the error remains `cleanup:unknown` with
+the retained child PID in its inventory. The error's `retry_client_cleanup()`
+callback retains the process handles and attempts one bounded child-only cleanup
+pass. It returns the updated inventory on success or raises `cleanup:unknown`
+with an updated inventory and retry callback on failure. The original error's
+inventory is a snapshot; use the retry result for current reconciliation state.
+This callback never reconnects to SQL or retries DROP operations. Retain the
+error until every unresolved child and SQL resource has been reconciled.
 
 Run/query deadlines use monotonic time. Defaults are 30 seconds overall,
 3 seconds per query and a shared 5-second SQL cleanup deadline, bounded to
@@ -92,3 +106,12 @@ independent catalog/sentinel checks remain pending, along with functional,
 security and consumer review and #393 verification. The existing full harness
 `integration` target remains fail-closed for unavailable SQL/API/auth, policy,
 storage and bot prerequisites and the unresolved T1/T2/T4 runtime blockers.
+
+Regressions cover huge positive and negative integers in all three timeout
+fields with no child or SQL effects, synthetic wildcard and literal grant
+interpretation against a distinct database matching the former name pattern,
+and failure at either pipe setup step combined with failed child termination.
+The last case retains the isolated Python child, reports unresolved ownership,
+and verifies bounded cleanup retry and eventual reap after fault removal. These
+checks establish fixture behavior only; actual privilege enforcement on both
+accepted engines remains pending.

@@ -40,7 +40,7 @@ def _validate(config):
     for field, maximum in (("timeout_seconds", 60), ("operation_timeout_seconds", 10),
                            ("cleanup_timeout_seconds", 10)):
         value = getattr(config, field)
-        if type(value) not in (int, float) or not math.isfinite(value) or not 0 < value <= maximum:
+        if type(value) not in (int, float) or not 0 < value <= maximum or not math.isfinite(value):
             raise ValueError(field)
     if config.disposable is not True:
         raise ValueError("disposable")
@@ -74,6 +74,15 @@ def _validate(config):
 class _Session:
     """One client process with bounded I/O, query count, output and reap time."""
     def __init__(self, config, user, database, deadline):
+        self.config, self.user = config, user
+        self.database, self.deadline = database, deadline
+        self.operation_timeout = config.operation_timeout_seconds
+        self.buffer, self.queries, self.closed, self.tainted = b"", 0, False, False
+        self.client = None
+
+    def start(self):
+        # The fixture registers this session before it can acquire a child.
+        config, user, database = self.config, self.user, self.database
         argv = [str(config.client), "--no-defaults"]
         if config.client.name == "mysql":
             argv.append("--no-login-paths")
@@ -82,25 +91,18 @@ class _Session:
                  "--binary-mode", "--connect-timeout=1"]
         if database is not None:
             argv.append(f"--database={database}")
-        self.database, self.deadline = database, deadline
-        self.operation_timeout = config.operation_timeout_seconds
-        self.buffer, self.queries, self.closed, self.tainted = b"", 0, False, False
-        if time.monotonic() >= deadline:
+        if self.client is not None or self.closed or time.monotonic() >= self.deadline:
             raise SqlFixtureError("session", "unavailable")
         try:
             self.client = subprocess.Popen(argv, env={}, stdin=subprocess.PIPE,
                                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
         except OSError:
             raise SqlFixtureError("session", "unavailable") from None
-        try:
-            os.set_blocking(self.client.stdin.fileno(), False)
-            os.set_blocking(self.client.stdout.fileno(), False)
-        except BaseException:
-            self.close()
-            raise
+        os.set_blocking(self.client.stdin.fileno(), False)
+        os.set_blocking(self.client.stdout.fileno(), False)
 
     def query(self, sql):
-        if self.closed or self.tainted or type(sql) is not str or self.queries >= 1024:
+        if self.client is None or self.closed or self.tainted or type(sql) is not str or self.queries >= 1024:
             raise SqlFixtureError("query", "unavailable")
         try:
             encoded = sql.encode("ascii")
@@ -142,6 +144,8 @@ class _Session:
 
     def close(self):
         self.closed = True
+        if self.client is None:
+            return
         try:
             if self.client.poll() is None:
                 self.client.kill()
@@ -163,7 +167,8 @@ def _preflight(session):
 class SqlFixture:
     def __init__(self, config):
         self.config = config
-        self.database = "gb12_" + secrets.token_hex(16)
+        # Database-level grants treat '_' and '%' as patterns on some engines.
+        self.database = "gb12" + secrets.token_hex(16)
         self.observer_user = "gb12o_" + secrets.token_hex(10)
         self.generation = secrets.token_hex(16).upper()
         self.deadline = time.monotonic() + config.timeout_seconds
@@ -182,6 +187,7 @@ class SqlFixture:
             try:
                 session = _Session(self.config, user, database, deadline)
                 self._sessions.append(session)
+                session.start()
             finally:
                 signal.pthread_sigmask(signal.SIG_SETMASK, previous)
             _preflight(session)
@@ -239,11 +245,11 @@ class SqlFixture:
         resources = tuple((kind, names[kind], "owned" if kind in self._owned else "unknown")
                           for kind in dict.fromkeys([*self._owned, *self._uncertain]))
         clients = tuple(("client", str(session.client.pid), "unknown") for session in self._sessions
-                        if getattr(session, "client", None) is not None and session.client.returncode is None)
+                        if getattr(session, "client", None) is not None)
         return resources + clients
 
-    def _cleanup(self):
-        self._active = False
+    def retry_client_cleanup(self):
+        """Retry only tracked child teardown once; never retry SQL deletion."""
         failed = False
         for session in tuple(self._sessions):
             try:
@@ -251,6 +257,20 @@ class SqlFixture:
                 self._sessions.remove(session)
             except BaseException:
                 failed = True
+        if failed:
+            error = SqlFixtureError("cleanup", "unknown")
+            error.inventory = self.inventory
+            error.retry_client_cleanup = self.retry_client_cleanup
+            raise error from None
+        return self.inventory
+
+    def _cleanup(self):
+        self._active = False
+        failed = False
+        try:
+            self.retry_client_cleanup()
+        except BaseException:
+            failed = True
         deadline = time.monotonic() + self.config.cleanup_timeout_seconds
         for kind in reversed(tuple(self._owned)):
             try:
@@ -288,4 +308,5 @@ def sql_fixture_run(config):
             run._cleanup()
     except BaseException as error:
         error.inventory = run.inventory
+        error.retry_client_cleanup = run.retry_client_cleanup
         raise

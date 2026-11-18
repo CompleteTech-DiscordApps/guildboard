@@ -23,6 +23,15 @@ class SyntheticEngine:
         self.sessions, self.commands = [], []
         self.version = next(iter(fixture.schema.CATALOG))
         self.networking, self.failure = "1", None
+        self.literal_grants = False
+
+    def select_scope_matches(self, grant, database):
+        if self.literal_grants:
+            return grant == database
+        # Model database-level wildcard interpretation, including quoted names.
+        pattern = "".join("." if char == "_" else ".*" if char == "%" else re.escape(char)
+                          for char in grant)
+        return re.fullmatch(pattern, database) is not None
 
     def session(self, config, user, database, deadline):
         engine = self
@@ -36,6 +45,9 @@ class SyntheticEngine:
 
             def close(self):
                 self.closed = True
+
+            def start(self):
+                pass
 
             def query(self, sql):
                 if self.closed or time.monotonic() >= deadline:
@@ -72,8 +84,12 @@ class SyntheticEngine:
                 elif "FROM information_schema.SCHEMATA" in sql:
                     result = [b"1"] if sql.split("'")[1] in engine.databases else []
                 elif sql == "SELECT phase FROM schema_installation WHERE singleton=1":
+                    if user in engine.users and not engine.select_scope_matches(engine.users[user], database):
+                        raise fixture.SqlFixtureError("query", "unknown")
                     result = [engine.databases[database]]
                 elif sql == "SELECT synthetic_value":
+                    if user in engine.users and not engine.select_scope_matches(engine.users[user], database):
+                        raise fixture.SqlFixtureError("query", "unknown")
                     result = [engine.databases[database]]
                 elif sql == "UPDATE synthetic_value":
                     if user in engine.users:
@@ -157,6 +173,18 @@ class SqlFixtureTests(unittest.TestCase):
         self.assertEqual(self.engine.commands, [])
         self.assert_clean()
 
+    def test_huge_integer_timeouts_are_names_only_and_have_zero_effects(self):
+        for field in ("timeout_seconds", "operation_timeout_seconds", "cleanup_timeout_seconds"):
+            for value in (10 ** 1000, -(10 ** 1000)):
+                with self.subTest(field=field, positive=value > 0), patch.object(subprocess, "Popen") as spawn:
+                    with self.assertRaisesRegex(ValueError, f"^{field}$"):
+                        with fixture.sql_fixture_run(replace(self.config, **{field: value})):
+                            self.fail("invalid timeout entered")
+                    spawn.assert_not_called()
+        self.assertEqual(self.engine.commands, [])
+        self.assertEqual(self.engine.sessions, [])
+        self.assert_clean()
+
     def test_engine_and_networking_preflight_have_zero_creates(self):
         supported = self.engine.version
         for version, networking in (("unknown", "1"), (supported, "0")):
@@ -166,6 +194,27 @@ class SqlFixtureTests(unittest.TestCase):
                     self.fail("unsupported engine entered")
         self.assertTrue(all(sql.startswith("SELECT VERSION()") for _, _, sql in self.engine.commands))
         self.assert_clean()
+
+    def test_observer_grant_denies_distinct_database_matching_old_pattern(self):
+        suffix = "a" * 32
+        foreign = "gb12x" + suffix
+        for version in fixture.schema.CATALOG:
+            for literal in (False, True):
+                with self.subTest(version=version, literal_grants=literal):
+                    self.engine.version, self.engine.literal_grants = version, literal
+                    self.engine.databases[foreign] = b"foreign sentinel"
+                    self.assertEqual(self.engine.select_scope_matches("gb12_" + suffix, foreign), not literal)
+                    with patch.object(fixture.secrets, "token_hex", side_effect=lambda size: "a" * (size * 2)):
+                        with fixture.sql_fixture_run(self.config) as run:
+                            self.assertRegex(run.database, r"^gb12[0-9a-f]{32}$")
+                            with run.observer() as observer:
+                                self.assertEqual(observer.query("SELECT synthetic_value"), [b"activated"])
+                            with run._connect(run.observer_user, foreign, run.deadline) as observer:
+                                with self.assertRaisesRegex(fixture.SqlFixtureError, "^query:unknown$"):
+                                    observer.query("SELECT synthetic_value")
+                            self.assertEqual(self.engine.databases[foreign], b"foreign sentinel")
+                    self.assertEqual(self.engine.databases.pop(foreign), b"foreign sentinel")
+                    self.assert_clean()
 
     def test_isolation_migration_and_separate_select_only_observer(self):
         with fixture.sql_fixture_run(self.config) as first, fixture.sql_fixture_run(self.config) as second:
@@ -221,7 +270,7 @@ class SqlFixtureTests(unittest.TestCase):
                 self.engine = SyntheticEngine()
 
     def test_colliding_existing_database_is_never_dropped(self):
-        name = "gb12_" + "a" * 32
+        name = "gb12" + "a" * 32
         self.engine.databases[name] = b"existing sentinel"
         with patch.object(fixture.secrets, "token_hex", return_value="a" * 32):
             with self.assertRaisesRegex(fixture.SqlFixtureError, "^create:unknown$"):
@@ -296,6 +345,9 @@ class SqlFixtureTests(unittest.TestCase):
         self.assertEqual(result.exception.inventory[0][0], "observer")
         self.assertEqual(self.engine.databases, {"unrelated_sentinel": b"sentinel"})
         self.assertEqual(self.sentinel.read_bytes(), b"unchanged")
+        commands = list(self.engine.commands)
+        self.assertEqual(result.exception.retry_client_cleanup(), result.exception.inventory)
+        self.assertEqual(self.engine.commands, commands)
 
     def test_cleanup_verifies_absence_and_does_not_retry_drops(self):
         original = self.engine.session
@@ -334,6 +386,7 @@ class BoundedClientTests(unittest.TestCase):
 
         with patch.object(subprocess, "Popen", side_effect=spawn):
             session = fixture._Session(config, config.admin_user, None, time.monotonic() + 2)
+            session.start()
         self.addCleanup(session.close)
         return session, captured[0]
 
@@ -379,6 +432,54 @@ class BoundedClientTests(unittest.TestCase):
         session.close()
         self.assertIsNotNone(session.client.returncode)
 
+    def test_partial_pipe_setup_and_failed_kill_retain_child_for_bounded_retry(self):
+        original = subprocess.Popen
+        config = fixture.SqlFixtureConfig(Path("/synthetic/mysql"), Path("/synthetic/socket"),
+                                          "fixture_admin", True)
+        for fail_at in (1, 2):
+            with self.subTest(failed_pipe=fail_at), ExitStack() as faults:
+                children = []
+
+                def spawn(argv, **kwargs):
+                    child = original([sys.executable, "-I", "-S", "-c", "import time; time.sleep(30)"], **kwargs)
+                    children.append(child)
+                    faults.enter_context(patch.object(child, "kill", side_effect=OSError("synthetic kill failure")))
+                    return child
+
+                def reap(children=children):
+                    for child in children:
+                        if child.poll() is None:
+                            original.kill(child)
+                        child.wait(timeout=2)
+                        child.stdin.close()
+                        child.stdout.close()
+
+                # Test cleanup runs after injected faults are removed, even on failure.
+                self.addCleanup(reap)
+                faults.enter_context(patch.object(fixture, "_validate"))
+                spawn_mock = faults.enter_context(patch.object(subprocess, "Popen", side_effect=spawn))
+                faults.enter_context(patch.object(fixture.os, "set_blocking",
+                                                 side_effect=[None] * (fail_at - 1) + [OSError("synthetic pipe failure")]))
+                preflight = faults.enter_context(patch.object(fixture, "_preflight"))
+                started = time.monotonic()
+                with self.assertRaisesRegex(fixture.SqlFixtureError, "^cleanup:unknown$") as result:
+                    with fixture.sql_fixture_run(config):
+                        self.fail("partially initialized client entered")
+                child = children[0]
+                expected = (("client", str(child.pid), "unknown"),)
+                self.assertEqual(result.exception.inventory, expected)
+                self.assertIsNone(child.poll())
+                with self.assertRaisesRegex(fixture.SqlFixtureError, "^cleanup:unknown$") as retry:
+                    result.exception.retry_client_cleanup()
+                self.assertEqual(retry.exception.inventory, expected)
+                self.assertEqual(child.kill.call_count, 3)
+                spawn_mock.assert_called_once()
+                preflight.assert_not_called()
+                self.assertLess(time.monotonic() - started, 1.5)
+                faults.close()
+                self.assertEqual(retry.exception.retry_client_cleanup(), ())
+                self.assertIsNotNone(child.returncode)
+
     def test_query_size_count_and_expired_session_are_bounded(self):
         session, _ = self.session("import sys; sys.stdin.buffer.read()")
         with self.assertRaisesRegex(ValueError, "^sql$"):
@@ -389,7 +490,7 @@ class BoundedClientTests(unittest.TestCase):
         with patch.object(subprocess, "Popen") as spawn:
             with self.assertRaisesRegex(fixture.SqlFixtureError, "^session:unavailable$"):
                 fixture._Session(fixture.SqlFixtureConfig(Path("/synthetic/mysql"), Path("/synthetic/socket"),
-                                                         "fixture_admin", True), "fixture_admin", None, 0)
+                                                         "fixture_admin", True), "fixture_admin", None, 0).start()
             spawn.assert_not_called()
 
 
