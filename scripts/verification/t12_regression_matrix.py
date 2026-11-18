@@ -50,10 +50,41 @@ VPS_BLOCKED = "Approved GoDaddy scope and qualifying receipt unavailable."
 REVIEW_PENDING = "Exact-candidate independent review and disposition unavailable."
 PUBLICATION_BLOCKED = "Accepted historical #471 designation, published bytes and approval unavailable."
 SMOKE = "Production smoke requires an approved deployed candidate at the GoDaddy target."
+# Explicit clause bindings are coverage plans, never qualifying evidence. Each
+# target pins a row, environment, native issue, contract and only relevant cases.
+# "$discord" expands to every registered client; {client} uses its row suffix.
 TRACE_SCOPES = {
+    ("GB-T9.04.01", "Run dependency, secret and static analysis checks with triaged findings"): (
+        ("dependency-license-lockfile", "hosted", 318, T9, ("dependency-license-lockfile",)),
+        ("secret-static-triage", "hosted", 318, T9, ("secret-static-triage",)),
+    ),
+    ("GB-T9.04.01", "verify lockfile provenance and license obligations"): (
+        ("dependency-license-lockfile", "hosted", 318, T9, ("dependency-license-lockfile",)),
+    ),
+    ("GB-T10.04.02", "Run external HTTPS/WSS, reconnect, large-message, idle-timeout and renewal tests against real VPS"): (
+        ("production-network", "vps-network", 353, T12,
+         ("https", "wss", "reconnect-restart", "large-message", "idle-below-threshold",
+          "idle-above-threshold", "tls-renewal")),
+    ),
+    ("GB-T10.04.02", "prove firewall/database isolation and Discord launch"): (
+        ("production-network", "vps-network", 353, T12, ("firewall-isolation", "sql-asset-isolation")),
+        ("production-discord", "$discord", 353, T12, ("activity-startup",)),
+    ),
     ("GB-T12.01.02", "Exercise actual UI launch/ready/auth/navigation with controlled SDK mocks "
-     "and separately real supported Discord clients"): {"browser-e2e", "sdk-launch"},
-    ("GB-T12.04.02", "run production smoke after deployment"): {"deployed-build-smoke", "deployed-client-smoke"},
+     "and separately real supported Discord clients"): (
+        ("browser-e2e", "local", 396, T12, ("controlled-launch", "ready", "auth", "navigation")),
+        ("sdk-launch", "$discord", 396, T12, ("actual-launch", "sdk-compatibility")),
+    ),
+    ("GB-T12.04.01", "Run keyboard/screen-reader scenarios, load/resource budgets and real GoDaddy HTTPS/WSS/idle timeout checks"): (
+        ("accessibility-{client}", "$discord", 414, T12, ("keyboard", "screen-reader")),
+        ("bounded-load", "vps-load", 414, T12, ("bounded-load", "resource-budget")),
+        ("platform-network", "vps-network", 414, T12,
+         ("https", "wss", "idle-below-threshold", "idle-above-threshold")),
+    ),
+    ("GB-T12.04.02", "run production smoke after deployment"): (
+        ("deployed-build-smoke", "vps-network", 417, T12, ("verified-build", "smoke", "https-wss")),
+        ("deployed-client-smoke", "$discord", 417, T12, ("verified-build", "deployed-client-journey")),
+    ),
 }
 
 
@@ -218,6 +249,41 @@ def case_observations(rows, gate, case):
             for row in rows if matching.intersection(row["casesByGate"].get(gate, ()))]
 
 
+def scope_observations(requirements, rows, discord):
+    """Resolve complete explicit bindings; issue-level links confer no scope credit."""
+    clauses = indexed(requirements, lambda row: (row["feature"], row["text"]), "trace scopes")
+    observations = indexed(rows, lambda row: (row["id"], row["environment"]), "scope observations")
+    result = {}
+    for identity, targets in TRACE_SCOPES.items():
+        require(identity in clauses, f"trace scope clause missing or stale: {identity}")
+        requirement = clauses[identity]
+        require(requirement["gate"] == G3 and requirement["handoff"] == f"{identity[0].split('.')[0]}.D1"
+                and requirement["workstream"] == identity[0].removeprefix("GB-").split(".")[0],
+                f"{identity}: wrong trace scope identity")
+        require(targets, f"{identity}: empty trace scope binding")
+        selected = {}
+        for name, environment, issue, source, cases in targets:
+            require(cases and len(cases) == len(set(cases)), f"{identity}: empty or duplicate scope cases")
+            environments = sorted(discord) if environment == "$discord" else [environment]
+            require(environments, f"{identity}: missing scope environments")
+            for current in environments:
+                suffix = current.removeprefix("discord-web-").removeprefix("discord-")
+                key = name.format(client=suffix), current
+                require(key in observations, f"{identity}: missing scope observation {key}")
+                require(key not in selected, f"{identity}: duplicate scope observation {key}")
+                row = observations[key]
+                gate = requirement["gate"]
+                require(row["issue"] == issue and row["issueId"] in requirement["verification"]
+                        and gate in row["gates"], f"{identity}: wrong scope native issue or gate for {key}")
+                require(row["source"] == source, f"{identity}: wrong scope observation source for {key}")
+                require(set(cases) <= set(row["casesByGate"][gate]),
+                        f"{identity}: missing canonical scope cases for {key}")
+                selected[key] = {**observation_reference(row, sorted(cases)),
+                                 "requirementSource": requirement["source"]}
+        result[identity] = list(selected.values())
+    return result
+
+
 def audit(root, matrix):
     require(type(matrix["version"]) is int and matrix["version"] == 1, "invalid matrix version")
     require(matrix.keys() == {"version", "mvp", "stable", "nativePrerequisites", "rows", "productionSmoke"},
@@ -298,14 +364,14 @@ def audit(root, matrix):
     ]
     verification = {key for ids in mvp.values() for key in ids}
     verification.update(key for row in trace for key in row["verification"])
+    scoped = scope_observations(trace, rows, discord)
     for requirement in trace:
         gate = requirement["gate"]
         links = [row for row in rows if row["issueId"] in requirement["verification"] and gate in row["gates"]]
-        scope = TRACE_SCOPES.get((requirement["feature"], requirement["text"]), ())
         requirement["issueLevelObservationLinks"] = [observation_reference(row, row["casesByGate"][gate])
                                                      for row in links]
-        requirement["scopeObservationLinks"] = [observation_reference(row, row["casesByGate"][gate])
-                                                for row in links if row["id"] in scope]
+        requirement["scopeObservationLinks"] = scoped.get((requirement["feature"], requirement["text"]), [])
+        requirement["scopeMappingStatus"] = "mapped" if requirement["scopeObservationLinks"] else "unmapped"
         requirement["handoffIssue"] = {**issue_reference(items[requirement["handoff"]]),
                                        "artifacts": items[requirement["handoff"]]["documentation_artifacts"]}
         requirement["scopeEvidenceStatus"] = "pending"
