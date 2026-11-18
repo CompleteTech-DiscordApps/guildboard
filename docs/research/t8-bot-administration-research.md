@@ -144,12 +144,24 @@ real credentials, instance binding, authorization, races/expiry and client tests
 are still needed before accepting an exact-launch/current-presence claim (#35).
 Do not invent a signed launch token or reclassify SDK IDs as trusted proof.
 
-Preserve the order in the [accepted GB-T0.S1 system boundary contract](../specifications/GB-T0-S1-system-contract.md) (#481): current identity/session/tenant/read → scoped
-existing operation receipt and canonical digest → if absent, active lineage →
-new-write capability/freshness/generation/schema/object checks → atomic state,
-revision, receipt, outbox and audit commit → durable success. Same readable
-receipt can settle a retry after write loss or restore; it does not replay the
-old payload into the restored document. No read means no receipt/digest leak.
+Preserve the [accepted system](../specifications/GB-T0-S1-system-contract.md),
+[persistence](../specifications/GB-T5-S1-persistence-recovery-contract.md) and
+[security contracts](../specifications/GB-T9-S1-security-privacy-contract.md).
+Check current identity, session, tenant and read authority before opening the
+verified serving inventory. Check any retained receipt and canonical digest
+before new-write checks. A matching readable historical receipt can settle a
+retry without replay after write loss or restore. A different digest conflicts.
+Recheck current read authority at protected release.
+
+When no receipt is present and retired-lineage coverage is proven, reject the
+old lineage. An unavailable or unverifiable inventory or incomplete historical
+coverage preserves `DEPENDENCY_UNAVAILABLE` and the original operation
+identity. An ordinary new write on the active lineage proceeds only with fresh
+scoped capability, generation, schema and object checks. The transaction
+commits state, revision, receipt, outbox and audit atomically. New success and
+outbox release require verified evidence of that exact accepted transaction in
+the current authoritative storage generation. Those inventory, coverage and
+durable proof checks are outside the synchronous fixture.
 No silent receipt expiry is authorized. A slash adapter needs an explicit stable
 operation identity/digest mapping; Discord interaction IDs and application
 operation IDs are different concepts and must not be globally deduplicated.
