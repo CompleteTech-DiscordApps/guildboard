@@ -69,15 +69,37 @@ def main() -> int:
         report['stage']='git-discovery'
         report['tested_head']=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True,stderr=subprocess.PIPE,timeout=15).strip()
         report['stage']='docker-discovery'
-        context=subprocess.check_output(['docker','context','show'],text=True,stderr=subprocess.PIPE,timeout=15).strip()
-        report['context']=context
-        docker=['docker','--context',context]
-        subprocess.run([*docker,'image','inspect',IMAGE],check=True,capture_output=True,text=True,timeout=15)
+        docker_env = os.environ.copy()
+        context = subprocess.check_output(
+            ['docker', 'context', 'show'], env=docker_env, text=True, stderr=subprocess.DEVNULL, timeout=15
+        ).strip()
+        report['stage'] = 'docker-context-verification'
+        if not context or any(character.isspace() for character in context):
+            raise RuntimeError('Docker context name is missing or invalid')
+        try:
+            endpoint = subprocess.check_output(
+                ['docker', 'context', 'inspect', '--format', '{{ (index .Endpoints "docker").Host }}', '--', context],
+                env=docker_env, text=True, stderr=subprocess.DEVNULL, timeout=15
+            ).removesuffix('\n')
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, UnicodeError):
+            raise RuntimeError('Docker context endpoint could not be verified') from None
+        if not re.fullmatch(r'unix:///(?!/)[^%?#\x00-\x20\x7f]+', endpoint):
+            raise RuntimeError('Docker context must use an absolute local Unix socket')
+        host_override = docker_env.get('DOCKER_HOST')
+        if context == 'default' and host_override and host_override != endpoint:
+            raise RuntimeError('Docker host override does not match the verified default context endpoint')
+        report['context'] = context
+        # Pin the inspected endpoint even if the context metadata changes during the run.
+        docker_env.pop('DOCKER_CONTEXT', None)
+        docker_env.pop('DOCKER_HOST', None)
+        docker = ['docker', '--host', endpoint]
+        report['stage'] = 'docker-image-preflight'
+        subprocess.run([*docker,'image','inspect',IMAGE],env=docker_env,check=True,capture_output=True,text=True,timeout=15)
         report['stage']='browser-session'
         process=subprocess.Popen([*docker,'run','--pull=never','--rm','--init','-i','--name',name,
                                   '--label',label+'='+name,'--network=none','--cpus=1',
                                   '--memory=768m','--pids-limit=256',IMAGE],
-                                 stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,
+                                 env=docker_env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,
                                  text=True,encoding='utf-8',bufsize=1)
         threading.Thread(target=read,daemon=True).start()
         init=request('initialize',{'protocolVersion':'2024-11-05','capabilities':{},'clientInfo':{'name':'guildboard-t7-research','version':'1'}})
@@ -101,7 +123,7 @@ def main() -> int:
         # Stage on the destination filesystem, then publish only after a complete copy.
         with tempfile.TemporaryDirectory(prefix='.t7-screenshot-',dir=target.parent) as staging:
             staged=Path(staging)/'screenshot.png'
-            subprocess.run([*docker,'cp',name+':/tmp/guildboard-t7-fixture.png',str(staged)],check=True,capture_output=True,timeout=15)
+            subprocess.run([*docker,'cp',name+':/tmp/guildboard-t7-fixture.png',str(staged)],env=docker_env,check=True,capture_output=True,timeout=15)
             screenshot_sha256=hashlib.sha256(staged.read_bytes()).hexdigest()
             # Hard-link publication refuses collisions and never replaces older evidence.
             os.link(staged,target)
@@ -131,7 +153,7 @@ def main() -> int:
             except Exception as error:
                 failed=True;report.update(result='blocked-or-failed',process_cleanup_error=str(error)[:4000])
             try:
-                inspect=subprocess.run([*docker,'container','inspect',name],capture_output=True,text=True,timeout=15)
+                inspect=subprocess.run([*docker,'container','inspect',name],env=docker_env,capture_output=True,text=True,timeout=15)
                 if inspect.returncode==0:
                     container=json.loads(inspect.stdout)[0]
                     owner=container['Config']['Labels'].get(label)
@@ -140,8 +162,8 @@ def main() -> int:
                     if not isinstance(container_id,str) or not re.fullmatch(r'[0-9a-f]{64}',container_id):
                         raise RuntimeError('refusing cleanup without a full container ID')
                     # --rm can remove this container and free its name before rm runs.
-                    subprocess.run([*docker,'rm','--force',container_id],capture_output=True,timeout=15)
-                    remaining=subprocess.check_output([*docker,'ps','-a','--no-trunc','--format','{{.ID}}'],text=True,timeout=15).splitlines()
+                    subprocess.run([*docker,'rm','--force',container_id],env=docker_env,capture_output=True,timeout=15)
+                    remaining=subprocess.check_output([*docker,'ps','-a','--no-trunc','--format','{{.ID}}'],env=docker_env,text=True,timeout=15).splitlines()
                     id_absent=container_id not in remaining
                     report['owned_container_id_absent_at_check']=id_absent
                     if not id_absent:
@@ -150,7 +172,7 @@ def main() -> int:
                     startup_confirmed=True
                 else:
                     # Without an inspected ID, a successful listing can only establish name absence.
-                    remaining=subprocess.check_output([*docker,'ps','-a','--format','{{.Names}}'],text=True,timeout=15).splitlines()
+                    remaining=subprocess.check_output([*docker,'ps','-a','--format','{{.Names}}'],env=docker_env,text=True,timeout=15).splitlines()
                     name_absent=name not in remaining
                     report['container_name_absent_at_check']=name_absent
                     if not name_absent:

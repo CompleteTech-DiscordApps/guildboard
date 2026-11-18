@@ -187,8 +187,15 @@ output path for each observation to retain each report.
 The [probe](../../scripts/research/t7-browser-probe.py) uses an already-cached
 immutable `mcp/playwright` image through its own Docker MCP stdio session, not a
 shared browser, local package install or HTTP service. It has network=none,
-no host mounts/volumes/ports, one CPU, 768 MiB and 256 PIDs. It stops only its
-own process/container. Forced cleanup requires a matching invocation label and
+no host mounts/volumes/ports, one CPU, 768 MiB and 256 PIDs. Before image or
+container operations, the probe reads the selected Docker context's metadata
+and requires an absolute local Unix socket endpoint. SSH, TCP, named pipes,
+and missing or invalid endpoint metadata block the probe before daemon
+access. A host override for the default context must match the inspected
+endpoint. All daemon commands, including cleanup, use the verified socket
+explicitly with `DOCKER_HOST` and `DOCKER_CONTEXT` removed from their environment.
+This verifies the client transport. The operator must use a local Docker daemon
+without a forwarding socket. The probe stops only its own process/container. Forced cleanup requires a matching invocation label and
 a valid full container ID from inspection. Removal and the absence check use
 that ID so automatic removal followed by name reuse preserves a replacement
 container. A name-list snapshot taken without an inspected ID records only
@@ -199,8 +206,8 @@ failed report. The stdout fallback preserves cleanup errors, the generated
 container name, exact run label and a SHA-256 digest of the selected context
 name if report publication fails. For reconciliation, hash the operator's
 context name as UTF-8 after trimming surrounding whitespace and match the
-recorded digest. Inspect that invocation's exact label and full container ID
-before any removal. This allows correlation while keeping the raw context
+recorded digest. Confirm the original local socket, then inspect that
+invocation's exact label and full container ID before any removal. This allows correlation while keeping the raw context
 name out of the fallback. Existing workloads and WSL were not targets.
 No image pull is performed; a missing image is an explicit local blocker.
 
@@ -332,7 +339,10 @@ behavior, screen-reader speech, human usability, hardware input, consumer
 integration and required reviews are still open. The proposal has no approved
 support policy or #229 acceptance.
 
-The current harness passes 20 mocked regressions, including late daemon
-registration after an empty name-list snapshot, a client reaping timeout,
-and cleanup diagnostics when the report write fails. These checks use test
-doubles and do not exercise a Docker daemon or browser.
+Run `python3 tests/research/t7-test-probe-failures.py` for 27 mocked harness
+regressions. The fake Docker CLI verifies named and default contexts, confirms
+the verified socket is used through cleanup, and checks that SSH, TCP, invalid
+endpoints and failed metadata inspection cause no daemon commands. Cleanup
+coverage includes late daemon registration, client reaping timeouts and
+diagnostics after report write failures. These checks exercise test doubles.
+Live Docker and browser verification of the context guard remain pending.

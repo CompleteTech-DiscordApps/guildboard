@@ -15,6 +15,8 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location('t7_probe', ROOT / 'scripts/research/t7-browser-probe.py')
+LOCAL_ENDPOINT = 'unix:///tmp/t7-mock-docker.sock'
+CONTEXT_INSPECT = ['docker', 'context', 'inspect', '--format', '{{ (index .Endpoints "docker").Host }}', '--', 'test-context']
 PROBE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PROBE)
 
@@ -50,6 +52,8 @@ class FailureReports(unittest.TestCase):
                 if failure_stage == 'discovery':
                     raise FileNotFoundError('docker unavailable')
                 return 'test-context\n'
+            if command == CONTEXT_INSPECT:
+                return LOCAL_ENDPOINT + '\n'
             self.assertIn('ps', command)
             return ''
 
@@ -115,6 +119,8 @@ class CleanupOwnership(unittest.TestCase):
                 return 'fixture-head\n'
             if command[1:] == ['context', 'show']:
                 return 'test-context\n'
+            if command == CONTEXT_INSPECT:
+                return LOCAL_ENDPOINT + '\n'
             self.assertEqual(command[-5:], ['ps', '-a', '--no-trunc', '--format', '{{.ID}}'])
             return '\n'.join(live)
 
@@ -200,6 +206,8 @@ class UnconfirmedCleanup(unittest.TestCase):
                 return 'fixture-head\n'
             if command[1:] == ['context', 'show']:
                 return 'test-context\n'
+            if command == CONTEXT_INSPECT:
+                return LOCAL_ENDPOINT + '\n'
             self.assertEqual(command[-4:], ['ps', '-a', '--format', '{{.Names}}'])
             listed = '\n'.join(docker_names)
             if not startup_observed:
@@ -269,6 +277,7 @@ class ReportPublicationFailures(unittest.TestCase):
             def check_output(command, **kwargs):
                 if command[0] == 'git': return 'fixture-head\n'
                 if command[1:] == ['context', 'show']: return 'test-context\n'
+                if command == CONTEXT_INSPECT: return LOCAL_ENDPOINT + '\n'
                 return ''
             def run(command, **kwargs):
                 if 'cp' in command: Path(command[-1]).write_bytes(b'new screenshot')
@@ -361,8 +370,9 @@ class CliStartupReports(unittest.TestCase):
         self.assertEqual(self.run_cli_failure('missing-checks')['error_type'], 'FileNotFoundError')
 
 
-class CliScreenshotPublication(unittest.TestCase):
-    def exercise(self, fail_copy):
+class CliProbe(unittest.TestCase):
+    def exercise(self, fail_copy=False, endpoint=LOCAL_ENDPOINT, metadata_error=False,
+                 context='test-context', default_override_mismatch=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             script = root / 'scripts/research/t7-browser-probe.py'
@@ -390,7 +400,14 @@ args = sys.argv[1:]
 with open(os.environ['FAKE_LOG'], 'a') as log:
     log.write(json.dumps(args) + '\n')
 if args == ['context', 'show']:
-    print('test-context')
+    print(os.environ['FAKE_CONTEXT'])
+elif args == ['context', 'inspect', '--format', '{{ (index .Endpoints "docker").Host }}', '--', os.environ['FAKE_CONTEXT']]:
+    if os.environ['FAKE_METADATA_ERROR'] == '1':
+        print('test-only metadata error', file=sys.stderr)
+        sys.exit(1)
+    print(os.environ['FAKE_ENDPOINT'])
+elif args[:2] != ['--host', 'unix:///tmp/t7-mock-docker.sock'] or 'DOCKER_HOST' in os.environ or 'DOCKER_CONTEXT' in os.environ:
+    sys.exit(98)
 elif 'image' in args:
     pass
 elif 'run' in args:
@@ -417,16 +434,35 @@ else:
 """)
             docker.chmod(0o755)
             env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
-            env.update(PATH=str(fake_bin), FAKE_LOG=str(root / 'docker.log'), FAIL_COPY=str(int(fail_copy)))
+            env.update(PATH=str(fake_bin), FAKE_LOG=str(root / 'docker.log'), FAIL_COPY=str(int(fail_copy)),
+                       FAKE_CONTEXT=context, FAKE_ENDPOINT=endpoint, FAKE_METADATA_ERROR=str(int(metadata_error)),
+                       DOCKER_HOST=endpoint if context == 'default' and not default_override_mismatch
+                       else 'tcp://example.invalid:2376', DOCKER_CONTEXT=context)
             result = subprocess.run([sys.executable, str(script), '--output', str(output)],
                                     cwd=root, env=env, capture_output=True, text=True, timeout=20)
             report = json.loads(output.read_text())
+            calls = [json.loads(line) for line in (root / 'docker.log').read_text().splitlines()]
+            discovery = [['context', 'show']]
+            if context:
+                discovery.append([*CONTEXT_INSPECT[1:-1], context])
+            self.assertEqual(calls[:len(discovery)], discovery)
+            if endpoint != LOCAL_ENDPOINT or metadata_error or not context or default_override_mismatch:
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(report['result'], 'blocked-or-failed')
+                self.assertEqual(report['stage'], 'docker-context-verification')
+                self.assertTrue(report['owned_container_absent'])
+                self.assertNotIn('context', report)
+                self.assertNotIn('command_stderr', report)
+                self.assertNotIn('example.invalid', output.read_text() + result.stdout)
+                self.assertEqual(calls, discovery)
+                return
             self.assertEqual(result.returncode, int(fail_copy), result.stderr)
+            self.assertEqual(report['context'], context)
+            self.assertTrue(all(call[:2] == ['--host', LOCAL_ENDPOINT] for call in calls[len(discovery):]))
             self.assertEqual(historical.read_bytes(), b'historical evidence')
             self.assertEqual(screenshot.read_bytes(), b'previous evidence')
             self.assertEqual(list(output.parent.glob('.t7-screenshot-*')), [])
             self.assertTrue(report['owned_container_absent'])
-            calls = [json.loads(line) for line in (root / 'docker.log').read_text().splitlines()]
             self.assertTrue(any('container' in call and 'inspect' in call for call in calls))
             self.assertTrue(any('ps' in call for call in calls))
             if fail_copy:
@@ -444,7 +480,34 @@ else:
         self.exercise(True)
 
     def test_success_publishes_new_screenshot(self):
-        self.exercise(False)
+        self.exercise()
+
+    def test_default_context_uses_verified_socket(self):
+        self.exercise(context='default')
+
+    def test_remote_contexts_never_touch_daemon(self):
+        for endpoint in ('ssh://example.invalid', 'tcp://example.invalid:2376', 'https://example.invalid'):
+            with self.subTest(endpoint=endpoint):
+                self.exercise(endpoint=endpoint)
+
+    def test_default_context_with_remote_host_override_never_touches_daemon(self):
+        self.exercise(context='default', endpoint='tcp://example.invalid:2376')
+
+    def test_default_context_requires_metadata_to_match_host_override(self):
+        self.exercise(context='default', default_override_mismatch=True)
+
+    def test_unknown_or_malformed_endpoints_never_touch_daemon(self):
+        for endpoint in ('', '<no value>', 'npipe:////./pipe/docker_engine', 'unix://', 'unix://relative.sock',
+                         'unix://example.invalid/socket', 'unix:////tmp/docker.sock', 'unix:///%2fexample.invalid',
+                         'unix:///tmp/docker.sock?name=x', LOCAL_ENDPOINT + '\nextra'):
+            with self.subTest(endpoint=endpoint):
+                self.exercise(endpoint=endpoint)
+
+    def test_missing_context_name_never_touches_daemon(self):
+        self.exercise(context='')
+
+    def test_failed_context_inspection_never_touches_daemon(self):
+        self.exercise(metadata_error=True)
 
 
 if __name__ == '__main__':
