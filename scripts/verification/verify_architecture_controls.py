@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Independent offline acceptance of the installed architecture gate.
 
-Run: python3 -B scripts/verification/verify_architecture_controls.py --base /path/to/engineering20 --tmp /writable/scratch --revision <full-caller-supplied-sha>
-The base must be the actual first-install 8f75 tree. Fixtures are disposable copies.
+Run: python3 -B scripts/verification/verify_architecture_controls.py --base /path/to/engineering20 --installed /path/to/initial-install --tmp /writable/scratch --revision <full-caller-supplied-sha>
+Use the 8f75 pre-install and 556d initial-install trees. Candidate fixtures are disposable copies.
 """
-import argparse, contextlib, hashlib, importlib.util, io, json, os, platform, re, shutil, stat, sys, tempfile
+import argparse, contextlib, hashlib, importlib.util, io, json, os, platform, re, shutil, stat, subprocess, sys, tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -120,11 +120,17 @@ def revision(value):
     return value
 def save(p, x): p.write_text(json.dumps(x, indent=2)+'\n')
 def main():
-    a=argparse.ArgumentParser(); a.add_argument('--base',type=Path,required=True); a.add_argument('--tmp',type=Path,required=True); a.add_argument('--revision',type=revision,required=True); args=a.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--base', type=Path, required=True)
+    parser.add_argument('--installed', type=Path, required=True)
+    parser.add_argument('--tmp', type=Path, required=True)
+    parser.add_argument('--revision', type=revision, required=True)
+    parser.add_argument('--exercise-evolved-candidate', action='store_true')
+    args = parser.parse_args()
     sys.dont_write_bytecode=True
     global g
     spec=importlib.util.spec_from_file_location('gate',ROOT/'scripts/architecture-controls/check.py'); g=importlib.util.module_from_spec(spec); spec.loader.exec_module(g)
-    original=snapshot(ROOT); base_original=snapshot(args.base)
+    sources = {path: snapshot(path) for path in (ROOT, args.base, args.installed)}
     failures=[]; count=0
     print('revision='+args.revision+'; base='+PIN+'; identity=caller-supplied, not independently Git verified')
     print('harness_sha256='+digest(Path(__file__))+'; gate_sha256='+digest(ROOT/'scripts/architecture-controls/check.py'))
@@ -150,13 +156,18 @@ def main():
             for folder in ('apps','packages','database','infra/godaddy'):
                 names.update(str(p.relative_to(head)) for p in (head/folder).rglob('*') if p.is_file())
             data['boundaries']={n:digest(head/n) for n in sorted(names)}; save(p,data)
-        def record(path, old, new):
-            p=head/POL/'decisions.json'; x=json.loads(p.read_text()); x['records'].append(dict(id='DEC-9001',revision=1,boundary=path,old_sha256=old,new_sha256=new,rationale='Explain the impact to reviewers',alternatives=['Retain existing boundary'],controls=['docs/security/GB-T0-04-02-threat-model.md'],test_evidence=['tests/architecture-controls/test_gate.py'])); save(p,x)
+        def record(path, old, new, decision_id='DEC-9001'):
+            p=head/POL/'decisions.json'; x=json.loads(p.read_text()); x['records'].append(dict(id=decision_id,revision=1,boundary=path,old_sha256=old,new_sha256=new,rationale='Explain the impact to reviewers',alternatives=['Retain existing boundary'],controls=['docs/security/GB-T0-04-02-threat-model.md'],test_evidence=['tests/architecture-controls/test_gate.py'])); save(p,x)
         def changed():
             p='apps/api/README.md'; old=digest(ROOT/p); (head/p).write_bytes((head/p).read_bytes()+b'\nacceptance change\n'); seal(); return p,old,digest(head/p)
         run('installed self comparison',lambda: (_ for _ in ()).throw(AssertionError()) if check()!=0 else None)
-        run('actual first install',lambda: (_ for _ in ()).throw(AssertionError()) if g.bootstrap(args.base,ROOT,PIN)!=1 else None)
-        run('wrong first install base identity',lambda: reject(lambda:g.bootstrap(args.base,ROOT,'0'*40)))
+        def historical_bootstrap():
+            if g.bootstrap(args.base, args.installed, PIN) != 1:
+                raise AssertionError('historical installation must introduce exactly one boundary')
+        run('actual first install', historical_bootstrap)
+        run('wrong first install base identity', lambda: reject(
+            lambda: g.bootstrap(args.base, args.installed, '0' * 40)
+        ))
         def alteration():
             p,o,n=changed(); reject(check); record(p,o,n); assert check()==1
             f=head/POL/'decisions.json'; orig=json.loads(f.read_text())
@@ -181,6 +192,25 @@ def main():
                 else: (head/p).unlink()
                 seal(); reject(check); record(p,old,digest(head/p)); assert check()==1
             run(kind+' boundary',mutation); reset()
+        if args.exercise_evolved_candidate:
+            def evolved_candidate():
+                path = 'apps/api/acceptance-evolved.txt'
+                (head / path).write_text('Later documented boundary\n')
+                seal()
+                reject(check)
+                record(path, None, digest(head / path), decision_id='DEC-9003')
+                if check() != 1:
+                    raise AssertionError('expected one documented change in the evolved candidate')
+                result = subprocess.run([
+                    sys.executable, '-B',
+                    str(head / 'scripts/verification/verify_architecture_controls.py'),
+                    '--base', str(args.base), '--installed', str(args.installed),
+                    '--tmp', str(args.tmp), '--revision', args.revision,
+                ], capture_output=True, text=True, timeout=75)
+                if result.returncode or 'PASS actual first install' not in result.stdout.splitlines():
+                    raise AssertionError('evolved candidate acceptance failed:\n' + result.stdout + result.stderr)
+            run('documented boundary leaves historical installation valid', evolved_candidate)
+            reset()
         def missing(): (head/POL/'baseline.json').unlink(); reject(check)
         run('missing policy',missing); reset()
         def malformed(): (head/POL/'traceability.json').write_text('{'); reject(check)
@@ -208,7 +238,10 @@ def main():
         def unrelated():
             p=head/POL/'traceability.json'; x=json.loads(p.read_text()); x['requirements']['R05']['interactions'].append('I10'); x['requirements']['R05']['canonical_acceptance'].append('F15'); save(p,x); reject(check)
         run('unrelated valid interaction and FID together',unrelated); reset()
-    run('source trees unchanged',lambda: (None if snapshot(ROOT)==original and snapshot(args.base)==base_original else (_ for _ in ()).throw(AssertionError('source modified'))))
+    def source_trees_unchanged():
+        if any(snapshot(path) != before for path, before in sources.items()):
+            raise AssertionError('source modified')
+    run('source trees unchanged', source_trees_unchanged)
     print('SUMMARY cases=%d passed=%d failed=%d'%(count,count-len(failures),len(failures)))
     return bool(failures)
 if __name__=='__main__': sys.exit(main())

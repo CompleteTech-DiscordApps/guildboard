@@ -1,0 +1,67 @@
+{
+  "coverage": "Synthetic MVP and stable publication examples with representative evidence rows, maintainer decisions and public receipts.",
+  "manifest": {
+    "schemaVersion": "1.0.0",
+    "version": "0.1.0-mvp.11",
+    "gate": "GB-T13.G1",
+    "revision": "1111111111111111111111111111111111111111",
+    "notesRef": "synthetic/release-notes.md",
+    "evidence": [
+      {
+        "id": "discord-startup",
+        "issue": "GB-T12.MVP1",
+        "revision": "1111111111111111111111111111111111111111",
+        "date": "2026-11-17",
+        "environment": "synthetic Discord client environment",
+        "level": "real-discord",
+        "result": "pass",
+        "ref": "synthetic/discord-startup.json"
+      }
+    ],
+    "provenanceRef": "synthetic/build-provenance.json"
+  },
+  "files": {
+    "dist/operator.txt": "synthetic operator instructions\n",
+    "dist/client.js": "synthetic client bytes\n",
+    "repro/input.lock": "synthetic pinned build inputs\n",
+    "repro/build.txt": "synthetic reproducible build recipe\n"
+  },
+  "notes": "Synthetic release notes\n",
+  "approval": {
+    "schemaVersion": "1.0.0",
+    "decision": "approved"
+  },
+  "nativeEvidenceRefs": {
+    "GB-T13.G1": ["synthetic/discord-startup.json"],
+    "GB-T13.G3": ["synthetic/production-smoke.json"]
+  },
+  "priorVersion": "0.1.0-mvp.10",
+  "otherRevision": "2222222222222222222222222222222222222222",
+  "scenarios": [
+    {"id": "accepted-evidence", "expected": "PUBLISHED", "current": "candidate"},
+    {"id": "stable-publication", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.0"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy", "environment": "synthetic GoDaddy VPS environment", "ref": "synthetic/production-smoke.json"}, "expected": "PUBLISHED", "current": "candidate"},
+    {"id": "stable-without-native-prerequisites", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.0"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy", "environment": "synthetic GoDaddy VPS environment", "ref": "synthetic/production-smoke.json"}, "nativeReady": false, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "wrong-first-stable-version", "candidatePatch": {"gate": "GB-T13.G3", "version": "1.0.1"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy", "environment": "synthetic GoDaddy VPS environment", "ref": "synthetic/production-smoke.json"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "stable-through-mvp", "candidatePatch": {"version": "1.0.0"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "production-is-evidence-only", "candidatePatch": {"gate": "GB-T13.G2", "version": "1.0.0"}, "recordPatch": {"id": "production-smoke", "issue": "GB-T13.G2", "level": "real-godaddy", "environment": "synthetic GoDaddy VPS environment"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "new-lower-version", "candidatePatch": {"version": "0.1.0-mvp.2"}, "expected": "VERSION_NOT_FORWARD", "current": "prior"},
+    {"id": "new-equal-precedence", "candidatePatch": {"version": "0.1.0-mvp.10+rebuilt"}, "expected": "VERSION_NOT_FORWARD", "current": "prior"},
+    {"id": "unresolved-notes", "candidatePatch": {"notesRef": "synthetic/wrong-notes.md"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "wrong-notes-identity", "notesIdentityPatch": {"version": "0.0.0"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "unresolved-provenance", "candidatePatch": {"provenanceRef": "synthetic/wrong-provenance.json"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "wrong-provenance-index", "provenancePatch": {"checksumIndex": "synthetic/wrong-index"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "wrong-provenance-input", "filePatch": {"repro/input.lock": "different pinned input"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "malformed-version", "candidatePatch": {"version": "0.01.0"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "malformed-digest", "candidatePatch": {"artifactSha256": "truncated"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "unsafe-pointer", "candidatePatch": {"notesRef": "../private/notes.md"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "extra-field", "candidatePatch": {"additional": "synthetic value"}, "expected": "INVALID_METADATA", "current": "prior"},
+    {"id": "missing-evidence", "candidatePatch": {"evidence": []}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "missing-native-prerequisite", "nativeReady": false, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "stale-evidence", "recordPatch": {"revision": "2222222222222222222222222222222222222222"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "wrong-level", "recordPatch": {"level": "synthetic"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "failed-evidence", "recordPatch": {"result": "fail"}, "expected": "PREREQUISITE_UNAVAILABLE", "current": "prior"},
+    {"id": "precommit-interruption", "interruption": "before", "expected": "PUBLICATION_INTERRUPTED", "current": "prior"},
+    {"id": "postcommit-interruption", "interruption": "after", "expected": "PUBLICATION_UNKNOWN", "current": "candidate"},
+    {"id": "competing-publication", "expectedPriorMatches": false, "expected": "PREVIOUS_PUBLICATION_CHANGED", "current": "prior"}
+  ]
+}
