@@ -195,7 +195,11 @@ export function createOperationalLogBoundary({
     let cancel = scheduleNext(remainingMs);
     return () => {
       active = false;
-      cancel();
+      try {
+        cancel();
+      } catch {
+        // The inactive callback cannot change the reclaimed mapping.
+      }
     };
 
     function scheduleNext(remaining: number): () => void {

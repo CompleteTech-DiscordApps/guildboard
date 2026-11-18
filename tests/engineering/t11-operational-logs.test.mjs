@@ -272,6 +272,36 @@ test("reclaims an idle mapping at the scheduled deadline and prevents journey re
   assert.equal(logs.issueCorrelation({ ...next, startedAt: 29 }), "coverage_unknown");
 });
 
+test("cancellation failure preserves expired lookup and frees capacity for issuance", () => {
+  let now = 10;
+  const callbacks = [];
+  const logs = createOperationalLogBoundary({
+    maxCorrelations: 1,
+    correlationTtlMs: 10,
+    monotonicNow: () => now,
+    scheduleExpiry: (expire) => {
+      callbacks.push(expire);
+      return () => {
+        throw new Error("synthetic timer cancellation failure");
+      };
+    },
+  });
+  const first = scope();
+  assert.equal(logs.issueCorrelation(first), "available");
+  now = 20;
+  assert.deepEqual(logs.createRecord(sample, first), unknown);
+
+  const second = scope(20);
+  assert.equal(logs.issueCorrelation(second), "available");
+  now = 30;
+  const third = scope(30);
+  assert.equal(logs.issueCorrelation(third), "available");
+  callbacks[0]();
+  callbacks[1]();
+  assert.deepEqual(logs.createRecord(sample, second), unknown);
+  assert.equal(logs.createRecord(sample, third).status, "record");
+});
+
 test("preserves the first identity on clock and scheduling failures and permits exact retries", () => {
   const scheduler = controlledScheduler();
   let now = 10;

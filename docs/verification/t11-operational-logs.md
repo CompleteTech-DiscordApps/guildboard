@@ -35,7 +35,8 @@ token in a bounded private process-local table. Exact retries reuse the token
 and its fixed deadline. The lifetime starts at the first submission and
 expiry is exclusive. An unreferenced host timer reclaims the live mapping
 even while the boundary is idle. Monotonic deadline checks on issuance and
-lookup also reclaim expired entries when timer dispatch is delayed. Weak
+lookup also reclaim expired entries when timer dispatch is delayed. A failed
+timer cancellation leaves the expired mapping reclaimed and the callback inert. Weak
 identity tracking prevents expired journeys from receiving a new token and
 lets garbage collection reclaim the identity with its journey. The table
 exports only the associated opaque token as part of a valid record. A
