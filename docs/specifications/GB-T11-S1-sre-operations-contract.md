@@ -135,10 +135,13 @@ user journeys.
 | Restart and disaster drill | Candidate ≤60 seconds from process fault to authorized read/write and peer convergence, with zero acknowledged loss. Disaster hypothesis RPO ≤15 minutes and RTO ≤4 hours for the 30 GiB research workload. Breach either measured objective or fail any mandatory integrity/isolation check to fail the drill. | After remediation, a fresh independent drill of the failed type verifies authorization, integrity and isolation, measures every objective and meets each trial boundary. |
 
 Candidate comparisons use complete, aligned windows and declared minimum volumes.
-Deduplicate by rule and affected deployment, preserve earliest trigger time,
+Deduplicate by rule, affected deployment, approved workload profile, evaluated
+journey and applicable cohort. Use a declared aggregate for a rule without a
+cohort breakdown and an explicit inapplicable value for non-journey rules.
+Preserve earliest trigger time,
 route with a bounded reason and runbook reference, and escalate unacknowledged
 pages by the approved rota. Clear each active rule only after observing its
-recovery signal for the same deployment, rule and approved workload profile.
+recovery signal for the same deployment, rule, profile, journey and cohort.
 Compare those identifiers on the observation with the active alert. Verify the
 observation source against the independently approved rule configuration.
 Evidence must be newer than the last breach, within the configured

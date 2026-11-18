@@ -313,7 +313,9 @@ class OperationsContractTest(unittest.TestCase):
                     {"backup": attempt["status"], "attempt": attempt["id"],
                      "selected": selected["id"] if selected else None, "cut": cut,
                      "loss": loss, "missing": missing,
-                     "escalate": loss in {"at_or_before_cut", "outside_bound"},
+                     "escalate": (case["preflight"] == "unsafe"
+                                  or case["verification"] in {"integrity_failed", "marker_gap"}
+                                  or loss in {"at_or_before_cut", "outside_bound"}),
                      "rpo_seconds": rpo_seconds,
                      "rto_seconds": case["rto_seconds"], "rpo": outcomes[0], "rto": outcomes[1],
                      "drill": restore_verdict(selected, case["preflight"], case["verification"], loss, outcomes)},
@@ -334,20 +336,32 @@ class OperationsContractTest(unittest.TestCase):
             "disaster": "verified_disaster_rehearsal",
         }
         fields = {"active", "evidence", "approved_source", "signal", "approved", "sufficient", "observed_second",
-                  "last_breach_second", "evaluated_second", "freshness_seconds"}
+                  "last_breach_second", "evaluated_second", "freshness_seconds", "integrity_recovery"}
+        cohorts = {"board_open": {"all", "cold", "warm", "unknown"},
+                   "edit": {"all", "solo", "collaborative", "unknown"},
+                   "probe": {"all"}, "none": {"none"}}
+        integrity_fields = {"responder_acknowledged", "isolated_rehearsal_verified", "loss_disposition_recorded"}
         rules = set()
         for case in self.cases("alert_recovery", fields):
             with self.subTest(case=case["case"]):
-                scope_fields = {"deployment", "rule", "profile"}
+                scope_fields = {"deployment", "rule", "profile", "journey", "cohort"}
                 for scope in (case["active"], case["evidence"]):
                     self.assertEqual(set(scope) - {"source"}, scope_fields)
                     for value in scope.values():
                         self.synthetic_identity(value)
                     self.assertIn(scope["rule"], signals)
+                    self.assertIn(scope["journey"], cohorts)
+                    self.assertIn(scope["cohort"], cohorts[scope["journey"]])
                 self.assertEqual(set(case["active"]), scope_fields)
                 self.assertEqual(set(case["evidence"]), scope_fields | {"source"})
                 self.synthetic_identity(case["approved_source"])
                 rule = case["active"]["rule"]
+                integrity = case["integrity_recovery"]
+                if rule == "backup_integrity":
+                    self.assertEqual(set(integrity), integrity_fields)
+                    self.assertTrue(all(type(value) is bool for value in integrity.values()))
+                else:
+                    self.assertIsNone(integrity)
                 self.assertIn(case["signal"], set(signals.values()) | {None})
                 for field in ("approved", "sufficient"):
                     self.assertIs(type(case[field]), bool)
@@ -359,6 +373,7 @@ class OperationsContractTest(unittest.TestCase):
                     case["approved"] and case["sufficient"] and case["signal"] == signals[rule]
                     and all(case["active"][key] == case["evidence"][key] for key in scope_fields)
                     and case["evidence"]["source"] == case["approved_source"]
+                    and (integrity is None or all(integrity.values()))
                     and observed is not None
                     and case["last_breach_second"] < observed <= case["evaluated_second"]
                     and case["evaluated_second"] - observed <= case["freshness_seconds"]
