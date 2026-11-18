@@ -19,9 +19,11 @@ contract][docs-contract] for claim ownership and evidence requirements.
 
 ## Claim status and handoff
 
-Accountable expertise: moderation and policy owners; T2/T6 and editor/user
-experience T3/T5/T7 consumers review their scope. Audiences: administrators,
-moderators and end users. The [claim register](evidence/GB-T13-02-02-T1-guide-claims.json)
+Accountable expertise for administrator and moderator claims: Moderation and
+policy owners, with T2/T6 consumers. End-user claims are accountable to Editor
+and user experience owners, with T3/T5/T7 consumers. Consumers review their
+respective scope. Audiences: administrators, moderators and end users.
+The [claim register](evidence/GB-T13-02-02-T1-guide-claims.json)
 pins the existing anchors and the runtime gap to exact guide bytes.
 
 | Claim anchor | Status | Next validating owner and scope |
