@@ -23,8 +23,8 @@
       "revision": 1,
       "boundary": "apps/api/src/audit-evidence.ts",
       "old_sha256": null,
-      "new_sha256": "f05c4e2d6890418212f1eb5ac448de81c0d4fa8a1682e245722cf8403aa77b0a",
-      "rationale": "Introduce the bounded audit evidence and incident state model behind API-side authorization. The module records redacted state and integrity evidence through a custody interface. Durable custody and an independent anchor require separate verified adapters.",
+      "new_sha256": "75a16a0db70f262b613cbe1e044a135dd570c509ee61255fea561730c1741837",
+      "rationale": "Introduce a bounded server-side audit evidence service with closed records, independently sampled integrity proof, accountable privileged reads and an injected private custody boundary. Durable custody, incident lifecycle and independently anchored acceptance require verified adapters.",
       "alternatives": [
         "Defer the API-side model until the custody adapters are available."
       ],
