@@ -115,6 +115,7 @@ class OperationTransactionTests(unittest.TestCase):
             "SELECT VERSION(), @@global.skip_networking, @@global.datadir"
         ).split("\t")
         self.assertIn(version, SCHEMA.CATALOG)
+        self.engine_version = version
         self.assertEqual(private, "1")
         self.assertEqual(Path(datadir).resolve(strict=True), fixture_data)
         admin(f"CREATE DATABASE {self.db}")
@@ -211,6 +212,118 @@ class OperationTransactionTests(unittest.TestCase):
         ]
         self.assertEqual(len(baseline), 3)
         return sorted([*baseline[1:], *(row.encode("ascii") for row in new_rows)])
+
+    def stage_policy_change(self, session):
+        """Synthetic generation transition; not a runtime authority decision."""
+        session.query("START TRANSACTION")
+        self.assertEqual(session.query(HEAD_LOCK), [f"active\t{LINEAGE}\t1\t7".encode("ascii")])
+        self.assertEqual(session.query(
+            f"UPDATE boards SET policy_generation=8 WHERE {SCOPE} AND policy_generation=7; SELECT ROW_COUNT()"
+        ), [b"1"])
+
+    def generation_changed_view(self, rows):
+        prefix = f"board\t1\t{BOARD}\t".encode("ascii")
+        matching = [row for row in rows if row.startswith(prefix)]
+        self.assertEqual(len(matching), 1)
+        original, = matching
+        fields = original[len(prefix):].split(b"|")
+        self.assertEqual(fields[1], b"7")
+        fields[1] = b"8"
+        return sorted([row for row in rows if row != original] + [prefix + b"|".join(fields)])
+
+    def wait_for_board_contention(self, observer, pending, waiter_id, blocker_id):
+        """Require an engine-reported wait edge for these two owned sessions."""
+        if "MariaDB" in self.engine_version:
+            waits = "information_schema.INNODB_LOCK_WAITS"
+            requester, blocker = "requesting_trx_id", "blocking_trx_id"
+        else:
+            waits = "performance_schema.data_lock_waits"
+            requester, blocker = "REQUESTING_ENGINE_TRANSACTION_ID", "BLOCKING_ENGINE_TRANSACTION_ID"
+        sql = (
+            f"SELECT 1 FROM {waits} w "
+            f"JOIN information_schema.INNODB_TRX r ON r.trx_id=w.{requester} "
+            f"JOIN information_schema.INNODB_TRX b ON b.trx_id=w.{blocker} "
+            "JOIN information_schema.PROCESSLIST p ON p.ID=r.trx_mysql_thread_id "
+            f"WHERE r.trx_mysql_thread_id={waiter_id} AND b.trx_mysql_thread_id={blocker_id} "
+            f"AND r.trx_state='LOCK WAIT' AND p.DB='{self.db}' "
+            f"AND BINARY p.INFO=X'{HEAD_LOCK.encode('ascii').hex()}'"
+        )
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            if observer.query(sql) == [b"1"]:
+                self.assertFalse(pending.done())
+                return
+            if pending.done():
+                pending.result()  # Surface a worker SQL/assertion failure first.
+                self.fail("contender finished without the required scoped engine lock wait")
+            # Poll pacing is not success evidence; only the native wait edge is.
+            time.sleep(0.02)
+        self.fail("no engine lock wait linking the contender to the owned board-fence holder")
+
+    def test_generation_first_denies_waiting_old_generation_edit(self):
+        with self.connection() as observer, self.connection() as policy, self.connection() as edit:
+            baseline = observer.query(VIEW)
+            changed = self.generation_changed_view(baseline)
+            policy.query("START TRANSACTION")
+            self.assertEqual(policy.query(HEAD_LOCK), [f"active\t{LINEAGE}\t0\t7".encode("ascii")])
+            self.assertEqual(policy.query(
+                f"UPDATE boards SET policy_generation=8 WHERE {SCOPE} AND policy_generation=7; SELECT ROW_COUNT()"
+            ), [b"1"])
+            self.assertEqual(policy.query(VIEW), changed)
+            holder, = policy.query("SELECT CONNECTION_ID()")
+            waiter, = edit.query("SELECT CONNECTION_ID()")
+            edit.query("SET SESSION innodb_lock_wait_timeout=10")
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                pending = executor.submit(self.stage, edit)
+                try:
+                    self.wait_for_board_contention(observer, pending, int(waiter), int(holder))
+                    self.assertEqual(observer.query(VIEW), baseline)
+                    policy.query("COMMIT")
+                    self.assertEqual(pending.result(timeout=5), "POLICY_STALE")
+                    self.assertEqual(edit.query(VIEW), changed)
+                    edit.query("ROLLBACK")
+                finally:
+                    # Release the holder even if barrier/assertion checks fail.
+                    # The worker's native lock timeout and Session's read timeout
+                    # bound executor shutdown; context exits reap owned clients.
+                    policy.query("ROLLBACK")
+            self.assertEqual(observer.query(VIEW), changed)
+
+    def test_write_first_preserves_acceptance_across_waiting_generation_change(self):
+        with self.connection() as observer, self.connection() as edit, self.connection() as policy:
+            baseline = observer.query(VIEW)
+            committed = self.committed_view(baseline)
+            changed = self.generation_changed_view(committed)
+            self.assertEqual(self.stage(edit), RECEIPT)
+            holder, = edit.query("SELECT CONNECTION_ID()")
+            waiter, = policy.query("SELECT CONNECTION_ID()")
+            policy.query("SET SESSION innodb_lock_wait_timeout=10")
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                pending = executor.submit(self.stage_policy_change, policy)
+                try:
+                    self.wait_for_board_contention(observer, pending, int(waiter), int(holder))
+                    self.assertEqual(edit.query(VIEW), committed)
+                    self.assertEqual(observer.query(VIEW), baseline)
+                    edit.query("COMMIT")
+                    pending.result(timeout=5)
+                    self.assertEqual(observer.query(VIEW), committed)
+                    self.assertEqual(policy.query(VIEW), changed)
+                    policy.query("COMMIT")
+                finally:
+                    edit.query("ROLLBACK")
+            self.assertEqual(observer.query(VIEW), changed)
+
+            with self.connection() as retry:
+                # Keep the original identity, digest and generation-7 preconditions.
+                # Current synthetic read permission alone permits receipt recovery.
+                self.assertEqual(self.stage(retry, replace(DEFAULT, write_allowed=False)), RECEIPT)
+                self.assertEqual(retry.query(VIEW), changed)
+                retry.query("ROLLBACK")
+                self.assertEqual(self.stage(retry, replace(DEFAULT, payload="changed edit")), "IDEMPOTENCY_CONFLICT")
+                retry.query("ROLLBACK")
+                self.assertEqual(self.stage(retry, replace(DEFAULT, read_allowed=False)), "CONCEALED")
+                self.assertEqual(retry.query(VIEW), changed)
+            self.assertEqual(observer.query(VIEW), changed)
 
     def test_commit_visibility_and_retry_after_discarded_result(self):
         with self.connection() as observer, self.connection() as owner:
