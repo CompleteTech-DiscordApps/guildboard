@@ -2,8 +2,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {isDeepStrictEqual} from 'node:util';
+import {stat} from 'node:fs/promises';
 import {assertLocalBrowserEnvironment, probeClipboard} from './clipboard-probe.mjs';
 import {probeCanvas} from './probe.mjs';
+import {probeNetwork} from './network-probe.mjs';
 
 const remoteNames = ['SELENIUM_REMOTE_URL', 'SELENIUM_REMOTE_HEADERS', 'SELENIUM_REMOTE_CAPABILITIES'];
 const origin = 'http://127.0.0.1:32001';
@@ -33,12 +35,13 @@ function deniedCalls() {
   };
 }
 
-for (const entry of ['initial', 'clipboard']) {
+for (const entry of ['initial', 'clipboard', 'network']) {
   for (const name of remoteNames) for (const value of [syntheticValue, '']) {
     test(`${entry} denies ${name} ${value ? 'configured' : 'empty'} before all side effects`, async t => {
       const before = environment(t, {[name]: value});
       const control = deniedCalls();
-      const run = () => entry === 'initial' ? probeCanvas(control) : probeClipboard(origin, control);
+      const run = () => entry === 'initial' ? probeCanvas(control)
+        : entry === 'network' ? probeNetwork(control) : probeClipboard(origin, control);
       await assert.rejects(run, error => {
         assert.equal(error.message, `Local browser launch requires unset environment names: ${name}`);
         assert.equal(String(error).includes(syntheticValue), false);
@@ -111,6 +114,72 @@ test('initial local launcher failure still closes its fixture server', async t =
     launch: async () => { throw marker; },
   }), error => error === marker);
   assert.equal(closed, true);
+  assert.ok(isDeepStrictEqual({...process.env}, before), 'the full caller environment must stay unchanged');
+});
+
+for (const executablePath of ['', '/synthetic/local/chromium']) {
+  test(`network entry preserves local launch options and cleans both servers and owned files (${executablePath ? 'explicit' : 'managed'})`, async t => {
+    const before = environment(t, {CHROMIUM_PATH: executablePath});
+    const marker = Error('offline network page control stops before requests');
+    const calls = [];
+    let ownedRoot;
+    await assert.rejects(() => probeNetwork({
+      startServer: async directory => {
+        ownedRoot ??= directory;
+        assert.equal(directory, ownedRoot);
+        const index = calls.length;
+        calls.push(`server-${index}`);
+        return {address: () => ({port: 32001 + index}), on: event => assert.equal(event, 'request'),
+          close: callback => { calls.push(`server-close-${index}`); callback(); }};
+      },
+      launch: async options => {
+        calls.push('launch');
+        assert.deepEqual(options, {headless: true, chromiumSandbox: true,
+          ...(executablePath ? {executablePath} : {})});
+        return {newPage: async () => { throw marker; }, close: async () => { calls.push('browser-close'); }};
+      },
+    }), error => error === marker);
+    assert.deepEqual(calls, ['server-0', 'server-1', 'launch', 'browser-close', 'server-close-0', 'server-close-1']);
+    await assert.rejects(() => stat(ownedRoot), {code: 'ENOENT'});
+    assert.ok(isDeepStrictEqual({...process.env}, before), 'the full caller environment must stay unchanged');
+  });
+}
+
+test('network entry rechecks parent configuration after setup and cleans owned resources on denial', async t => {
+  const before = environment(t);
+  const control = deniedCalls();
+  let servers = 0;
+  let closed = 0;
+  let ownedRoot;
+  await assert.rejects(() => probeNetwork({...control, startServer: async directory => {
+    ownedRoot = directory;
+    const index = ++servers;
+    if (index === 2) process.env.SELENIUM_REMOTE_CAPABILITIES = syntheticValue;
+    return {address: () => ({port: 32000 + index}), on: () => {},
+      close: callback => { closed++; callback(); }};
+  }}), {message: 'Local browser launch requires unset environment names: SELENIUM_REMOTE_CAPABILITIES'});
+  assert.deepEqual(control.calls, {launcher: 0, network: 0, clipboard: 0});
+  assert.equal(closed, 2);
+  await assert.rejects(() => stat(ownedRoot), {code: 'ENOENT'});
+  assert.ok(isDeepStrictEqual({...process.env}, {...before, SELENIUM_REMOTE_CAPABILITIES: syntheticValue}),
+    'the guard must preserve even a concurrent caller environment change');
+});
+
+test('network local launcher failure still closes both servers and removes its owned directory', async t => {
+  const before = environment(t);
+  const marker = Error('offline network launcher failure');
+  let ownedRoot;
+  let closed = 0;
+  await assert.rejects(() => probeNetwork({
+    startServer: async directory => {
+      ownedRoot = directory;
+      return {address: () => ({port: 32001}), on: () => {},
+        close: callback => { closed++; callback(); }};
+    },
+    launch: async () => { throw marker; },
+  }), error => error === marker);
+  assert.equal(closed, 2);
+  await assert.rejects(() => stat(ownedRoot), {code: 'ENOENT'});
   assert.ok(isDeepStrictEqual({...process.env}, before), 'the full caller environment must stay unchanged');
 });
 
