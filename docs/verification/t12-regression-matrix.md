@@ -111,3 +111,51 @@ contract](../specifications/GB-T12-S1-verification-evidence-contract.md),
 [T9 security contract](../specifications/GB-T9-S1-security-privacy-contract.md)
 and [T13 release contract](../specifications/GB-T13-S1-documentation-release-contract.md).
 The coverage plan accepts pending and blocked rows. G1, G2 and G3 are pending.
+
+
+## Synthetic handoff coverage correction (2026-11-18)
+
+Related [#588](https://github.com/CompleteTech-DiscordApps/guildboard/issues/588)
+repairs the offline handoff model's weaker case floor against the already
+committed matrix. G2 and G3 retain backup recovery objectives, all three
+capacity/restart/reconnect objectives, HTTPS/WSS deployed smoke and all supported
+client journey observations. G3 also retains every controlled browser journey
+case and exact-build regression coverage for the twelve MVP behaviors, stable
+functionality and accessibility. No accepted matrix case or existing test is
+removed.
+
+The new literal oracle enumerates required cases independently of
+`gate_coverage()`, `row_floors()` and the implementation's shared MVP constant.
+Cross-file equality checks bind that oracle to the committed matrix and both
+floor helpers. Synthetic positive controls cover G1, G2 with all seven registered
+clients, and G3 with all seven clients under both permitted controlled-browser
+environments. Each of 618 mandatory case iterations removes that case, observes
+its failure while other cases are outstanding, substitutes an unrelated passing
+case, and observes an unrelated failure. Both matrix qualification and the full
+T13 handoff are checked. Every altered fixture retains otherwise eligible
+candidate, scope, artifact digest, result observer, cleanup observer, registry
+and authority bindings; the findings inventory is rebuilt for its exact receipt
+bytes. Synthetic support grants for Firefox and previews authorize only these
+model fixtures. They establish no actual supported-client decision.
+
+Validation uses Python 3.12.14 on Linux from base
+`270f1dc822d12a8b57888573e3de427cd0314357`; the PR validation receipt records the
+full resulting head. Run the combined checks from the repository root:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=tests/verification python3 -B -m unittest test_t12_verification_evidence_contract test_t12_regression_matrix test_t9_security_privacy_contract test_t13_release_contract -v
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=tests/verification python3 -B -O -m unittest test_t12_verification_evidence_contract test_t12_regression_matrix test_t9_security_privacy_contract test_t13_release_contract -v
+python3 -B scripts/verification/t12_regression_matrix.py --report
+python3 -B scripts/github-bootstrap/validate.py
+git diff --check
+```
+
+The literal consistency regression also detects the original base helper when
+that helper is injected in memory: one expected assertion failure and no errors.
+That negative control does not change repository files. All observations here
+are model/fixture checks. There is no actual browser/SDK, SQL, Discord, manual
+assistive technology, GoDaddy, deployed smoke, performance, restore or release
+approval evidence. #416 and #417 remain open; G1/G2/G3 remain pending and
+production smoke remains blocked. Fresh independent functional and defensive
+review at the full head, required hosted CI, protected merge and applicable
+post-merge verification remain required before the bounded issue may close.
