@@ -3588,7 +3588,7 @@
     "release": "v1.0"
   },
   {
-    "requirement": "verify systemd/Compose restart preserves state and avoids duplicate acknowledgments",
+    "requirement": "verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence",
     "workstream": "T11",
     "feature": "GB-T11.02.01",
     "implementation": [

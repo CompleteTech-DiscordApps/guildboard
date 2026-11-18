@@ -21958,11 +21958,11 @@
       "dependencies": [],
       "acceptance_criteria": [
         "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry.",
-        "Verify systemd/Compose restart preserves state and avoids duplicate acknowledgments."
+        "Verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence."
       ],
       "expected_tests": [
         "Positive acceptance: Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry.",
-        "Positive acceptance: verify systemd/Compose restart preserves state and avoids duplicate acknowledgments.",
+        "Positive acceptance: verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence.",
         "Failure acceptance: exercise invalid configuration, unavailable prerequisites and interrupted execution for graceful shutdown and restart behavior."
       ],
       "documentation_artifacts": [
@@ -21970,7 +21970,7 @@
       ],
       "requirements": [
         "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry",
-        "verify systemd/Compose restart preserves state and avoids duplicate acknowledgments"
+        "verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence"
       ],
       "assignees": [],
       "github": {
@@ -21981,7 +21981,7 @@
       "project_item_id": "PVTI_lAHOAFlvLs4BoeZ9zhDJE8M",
       "applied_hash": "bf0d8886e6679385c55e45138123e8f743d45df75d3c2bb4c3cbe3e14ee65403",
       "body_hash": "add03c03173e977296b4253fb6ab33618c149186418d66e2bf284878459948d4",
-      "description": "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry; verify systemd/Compose restart preserves state and avoids duplicate acknowledgments"
+      "description": "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry; verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence"
     },
     {
       "id": "GB-T11.02.01.T1",
@@ -22016,11 +22016,11 @@
       ],
       "acceptance_criteria": [
         "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry.",
-        "Verify systemd/Compose restart preserves state and avoids duplicate acknowledgments."
+        "Verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence."
       ],
       "expected_tests": [
         "Positive acceptance: Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry.",
-        "Positive acceptance: verify systemd/Compose restart preserves state and avoids duplicate acknowledgments.",
+        "Positive acceptance: verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence.",
         "Failure acceptance: exercise invalid configuration, unavailable prerequisites and interrupted execution for implement graceful shutdown and restart behavior."
       ],
       "documentation_artifacts": [
@@ -22028,7 +22028,7 @@
       ],
       "requirements": [
         "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry",
-        "verify systemd/Compose restart preserves state and avoids duplicate acknowledgments"
+        "verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence"
       ],
       "assignees": [],
       "github": {
@@ -22039,7 +22039,7 @@
       "project_item_id": "PVTI_lAHOAFlvLs4BoeZ9zhDJE88",
       "applied_hash": "33bdf16d1e9199bb5518e62dd44724b7d3d186ee3842da7969f1a5f351e33b44",
       "body_hash": "7da7eb756c7672a96057e1f6abca0c378256477a4cfc74ec2bbd1f7fab57ca3a",
-      "description": "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry; verify systemd/Compose restart preserves state and avoids duplicate acknowledgments"
+      "description": "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry; verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence"
     },
     {
       "id": "GB-T11.02.01.V1",
@@ -22075,7 +22075,7 @@
       "acceptance_criteria": [
         "Execute acceptance scenarios for Graceful shutdown and restart behavior.",
         "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry.",
-        "Verify systemd/Compose restart preserves state and avoids duplicate acknowledgments.",
+        "Verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence.",
         "Retain raw results, tested revision/environment and defects.",
         "No pass claims from mocks alone for Discord or GoDaddy integration."
       ],
@@ -22090,7 +22090,7 @@
       "requirements": [
         "Execute acceptance scenarios for Graceful shutdown and restart behavior",
         "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry",
-        "verify systemd/Compose restart preserves state and avoids duplicate acknowledgments",
+        "verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence",
         "retain raw results, tested revision/environment and defects",
         "no pass claims from mocks alone for Discord or GoDaddy integration"
       ],
@@ -22103,7 +22103,7 @@
       "project_item_id": "PVTI_lAHOAFlvLs4BoeZ9zhDJE-E",
       "applied_hash": "b7f33000c5d17aa4adf7a076709a22e530277d9726c5e0f0a5709175d8d6845f",
       "body_hash": "0efe6773e222107362389dd2b44e4f20acec9de82d965738b2c2a842bd0cf0bb",
-      "description": "Execute acceptance scenarios for Graceful shutdown and restart behavior; Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry; verify systemd/Compose restart preserves state and avoids duplicate acknowledgments; retain raw results, tested revision/environment and defects; no pass claims from mocks alone for Discord or GoDaddy integration"
+      "description": "Execute acceptance scenarios for Graceful shutdown and restart behavior; Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry; verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence; retain raw results, tested revision/environment and defects; no pass claims from mocks alone for Discord or GoDaddy integration"
     },
     {
       "id": "GB-T11.02.02",
