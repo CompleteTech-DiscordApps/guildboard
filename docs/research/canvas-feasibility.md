@@ -449,3 +449,82 @@ permissions. It does not establish server denial, revocation, concurrency,
 paste/drop/context-menu behavior, text creation, touch/stylus, assistive
 technology, Discord iframe/proxy/client behavior, GoDaddy behavior, performance
 budgets or license/security acceptance. #98 remains open and #99 remains blocked.
+
+## Fresh text creation and draft removal, 2026-11-18
+
+The [creation probe](../../research-fixtures/canvas/text-creation-probe.mjs),
+invoked by `npm run probe` alongside every earlier probe, adds four matched
+writable/viewer pairs. Each trial starts in a fresh page at 1200×800 with live
+`creation-rectangle`, live `creation-text` and deleted `creation-tombstone`.
+Only scene seeding and view-mode setup use the editor API. Actual pointer and
+keyboard input open an empty canvas position at (900, 500), type
+`Fresh synthetic text`, and finish or remove that draft. No API-supplied tool,
+selection, generated element or text mutation substitutes for input.
+
+| Creation route | Finish or removal control | Required writable observation |
+| --- | --- | --- |
+| Double-click empty canvas | Control+Enter | New live text ID, exact intended text, closed editor |
+| `t`, then click empty canvas | Escape | Same generated ID and exact text survive submission |
+| `t`, then click empty canvas | Outside click at (1050, 650) | Same generated ID and exact text survive blur submission |
+| Double-click empty canvas | Type, Control+A, Backspace, Escape | Typed positive control first; cleared draft closes as a tombstone with the same generated ID |
+
+The pinned [text editor keyboard handler](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/element/textWysiwyg.tsx#L372-L399)
+submits on both Escape and Control+Enter. The pinned
+[submission callback](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/components/App.tsx#L4896-L4943)
+marks empty submitted text deleted. The removal control therefore explicitly
+clears a typed draft before Escape; Escape alone is tested as a finish control.
+These source findings were also checked against the installed 0.18.1 package's
+source map. They do not establish general undo or server cancellation semantics.
+
+Each writable trial must focus the real text editor, expose a new nonempty ID,
+retain that ID through typing and closure, contain exact `text` and
+`originalText`, and emit complete callbacks containing the typed scene and final
+scene. Final elements must stay identical through a separate two-frame settling
+window. The removal path must first satisfy the nonempty typed positive control.
+All seeded elements, their order and every field must stay exactly equal at
+each checkpoint and every callback, including the pre-existing tombstone.
+Duplicate IDs or additional new IDs fail. Viewer checkpoints and every observed
+callback must exactly equal their complete baseline, with no text editor.
+
+Evidence includes complete before/open/typed/cleared/finished/settled elements,
+callback sequences tagged by phase, active tool, selected IDs, viewport,
+text-editor value/focus/caret selection and focused element tag/role/label.
+The callback cap is 200 per trial and overflow fails. Frame waits have a
+five-second limit; actions and predicate waits have ten-second defaults. The
+exact-origin route guard, blocked service workers, page-error checks and browser
+sandbox remain enabled. Observations are bounded windows and synthetic input;
+they do not rule out all delayed effects or establish physical-input behavior.
+
+Source baseline: `270f1dc822d12a8b57888573e3de427cd0314357`. Editor and tooling
+pins remain Excalidraw 0.18.1, React/ReactDOM 18.3.1, Playwright 1.56.1 and
+esbuild 0.25.12. No dependency, workflow, browser-launch or network policy changed.
+Local verification on Debian 13.6 / Node 24.22.3 / npm 11.9.0:
+
+| Exact command | Exit and evidence |
+| --- | --- |
+| `npm ci --ignore-scripts --offline --no-audit` (fixture directory) | 0; 252 locked packages, lifecycle scripts disabled |
+| `npm test` (fixture directory) | 0; 17 passes, zero skips; existing unit coverage |
+| `CHROMIUM_PATH=/usr/bin/chromium npm run probe` (fixture directory) | 1; bundle built, Chromium launch aborted before any page |
+| `CHROMIUM_PATH=/usr/bin/chromium npm run probe:network` (fixture directory) | 1; Chromium launch aborted before network controls |
+| `node --check research-fixtures/canvas/text-creation-probe.mjs` | 0; syntax only |
+| `node --check research-fixtures/canvas/probe.mjs` | 0; syntax only |
+| `python3 -B scripts/github-bootstrap/validate.py` | 0; 471 manifest items, no errors |
+| `git diff --check` | 0 |
+
+The expected managed Playwright build 1194 executable was absent from its cache.
+Explicit system Chromium 156.0.8078.79 retained `chromiumSandbox: true` but
+failed with a denied process-singleton `socket()` and subsequent denied ptrace.
+No new text-input assertions executed locally. The existing path-triggered
+Canvas feasibility fixture workflow supplies the permitted hosted browser run;
+its result is pending for this candidate. Unit and syntax results do not prove
+creation, finish/removal or viewer behavior.
+
+For #99, distinguish submission from draft removal and require stable generated
+identity plus full seeded-scene preservation. UI callbacks remain observations,
+not authenticated writes. Paste/drop/context-menu, server authorization,
+revocation, concurrent accepted-intent undo, persistence, touch/stylus, assistive
+technology, physical input, Discord iframe/proxy/clients, GoDaddy, performance
+and license/security acceptance remain open. #98 remains incomplete; #99 remains
+blocked. The earlier matrix's text-creation limitation describes its historical
+coverage; this addition requires the hosted browser evidence below before
+claiming that narrower path is observed.
