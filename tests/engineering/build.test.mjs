@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -107,7 +108,13 @@ test("successful builds remove stale output and bind hashes deterministically", 
     assert.equal(first.status, 0, first.stderr);
     assert.ok(!fs.existsSync(path.join(dir, "apps/activity/dist/deleted.js")));
     const manifest = fs.readFileSync(path.join(dir, "engineering-build/manifest.json"), "utf8");
-    assert.ok(Object.keys(JSON.parse(manifest).outputs).length > 0);
+    const completed = JSON.parse(manifest);
+    assert.ok(Object.keys(completed.outputs).length > 0);
+    const recipe = "scripts/engineering/build.mjs";
+    const recipeDigest = createHash("sha256")
+      .update(fs.readFileSync(path.join(dir, recipe)))
+      .digest("hex");
+    assert.equal(completed.inputs[recipe], recipeDigest);
     const second = run(dir);
     assert.equal(second.status, 0, second.stderr);
     assert.equal(
