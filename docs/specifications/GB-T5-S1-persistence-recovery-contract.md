@@ -166,8 +166,11 @@ measured operating-envelope evidence.
 Normal restart reopens the persisted active lineage and receipt coverage as one
 authoritative state. A document restore or disaster promotion can only activate
 an identifier that has never served within the scoped board, including any
-lineage omitted from the recovered cut. If freshness cannot be verified, keep
-the candidate isolated. A document restore changes the document and active lineage
+lineage omitted from the recovered cut. Require a current authoritative reservation
+for the exact guild, board and new lineage at cutover, independent of the recovered
+lineage inventory. A durable allocator in a separately fenced namespace may supply
+that reservation. Missing or mismatched evidence keeps the candidate isolated.
+A document restore changes the document and active lineage
 while preserving all existing receipt evidence and uncertainty. Its source
 checkpoint provides content only. The previously active lineage is complete if
 its full accepted receipt history was retained through retirement. A later
@@ -177,8 +180,9 @@ independently verified cut and provenance before carrying forward a completeness
 claim. A newer checkpoint, restart, document restore or promotion does not by
 itself close a gap. Persist that state atomically with the new active lineage
 before serving. Absent inactive identities return `LINEAGE_CHANGED` when
-coverage is affirmatively complete for that history. With uncertain coverage
-after any disaster they return T0's safe `DEPENDENCY_UNAVAILABLE` and remain
+coverage is affirmatively complete for that history. T0 §6 delegates missing
+durable evidence after disaster to the recovery contract. With uncertain coverage
+after any disaster, these identities return `DEPENDENCY_UNAVAILABLE` and remain
 unknown. Matching retained receipts and digest conflicts take precedence and
 all outcomes remain subject to current read and release authorization.
 

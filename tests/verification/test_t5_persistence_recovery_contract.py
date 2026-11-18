@@ -32,27 +32,42 @@ class Command:
 
 
 @dataclass(frozen=True)
+class VerifiedLineageReservation:
+    lineage: str
+    guild: str = "guild-a"
+    board: str = "board-a"
+
+
+FIXTURE_RESERVATION = VerifiedLineageReservation("lineage-b")
+
+
+@dataclass(frozen=True)
 class History:
     active: str = "lineage-a"
     disaster_seen: bool = False
     complete_retired: frozenset = frozenset()
     known_lineages: frozenset = frozenset({"lineage-a"})
+    guild: str = "guild-a"
+    board: str = "board-a"
 
     def restart(self):
         return replace(self)
 
-    def restore(self, new_lineage):
-        return self.activate(new_lineage, self.complete_retired | {self.active})
+    def restore(self, new_lineage, reservation):
+        return self.activate(new_lineage, reservation, self.complete_retired | {self.active})
 
-    def promote(self, new_lineage, proven_complete):
+    def promote(self, new_lineage, reservation, proven_complete):
         previously_complete = self.complete_retired | {self.active}
-        return self.activate(new_lineage, previously_complete & proven_complete, disaster=True)
+        return self.activate(new_lineage, reservation, previously_complete & proven_complete, disaster=True)
 
-    def activate(self, new_lineage, complete_retired, disaster=False):
-        if new_lineage == self.active or new_lineage in self.known_lineages:
+    def activate(self, new_lineage, reservation, complete_retired, disaster=False):
+        if (type(reservation) is not VerifiedLineageReservation
+                or reservation != VerifiedLineageReservation(new_lineage, self.guild, self.board)
+                or new_lineage == self.active or new_lineage in self.known_lineages):
             return None
-        return History(new_lineage, self.disaster_seen or disaster, complete_retired,
-                       self.known_lineages | {self.active, new_lineage})
+        return replace(self, active=new_lineage, disaster_seen=self.disaster_seen or disaster,
+                       complete_retired=complete_retired,
+                       known_lineages=self.known_lineages | {self.active, new_lineage})
 
 
 @dataclass(frozen=True)
@@ -178,10 +193,10 @@ def command_result(case, receipts=ORIGINAL_RECEIPTS, history=History()):
 def command_scenario_result(case):
     history = History()
     if case.recovery == "document":
-        history = history.restore("lineage-b")
+        history = history.restore("lineage-b", FIXTURE_RESERVATION)
     elif case.recovery == "disaster":
         proven_complete = {"lineage-a"} if case.complete_history else set()
-        history = history.promote("lineage-b", proven_complete)
+        history = history.promote("lineage-b", FIXTURE_RESERVATION, proven_complete)
     return command_result(case, history=history)
 
 
@@ -220,7 +235,8 @@ def migration_result(case):
 DISASTER_DELETION_PROOF = ("generation-a", "sql-cut-a", "objects-a", "references-a", 4)
 
 
-def disaster_attempt(case, history=History(), target_lineage="lineage-b", proven_complete=frozenset()):
+def disaster_attempt(case, history=History(), target_lineage="lineage-b", proven_complete=frozenset(),
+                     reservation=FIXTURE_RESERVATION):
     restored_cut = (case.source_generation, case.restored_sql_cut, case.restored_object_set,
                     case.restored_reference_set, case.deletion_cut)
     verified = all((
@@ -233,7 +249,7 @@ def disaster_attempt(case, history=History(), target_lineage="lineage-b", proven
         case.checkpoint <= case.anchored_head,
         case.audit_tail == tuple(range(case.checkpoint + 1, case.anchored_head + 1)),
     ))
-    promoted = history.promote(target_lineage, proven_complete) if verified else None
+    promoted = history.promote(target_lineage, reservation, proven_complete) if verified else None
     if promoted is None:
         return "ISOLATED", [], history
     return "EXPOSED", ["exposure"], promoted
@@ -305,7 +321,7 @@ class RestoreState:
 RESTORE_COMMAND = Command(operation="operation-restore", digest="digest-restore")
 
 
-def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState()):
+def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState(), reservation=FIXTURE_RESERVATION):
     receipts = dict(ORIGINAL_RECEIPTS)
     receipts.update(state.receipts)
     outcome, effects = command_result(command, receipts, state.history)
@@ -313,9 +329,11 @@ def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState()):
         return outcome, [], state
 
     projection = restore_projection(case)
-    next_history = state.history.restore(case.target_lineage)
-    if projection is None or not case.commit or next_history is None:
+    if projection is None or not case.commit:
         return ("REJECTED" if command.release else "NOT_FOUND"), [], state
+    next_history = state.history.restore(case.target_lineage, reservation)
+    if next_history is None:
+        return ("DEPENDENCY_UNAVAILABLE" if command.release else "NOT_FOUND"), [], state
     content, references = projection
     final_revision = state.revision + 1
     final_cut = (command.guild, command.board, command.lineage, final_revision)
@@ -460,10 +478,12 @@ class ContractScenarios(unittest.TestCase):
         first = RESTORE_COMMAND
         _, _, after_first = restore_attempt(Restore(), first)
         second = replace(first, lineage="lineage-b", operation="restore-again")
-        self.assertEqual(restore_attempt(Restore(target_lineage="lineage-a"), second, after_first),
-                         ("REJECTED", [], after_first))
+        self.assertEqual(restore_attempt(Restore(target_lineage="lineage-a"), second, after_first,
+                                        VerifiedLineageReservation("lineage-a")),
+                         ("DEPENDENCY_UNAVAILABLE", [], after_first))
         second_case = Restore(target_lineage="lineage-c")
-        outcome, _, after_second = restore_attempt(second_case, second, after_first)
+        outcome, _, after_second = restore_attempt(second_case, second, after_first,
+                                                   VerifiedLineageReservation("lineage-c"))
         self.assertEqual(outcome, "RESTORED")
         self.assertEqual(after_second.history.active, "lineage-c")
         self.assertEqual(after_second.history.complete_retired, frozenset({"lineage-a", "lineage-b"}))
@@ -487,17 +507,19 @@ class ContractScenarios(unittest.TestCase):
                 self.assertEqual(disaster_result(replace(valid, **claim)), ("ISOLATED", []))
 
     def test_disaster_promotion_stays_isolated_for_previously_used_lineages(self):
-        history = History().restore("lineage-b").restart()
+        history = History().restore("lineage-b", FIXTURE_RESERVATION).restart()
         for used in ("lineage-a", "lineage-b"):
             with self.subTest(lineage=used):
-                self.assertEqual(disaster_attempt(Disaster(), history, used),
+                self.assertEqual(disaster_attempt(Disaster(), history, used,
+                                                  reservation=VerifiedLineageReservation(used)),
                                  ("ISOLATED", [], history))
-        outcome, effects, promoted = disaster_attempt(Disaster(), history, "lineage-c")
+        outcome, effects, promoted = disaster_attempt(Disaster(), history, "lineage-c",
+                                                       reservation=VerifiedLineageReservation("lineage-c"))
         self.assertEqual((outcome, effects, promoted.active), ("EXPOSED", ["exposure"], "lineage-c"))
         self.assertEqual(promoted.known_lineages, frozenset({"lineage-a", "lineage-b", "lineage-c"}))
 
     def test_disaster_coverage_survives_restart_restore_and_later_disasters(self):
-        history = History().promote("lineage-b", set())
+        history = History().promote("lineage-b", FIXTURE_RESERVATION, set())
         missing = Command(operation="operation-lost")
         unrecognized = Command(lineage="lineage-lost")
         unknown = ("DEPENDENCY_UNAVAILABLE", [])
@@ -511,7 +533,7 @@ class ContractScenarios(unittest.TestCase):
         self.assertEqual(command_result(current, receipts, history), ("ACK_CURRENT_1", []))
 
         self.assertEqual(restore_projection(Restore()), (["shape-b"], ["asset-b"]))
-        history = history.restore("lineage-c").restart()
+        history = history.restore("lineage-c", VerifiedLineageReservation("lineage-c")).restart()
         self.assertEqual(history.active, "lineage-c")
         self.assertEqual(command_result(current, receipts, history), ("ACK_HISTORICAL_1", []))
         self.assertEqual(command_result(missing, receipts, history), unknown)
@@ -520,7 +542,7 @@ class ContractScenarios(unittest.TestCase):
         self.assertEqual(command_result(absent_b, receipts, history), ("LINEAGE_CHANGED", []))
 
         # The later recovered cut proves B complete but omits a suffix of C.
-        history = history.promote("lineage-d", {"lineage-b"}).restart()
+        history = history.promote("lineage-d", VerifiedLineageReservation("lineage-d"), {"lineage-b"}).restart()
         self.assertEqual(command_result(absent_b, receipts, history), ("LINEAGE_CHANGED", []))
         self.assertEqual(command_result(missing, receipts, history), unknown)
         self.assertEqual(command_result(unrecognized, receipts, history), unknown)
@@ -529,6 +551,24 @@ class ContractScenarios(unittest.TestCase):
                          ("NOT_FOUND", []))
         self.assertEqual(command_result(Command(lineage=history.active), receipts, history),
                          ("ACK_NEW", EFFECTS))
+
+    def test_omitted_lineage_cannot_become_active_without_a_current_scoped_reservation(self):
+        history = History().promote("lineage-b", FIXTURE_RESERVATION, set()).restart()
+        state = RestoreState(history=history)
+        omitted = "lineage-omitted"
+        old = Command(lineage=omitted, operation="unresolved-old-operation")
+        restore = Restore(target_lineage=omitted)
+        command = replace(RESTORE_COMMAND, lineage=history.active)
+        self.assertNotIn(omitted, history.known_lineages)
+        for reservation in (None, FIXTURE_RESERVATION, VerifiedLineageReservation(omitted, guild="foreign"),
+                            VerifiedLineageReservation(omitted, board="foreign")):
+            with self.subTest(reservation=reservation):
+                self.assertEqual(restore_attempt(restore, command, state, reservation),
+                                 ("DEPENDENCY_UNAVAILABLE", [], state))
+                self.assertEqual(disaster_attempt(Disaster(), history, omitted, reservation=reservation),
+                                 ("ISOLATED", [], history))
+        self.assertEqual(command_result(old, history=history), ("DEPENDENCY_UNAVAILABLE", []))
+        self.assertEqual(command_result(replace(old, release=False), history=history), ("NOT_FOUND", []))
 
     def load_inputs(self, model, inputs):
         self.assertIs(type(inputs), dict)
