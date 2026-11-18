@@ -46,6 +46,11 @@ FIELDS_FROM_MANIFEST = ("name", "version", "workspaces", "dependencies", "devDep
 OBJECT_LIMIT = 2 * 1024 * 1024
 RECEIPT_LIMIT = 256 * 1024
 EVIDENCE_DIRECTORY = ".t9-assurance"
+# Reviewed in protected T0 PR #579. This is a single dated disposition, not a
+# registry of caller-supplied advisory exceptions or current scan authority.
+ROOT_ADVISORY = "GHSA-fc5q-39xc-vjpf"
+WITHDRAWAL_RECORD = "docs/evidence/GB-T0-G1-dependency-requalification-2026-11-18.json"
+WITHDRAWAL_SHA256 = "68707568cc51415a449ca7b252598e074eb84fafb36be81b6092c28e82a97955"
 
 
 class Invalid(ValueError):
@@ -127,14 +132,15 @@ def source_snapshot(revision):
                       b"yarn.lock", b"pnpm-lock.yaml", b"bun.lock", b"bun.lockb"}
     for record in listing.rstrip(b"\0").split(b"\0"):
         info, _, name = record.partition(b"\t")
-        if name.rsplit(b"/", 1)[-1] not in package_inputs and name != LICENSE_INPUT.encode():
+        if (name.rsplit(b"/", 1)[-1] not in package_inputs
+                and name not in (LICENSE_INPUT.encode(), WITHDRAWAL_RECORD.encode())):
             continue
         path = name.decode("ascii")
-        require(path in SOURCE_FILES)
+        require(path in SOURCE_FILES or path == WITHDRAWAL_RECORD)
         mode, kind, oid = info.split()
         require(mode == b"100644" and kind == b"blob" and matches(COMMIT, oid.decode("ascii")))
         objects[path] = oid.decode("ascii")
-    require(objects.keys() == SOURCE_FILES)
+    require(objects.keys() - {WITHDRAWAL_RECORD} == SOURCE_FILES)
     snapshot = {}
     for path, oid in objects.items():
         require(int(git("cat-file", "-s", oid)) <= OBJECT_LIMIT)
@@ -204,6 +210,23 @@ def check_lock(snapshot, scope):
         require(entry.get("resolved") == expected and check_licenses.valid_integrity(entry.get("integrity")))
         known_root_advisory |= scope == "root" and name == "picomatch" and version == "4.0.7"
     return known_root_advisory
+
+
+def reviewed_root_withdrawal(snapshot, now):
+    data = snapshot.get(WITHDRAWAL_RECORD)
+    if data is None or sha256(data) != WITHDRAWAL_SHA256:
+        return False
+    # Exact-byte authentication above binds the advisory, original source SHA,
+    # observations and limitations together. Never accept a bare withdrawn flag.
+    record = read_json(data)
+    observation = record["upstream_observation"]
+    return (record["source_sha"] == "17d97f4d1b5bcf97e8a8494d25db17480efe21e9"
+            and record["root_lockfile"] == LOCKS["root"]
+            and record["root_lockfile_sha256"] == sha256(snapshot[LOCKS["root"]])
+            and observation["url"] == f"https://github.com/advisories/{ROOT_ADVISORY}"
+            and observation["withdrawn_date"] == "2026-11-18"
+            and all(datetime.fromisoformat(item["timestamp_utc"]) <= now
+                    for item in record["observations"]))
 
 
 def check_license_policy(snapshot):
@@ -362,6 +385,8 @@ def main(argv=None, *, clock=utc_now):
         known_advisory = check_lock(snapshot, "root")
         check_lock(snapshot, "canvas")
         license_pass = check_license_policy(snapshot)
+        now = clock()
+        withdrawn = known_advisory and reviewed_root_withdrawal(snapshot, now)
     except INPUT_ERRORS:
         print("result: UNVERIFIED (SOURCE_OR_LICENSE_INPUT)")
         return 2
@@ -370,21 +395,22 @@ def main(argv=None, *, clock=utc_now):
     print("lockfile and manifest structure: PASS")
     print("offline license policy:", "PASS" if license_pass else "FAIL")
     if known_advisory:
-        print("root advisory tracked by #458: OPEN")
+        status = ("WITHDRAWN (REVIEWED_OBSERVATION_2026-11-18)" if withdrawn
+                  else "CURRENT_STATUS_UNKNOWN (KNOWN_PIN_HOLD)")
+        print(f"root advisory {ROOT_ADVISORY}: {status}")
 
     try:
         require(matches(DIGEST, args.trusted_authority_sha256))
         directory = os.open(EVIDENCE_DIRECTORY, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
-            evidence_pass = check_evidence(directory, args.trusted_authority_sha256, snapshot, revision,
-                                           clock())
+            evidence_pass = check_evidence(directory, args.trusted_authority_sha256, snapshot, revision, now)
         finally:
             os.close(directory)
     except INPUT_ERRORS:
         print("result: UNVERIFIED (EVIDENCE_OR_AUTHORITY)")
         return 2
 
-    if license_pass and evidence_pass and not known_advisory:
+    if license_pass and evidence_pass and (not known_advisory or withdrawn):
         print("result: PASS (SUPPLY_CHAIN_SCOPE)")
         return 0
     print("result: FAIL (UNRESOLVED_FINDINGS_OR_LICENSE)")
