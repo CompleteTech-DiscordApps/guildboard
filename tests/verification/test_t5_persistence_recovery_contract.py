@@ -36,17 +36,20 @@ class History:
     active: str = "lineage-a"
     disaster_seen: bool = False
     complete_retired: frozenset = frozenset()
+    known_lineages: frozenset = frozenset({"lineage-a"})
 
     def restart(self):
         return replace(self)
 
     def restore(self, new_lineage):
         return replace(self, active=new_lineage,
-                       complete_retired=self.complete_retired | {self.active})
+                       complete_retired=self.complete_retired | {self.active},
+                       known_lineages=self.known_lineages | {self.active, new_lineage})
 
     def promote(self, new_lineage, proven_complete):
         previously_complete = self.complete_retired | {self.active}
-        return History(new_lineage, True, previously_complete & proven_complete)
+        return History(new_lineage, True, previously_complete & proven_complete,
+                       self.known_lineages | {self.active, new_lineage})
 
 
 @dataclass(frozen=True)
@@ -85,6 +88,10 @@ class Migration:
 @dataclass(frozen=True)
 class Disaster:
     manifest_verified: bool = True
+    source_generation: str = "generation-a"
+    restored_sql_cut: str = "sql-cut-a"
+    restored_object_set: str = "objects-a"
+    restored_reference_set: str = "references-a"
     deletion_independent: bool = True
     exposure_fence: bool = True
     deletion_cut: int = 4
@@ -103,6 +110,7 @@ class Disaster:
 
 @dataclass(frozen=True)
 class Restore:
+    target_lineage: str = "lineage-b"
     same_scope: bool = True
     authorized: bool = True
     deleted: bool = False
@@ -206,9 +214,15 @@ def migration_result(case):
     return "FENCED", []
 
 
+DISASTER_DELETION_PROOF = ("generation-a", "sql-cut-a", "objects-a", "references-a", 4)
+
+
 def disaster_result(case):
+    restored_cut = (case.source_generation, case.restored_sql_cut, case.restored_object_set,
+                    case.restored_reference_set, case.deletion_cut)
     verified = all((
         case.manifest_verified, case.deletion_independent, case.exposure_fence,
+        restored_cut == DISASTER_DELETION_PROOF,
         case.hidden, case.revocations_applied, case.audit_independent,
         case.audit_integrity, case.generation_fenced, case.lineage_receipts_verified,
         case.deletion_cut <= case.current_watermark,
@@ -264,7 +278,7 @@ class RestoreState:
     revision: int = 7
     policy_generation: int = 1
     retired_cut: tuple = ()
-    receipt: tuple = ()
+    receipts: tuple = ()
     event: tuple = ()
     outbox: tuple = ()
     audit: tuple = ()
@@ -277,27 +291,25 @@ RESTORE_COMMAND = Command(operation="operation-restore", digest="digest-restore"
 
 def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState()):
     receipts = dict(ORIGINAL_RECEIPTS)
-    if state.receipt:
-        key, receipt = state.receipt
-        receipts[key] = receipt
+    receipts.update(state.receipts)
     outcome, effects = command_result(command, receipts, state.history)
     if not effects:
         return outcome, [], state
 
     projection = restore_projection(case)
-    if projection is None or not case.commit:
+    if projection is None or not case.commit or case.target_lineage in state.history.known_lineages:
         return ("REJECTED" if command.release else "NOT_FOUND"), [], state
     content, references = projection
     final_cut = (state.history.active, state.revision + 1)
     publication = RestoreState(
-        history=state.history.restore("lineage-b"),
+        history=state.history.restore(case.target_lineage),
         revision=0,
         policy_generation=state.policy_generation + 1,
         retired_cut=final_cut,
-        receipt=(identity(command), (command.digest, final_cut[1])),
-        event=(final_cut, command.operation, "restore", "lineage-b", 0),
+        receipts=(*state.receipts, (identity(command), (command.digest, final_cut[1]))),
+        event=(final_cut, command.operation, "restore", case.target_lineage, 0),
         outbox=final_cut,
-        audit=(final_cut, "restore", "lineage-b"),
+        audit=(final_cut, "restore", case.target_lineage),
         content=tuple(content),
         references=tuple(references),
     )
@@ -385,7 +397,7 @@ class ContractScenarios(unittest.TestCase):
                                    "outbox", "audit", "shape-b", "asset-b"])
         former_cut = ("lineage-a", 8)
         self.assertEqual(published.retired_cut, former_cut)
-        self.assertEqual(published.receipt, (identity(command), (command.digest, 8)))
+        self.assertEqual(published.receipts, ((identity(command), (command.digest, 8)),))
         self.assertEqual(published.event, (former_cut, command.operation, "restore", "lineage-b", 0))
         self.assertEqual(published.outbox, former_cut)
         self.assertEqual(published.audit, (former_cut, "restore", "lineage-b"))
@@ -404,6 +416,29 @@ class ContractScenarios(unittest.TestCase):
                          ("REJECTED", [], RestoreState()))
         self.assertEqual(restore_attempt(Restore(commit=False), replace(command, release=False, lost_ack=False)),
                          ("NOT_FOUND", [], RestoreState()))
+
+    def test_restore_keeps_all_receipts_and_never_reuses_retired_lineages(self):
+        first = RESTORE_COMMAND
+        _, _, after_first = restore_attempt(Restore(), first)
+        second = replace(first, lineage="lineage-b", operation="restore-again")
+        self.assertEqual(restore_attempt(Restore(target_lineage="lineage-a"), second, after_first),
+                         ("REJECTED", [], after_first))
+        outcome, _, after_second = restore_attempt(Restore(target_lineage="lineage-c"), second, after_first)
+        self.assertEqual(outcome, "RESTORED")
+        self.assertEqual(after_second.history.active, "lineage-c")
+        self.assertEqual(after_second.history.complete_retired, frozenset({"lineage-a", "lineage-b"}))
+        reopened = replace(after_second, history=after_second.history.restart())
+        self.assertEqual(restore_attempt(Restore(), first, reopened), ("ACK_HISTORICAL_8", [], reopened))
+        self.assertEqual(restore_attempt(Restore(), second, reopened), ("ACK_HISTORICAL_1", [], reopened))
+
+    def test_disaster_applied_cut_requires_bound_recovered_projection(self):
+        valid = Disaster()
+        self.assertEqual(disaster_result(valid), ("EXPOSED", ["exposure"]))
+        for claim in ({"deletion_cut": 6, "applied_markers": ()}, {"source_generation": "generation-b"},
+                      {"restored_sql_cut": "sql-cut-b"}, {"restored_object_set": "objects-b"},
+                      {"restored_reference_set": "references-b"}):
+            with self.subTest(claim=claim):
+                self.assertEqual(disaster_result(replace(valid, **claim)), ("ISOLATED", []))
 
     def test_disaster_coverage_survives_restart_restore_and_later_disasters(self):
         history = History().promote("lineage-b", set())

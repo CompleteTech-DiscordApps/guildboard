@@ -223,7 +223,12 @@ applied deletion cut, encryption/key access reference and validation state. Pin
 all cut-reachable bytes until the consistent SQL/log and asset manifest is
 durable. Verify restore in isolation with all required keys and the complete
 chain. Read authoritative deletion markers and current watermark from a source
-independent of the restored generation. Verify uninterrupted coverage from the
+independent of the restored generation. Independently authenticate that the
+claimed applied cut is bound to the exact recovered generation, SQL and log
+cut, assets, exports and scoped references. Confirm the recovered projection
+reflects applicable markers through that cut. If it cannot be proved,
+reconcile from an independently established earlier cut or keep the target
+isolated. Verify uninterrupted coverage from the
 applied cut through the exposure fence, apply markers, reapply revocations and
 verify hidden content, assets, exports and references. Order exposure against
 new deletions or re-reconcile at an equivalent fence. Keep the target isolated
