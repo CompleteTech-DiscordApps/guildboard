@@ -95,6 +95,18 @@ revision and the retained evidence after repository review. Real G1 and G3
 authorization and public readback belong to the subsequent native gate and
 publication issues.
 
+## Retention addendum, 2026-11-18 UTC
+
+The historical `446-private-stage` raw inventory described above was
+unavailable to this campaign. Its retention could not be reverified here;
+the historical facts and digests above remain unchanged. A [new retained
+replay](GB-T13-04-01-V1-staging-replay.md) at source
+`57ad491cc1df755061187a10f52df4586862416c` now provides current reviewable
+local evidence. It is a fresh verification run, not recovery of the old logs.
+The replay receipt records its separate identities, private authenticated
+access, preserved harness failures, independent review and scope limits.
+It supplies no real gate approval, issue closure or publication authority.
+
 [verification]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/446
 [implementation]: https://github.com/CompleteTech-DiscordApps/guildboard/issues/445
 [staging-merge]: https://github.com/CompleteTech-DiscordApps/guildboard/pull/543
