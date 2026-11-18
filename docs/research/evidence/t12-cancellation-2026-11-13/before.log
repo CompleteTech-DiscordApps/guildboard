@@ -1,0 +1,48 @@
+test_sigterm_reaps_owned_workers_and_retains_completed_results (__main__.SourceCaptureRegression.test_sigterm_reaps_owned_workers_and_retains_completed_results) ... FAIL
+test_sigint_reaps_owned_workers_and_retains_completed_results (__main__.SourceCaptureRegression.test_sigint_reaps_owned_workers_and_retains_completed_results) ... ERROR
+
+======================================================================
+ERROR: test_sigint_reaps_owned_workers_and_retains_completed_results (__main__.SourceCaptureRegression.test_sigint_reaps_owned_workers_and_retains_completed_results)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<worktree>/tests/research/t12-test-experiments.py", line 424, in test_sigint_reaps_owned_workers_and_retains_completed_results
+    self.check_cancellation(signal.SIGINT)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<worktree>/tests/research/t12-test-experiments.py", line 498, in check_cancellation
+    stdout, stderr = process.communicate(timeout=4)
+                     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 1221, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 2154, in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 1268, in _check_timeout
+    raise TimeoutExpired(
+    ...<2 lines>...
+            stderr=b''.join(stderr_seq) if stderr_seq else None)
+subprocess.TimeoutExpired: Command '['/usr/bin/python', '-c', '\nimport importlib.util, json, pathlib, signal, subprocess, sys\nspec = importlib.util.spec_from_file_location("capture", sys.argv[1])\nm = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(m)\nurl, marker = sys.argv[2], pathlib.Path(sys.argv[3])\ndef record(row):\n    with marker.open("a") as output:\n        output.write(json.dumps(row) + "\\n")\npopen = subprocess.Popen\ndef tracked(*args, **kwargs):\n    process = popen(*args, **kwargs)\n    record({"pid": process.pid, "url": args[0][-1]})\n    return process\nm.subprocess.Popen = tracked\nfetch = m.fetch\ndef routed(target, timeout):\n    if target.startswith("https://docs.discord.com/"):\n        target = url + "/failed"\n    elif target.startswith("https://raw.githubusercontent.com/"):\n        target = url + "/healthy"\n    result = fetch(target, timeout)\n    record({"completed": target})\n    return result\nm.fetch = routed\nm.SOURCES = [("P1", url + "/healthy", "owned test"),\n             ("D1", "https://docs.discord.com/example", "owned test")] + [\n             ("S" + str(i), url + "/slow", "owned test") for i in range(8)]\nif hasattr(m, "main"):\n    before = [signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGINT)]\n    status = m.main()\n    record({"handlers_restored": before == [signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGINT)]})\n    sys.exit(status)\nrows = m.capture_all()\nprint(json.dumps({"sources": rows}))\nsys.exit(any(row["status"] != "fetched" for row in rows))\n', '<worktree>/docs/research/evidence/t12-cancellation-2026-11-13/before-source.py', 'http://127.0.0.1:45197', '/tmp/tmp0jv6et7x/children.jsonl']' timed out after 4 seconds
+
+======================================================================
+FAIL: test_sigterm_reaps_owned_workers_and_retains_completed_results (__main__.SourceCaptureRegression.test_sigterm_reaps_owned_workers_and_retains_completed_results)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<worktree>/tests/research/t12-test-experiments.py", line 420, in test_sigterm_reaps_owned_workers_and_retains_completed_results
+    self.check_cancellation(signal.SIGTERM)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "<worktree>/tests/research/t12-test-experiments.py", line 504, in check_cancellation
+    self.assertEqual(leaked, [], "collector must reap every owned fetch child")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [82566, 82570, 82596, 82686] != []
+
+First list contains 4 additional elements.
+First extra element 0:
+82566
+
+- [82566, 82570, 82596, 82686]
++ [] : collector must reap every owned fetch child
+
+----------------------------------------------------------------------
+Ran 2 tests in 5.132s
+
+FAILED (failures=1, errors=1)

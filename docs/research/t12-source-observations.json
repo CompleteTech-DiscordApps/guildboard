@@ -1,0 +1,209 @@
+{
+  "kind": "public-document-observations-not-platform-testing",
+  "sources": [
+    {
+      "attempts": [
+        {
+          "bytes": 1053117,
+          "final_url": "https://www.foundationdb.org/files/fdb-paper.pdf",
+          "http_status": 200,
+          "observed_at_utc": "2026-10-26T00:55:48.685278+00:00",
+          "sha256": "ce786e9965dbc04f3e5ae1d57d6a895ee2dafb1b89f8f9c82355502895562b26",
+          "status": "fetched",
+          "url": "https://www.foundationdb.org/files/fdb-paper.pdf"
+        }
+      ],
+      "document_version": "SIGMOD 2021 paper, not a runtime evaluation",
+      "id": "F1",
+      "observed_at_utc": "2026-10-26T00:55:48.685269+00:00",
+      "status": "fetched",
+      "url": "https://www.foundationdb.org/files/fdb-paper.pdf"
+    },
+    {
+      "attempts": [
+        {
+          "bytes": 145666,
+          "final_url": "https://playwright.dev/docs/test-parallel",
+          "http_status": 200,
+          "observed_at_utc": "2026-10-26T00:55:48.685631+00:00",
+          "sha256": "66f38be07e2f1e559605be04b6ce1f614ea0d4324de910de737ec77bbadde613",
+          "status": "fetched",
+          "url": "https://playwright.dev/docs/test-parallel"
+        }
+      ],
+      "document_version": "rolling stable documentation, binary not evaluated",
+      "id": "P1",
+      "observed_at_utc": "2026-10-26T00:55:48.685624+00:00",
+      "status": "fetched",
+      "url": "https://playwright.dev/docs/test-parallel"
+    },
+    {
+      "attempts": [
+        {
+          "bytes": 140180,
+          "final_url": "https://playwright.dev/docs/accessibility-testing",
+          "http_status": 200,
+          "observed_at_utc": "2026-10-26T00:55:48.685927+00:00",
+          "sha256": "e37dc9bb54d952fdf2f63907a65f687b4f56d67e6bc80593a44e48df9f7f7c96",
+          "status": "fetched",
+          "url": "https://playwright.dev/docs/accessibility-testing"
+        }
+      ],
+      "document_version": "rolling stable documentation, binary not evaluated",
+      "id": "P2",
+      "observed_at_utc": "2026-10-26T00:55:48.685919+00:00",
+      "status": "fetched",
+      "url": "https://playwright.dev/docs/accessibility-testing"
+    },
+    {
+      "attempts": [
+        {
+          "bytes": 366690,
+          "final_url": "https://grafana.com/docs/k6/latest/using-k6/scenarios/concepts/open-vs-closed/",
+          "http_status": 200,
+          "observed_at_utc": "2026-10-26T00:55:48.686204+00:00",
+          "sha256": "d647db7b47d0760edf0f07ab44142bc2e009cb52da41486a41697b24d7de836c",
+          "status": "fetched",
+          "url": "https://grafana.com/docs/k6/latest/using-k6/scenarios/concepts/open-vs-closed/"
+        }
+      ],
+      "document_version": "rolling latest documentation, observed v2.3.x navigation; binary not evaluated",
+      "id": "K1",
+      "observed_at_utc": "2026-10-26T00:55:48.686199+00:00",
+      "status": "fetched",
+      "url": "https://grafana.com/docs/k6/latest/using-k6/scenarios/concepts/open-vs-closed/"
+    },
+    {
+      "attempts": [
+        {
+          "bytes": 512457,
+          "final_url": "https://www.w3.org/TR/2024/REC-WCAG22-20241212/",
+          "http_status": 200,
+          "observed_at_utc": "2026-10-26T00:55:48.881539+00:00",
+          "sha256": "6e3c5fe397257cae509a2fb4752b73062cf8cbeb92c2cec618989b17e4cf7057",
+          "status": "fetched",
+          "url": "https://www.w3.org/TR/2024/REC-WCAG22-20241212/"
+        }
+      ],
+      "document_version": "WCAG 2.2 Recommendation 2024-12-12",
+      "id": "W1",
+      "observed_at_utc": "2026-10-26T00:55:48.881527+00:00",
+      "status": "fetched",
+      "url": "https://www.w3.org/TR/2024/REC-WCAG22-20241212/"
+    },
+    {
+      "attempts": [
+        {
+          "error_type": "HTTPError",
+          "http_status": 403,
+          "observed_at_utc": "2026-10-26T00:55:48.890206+00:00",
+          "status": "fetch-failed",
+          "url": "https://docs.discord.com/developers/activities/development-guides/local-development"
+        },
+        {
+          "bytes": 11546,
+          "final_url": "https://raw.githubusercontent.com/discord/discord-api-docs/6128d99116af8357db1e4966ebd7f099817a0e04/developers/activities/development-guides/local-development.mdx",
+          "http_status": 200,
+          "observed_at_utc": "2026-10-26T00:55:48.988650+00:00",
+          "sha256": "c00af13f2c5dac8a7b0646c2f4846500f69b5c6130e4d24c19b948d544116a52",
+          "status": "fetched",
+          "url": "https://raw.githubusercontent.com/discord/discord-api-docs/6128d99116af8357db1e4966ebd7f099817a0e04/developers/activities/development-guides/local-development.mdx"
+        }
+      ],
+      "document_version": "rolling official Discord documentation",
+      "fallback_source_revision": "6128d99116af8357db1e4966ebd7f099817a0e04",
+      "id": "D1",
+      "observed_at_utc": "2026-10-26T00:55:48.890193+00:00",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/activities/development-guides/local-development"
+    },
+    {
+      "attempts": [
+        {
+          "error_type": "HTTPError",
+          "http_status": 403,
+          "observed_at_utc": "2026-10-26T00:55:49.001496+00:00",
+          "status": "fetch-failed",
+          "url": "https://docs.discord.com/developers/activities/development-guides/mobile"
+        },
+        {
+          "bytes": 3354,
+          "final_url": "https://raw.githubusercontent.com/discord/discord-api-docs/6128d99116af8357db1e4966ebd7f099817a0e04/developers/activities/development-guides/mobile.mdx",
+          "http_status": 200,
+          "observed_at_utc": "2026-10-26T00:55:49.081126+00:00",
+          "sha256": "c5f507d42b07d7978d1a5ec02b82ccd4c66beca1c4581be08aac664b71f0e77e",
+          "status": "fetched",
+          "url": "https://raw.githubusercontent.com/discord/discord-api-docs/6128d99116af8357db1e4966ebd7f099817a0e04/developers/activities/development-guides/mobile.mdx"
+        }
+      ],
+      "document_version": "rolling official Discord documentation",
+      "fallback_source_revision": "6128d99116af8357db1e4966ebd7f099817a0e04",
+      "id": "D2",
+      "observed_at_utc": "2026-10-26T00:55:49.001483+00:00",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/activities/development-guides/mobile"
+    },
+    {
+      "attempts": [
+        {
+          "error_type": "HTTPError",
+          "http_status": 403,
+          "observed_at_utc": "2026-10-26T00:55:49.061707+00:00",
+          "status": "fetch-failed",
+          "url": "https://docs.discord.com/developers/activities/development-guides/production-readiness"
+        },
+        {
+          "bytes": 2623,
+          "final_url": "https://raw.githubusercontent.com/discord/discord-api-docs/6128d99116af8357db1e4966ebd7f099817a0e04/developers/activities/development-guides/production-readiness.mdx",
+          "http_status": 200,
+          "observed_at_utc": "2026-10-26T00:55:49.129650+00:00",
+          "sha256": "8a66d4ea6e7b32f710560562e7852174880919c2b4436ee81fac49f437511fcc",
+          "status": "fetched",
+          "url": "https://raw.githubusercontent.com/discord/discord-api-docs/6128d99116af8357db1e4966ebd7f099817a0e04/developers/activities/development-guides/production-readiness.mdx"
+        }
+      ],
+      "document_version": "rolling official Discord documentation",
+      "fallback_source_revision": "6128d99116af8357db1e4966ebd7f099817a0e04",
+      "id": "D3",
+      "observed_at_utc": "2026-10-26T00:55:49.061696+00:00",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/activities/development-guides/production-readiness"
+    },
+    {
+      "attempts": [
+        {
+          "bytes": 4767,
+          "final_url": "https://nginx.org/en/docs/http/websocket.html",
+          "http_status": 200,
+          "observed_at_utc": "2026-10-26T00:55:49.131055+00:00",
+          "sha256": "09750cebc18551f280f74096feda7873d90fd167d78db01dcc2cc0498e0b857d",
+          "status": "fetched",
+          "url": "https://nginx.org/en/docs/http/websocket.html"
+        }
+      ],
+      "document_version": "rolling official Nginx documentation, host version unverified",
+      "id": "N1",
+      "observed_at_utc": "2026-10-26T00:55:49.131048+00:00",
+      "status": "fetched",
+      "url": "https://nginx.org/en/docs/http/websocket.html"
+    },
+    {
+      "attempts": [
+        {
+          "bytes": 259794,
+          "final_url": "https://www.godaddy.com/help/back-up-my-vps-hosting-27819",
+          "http_status": 200,
+          "observed_at_utc": "2026-10-26T00:55:49.198335+00:00",
+          "sha256": "e9cc98520b564eeaaa0f36a27e688ecfa62e79f01cec69d3f6dee9fb8f11abbe",
+          "status": "fetched",
+          "url": "https://www.godaddy.com/help/back-up-my-vps-hosting-27819"
+        }
+      ],
+      "document_version": "rolling VPS Hosting provider help, plan and backup behavior unverified",
+      "id": "G1",
+      "observed_at_utc": "2026-10-26T00:55:49.198327+00:00",
+      "status": "fetched",
+      "url": "https://www.godaddy.com/help/back-up-my-vps-hosting-27819"
+    }
+  ]
+}

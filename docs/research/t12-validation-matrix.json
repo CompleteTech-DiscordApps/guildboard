@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "issue": "GB-T12.R1",
+  "status": "proposed-research-not-release-contract",
+  "load_basis": "Synthetic hypotheses awaiting product telemetry, accepted protocol and measured GoDaddy capacity. Payload bytes exclude envelope, TLS, compression, presence, assets and retransmissions.",
+  "workload_mix_percent": {"modify": 70, "create": 15, "delete": 10, "compound": 5},
+  "contention_candidate": "20 percent of valid writes target the same object within each board; remaining writes spread over 1000 objects. This is a synthetic hotspot, not a product conflict-resolution decision.",
+  "fault_corpus_candidate": ["5 percent duplicate delivery with same logical ID", "30 second disconnect and <=500 event tail", "one board policy fence while other guild remains active", "commit-before-ACK disconnect", "snapshot boundary and retained old-lineage receipt retry"],
+  "load_profiles": [
+    {"id": "small", "guilds": 1, "boards_per_guild": 1, "editors_per_board": 2, "viewers_per_board": 8, "operations_per_editor_second": 2, "operation_payload_bytes": 1024, "duration_seconds": 300, "gate_candidate": true},
+    {"id": "baseline", "guilds": 3, "boards_per_guild": 2, "editors_per_board": 4, "viewers_per_board": 16, "operations_per_editor_second": 4, "operation_payload_bytes": 1024, "duration_seconds": 900, "gate_candidate": true},
+    {"id": "stress", "guilds": 10, "boards_per_guild": 2, "editors_per_board": 8, "viewers_per_board": 42, "operations_per_editor_second": 5, "operation_payload_bytes": 2048, "duration_seconds": 60, "gate_candidate": false}
+  ],
+  "budget_candidates": [
+    {"id": "commit-ack", "metric": "same-client monotonic send-to-durable-ACK, all eligible new commands, after warmup", "p95_ms": 250, "p99_ms": 750, "conditions": "baseline, target same-region RTT <=100ms; rejected/conflicting commands reported separately; lost/timeout samples remain in denominator"},
+    {"id": "peer-visible", "metric": "source send to accepted peer projection, instrumented shared clock uncertainty", "p95_ms": 500, "p99_ms": 1000, "conditions": "baseline; report clock error separately; do not subtract proxy/network time"},
+    {"id": "cold-launch", "metric": "user launch to authenticated usable accepted board", "p95_ms": 5000, "p99_ms": 7500, "conditions": "cold/warm cache separate; <=2MiB initial board serialized data and <=1000 objects synthetic initial corpus"},
+    {"id": "reconnect", "metric": "transport restored to converged accepted board", "p95_ms": 3000, "p99_ms": 5000, "conditions": "after 30s offline, <=500 missed operations, drafts preserved; no false ACK"},
+    {"id": "render", "metric": "main-thread frame duration while editing/panning synthetic baseline board", "p95_ms": 32, "p99_ms": 50, "conditions": "real desktop/mobile measured separately; background/PIP separate; no screen-reader performance inference"}
+  ],
+  "resource_candidates": {"steady_cpu_percent_max": 70, "available_memory_percent_min": 20, "free_data_disk_percent_min": 20, "post_drain_unexplained_rss_growth_percent_max": 10, "event_loop_delay_p99_ms_max": 50, "unexplained_application_error_fraction_max": 0.001, "minimum_measured_commands": 10000, "steady_duration_seconds_min": 900, "repeat_runs_min": 3, "note": "Proposed baseline investigation thresholds, not hardware promises. Count throttles, conflicts, rejected abuse, timeouts, dropped offered work and generator saturation separately. Zero tolerance for unauthorized effects, acknowledged loss or cross-tenant disclosure."},
+  "external_rows": [
+    {"id": "discord-win", "environment": "Windows stable Discord desktop + NVDA + keyboard/mouse", "group": "client-at", "status": "not-run", "required_evidence": ["app-build-sdk", "discord-os-at-builds", "launch-ready-auth", "proxy-https-wss", "keyboard-speech-focus", "revocation-reconnect", "trace-hash-date"]},
+    {"id": "discord-mac", "environment": "macOS stable Discord desktop + VoiceOver + keyboard/trackpad", "group": "client-at", "status": "not-run", "required_evidence": ["app-build-sdk", "discord-os-at-builds", "launch-ready-auth", "proxy-https-wss", "keyboard-speech-focus", "revocation-reconnect", "trace-hash-date"]},
+    {"id": "discord-web-chromium", "environment": "Windows Discord web in stable Chrome + NVDA", "group": "client-at", "status": "not-run", "required_evidence": ["app-build-sdk", "browser-os-at-builds", "actual-discord-iframe", "proxy-https-wss", "keyboard-speech-focus", "zoom-reflow-contrast", "trace-hash-date"]},
+    {"id": "discord-web-firefox", "environment": "Windows Discord web in stable Firefox + NVDA, support decision pending", "group": "client-at", "status": "not-run", "required_evidence": ["app-build-sdk", "browser-os-at-builds", "actual-discord-iframe", "proxy-https-wss", "keyboard-speech-focus", "support-decision", "trace-hash-date"]},
+    {"id": "discord-ios", "environment": "Physical iPhone stable Discord + VoiceOver + touch + external keyboard", "group": "client-at", "status": "not-run", "required_evidence": ["app-build-sdk", "discord-os-at-device-builds", "supported-platform-setting", "safe-area-rotation-soft-keyboard", "touch-speech-focus", "background-foreground-reconnect", "trace-hash-date"]},
+    {"id": "discord-android", "environment": "Physical Android stable Discord + TalkBack + touch + external keyboard", "group": "client-at", "status": "not-run", "required_evidence": ["app-build-sdk", "discord-os-at-device-builds", "supported-platform-setting", "safe-area-rotation-soft-keyboard", "touch-speech-focus", "background-foreground-reconnect", "trace-hash-date"]},
+    {"id": "discord-previews", "environment": "PTB/Canary desktop and mobile beta exploratory, isolated development app", "group": "client-at", "status": "not-run", "required_evidence": ["app-build-sdk", "exact-client-build-channel", "launch-proxy-smoke", "separate-from-stable-gate", "trace-hash-date"]},
+    {"id": "vps-network", "environment": "Actual authorized GoDaddy Linux VPS, external probe and actual Discord proxy path", "group": "vps", "status": "not-run", "required_evidence": ["redacted-provider-plan-region-os", "nginx-runtime-tls-builds", "https-chain-renewal", "wss-upgrade-heartbeat-idle-reconnect", "private-db-assets-denied-externally", "trace-hash-date"]},
+    {"id": "vps-load", "environment": "Same pinned GoDaddy host and accepted protocol with independent bounded generators", "group": "vps", "status": "not-run", "required_evidence": ["app-db-protocol-builds", "host-cpu-ram-disk-quota", "arrival-lag-dropped-work", "latency-sample-count-clock-error", "resource-raw-series", "tenant-isolation-and-revoke-races", "trace-hash-date"]},
+    {"id": "vps-recovery", "environment": "Owned disposable GoDaddy test deployment and isolated restore destination", "group": "vps", "status": "not-run", "required_evidence": ["app-db-backup-tools-builds", "scoped-crash-authorization", "commit-ack-fault-history", "snapshot-tail-assets-receipts-cut", "measured-rpo-rto-and-restore-hashes", "trace-hash-date"]}
+  ],
+  "accessibility_candidate": {
+    "normative_target": "All applicable WCAG 2.2 A and AA criteria, W3C Recommendation 2024-12-12; actual applicability/conformance review pending",
+    "critical_task_budget": "zero blockers for supported keyboard and AT tasks; no critical/serious automated findings left unexplained; automated scans alone cannot pass",
+    "tasks": ["launch-auth-enter-board", "locate-select-describe-object", "create-edit-move-delete-through-semantic-alternative", "navigate-pan-zoom-without-drag", "open-close-dialog-and-restore-focus", "read-policy-denial-and-pending-accepted-rejected-feedback", "preserve-draft-on-revoke-and-reconnect"],
+    "checks": ["keyboard-no-trap", "name-role-value-and-status-speech", "focus-visible-not-obscured", "text-contrast-4.5-normal-3-large", "nontext-contrast-3", "text-resize-200-percent", "outer-controls-reflow-320-css-px", "text-spacing", "target-size-24-css-px-or-reviewed-exception", "dragging-alternative", "reduced-motion-design-goal", "forced-colors-manual-review"],
+    "additional_design_goal": "44x44 CSS pixel outer controls, reduced motion and polite/coalesced live feedback; these are proposed design goals, not WCAG AA numeric requirements. Canvas two-dimensional reflow exceptions require documented review; surrounding UI remains testable.",
+    "status": "not-run"
+  },
+  "stop_conditions": ["any unauthorized side effect or tenant leak", "acknowledged mutation missing after authorized crash/recovery", "available memory below 10 percent", "free data disk below 15 percent", "sustained generator schedule lag above 1 second or host safety budget exceeded", "shared workload interference or missing explicit destructive-test authority"]
+}
