@@ -87,14 +87,25 @@ def acknowledgment_loss(trial, cut, acknowledgments, recovered):
     return ("within_bound" if missing else "none"), lost
 
 
-def consistent_canary_times(candidates):
+def consistent_canary_times(candidates, acknowledged, restored):
     commits_by_position = {}
     positions_by_operation = {}
+    operations_by_position = {}
+    contradiction = False
+    for entry in acknowledged | restored:
+        positions_by_operation.setdefault(entry[:-1], set()).add(entry[-1])
+        operations_by_position.setdefault((*entry[:3], entry[-1]), set()).add(entry[:-1])
     for operation, position, timestamp in candidates:
+        known_positions = positions_by_operation.get(operation, {position})
+        known_operations = operations_by_position.get((*operation[:3], position), {operation})
+        if known_positions != {position} or known_operations != {operation}:
+            contradiction = True
+            continue
+        if (*operation, position) not in restored:
+            continue
         commits_by_position.setdefault(position, set()).add((operation, timestamp))
-        positions_by_operation.setdefault(operation, set()).add(position)
-    return [timestamp for matches in commits_by_position.values() if len(matches) == 1
-            for operation, timestamp in matches if len(positions_by_operation[operation]) == 1]
+    times = [next(iter(matches))[1] for matches in commits_by_position.values() if len(matches) == 1]
+    return times, contradiction
 
 
 class OperationsContractTest(unittest.TestCase):
@@ -337,7 +348,11 @@ class OperationsContractTest(unittest.TestCase):
                             and case["fault_second"] is not None
                             and canary["commit_second"] < case["fault_second"] <= canary["restore_second"]):
                         canary_commits.append((operation, canary["position"], canary["commit_second"]))
-                valid_commits = consistent_canary_times(canary_commits)
+                valid_commits, conflicting_canary = consistent_canary_times(
+                    canary_commits, acknowledgments["identities"], recovered["identities"],
+                )
+                if conflicting_canary:
+                    loss = "contradictory"
                 rpo_seconds = case["fault_second"] - max(valid_commits) if valid_commits else None
                 outcomes = (objective(rpo_seconds, 900), objective(case["rto_seconds"], 14400))
                 self.assertEqual(
@@ -364,7 +379,13 @@ class OperationsContractTest(unittest.TestCase):
                 identities = {(*original, 8), (*operation, position)}
                 inventory = {"board_scope": scope[:2], "coverage": {"lineage_a": 10}, "identities": identities}
                 self.assertEqual(acknowledgment_loss(trial, 10, inventory, inventory), ("contradictory", []))
-                self.assertEqual(consistent_canary_times([(original, 8, 5), (operation, position, 9)]), [])
+                self.assertEqual(consistent_canary_times([(original, 8, 5), (operation, position, 9)],
+                                                          identities, identities), ([], True))
+        evidence = {(*original, 8)}
+        self.assertEqual(consistent_canary_times([(original, 8, 5)], evidence, evidence), ([5], False))
+        self.assertEqual(consistent_canary_times([(original, 8, 5)], evidence, set()), ([], False))
+        for contradicts in ((other, 8, 9), (original, 9, 9)):
+            self.assertEqual(consistent_canary_times([contradicts], evidence, evidence), ([], True))
 
     def test_alert_recovery_requires_fresh_rule_specific_evidence(self):
         signals = {

@@ -222,9 +222,11 @@ actorUserId, operationId)`. Verify coverage for
 both sources in the affected scope through the trial's pre-fault high-water
 mark. Record any gap that prevents establishing presence or absence.
 Require each scoped durable position to identify one operation and each
-operation identity to resolve to one position. Contradictory accepted evidence
-fails integrity and triggers immediate escalation. Contradictory canary timing
-supplies no RPO evidence.
+operation identity to resolve to one position. Corroborate a canary position
+and identity in the independent recovery inventory before using its timing.
+Contradictory accepted identities across evidence sources fail integrity and
+trigger immediate escalation. Contradictory canary timing supplies no RPO
+evidence.
 Any acknowledged operation known missing at or before the selected recovery
 cut causes an integrity failure and immediate escalation, even when both timing
 objectives pass. Approve the allowed post-cut loss boundary before the trial.
