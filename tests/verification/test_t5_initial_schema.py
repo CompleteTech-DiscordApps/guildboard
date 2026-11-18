@@ -111,8 +111,24 @@ class EngineTests(unittest.TestCase):
 
         denied = list(self.tool)
         denied[denied.index("--user") + 1] = observer
+        observer_args = [*denied, "--generation", GENERATION]
+        preflight = subprocess.run(
+            observer_args, text=True, capture_output=True, timeout=60,
+        )
+        self.assertEqual(preflight.returncode, 1, preflight.stderr)
+        self.assertIn("schema v1 is not activated", preflight.stderr)
+
+        observer_cli = [
+            f"--user={observer}" if arg.startswith("--user=") else arg for arg in self.cli
+        ]
+        ddl_denied = subprocess.run(
+            [*observer_cli, f"--database={self.db}", "-e", "CREATE TABLE denied_fixture (id INT)"],
+            text=True, capture_output=True, timeout=15,
+        )
+        self.assertNotEqual(ddl_denied.returncode, 0)
+        self.assertRegex(ddl_denied.stderr, r"ERROR 1142\b")
         result = subprocess.run(
-            [*denied, "--generation", GENERATION, "--apply"],
+            [*observer_args, "--apply"],
             text=True, capture_output=True, timeout=60,
         )
         self.assertEqual(result.returncode, 1, result.stderr)
