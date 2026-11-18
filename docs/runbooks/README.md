@@ -137,6 +137,10 @@ headroom before lifting restrictions. [Monitoring and failure handling][monitori
    open uncertainty, and assign follow-up owners. [Incident roles and handoffs][roles]
    · [Security policy][security]
 
+For suspected credential compromise and other security incidents, use the
+[security incident decisions and post-release care](security-incident-and-post-release-care.md)
+supplement for approved containment, evidence custody and disclosure decisions.
+
 ## Synthetic tabletop evidence plan
 
 Use paper or local synthetic fixtures and simulate approvals, notifications and
