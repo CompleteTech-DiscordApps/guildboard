@@ -231,7 +231,8 @@ Require each scoped durable position to identify one operation and each
 operation identity to resolve to one position. Corroborate a canary position
 and identity in the independent recovery inventory before using its timing.
 Contradictory accepted identities across evidence sources fail integrity and
-trigger immediate escalation. Contradictory canary timing supplies no RPO
+trigger immediate escalation even when no recovery generation qualifies.
+Contradictory canary timing supplies no RPO
 evidence.
 Any acknowledged operation known missing at or before the selected recovery
 cut causes an integrity failure and immediate escalation, even when both timing

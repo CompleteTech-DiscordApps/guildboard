@@ -57,15 +57,17 @@ def restore_verdict(selected, preflight, verification, loss, objectives):
 
 
 def acknowledgment_loss(trial, cut, acknowledgments, recovered):
-    if cut is None:
-        return "unknown", []
     expected = acknowledgments["identities"]
     present = recovered["identities"]
+    evidence = expected | present
+    contradictory = (len(evidence) != len({item[:-1] for item in evidence})
+                     or len(evidence) != len({item[-1] for item in evidence}))
+    if cut is None:
+        return ("contradictory" if contradictory else "unknown"), []
     covered_through = recovered["covered_through"]
     missing = sorted(item for item in expected - present if item[-1] <= covered_through)
     lost = [list(item) for item in missing]
-    evidence = expected | present
-    if len(evidence) != len({item[:-1] for item in evidence}) or len(evidence) != len({item[-1] for item in evidence}):
+    if contradictory:
         return "contradictory", lost
     if any(item[-1] <= cut for item in missing):
         return "at_or_before_cut", lost
@@ -287,6 +289,15 @@ class OperationsContractTest(unittest.TestCase):
                        "canaries": [*passing["canaries"], conflicting_identity],
                        "expected": {**passing["expected"], "loss": "contradictory", "escalate": True,
                                     "rpo_seconds": None, "rpo": "unknown", "drill": "failed"}})
+        retained = passing["recovered"]["identities"][0]
+        trials.append({**passing, "case": "inventory_conflict_without_recovery_cut",
+                       "generations": [{**generation, "status": "interrupted"}
+                                       for generation in passing["generations"]],
+                       "recovered": {**passing["recovered"], "identities": [
+                           [*retained[:-2], "different_operation", retained[-1]]]},
+                       "expected": {**passing["expected"], "backup": "interrupted", "selected": None,
+                                    "cut": None, "loss": "contradictory", "escalate": True,
+                                    "rpo_seconds": None, "rpo": "unknown", "drill": "blocked"}})
         for case in trials:
             with self.subTest(case=case["case"]):
                 trial = case["trial"]
