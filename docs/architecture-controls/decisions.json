@@ -119,6 +119,40 @@
       "test_evidence": [
         "tests/engineering/t9-deletion-job.test.mjs"
       ]
+    },
+    {
+      "id": "DEC-0008",
+      "revision": 1,
+      "boundary": "apps/api/src/resource-admission.ts",
+      "old_sha256": null,
+      "new_sha256": "c3ab811fb93596b8c00e4a8c102e67994d22bc3cd287515a44978cebb46efd64",
+      "rationale": "Introduce bounded server-side resource decisions over an approved profile and current scoped accounting. Consumers retain authoritative measurements, serialization and effects.",
+      "alternatives": [
+        "Defer the resource decision seam until ingress and queue adapters are available."
+      ],
+      "controls": [
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t9-resource-admission.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0009",
+      "revision": 1,
+      "boundary": "apps/api/src/index.ts",
+      "old_sha256": "eacb721144cf6843aec472e6592ec6540404df5cdcabb3869a79c6934a144168",
+      "new_sha256": "edcef52bfa9adccf26b8bf90761e8106df68f8a73c53b9d7bdeafb027a14d578",
+      "rationale": "Expose the resource decision boundary and its input and result contracts to server-side consumers.",
+      "alternatives": [
+        "Defer the resource decision seam until ingress and queue adapters are available."
+      ],
+      "controls": [
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t9-resource-admission.test.mjs"
+      ]
     }
   ]
 }
