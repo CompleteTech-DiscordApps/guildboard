@@ -1,4 +1,4 @@
-"""The T9 verifier is exercised with inert synthetic package and evidence data."""
+"""Offline package metadata checks with synthetic current assurance receipts."""
 
 from contextlib import redirect_stdout
 from datetime import datetime, timezone
@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts/verification"))
 import check_t9_supply_chain as gate
 
 NOW = datetime(2026, 11, 17, 21, tzinfo=timezone.utc)
+AFTER_WITHDRAWAL = datetime(2026, 11, 18, 20, tzinfo=timezone.utc)
 REVISION = "a" * 40
 SRI = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
@@ -104,6 +105,29 @@ class SupplyChainTests(unittest.TestCase):
             return gate.check_evidence(with_fd, pin, self.snapshot, REVISION, NOW)
         finally:
             os.close(with_fd)
+
+    def use_reviewed_withdrawal(self):
+        # Authentic committed metadata/locks with synthetic assurance receipts.
+        self.snapshot = {path: (ROOT / path).read_bytes() for path in gate.SOURCE_FILES}
+        self.snapshot[gate.WITHDRAWAL_RECORD] = (ROOT / gate.WITHDRAWAL_RECORD).read_bytes()
+        self.authority.update(issued_at="2026-11-18T19:00:00Z", expires_at="2026-11-19T19:00:00Z")
+        for name, receipt in self.receipts.items():
+            receipt["completed_at"] = "2026-11-18T18:00:00Z"
+            _, scope = gate.RECEIPTS[name]
+            if scope in gate.LOCKS:
+                receipt["lock_sha256"] = gate.sha256(self.snapshot[gate.LOCKS[scope]])
+                receipt["manifest_set_sha256"] = digest("".join(
+                    gate.sha256(self.snapshot[path]) for path in gate.MANIFESTS[scope]))
+
+    def run_main(self, pin, now=AFTER_WITHDRAWAL):
+        output = StringIO()
+        with (redirect_stdout(output), patch.object(Path, "cwd", return_value=ROOT),
+              patch.object(gate, "git", side_effect=[b"\n", REVISION.encode()]),
+              patch.object(gate, "source_snapshot", return_value=self.snapshot),
+              patch.object(gate, "EVIDENCE_DIRECTORY", str(self.directory))):
+            result = gate.main([] if pin is None else ["--trusted-authority-sha256", pin],
+                               clock=lambda: now)
+        return result, output.getvalue()
 
     def test_clear_exact_receipts(self):
         self.assertTrue(self.validate(self.write_dossier()))
@@ -239,8 +263,162 @@ class SupplyChainTests(unittest.TestCase):
               patch.object(gate, "EVIDENCE_DIRECTORY", str(self.directory))):
             result = gate.main(["--trusted-authority-sha256", digest("synthetic")], clock=lambda: NOW)
         self.assertEqual(result, 1)
-        self.assertIn("root advisory tracked by #458: OPEN", output.getvalue())
+        self.assertIn("root advisory GHSA-fc5q-39xc-vjpf: CURRENT_STATUS_UNKNOWN (KNOWN_PIN_HOLD)",
+                      output.getvalue())
         self.assertIn("FAIL (UNRESOLVED_FINDINGS_OR_LICENSE)", output.getvalue())
+
+    def test_reviewed_withdrawal_plus_fresh_authenticated_receipts_can_pass(self):
+        self.use_reviewed_withdrawal()
+        self.assertTrue(gate.check_lock(self.snapshot, "root"))
+        self.assertTrue(gate.reviewed_root_withdrawal(self.snapshot, AFTER_WITHDRAWAL))
+        result, output = self.run_main(self.write_dossier())
+        self.assertEqual(result, 0)
+        self.assertIn("WITHDRAWN (REVIEWED_OBSERVATION_2026-11-18)", output)
+        self.assertIn("HISTORICAL_ONLY", output)
+        self.assertIn("PASS (SUPPLY_CHAIN_SCOPE)", output)
+        self.assertNotIn("#458: OPEN", output)
+
+    def test_missing_malformed_or_altered_withdrawal_keeps_known_pin_hold(self):
+        self.use_reviewed_withdrawal()
+        data = self.snapshot[gate.WITHDRAWAL_RECORD]
+        record = json.loads(data)
+        variants = [None, b"{", b"[]", b"null", data + b"\n",
+                    b'{"withdrawn": true}', data[:-2] + b', "schema_version": 1}\n']
+        for key, value in (("schema_version", 2), ("source_sha", "b" * 40),
+                           ("root_lockfile_sha256", digest("other lock")),
+                           ("root_lockfile", gate.LOCKS["canvas"]), ("dependency_changes", True)):
+            variants.append(encoded(dict(record, **{key: value})))
+        for key, value in (("url", "https://github.com/advisories/GHSA-0000-0000-0000"),
+                           ("withdrawn_date", None), ("withdrawn_date", "2026-11-19")):
+            variants.append(encoded(dict(record, upstream_observation={
+                **record["upstream_observation"], key: value})))
+        pin = self.write_dossier()
+        for index, variant in enumerate(variants):
+            with self.subTest(variant=index):
+                if variant is None:
+                    self.snapshot.pop(gate.WITHDRAWAL_RECORD, None)
+                else:
+                    self.snapshot[gate.WITHDRAWAL_RECORD] = variant
+                result, output = self.run_main(pin)
+                self.assertEqual(result, 1)
+                self.assertIn("CURRENT_STATUS_UNKNOWN (KNOWN_PIN_HOLD)", output)
+                self.assertIn("FAIL (UNRESOLVED_FINDINGS_OR_LICENSE)", output)
+
+    def test_reviewed_withdrawal_cannot_cover_changed_lock_or_predate_observation(self):
+        self.use_reviewed_withdrawal()
+        self.assertFalse(gate.reviewed_root_withdrawal(self.snapshot, NOW))
+        self.snapshot[gate.LOCKS["root"]] += b"\n"
+        # Even correctly authenticated new receipts cannot broaden the historical
+        # disposition to different exact lock bytes.
+        for name in ("dependency-root", "provenance-root"):
+            self.receipts[name]["lock_sha256"] = gate.sha256(self.snapshot[gate.LOCKS["root"]])
+        result, output = self.run_main(self.write_dossier())
+        self.assertEqual(result, 1)
+        self.assertIn("CURRENT_STATUS_UNKNOWN (KNOWN_PIN_HOLD)", output)
+
+    def test_withdrawal_alone_never_supplies_current_authority_or_receipts(self):
+        self.use_reviewed_withdrawal()
+        for mode in ("no_authority", "wrong_pin", "missing_receipt", "tampered_receipt",
+                     "expired_authority", "self_review", "stale_scan", "wrong_scope"):
+            with self.subTest(mode=mode):
+                authority = encoded(self.authority)
+                receipts = encoded(self.receipts)
+                if mode == "expired_authority":
+                    self.authority["expires_at"] = "2026-11-18T20:00:00Z"
+                if mode == "self_review":
+                    self.authority["reviewer"] = self.receipts["static-source"]["producer"]
+                if mode == "stale_scan":
+                    self.receipts["secret-source"]["completed_at"] = "2026-11-11T19:59:59Z"
+                if mode == "wrong_scope":
+                    self.receipts["dependency-root"]["scope"] = "canvas"
+                pin = self.write_dossier()
+                if mode == "no_authority":
+                    pin = None
+                if mode == "wrong_pin":
+                    pin = digest("untrusted authority")
+                if mode == "missing_receipt":
+                    (self.directory / "provenance-root.json").unlink()
+                if mode == "tampered_receipt":
+                    self.put("static-source", b"{}")
+                result, output = self.run_main(pin)
+                self.assertEqual(result, 2)
+                self.assertIn("WITHDRAWN (REVIEWED_OBSERVATION_2026-11-18)", output)
+                self.assertIn("UNVERIFIED (EVIDENCE_OR_AUTHORITY)", output)
+                self.authority, self.receipts = json.loads(authority), json.loads(receipts)
+
+    def test_withdrawal_does_not_dispose_current_findings_or_waive_license_policy(self):
+        self.use_reviewed_withdrawal()
+        self.receipts["dependency-root"].update(
+            result="findings", findings=[{"id": digest("active finding"), "severity": "high"}])
+        result, output = self.run_main(self.write_dossier())
+        self.assertEqual(result, 1)
+        self.assertIn("FAIL (UNRESOLVED_FINDINGS_OR_LICENSE)", output)
+        self.receipts["dependency-root"].update(result="clear", findings=[])
+        policy = json.loads(self.snapshot[gate.LICENSE_INPUT])
+        policy["exceptions"].append(
+            {"name": "unused", "version": "1.0.0", "license": "MPL-2.0", "reason": "synthetic"})
+        self.snapshot[gate.LICENSE_INPUT] = encoded(policy)
+        result, output = self.run_main(self.write_dossier())
+        self.assertEqual(result, 1)
+        self.assertIn("offline license policy: FAIL", output)
+
+    def test_withdrawal_is_loaded_only_from_exact_committed_regular_file(self):
+        self.use_reviewed_withdrawal()
+        source = self.directory / "repo"
+        script_dir = source / "scripts/verification"
+        script_dir.mkdir(parents=True)
+        for path in (Path(gate.__file__), Path(gate.check_licenses.__file__)):
+            (script_dir / path.name).write_bytes(path.read_bytes())
+        for name, blob in self.snapshot.items():
+            path = source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(blob)
+
+        def git(*args):
+            return subprocess.check_output(["git", *args], cwd=source, stderr=subprocess.PIPE)
+
+        def commit_and_authorize():
+            git("add", ".")
+            git("-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+                "commit", "--quiet", "-m", "Offline metadata fixture")
+            revision = git("rev-parse", "HEAD").decode("ascii").strip()
+            for record in [self.authority, self.approvals, *self.receipts.values()]:
+                record["revision"] = revision
+            return self.write_dossier()
+
+        def run(pin):
+            runner = ("import sys; sys.path.insert(0, 'scripts/verification'); "
+                      "from datetime import datetime, timezone; import check_t9_supply_chain as g; "
+                      f"raise SystemExit(g.main(['--trusted-authority-sha256', '{pin}'], "
+                      "clock=lambda: datetime(2026,11,18,20,tzinfo=timezone.utc)))")
+            return subprocess.run([sys.executable, "-B", "-c", runner], cwd=source,
+                                  capture_output=True, text=True)
+
+        git("init", "--quiet")
+        (source / ".gitignore").write_text(gate.EVIDENCE_DIRECTORY + "/\n")
+        self.directory = source / gate.EVIDENCE_DIRECTORY
+        self.directory.mkdir()
+        pin = commit_and_authorize()
+        self.assertEqual(run(pin).returncode, 0)
+        evidence = source / gate.WITHDRAWAL_RECORD
+        evidence.write_bytes(b"uncommitted metadata")
+        result = run(pin)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("WITHDRAWN (REVIEWED_OBSERVATION_2026-11-18)", result.stdout)
+        for mode, expected in (("altered", 1), ("missing", 1), ("symlink", 2), ("executable", 2)):
+            with self.subTest(mode=mode):
+                evidence.unlink(missing_ok=True)
+                if mode == "altered":
+                    evidence.write_bytes(b'{"withdrawn": true}')
+                elif mode == "symlink":
+                    evidence.symlink_to("unused-local-fixture")
+                elif mode == "executable":
+                    evidence.write_bytes(self.snapshot[gate.WITHDRAWAL_RECORD])
+                    evidence.chmod(0o755)
+                result = run(commit_and_authorize())
+                self.assertEqual(result.returncode, expected, result.stderr)
+                self.assertNotIn("PASS (SUPPLY_CHAIN_SCOPE)", result.stdout)
+                self.assertEqual(result.stderr, "")
 
     def test_unsafe_cli_arguments_do_not_echo(self):
         output = StringIO()
