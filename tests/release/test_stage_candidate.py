@@ -29,11 +29,12 @@ class StageCandidateTests(unittest.TestCase):
             "package.json": b'{"version":"0.0.0"}\n',
             "package-lock.json": b'{"lockfileVersion":3}\n',
             "tsconfig.base.json": b'{"compilerOptions":{}}\n',
+            release.BUILD_SCRIPT: b"// fixture build entry point\n",
             "apps/api/package.json": b'{"name":"@guildboard/api","version":"0.0.0"}\n',
             "apps/api/src/index.ts": b"export const marker = true;\n",
         }
         self.build_outputs = {"apps/api/dist/index.js": b"export const marker = true;\n"}
-        self.write_source({**self.inputs, release.BUILD_SCRIPT: b"// fixture build entry point\n"})
+        self.write_source(self.inputs)
         self.git("add", ".")
         self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
                  "-c", "commit.gpgsign=false", "commit", "-qm", "Fixture")
@@ -132,6 +133,22 @@ class StageCandidateTests(unittest.TestCase):
             release.stage(self.output, self.assemble(body=b"Changed approved notes."))
         self.assertEqual((original / release.NOTES).read_bytes(), first[release.NOTES])
         self.assertFalse((original / release.RECEIPT).exists())
+
+    def test_build_recipe_must_match_the_completed_output_inventory(self):
+        original = self.assemble()
+        updated = b"// fixture build recipe changed\n"
+        self.write_source({release.BUILD_SCRIPT: updated})
+        self.git("add", release.BUILD_SCRIPT)
+        self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false",
+                 "commit", "-qm", "Change build recipe")
+        self.revision = self.git("rev-parse", "HEAD").strip()
+        with self.assertRaisesRegex(release.Invalid, "build-inputs"):
+            self.assemble()
+        self.build["inputs"][release.BUILD_SCRIPT] = release.digest(updated)
+        self.write_source({release.BUILD: release.canonical(self.build)})
+        fresh = self.assemble()
+        self.assertNotEqual(fresh[release.INDEX], original[release.INDEX])
+        self.assertEqual(fresh[release.BUILD_SCRIPT], updated)
 
     def test_cli_stage_and_dry_run_return_machine_reports(self):
         self.today = datetime.now(UTC).date()

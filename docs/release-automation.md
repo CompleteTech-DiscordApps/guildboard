@@ -37,9 +37,12 @@ the build versions and file digests, and the input bytes in Git. It packages the
 compiled outputs, completed engineering build manifest, pinned settings, build
 entry point, recipe and indexed provenance. It sorts the checksum index by
 distribution path and derives the exact artifact, manifest and notes digests.
-The engineering build manifest supplies the full input inventory. The provenance
-links the indexed build manifest, lockfile, configuration, build entry point
-and recipe to the pinned source revision. Run the recipe again at that revision
+The engineering build manifest records the build entry point in its input
+inventory. Staging rejects outputs whose recorded recipe differs from the
+committed recipe. Rebuild before staging if the manifest predates that check
+or the recipe changed. The provenance links the indexed build manifest,
+lockfile, configuration, build entry point and recipe to the pinned source
+revision. Run the recipe again at that revision
 to reproduce the output hashes. Repeat staging with the same inputs to reproduce
 the complete candidate.
 

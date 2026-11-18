@@ -27,7 +27,7 @@ RECEIPT = "publication-receipt.json"
 BUILD = "engineering-build/manifest.json"
 RECIPE = "engineering-build/release-recipe.txt"
 BUILD_SCRIPT = "scripts/engineering/build.mjs"
-SETTINGS = {"package.json", "package-lock.json", "tsconfig.base.json"}
+SETTINGS = {"package.json", "package-lock.json", "tsconfig.base.json", BUILD_SCRIPT}
 LIMIT = 512 * 1024
 MAX_FILE = 16 * 1024 * 1024
 MAX_BUNDLE = 64 * 1024 * 1024
@@ -298,11 +298,10 @@ def build_payload(source):
 
         package_paths = {f"{project}/package.json" for project in projects}
         payload = file_bytes(root, outputs)
-        for path in sorted(inputs | {BUILD_SCRIPT}):
+        for path in sorted(inputs):
             data = read_file(root, path, MAX_FILE, "build-inputs")
             require(data == git(source, "show", f"{revision}:{path}"), "source-inputs")
-            if path in inputs:
-                require(digest(data) == build["inputs"][path], "build-inputs")
+            require(digest(data) == build["inputs"][path], "build-inputs")
             if path == "package.json":
                 package = decode(data, LIMIT, "build-inputs")
                 require(package.get("version") == build["rootVersion"], "build-versions")
@@ -313,7 +312,7 @@ def build_payload(source):
                 require(match(name, r"@guildboard/[a-z0-9-]+") and name not in versions
                         and match(version, rf"{NUMBER}\.{NUMBER}\.{NUMBER}"), "build-versions")
                 versions[name] = version
-            if path in SETTINGS or path == BUILD_SCRIPT:
+            if path in SETTINGS:
                 payload[path] = data
         require(versions == build["versions"], "build-versions")
         require(all(digest(payload[path]) == build["outputs"][path] for path in outputs), "build-digests")
@@ -363,7 +362,7 @@ def assemble(source, metadata_raw, body):
     payload[PROVENANCE] = canonical({
         "schemaVersion": SCHEMA,
         "sourceRevision": revision,
-        "inputs": [build_record(path, payload) for path in sorted(SETTINGS | {BUILD, BUILD_SCRIPT})],
+        "inputs": [build_record(path, payload) for path in sorted(SETTINGS | {BUILD})],
         "recipe": build_record(RECIPE, payload),
         "checksumIndex": INDEX,
     })
