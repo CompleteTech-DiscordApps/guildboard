@@ -450,6 +450,8 @@ def stage(output, bundle):
             except (Invalid, OSError):
                 identical = False
             require(identical, "version-conflict")
+            # A prior rename may have succeeded before the staging root was synced.
+            os.fsync(root)
             return identity
         # Address the held directory for staging as well as promotion.
         root_path = Path(f"/proc/self/fd/{root}")

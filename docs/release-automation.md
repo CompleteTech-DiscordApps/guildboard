@@ -45,12 +45,14 @@ the complete candidate.
 
 The result is a JSON report and a complete directory named by the full SemVer.
 Files and directories are synced and the directory is promoted with a same-root
-rename. An exact retry returns the same identity. Different bytes for an existing
-version return `VERSION_CONFLICT`. An interrupted process may leave an
-unpublished owner-only `.stage-*` directory. It can be removed after the
-process has exited. Retry with the same inputs to produce or read back the
-complete version directory. The staged files are private to the account running
-the command.
+rename. An exact retry verifies the existing bytes and syncs the staging root
+before returning the same identity. A root sync failure after promotion returns
+`INPUT_UNAVAILABLE` and leaves the complete candidate in place for an exact
+retry. Different bytes for an existing version return `VERSION_CONFLICT`. An
+interrupted process may leave an unpublished owner-only `.stage-*` directory.
+It can be removed after the process has exited. Retry with the same inputs to
+produce or read back the complete version directory. The staged files are
+private to the account running the command.
 
 ## Dry-run the gate
 

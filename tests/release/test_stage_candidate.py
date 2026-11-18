@@ -392,6 +392,43 @@ release.stage(Path(sys.argv[3]), bundle)
         self.assertEqual(new_identity, release.verify_bundle(bundle)[1])
         self.assertEqual(release.stage(self.output, bundle), new_identity)
 
+    def test_retry_syncs_promoted_candidate_after_staging_root_sync_failure(self):
+        bundle = self.assemble()
+        identity = release.verify_bundle(bundle)[1]
+        candidate = self.output / identity["version"]
+        root_stat = self.output.stat()
+        real_fsync = os.fsync
+
+        def fail_root_sync(descriptor):
+            if os.path.samestat(os.fstat(descriptor), root_stat):
+                self.assertTrue(candidate.is_dir())
+                raise OSError("staging root sync failed")
+            real_fsync(descriptor)
+
+        with patch.object(release.os, "fsync", side_effect=fail_root_sync):
+            with self.assertRaisesRegex(OSError, "staging root sync failed"):
+                release.stage(self.output, bundle)
+            promoted = candidate.stat()
+            with patch.object(release.os, "rename") as rename:
+                with self.assertRaisesRegex(OSError, "staging root sync failed"):
+                    release.stage(self.output, bundle)
+                rename.assert_not_called()
+
+        synced = []
+
+        def record_sync(descriptor):
+            real_fsync(descriptor)
+            synced.append(os.fstat(descriptor))
+
+        with patch.object(release.os, "fsync", side_effect=record_sync):
+            self.assertEqual(release.stage(self.output, bundle), identity)
+        self.assertEqual(len(synced), 1)
+        self.assertTrue(os.path.samestat(synced[0], root_stat))
+        self.assertTrue(os.path.samestat(candidate.stat(), promoted))
+        with release.directory(self.output) as root:
+            self.assertEqual(release.read_bundle(root, identity["version"]), bundle)
+        self.assertEqual({path.name for path in self.output.iterdir()}, {candidate.name})
+
 
 if __name__ == "__main__":
     unittest.main()
