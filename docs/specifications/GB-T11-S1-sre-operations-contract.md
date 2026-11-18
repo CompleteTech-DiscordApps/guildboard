@@ -214,7 +214,8 @@ original pre-fault durable commit and restored lineage/cut match trusted
 evidence. RPO is incident/fault time minus that original commit time. Exclude
 inconsistent, unverified, post-fault and unrestored canaries. Require an observed
 restore at or after the fault and a consistent original durable commit identity
-and timestamp for each scoped position. Copy, replay and
+and timestamp for each scoped position. Resolve timing consistency before
+selecting any pre-fault observation. Copy, replay and
 restore execution timestamps cannot serve as original commit evidence. Compare
 an independent pre-fault acknowledgment inventory with recovered evidence by
 durable position and the full T0 identity `(guildId, boardId, lineageId,

@@ -80,7 +80,7 @@ def acknowledgment_loss(trial, cut, acknowledgments, recovered):
     return ("within_bound" if missing else "none"), lost
 
 
-def consistent_canary_times(candidates, acknowledged, restored):
+def consistent_canary_times(candidates, acknowledged, restored, eligible=None):
     commits_by_position = {}
     positions_by_operation = {}
     operations_by_position = {}
@@ -97,7 +97,8 @@ def consistent_canary_times(candidates, acknowledged, restored):
         if (*operation, position) not in restored:
             continue
         commits_by_position.setdefault(position, set()).add((operation, timestamp))
-    times = [next(iter(matches))[1] for matches in commits_by_position.values() if len(matches) == 1]
+    times = [timestamp for position, matches in commits_by_position.items() if len(matches) == 1
+             for operation, timestamp in matches if eligible is None or (operation, position, timestamp) in eligible]
     return times, contradiction
 
 
@@ -324,6 +325,7 @@ class OperationsContractTest(unittest.TestCase):
                 self.assertIs(type(case["canaries"]), list)
                 self.assertLessEqual(len(case["canaries"]), 8)
                 canary_commits = []
+                temporally_eligible = set()
                 for canary in case["canaries"]:
                     self.assertEqual(set(canary), {"commit_second", "restore_second", "evidence", "operation", "position"})
                     self.bounded_integer(canary["commit_second"], 86400, nullable=True)
@@ -340,13 +342,14 @@ class OperationsContractTest(unittest.TestCase):
                     if (cut is not None and operation[:3] == scope
                             and canary["position"] <= cut
                             and canary["evidence"] == "verified_consistent"
-                            and canary["restore_second"] is not None
-                            and canary["commit_second"] is not None
-                            and case["fault_second"] is not None
-                            and canary["commit_second"] < case["fault_second"] <= canary["restore_second"]):
-                        canary_commits.append((operation, canary["position"], canary["commit_second"]))
+                            and canary["commit_second"] is not None):
+                        evidence = (operation, canary["position"], canary["commit_second"])
+                        canary_commits.append(evidence)
+                        if (canary["restore_second"] is not None and case["fault_second"] is not None
+                                and canary["commit_second"] < case["fault_second"] <= canary["restore_second"]):
+                            temporally_eligible.add(evidence)
                 valid_commits, conflicting_canary = consistent_canary_times(
-                    canary_commits, acknowledgments["identities"], recovered["identities"],
+                    canary_commits, acknowledgments["identities"], recovered["identities"], temporally_eligible,
                 )
                 if conflicting_canary:
                     loss = "contradictory"
@@ -406,6 +409,16 @@ class OperationsContractTest(unittest.TestCase):
         self.assertEqual(consistent_canary_times([(original, 8, 5)], evidence, set()), ([], False))
         for contradicts in ((other, 8, 9), (original, 9, 9)):
             self.assertEqual(consistent_canary_times([contradicts], evidence, evidence), ([], True))
+
+    def test_canary_timestamp_consistency_precedes_temporal_eligibility(self):
+        original = ("guild_a", "board_a", "lineage_a", "actor_a", "operation_a")
+        next_operation = (*original[:4], "operation_b")
+        source = {(*original, 8), (*next_operation, 9)}
+        pre_fault = (original, 8, 5)
+        self.assertEqual(consistent_canary_times([pre_fault, (original, 8, 11)], source, source, {pre_fault}),
+                         ([], False))
+        self.assertEqual(consistent_canary_times([pre_fault, (next_operation, 9, 11)], source, source, {pre_fault}),
+                         ([5], False))
 
     def test_alert_recovery_requires_fresh_rule_specific_evidence(self):
         signals = {
