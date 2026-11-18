@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "scope": "Dated public dependency advisory observations for GB-T0.G1; no product runtime or security certification.",
+  "source_sha": "17d97f4d1b5bcf97e8a8494d25db17480efe21e9",
+  "root_lockfile": "package-lock.json",
+  "root_lockfile_sha256": "79b589818e65a2694671013b5460681593dfdd2901ada23664a1549832e79e80",
+  "dependency_changes": false,
+  "dependency_chain": [
+    "typescript-eslint@8.72.2",
+    "@typescript-eslint/typescript-estree@8.72.2",
+    "tinyglobby@0.2.17",
+    "picomatch@4.0.7"
+  ],
+  "upstream_observation": {
+    "url": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+    "observed_date_utc": "2026-11-18",
+    "withdrawn_date": "2026-11-18",
+    "patched_version_listed": null,
+    "scope": "Withdrawal metadata only; no independent reproduction or resolution of underlying behavior is claimed."
+  },
+  "historical_result": {
+    "date_utc": "2026-11-17",
+    "exit_code": 1,
+    "high_affected_packages": 9,
+    "underlying_advisories": 1,
+    "source": "https://github.com/CompleteTech-DiscordApps/guildboard/issues/458#issuecomment-6961055575"
+  },
+  "credential_controls": [
+    "Distinct empty temporary user and global npm configuration files.",
+    "No project .npmrc present for the installed-root audit.",
+    "Token, auth, secret, password, npm_config and node_options environment keys removed without logging values.",
+    "Explicit public registry https://registry.npmjs.org; lifecycle scripts disabled."
+  ],
+  "observations": [
+    {
+      "kind": "lockfile-only public audit",
+      "timestamp_utc": "2026-11-18T17:18:45.974233+00:00",
+      "command": "npm --userconfig=<empty temporary file> --globalconfig=<different empty temporary file> --registry=https://registry.npmjs.org audit --package-lock-only --ignore-scripts --json",
+      "node_version": "24.22.3",
+      "npm_version": "11.9.0",
+      "exit_code": 0,
+      "raw_report": {
+        "auditReportVersion": 2,
+        "vulnerabilities": {},
+        "metadata": {
+          "vulnerabilities": {
+            "info": 0,
+            "low": 0,
+            "moderate": 0,
+            "high": 0,
+            "critical": 0,
+            "total": 0
+          },
+          "dependencies": {
+            "prod": 17,
+            "dev": 100,
+            "optional": 0,
+            "peer": 0,
+            "peerOptional": 0,
+            "total": 116
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "kind": "installed root workspace public audit",
+      "timestamp_utc": "2026-11-18T17:21:07.601085+00:00",
+      "command": "npm --userconfig=<empty temporary file> --globalconfig=<different empty temporary file> --registry=https://registry.npmjs.org audit --audit-level=high --ignore-scripts --json",
+      "node_version": "24.22.3",
+      "npm_version": "11.9.0",
+      "exit_code": 0,
+      "raw_report": {
+        "auditReportVersion": 2,
+        "vulnerabilities": {},
+        "metadata": {
+          "vulnerabilities": {
+            "info": 0,
+            "low": 0,
+            "moderate": 0,
+            "high": 0,
+            "critical": 0,
+            "total": 0
+          },
+          "dependencies": {
+            "prod": 17,
+            "dev": 100,
+            "optional": 0,
+            "peer": 0,
+            "peerOptional": 0,
+            "total": 116
+          }
+        }
+      },
+      "stderr": ""
+    }
+  ],
+  "native_prerequisites": {
+    "observation_date_utc": "2026-11-18",
+    "source": "https://api.github.com/repos/CompleteTech-DiscordApps/guildboard/issues/458/dependencies/blocked_by?per_page=100",
+    "issues": [
+      7,
+      10,
+      14,
+      17,
+      21,
+      24,
+      28,
+      31,
+      32
+    ],
+    "states": "all closed as completed; acceptance remains limited to their recorded foundation scopes"
+  },
+  "disposition": "Candidate for retiring the historical active-advisory hold. Fresh current-head independent review, full qualification, protected integration, exact merged checks and issue handoff are required separately.",
+  "limits": [
+    "No claim of a patched dependency or proof that the originally reported behavior is absent.",
+    "A zero-advisory result is a dated registry observation and may change.",
+    "No active advisory is suppressed or accepted by exception.",
+    "No product, Discord, GoDaddy, SQL, distribution, legal or release acceptance is established.",
+    "These audits ran on the stated source SHA; a later PR head or merged revision requires its own qualification record."
+  ]
+}

@@ -12,7 +12,7 @@ python3 scripts/github-bootstrap/validate.py
 Test consumers import `HarnessConfig` and `fixture_run` from
 `scripts.verification.t12_fixture_harness` and use the context manager with a
 caller-owned temporary directory with an absolute path and mode 0700. Use
-the run synchronously. The harness validates the opened root and allocates the
+the run synchronously in a single-threaded Python process. The harness validates the opened root and allocates the
 namespace relative to its directory descriptor. The worker enters the pinned
 namespace through procfs. Cleanup checks that the original namespace name
 still identifies the pinned directory before removing it relative to the pinned
@@ -42,15 +42,67 @@ deadline on real elapsed time.
 | Fixture selectors and identity | Two boards share the subject guild. A foreign board reuses board, asset, receipt and lineage selectors. The in-memory adapter distinguishes guild membership records for the same user ID and returns no membership for an unmatched pair. The dataset includes viewer, moderator, revoked, foreign control and distinct observer records. The test checks that the adapter path creates no socket. |
 | Directory ownership | Replacing the root pathname before allocation leaves allocation, worker cwd and removal in the opened root. Replacing the namespace entry after it has been pinned causes cleanup to reap the child, report an identity change and preserve both directories. Independent filesystem observations verify the replacement directories and unrelated sentinel bytes. |
 | Acquisition failure | An injected namespace open failure propagates the original error and removes the empty namespace. If the namespace contains an unexpected file, rollback reports a failure and preserves the file. Both tests verify that the unrelated sentinel remains unchanged. |
-| E03 catchable interruption | After the owned worker starts, the test delivers SIGINT to its own Python process while the fixture context is active. The context stops new worker starts and signals and reaps its one tracked child. The test checks the child was reaped, a separately owned child survives and only the unchanged filesystem sentinel remains. Unexpected contents in the namespace surface a cleanup failure and are preserved. |
+| Worker acquisition | A real child is created at a controlled barrier before `Popen` returns its handle. A SIGINT delivered to the caller at that barrier remains pending until the handle is registered. Cleanup reaps that child before removing the namespace, and a separately owned child and unrelated filesystem sentinel survive. Successful startup separately verifies the same reap-before-removal ordering. |
+| Unknown worker outcome | A real missing-executable failure and injected exceptions before handle registration retain the namespace and report `fixture worker acquisition outcome unknown`. A caught startup error cannot permit a second acquisition. A simulated reap timeout retains the namespace and reports `fixture worker cleanup outcome unknown`. Test-owned fallback handles stop and reap every child created by the tests, with finite waits. |
+| E03 catchable interruption | SIGINT after startup and during reap reaches the caller after owned cleanup. A single real SIGINT immediately before or after cleanup's initial mask read triggers bounded recovery, with independent reap-before-removal observations. The same entry barriers with injected reap failure preserve the namespace and chain uncertainty to the original interrupt. An original `KeyboardInterrupt` or `SystemExit` survives a cleanup failure, with a chained cleanup error and a note that resources may remain. Tests also observe caller-installed handlers, an unrelated blocked signal, a preblocked pending SIGINT, a failed block and a transient mask-restore failure. Unexpected namespace contents remain preserved. |
 
-The interruption case uses one fixed ordering (enter, start, interrupt, reap)
-with seed 42. It covers cancellation in the active context after registration
-of the worker. Signal interruption during resource acquisition, repeated
-signals during teardown, default SIGTERM, SIGKILL and host loss are outside
-this fixture result. The observer actor represents test data. The runner's
-independent observations cover the local filesystem, child process and
-preflight call boundaries.
+Worker acquisition and cleanup temporarily block only SIGINT on the calling
+thread with `pthread_sigmask`; they do not replace signal handlers or signal
+process groups. Restoring the exact prior mask delivers a pending SIGINT using
+the caller's existing disposition. A preblocked SIGINT remains blocked and
+pending until the caller unblocks it. If mask restoration raises, one bounded,
+idempotent restoration attempt is made before propagating the error. Persistent
+mask-operation failures are errors; caller state cannot be guaranteed if the OS
+continues to reject restoration. The private probe child inherits the temporary
+mask and is stopped using its own process handle and SIGKILL, then reaped with
+the configured timeout. It starts no descendants.
+
+Cleanup outcome state is initialized before the caller can start a worker.
+An outer cancellation guard is active during caller execution and normal-exit
+cleanup dispatch, including the cleanup preamble before SIGINT masking. If
+catchable cancellation interrupts that entry path, the namespace descriptor
+remains open for one recovery attempt. The original
+cancellation propagates after the known worker is stopped and reaped and the
+namespace is removed. If recovery fails, cancellation instead carries the
+cleanup failure as its cause and a note that resources may remain. Completed
+resource cleanup is not repeated when restoring the caller's mask delivers a
+pending interrupt. The namespace descriptor is closed within the masked resource
+attempt. Any resource failure is recorded before restoring the mask and is not
+retried into success. A failed stop/reap prevents namespace removal, including
+when a pending SIGINT arrives during mask restoration; the tests observe this
+combination with an injected reap timeout.
+
+Two regression tests first record the normal-exit Python line boundaries before
+the first mask operation, then deliver one real SIGINT at each recorded boundary,
+with successful and injected-failed reap outcomes. The corrected implementation
+has three such boundaries: context-manager dispatch, cleanup's inactive-state
+assignment, and entry into signal deferral. Independent observations check worker
+reaping before removal, one descriptor close, the original interrupt object,
+namespace retention on failure, the caller's mask and handler, an unrelated child,
+and sentinel bytes. On the previous implementation these regressions fail at
+dispatch and in the cleanup preamble; their fallback cleanup stops and reaps only
+test-owned children with finite waits and closes only the verified owned descriptor.
+
+Before calling `Popen`, the run records acquisition uncertainty. Only storing
+the returned handle clears that uncertainty. Any constructor exception therefore
+quarantines the namespace, even a normal exec failure whose child Python may
+already have reaped. Unknown outcomes require owner inspection; the harness
+does not discover or signal processes from guessed PIDs. If a handle is known,
+cleanup attempts its stop and reap before considering directory removal. A
+failed stop/reap or unexpected directory contents prevents successful cleanup.
+
+These tests use fixed barrier orderings with seed 42, not exhaustive signal
+schedules. Real local child processes and SIGINT delivery are observed; the
+reap timeout, exceptional acquisition and mask-operation faults are injected.
+The SIGINT guarantee requires the documented single-threaded caller: masking
+one thread does not prevent another thread from receiving a process-directed
+signal. Concurrent callers, asynchronous injected exceptions, repeated signals,
+other signal dispositions such as default SIGTERM, SIGKILL, host loss and
+interruption during namespace creation/descriptor acquisition remain unverified.
+There is no portability claim beyond Linux/procfs with Python 3.11 or later
+(`BaseException.add_note` is used for failed cancellation cleanup). The observer
+actor represents test data. The runner's independent observations cover the
+local filesystem, child process and preflight call boundaries.
 
 This is fixture-class evidence. The remaining work requires a pinned accepted
 SQL engine and migrated schema, a separate observing SQL connection, the

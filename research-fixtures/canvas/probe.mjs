@@ -5,6 +5,7 @@ import {probeCompound} from './compound-probe.mjs';
 import {probeAsset} from './asset-probe.mjs';
 import {probeHydration} from './hydration-probe.mjs';
 import {probeKeyboardUndo} from './keyboard-undo-probe.mjs';
+import {probeViewerInput} from './viewer-input-probe.mjs';
 import {browserLaunchOptions, isFixtureNetworkRequest, startFixtureServer} from './fixture-runtime.mjs';
 
 const server = await startFixtureServer(process.cwd());
@@ -117,10 +118,11 @@ try {
   const assets = await probeAsset(page, frame);
   const compound = await probeCompound(page, frame);
   const keyboardNavigation = await probeKeyboardUndo(browser, origin);
+  const viewerInput = await probeViewerInput(browser, origin);
   assert.deepEqual(blockedRequests, []);
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({
-    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks, hydration, keyboardControl, keyboardNavigation, assets, compound,
+    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks, hydration, keyboardControl, keyboardNavigation, assets, compound, viewerInput,
     checks: ['remote ID preserved', 'NEVER remote baseline survives local undo',
       'view-mode Delete with selected content leaves scene unchanged',
       'view-mode undo with retained local history leaves scene unchanged',
@@ -129,7 +131,8 @@ try {
     blockedRequests,
     limitations: ['Not yet tested in Discord', 'No server permission checks',
       'No touch/stylus or accessibility acceptance', 'No concurrent remote overwrites or rollback after reconnect or permission changes',
-      'Selection is supplied through the editor API; paste/drop/text/context-menu controls remain untested'],
+      'Earlier smoke selection is API-supplied; fresh viewer-input trials use real pointer/keyboard input',
+      'Paste/drop/context-menu and text creation paths remain untested'],
   }, null, 2));
 } finally {
   try { await browser?.close(); }
