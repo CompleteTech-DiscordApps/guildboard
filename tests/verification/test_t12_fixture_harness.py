@@ -60,6 +60,26 @@ class FixtureHarnessTests(unittest.TestCase):
         with self.assertRaises(ChildProcessError):
             os.waitpid(child.pid, os.WNOHANG)
 
+    def interrupt_next_mask_read(self, after_read, interruptions):
+        sigmask = signal.pthread_sigmask
+        armed = True
+
+        def read(how, mask):
+            nonlocal armed
+            if armed and how == signal.SIG_BLOCK and not mask:
+                armed = False
+                if after_read:
+                    sigmask(how, mask)
+                try:
+                    signal.raise_signal(signal.SIGINT)
+                except KeyboardInterrupt as error:
+                    interruptions.append(error)
+                    raise
+                self.fail("SIGINT did not interrupt the unmasked cleanup entry")
+            return sigmask(how, mask)
+
+        return patch.object(signal, "pthread_sigmask", side_effect=read)
+
     def test_valid_runs_have_repeatable_seed_data_and_independent_state(self):
         with fixture_run(self.config) as first, fixture_run(self.config) as second:
             self.assertNotEqual(first.namespace, second.namespace)
@@ -375,6 +395,95 @@ class FixtureHarnessTests(unittest.TestCase):
                 stack.enter_context(patch.object(children[0], "wait", side_effect=interrupt_reap))
         self.assert_reaped(children[0])
         self.assert_sentinel_only()
+
+    def test_sigint_at_cleanup_mask_read_recovers_before_propagating(self):
+        previous = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGUSR1})
+        handler = signal.getsignal(signal.SIGINT)
+        try:
+            for after_read in (False, True):
+                with self.subTest(after_read=after_read):
+                    children, interruptions = [], []
+                    with self.capture_children(children), ExitStack() as stack:
+                        with self.assertRaises(KeyboardInterrupt) as raised:
+                            with fixture_run(self.config) as run:
+                                run.start_worker()
+                                remove = run._remove_namespace
+
+                                def observe_remove(expected):
+                                    self.assert_reaped(children[0])
+                                    self.assertTrue(children[0].stdin.closed)
+                                    remove(expected)
+
+                                run._remove_namespace = observe_remove
+                                stack.enter_context(self.interrupt_next_mask_read(
+                                    after_read, interruptions,
+                                ))
+                    self.assertEqual(len(interruptions), 1)
+                    self.assertIs(raised.exception, interruptions[0])
+                    self.assertIsNone(raised.exception.__cause__)
+                    self.assert_reaped(children[0])
+                    self.assert_sentinel_only()
+                    self.assertEqual(
+                        signal.pthread_sigmask(signal.SIG_BLOCK, set()),
+                        previous | {signal.SIGUSR1},
+                    )
+                    self.assertIs(signal.getsignal(signal.SIGINT), handler)
+        finally:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+
+    def test_sigint_at_cleanup_mask_read_chains_failed_recovery(self):
+        for after_read in (False, True):
+            with self.subTest(after_read=after_read):
+                children, interruptions = [], []
+                previous = signal.pthread_sigmask(signal.SIG_BLOCK, set())
+                handler = signal.getsignal(signal.SIGINT)
+                with self.capture_children(children), ExitStack() as stack:
+                    with self.assertRaises(KeyboardInterrupt) as raised:
+                        with fixture_run(self.config) as run:
+                            run.start_worker()
+                            wait = stack.enter_context(patch.object(
+                                children[0], "wait",
+                                side_effect=subprocess.TimeoutExpired("owned-worker", 1),
+                            ))
+                            stack.enter_context(self.interrupt_next_mask_read(
+                                after_read, interruptions,
+                            ))
+                self.assertEqual(len(interruptions), 1)
+                self.assertIs(raised.exception, interruptions[0])
+                self.assertEqual(
+                    str(raised.exception.__cause__), "fixture worker cleanup outcome unknown",
+                )
+                self.assertIsInstance(raised.exception.__cause__.__cause__, subprocess.TimeoutExpired)
+                self.assertIn("fixture cleanup failed; resources may remain", raised.exception.__notes__)
+                wait.assert_called_once_with(timeout=self.config.cleanup_timeout_seconds)
+                self.assertTrue(run.namespace.is_dir())
+                self.assertTrue(children[0].stdin.closed)
+                self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+                self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, set()), previous)
+                self.assertIs(signal.getsignal(signal.SIGINT), handler)
+                self.reap_owned_child(children[0])
+
+    def test_pending_sigint_preserves_reap_failure_without_retry(self):
+        children = []
+        failure = subprocess.TimeoutExpired("owned-worker", 1)
+
+        def fail_reap(*args, **kwargs):
+            signal.raise_signal(signal.SIGINT)
+            raise failure
+
+        with self.capture_children(children), ExitStack() as stack:
+            with self.assertRaises(KeyboardInterrupt) as raised:
+                with fixture_run(self.config) as run:
+                    run.start_worker()
+                    wait = stack.enter_context(patch.object(children[0], "wait", side_effect=fail_reap))
+        self.assertEqual(str(raised.exception.__cause__), "fixture worker cleanup outcome unknown")
+        self.assertIs(raised.exception.__cause__.__cause__, failure)
+        self.assertIn("fixture cleanup failed; resources may remain", raised.exception.__notes__)
+        wait.assert_called_once_with(timeout=self.config.cleanup_timeout_seconds)
+        self.assertTrue(run.namespace.is_dir())
+        self.assertTrue(children[0].stdin.closed)
+        self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+        self.reap_owned_child(children[0])
 
     def test_direct_cancellation_during_acquisition_reports_unknown_outcome(self):
         for interruption in (KeyboardInterrupt(), SystemExit(7)):

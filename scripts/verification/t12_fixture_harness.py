@@ -218,21 +218,48 @@ class _FixtureRun:
 
     def _close(self) -> None:
         self._active = False
-        try:
+        cleanup_completed = False
+        cleanup_failure = None
+
+        def cleanup():
+            nonlocal cleanup_completed, cleanup_failure
             with _defer_sigint():
-                if self._worker is not None:
-                    # The process has no descendants and is the only handle we signal.
-                    try:
-                        self._worker.kill()
-                        self._worker.wait(timeout=self._cleanup_timeout)
-                    except Exception as error:
-                        raise RuntimeError("fixture worker cleanup outcome unknown") from error
-                    finally:
-                        self._worker.stdin.close()
-                if self._worker_acquisition_pending:
-                    raise RuntimeError("fixture worker acquisition outcome unknown")
-                # A failed reap or unexpected contents retain the namespace.
-                self._remove_namespace(os.fstat(self._namespace_fd))
+                try:
+                    if self._worker is not None:
+                        # The process has no descendants and is the only handle we signal.
+                        try:
+                            self._worker.kill()
+                            self._worker.wait(timeout=self._cleanup_timeout)
+                        except Exception as error:
+                            raise RuntimeError("fixture worker cleanup outcome unknown") from error
+                        finally:
+                            self._worker.stdin.close()
+                    if self._worker_acquisition_pending:
+                        raise RuntimeError("fixture worker acquisition outcome unknown")
+                    # A failed reap or unexpected contents retain the namespace.
+                    self._remove_namespace(os.fstat(self._namespace_fd))
+                    cleanup_completed = True
+                except Exception as error:
+                    # Preserve a resource failure if restoring the mask dispatches
+                    # cancellation; that failure must not trigger another removal.
+                    cleanup_failure = error
+                    raise
+
+        try:
+            try:
+                cleanup()
+            except (KeyboardInterrupt, SystemExit) as error:
+                try:
+                    if cleanup_failure is not None:
+                        raise cleanup_failure
+                    if not cleanup_completed:
+                        # A signal can interrupt entry before the mask is installed.
+                        # Keep the descriptor for one bounded recovery attempt.
+                        cleanup()
+                except BaseException as cleanup_error:
+                    error.add_note("fixture cleanup failed; resources may remain")
+                    raise error from cleanup_error
+                raise
         finally:
             os.close(self._namespace_fd)
 

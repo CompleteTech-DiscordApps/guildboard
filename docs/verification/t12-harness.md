@@ -44,7 +44,7 @@ deadline on real elapsed time.
 | Acquisition failure | An injected namespace open failure propagates the original error and removes the empty namespace. If the namespace contains an unexpected file, rollback reports a failure and preserves the file. Both tests verify that the unrelated sentinel remains unchanged. |
 | Worker acquisition | A real child is created at a controlled barrier before `Popen` returns its handle. A SIGINT delivered to the caller at that barrier remains pending until the handle is registered. Cleanup reaps that child before removing the namespace, and a separately owned child and unrelated filesystem sentinel survive. Successful startup separately verifies the same reap-before-removal ordering. |
 | Unknown worker outcome | A real missing-executable failure and injected exceptions before handle registration retain the namespace and report `fixture worker acquisition outcome unknown`. A caught startup error cannot permit a second acquisition. A simulated reap timeout retains the namespace and reports `fixture worker cleanup outcome unknown`. Test-owned fallback handles stop and reap every child created by the tests, with finite waits. |
-| E03 catchable interruption | SIGINT after startup and during reap reaches the caller after owned cleanup. An original `KeyboardInterrupt` or `SystemExit` survives a cleanup failure, with a chained cleanup error and a note that resources may remain. Tests also observe caller-installed handlers, an unrelated blocked signal, a preblocked pending SIGINT, a failed block and a transient mask-restore failure. Unexpected namespace contents remain preserved. |
+| E03 catchable interruption | SIGINT after startup and during reap reaches the caller after owned cleanup. A single real SIGINT immediately before or after cleanup's initial mask read triggers bounded recovery, with independent reap-before-removal observations. The same entry barriers with injected reap failure preserve the namespace and chain uncertainty to the original interrupt. An original `KeyboardInterrupt` or `SystemExit` survives a cleanup failure, with a chained cleanup error and a note that resources may remain. Tests also observe caller-installed handlers, an unrelated blocked signal, a preblocked pending SIGINT, a failed block and a transient mask-restore failure. Unexpected namespace contents remain preserved. |
 
 Worker acquisition and cleanup temporarily block only SIGINT on the calling
 thread with `pthread_sigmask`; they do not replace signal handlers or signal
@@ -56,6 +56,16 @@ mask-operation failures are errors; caller state cannot be guaranteed if the OS
 continues to reject restoration. The private probe child inherits the temporary
 mask and is stopped using its own process handle and SIGKILL, then reaped with
 the configured timeout. It starts no descendants.
+
+If catchable cancellation interrupts cleanup before the SIGINT mask is installed,
+the namespace descriptor remains open for one recovery attempt. The original
+cancellation propagates after the known worker is stopped and reaped and the
+namespace is removed. If recovery fails, cancellation instead carries the
+cleanup failure as its cause and a note that resources may remain. Completed
+resource cleanup is not repeated when restoring the caller's mask delivers a
+pending interrupt. A resource failure is retained even if a pending SIGINT
+arrives while restoring the mask; it prevents removal and is not retried into
+success. The tests observe this combination with an injected reap timeout.
 
 Before calling `Popen`, the run records acquisition uncertainty. Only storing
 the returned handle clears that uncertainty. Any constructor exception therefore
