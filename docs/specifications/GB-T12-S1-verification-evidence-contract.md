@@ -354,10 +354,17 @@ For #456, #457 and #472, apply the corresponding T13 gate and accepted
 requirements to the projected entries. Recompute the entries from the approved
 sources and require an exact match to the staged manifest. A caller-supplied
 entry can confer no gate credit even if it equals a manifest entry. G1 requires
-current real Discord startup evidence for GB-T12.MVP1. G2 requires current
-GoDaddy production and recovery evidence. G3 also requires integrated and
+current real Discord startup and authenticated guild evidence for GB-T12.MVP1
+and every behavior in the mandatory MVP table. G2 requires current GoDaddy
+production observations for HTTPS/WSS, monitoring, rollback and smoke, an
+isolated recovery result, and the actual Discord proxy and reconnect journey.
+Each mandatory row links the required native issue, class, and covered behaviors
+to its exact independently observed artifact. G3 also requires integrated and
 regression results, the release fence, applicable client accessibility and
-isolated platform network, load and recovery evidence. G3 independently requires the
+isolated platform network, load and recovery evidence. Resolve the applicable
+Discord environments from an independently approved candidate-scoped support
+decision. Unknown support leaves the gate pending. Firefox and preview rows
+enter active coverage only with an applicable decision. G3 independently requires the
 `production-smoke` GB-T13.G2 `real-godaddy` entry and the authoritative
 historical #471 evidence described below. The complete applicable matrix and
 native prerequisites apply to each gate. For release automation #446 and

@@ -240,8 +240,7 @@ class AuthorityRegistry:
 
 
 def current_grant(registry, ref, purpose, subject, current, since=None):
-    if (type(registry) is not AuthorityRegistry or type(registry.issuers) is not dict
-            or type(registry.grants) is not dict):
+    if not valid_authorities(registry):
         return False
     issuer = registry.issuers.get((purpose, ref))
     grant = registry.grants.get(ref)
@@ -259,6 +258,11 @@ def current_grant(registry, ref, purpose, subject, current, since=None):
         return False
 
 
+def valid_authorities(registry):
+    return (type(registry) is AuthorityRegistry and type(registry.issuers) is dict
+            and type(registry.grants) is dict)
+
+
 def qualifies(data, key, registry, artifact, observation, inventory, trusted_time, authorities):
     record = validate_receipt(data)
     require(type(key) is tuple and len(key) == 2)
@@ -268,7 +272,8 @@ def qualifies(data, key, registry, artifact, observation, inventory, trusted_tim
     require(row in CLASS_BY_ROW)
     require(all(item is not None for item in (
         registry, artifact, observation, inventory, trusted_time, authorities)), "DEPENDENCY_UNAVAILABLE")
-    require(type(registry) is dict and key in registry and type(authorities) is AuthorityRegistry)
+    require(valid_authorities(authorities), "DEPENDENCY_UNAVAILABLE")
+    require(type(registry) is dict and key in registry)
     approval = registry[key]
     closed(approval, "metadata runId artifactSha256 resultObserver cleanupObserver authorityRef resourceful "
                      "configurationRef supportedConfiguration prerequisiteRefs freshUntil projection")
@@ -432,6 +437,11 @@ class EvidenceSources:
 
 
 def qualified_receipt(key, sources):
+    require(type(sources) is EvidenceSources and valid_authorities(sources.authorities), "DEPENDENCY_UNAVAILABLE")
+    require(all(type(container) is dict for container in (
+        sources.registry, sources.receipt_refs, sources.receipts, sources.artifacts,
+        sources.observations, sources.inventories,
+    )), "DEPENDENCY_UNAVAILABLE")
     ref = sources.receipt_refs.get(key)
     approval = sources.registry.get(key)
     raw = sources.receipts.get(ref)
@@ -484,13 +494,29 @@ SECURITY_KEYS = {(name, "review" if name == "independent-security-review" else "
                  for name in SECURITY_INPUTS}
 
 
-def matrix_outcome(required_keys, sources, candidate, scope, findings, dispositions):
+def matrix_outcome(required_keys, sources, candidate, scope, findings, dispositions, coverage=None):
     """Re-resolve every selected row from the current independent sources."""
+    if coverage is not None and not coverage.keys() <= required_keys:
+        return "blocked"
     keys = required_keys | SECURITY_KEYS
     eligible, receipts = {}, []
     for key in sorted(keys):
         try:
             item, record = qualified_receipt(key, sources)
+            if coverage is not None and key in coverage and record is not None:
+                native_issue, behaviors = coverage[key]
+                evidence = record["evidence"]
+                coverage_artifact = decode_json(sources.artifacts[evidence["artifactRef"]], 16384)
+                closed(coverage_artifact, "synthetic requirement row cases result")
+                cases = coverage_artifact["cases"]
+                require(type(cases) is list)
+                for case in cases:
+                    token(case)
+                unique_array(cases, minimum=1)
+                if (evidence["nativeIssue"] != native_issue or coverage_artifact["synthetic"] is not True
+                        or [coverage_artifact["requirement"], coverage_artifact["row"]] != list(key)
+                        or coverage_artifact["result"] != evidence["result"] or not behaviors <= set(cases)):
+                    continue
         except ValueError:
             continue
         if item is not None and item.candidate == candidate and item.scope == scope:
@@ -519,22 +545,39 @@ T13_GATE_RECORDS = {
     "GB-T13.G3": {("production-smoke", "GB-T13.G2", "real-godaddy")},
 }
 
-T13_GATE_ROWS = {
-    "GB-T13.G1": {("integrated", "hosted")},
-    "GB-T13.G2": {("production-smoke", "vps-network"), ("production-recovery", "vps-recovery")},
-    "GB-T13.G3": {
-        ("integrated", "hosted"), ("production-smoke", "vps-network"),
-        ("production-recovery", "vps-recovery"), ("recovery", "vps-recovery"),
-        ("platform-network", "vps-network"), ("bounded-load", "vps-load"),
-        ("release-fence", "hosted"), ("regression", "hosted"),
-        *((f"accessibility-{suffix}", row) for suffix, row in (
-            ("win", "discord-win"), ("mac", "discord-mac"),
-            ("chromium", "discord-web-chromium"), ("firefox", "discord-web-firefox"),
-            ("ios", "discord-ios"), ("android", "discord-android"),
-            ("previews", "discord-previews"),
-        )),
-    },
+MVP_BEHAVIORS = {
+    "activity-startup", "authenticated-guild", "moderator-role", "whiteboard",
+    "simultaneous-moderators", "read-only-viewer", "backend-permissions",
+    "live-sync", "save-board", "board-lock", "reconnect", "security-negatives",
 }
+DISCORD_ROWS = {row for row in EXTERNAL if row.startswith("discord-")}
+
+
+def gate_coverage(gate, clients):
+    mvp = {
+        ("integrated", "hosted"): (455, MVP_BEHAVIORS),
+        **{("discord-startup", row): (455, {"activity-startup", "authenticated-guild"}) for row in clients},
+    }
+    production = {
+        ("production-smoke", "vps-network"): (457, {"https-wss", "monitoring", "rollback", "smoke"}),
+        ("production-recovery", "vps-recovery"): (457, {"isolated-restore", "rpo-rto", "continuity"}),
+        **{("production-discord", row): (353, {"mapped-proxy", "upgrade", "reconnect"}) for row in clients},
+    }
+    if gate == "GB-T13.G1":
+        return mvp
+    if gate == "GB-T13.G2":
+        return production
+    return {
+        **mvp, **production,
+        ("integrated", "hosted"): (455, MVP_BEHAVIORS | {"modes", "moderation", "import-export", "recovery"}),
+        ("recovery", "vps-recovery"): (410, {"recovery-inventories", "deletion-fences"}),
+        ("platform-network", "vps-network"): (414, {"platform-network"}),
+        ("bounded-load", "vps-load"): (414, {"bounded-load"}),
+        ("release-fence", "hosted"): (400, {"release-fence"}),
+        ("regression", "hosted"): (417, {"regression"}),
+        **{("accessibility-" + row.removeprefix("discord-web-").removeprefix("discord-"), row):
+           (414, {"manual-at", "accessible-task-coverage"}) for row in clients},
+    }
 
 
 @cache
@@ -577,7 +620,7 @@ def t13_handoff(bundle, sources, gate_registry, issue_map, findings, disposition
     if selected is None:
         return "pending"
     try:
-        closed(selected, "authorityRef candidateSha scope matrixKeys projectionKeys prerequisiteRefs")
+        closed(selected, "authorityRef candidateSha scope matrixKeys projectionKeys prerequisiteRefs clientRows clientScopeRef")
         current = instant(sources.time)
         for name in ("matrixKeys", "projectionKeys"):
             keys = selected[name]
@@ -591,6 +634,13 @@ def t13_handoff(bundle, sources, gate_registry, issue_map, findings, disposition
         for ref in selected["prerequisiteRefs"]:
             token(ref)
         unique_array(selected["prerequisiteRefs"], minimum=1)
+        clients = selected["clientRows"]
+        require(type(clients) is list)
+        for row in clients:
+            token(row)
+            require(row in DISCORD_ROWS)
+        unique_array(clients, minimum=1)
+        token(selected["clientScopeRef"])
         token(selected["scope"])
         token(selected["authorityRef"])
     except ValueError:
@@ -598,15 +648,18 @@ def t13_handoff(bundle, sources, gate_registry, issue_map, findings, disposition
     required = {tuple(key) for key in selected["matrixKeys"]}
     projected = [tuple(key) for key in selected["projectionKeys"]]
     scope = selected["scope"]
+    minimum = gate_coverage(gate, clients)
     matrix_subject = [gate, digest(encode(selected))]
     if (selected["candidateSha"] != candidate or not projected
-            or not T13_GATE_ROWS[gate] <= required
+            or not minimum.keys() <= required
+            or not current_grant(sources.authorities, selected["clientScopeRef"], "release-client-scope",
+                                 [gate, candidate, scope, sorted(clients)], current)
             or set(selected["prerequisiteRefs"]) != native_gate_dependencies(gate)
             or not set(projected) <= required
             or not current_grant(sources.authorities, selected["authorityRef"], "gate-matrix", matrix_subject, current)
             or not all(current_grant(sources.authorities, ref, "gate-prerequisite", [ref, *matrix_subject], current)
                        for ref in selected["prerequisiteRefs"])
-            or matrix_outcome(required, sources, candidate, scope, findings, dispositions) != "pass"):
+            or matrix_outcome(required, sources, candidate, scope, findings, dispositions, minimum) != "pass"):
         return "pending"
     evidence = [t13_projection(key, candidate, scope, sources, issue_map) for key in projected]
     if (any(row is None for row in evidence) or manifest["evidence"] != evidence
@@ -772,11 +825,17 @@ class VerificationEvidenceContractTests(unittest.TestCase):
                                  "fail")
 
     def qualification_inputs(self, requirement="harness", row="offline", scope="test-only",
-                             result="pass", issue=393, finding_refs=None):
+                             result="pass", issue=393, finding_refs=None, scenarios=None):
         record, artifact = self.receipt()
         record["requirementId"], record["gateRow"] = requirement, row
         record["evidence"].update(scope=scope, evidenceClass=CLASS_BY_ROW[row], result=result,
                                   nativeIssue=issue, artifactRef=f"{requirement}-{row}")
+        if scenarios is not None:
+            artifact = encode({"synthetic": True, "requirement": requirement, "row": row,
+                               "cases": sorted(scenarios), "result": result})
+            record["artifactSha256"] = digest(artifact)
+            record["environmentId"] = record["evidence"]["environment"] = f"synthetic-{row}"
+            record["evidence"]["scenarioIds"] = ["E08"]
         if finding_refs is not None:
             record["evidence"]["findingDispositions"] = finding_refs
         binding = {"requirementId": requirement, "gateRow": row,
@@ -1051,23 +1110,54 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         backlog = read_json(ROOT / "planning/guildboard-backlog.json")["items"]
         return {item["github"]["number"]: item["id"] for item in backlog}
 
+    def test_gate_floors_reject_missing_or_misattributed_observations(self):
+        for gate, omitted, scenario in (
+            ("GB-T13.G1", ("integrated", "hosted"), "board-lock"),
+            ("GB-T13.G2", ("production-discord", "discord-win"), "mapped-proxy"),
+            ("GB-T13.G2", ("production-smoke", "vps-network"), "rollback"),
+        ):
+            with self.subTest(gate=gate, omitted=omitted, scenario=scenario):
+                required = gate_coverage(gate, ["discord-win"])
+                keys = set(required)
+                overrides = {key[0]: {"issue": issue, "scenarios": cases}
+                             for key, (issue, cases) in required.items()}
+                valid = self.sources(keys, **overrides)
+                def outcome(selection, current):
+                    findings = self.finding_inventory(selection, current)
+                    return matrix_outcome(selection, current, CANDIDATE, "release", findings, {}, required)
+                self.assertEqual(outcome(keys, valid), "pass")
+                self.assertEqual(outcome(keys - {omitted}, valid), "blocked")
+                for changed in ({"issue": 393}, {"scenarios": required[omitted][1] - {scenario}}):
+                    substituted = {**overrides, omitted[0]: {**overrides[omitted[0]], **changed}}
+                    self.assertEqual(outcome(keys, self.sources(keys, **substituted)), "blocked")
+
     def test_t13_handoff_requires_qualified_matrix_gate_evidence_and_authority(self):
         issue_map = self.issue_map()
         model = t13.ReleaseContractScenarios()
         model.setUp()
         smoke = ("production-smoke", "vps-network")
-        matrix = self.fixture["handoffMatrix"]
-        keys = {tuple(entry["key"]) for entry in matrix}
-        sources = self.sources(keys, **{entry["key"][0]: {"issue": entry["issue"]} for entry in matrix})
-        findings = self.finding_inventory(keys, sources)
         gate = "GB-T13.G3"
+        clients = ["discord-win"]
+        minimum = gate_coverage(gate, clients)
+        matrix = self.fixture["handoffMatrix"]
+        configured = {tuple(entry["key"]): entry["issue"] for entry in matrix
+                      if entry["key"][1] not in DISCORD_ROWS or entry["key"][1] in clients}
+        keys = configured.keys() | minimum.keys()
+        overrides = {key[0]: {"issue": issue, "scenarios": {key[0]}} for key, issue in configured.items()}
+        overrides.update({key[0]: {"issue": issue, "scenarios": cases}
+                          for key, (issue, cases) in minimum.items()})
+        sources = self.sources(keys, **overrides)
+        findings = self.finding_inventory(keys, sources)
         policy = {gate: {"authorityRef": "applicable-matrix", "candidateSha": CANDIDATE, "scope": "release",
                          "matrixKeys": sorted(keys), "projectionKeys": [smoke],
+                         "clientRows": clients, "clientScopeRef": "supported-clients",
                          "prerequisiteRefs": sorted(native_gate_dependencies(gate))}}
 
         def grant_policy(authorities, selection):
             subject = [gate, digest(encode(selection[gate]))]
             self.grant(authorities, "gate-matrix", "applicable-matrix", subject)
+            self.grant(authorities, "release-client-scope", "supported-clients",
+                       [gate, CANDIDATE, "release", sorted(selection[gate]["clientRows"])], "platform-support-owner")
             for ref in selection[gate]["prerequisiteRefs"]:
                 self.grant(authorities, "gate-prerequisite", ref, [ref, *subject], f"owner-{ref}")
 
@@ -1107,8 +1197,17 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         self.assertEqual(handoff(historical=None), "pending")
         self.assertEqual(handoff(registry={}), "pending")
         self.assertEqual(handoff(current=[entry]), "pending")
+        for container in ("receipt_refs", "receipts", "artifacts", "registry", "observations", "inventories"):
+            self.assertEqual(handoff(current=replace(sources, **{container: None})), "pending")
+        self.assertEqual(handoff(current=replace(sources, authorities=replace(sources.authorities, grants=None))),
+                         "pending")
+        expanded_clients = copy.deepcopy(policy)
+        expanded_clients[gate]["clientRows"].append("discord-web-firefox")
+        expanded_sources = copy.deepcopy(sources)
+        grant_policy(expanded_sources.authorities, expanded_clients)
+        self.assertEqual(handoff(current=expanded_sources, registry=expanded_clients), "pending")
         for ref in ("t13-approval", "t13-native", "t13-mvp", "applicable-matrix", "GB-T13.G1",
-                    "GB-T13.G2", "GB-T13.D1", "GB-T0.G1", "complete-findings"):
+                    "GB-T13.G2", "GB-T13.D1", "GB-T0.G1", "complete-findings", "supported-clients"):
             current = copy.deepcopy(sources)
             current.authorities.grants[ref]["decision"] = "withdrawn"
             self.assertEqual(handoff(current=current), "pending")
