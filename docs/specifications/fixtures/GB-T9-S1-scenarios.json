@@ -1,0 +1,277 @@
+{
+  "version": 1,
+  "contract": "GB-T9.S1",
+  "kind": "declarative_synthetic",
+  "scenarios": [
+    {
+      "id": "membership",
+      "research": "A01",
+      "verificationIssues": [297, 300],
+      "inputs": "Verified fresh member; client-only role assertion, foreign guild evidence, expired observation and unavailable source.",
+      "requiredObservations": "Permit only the verified case. Other cases create no protected output or durable effects."
+    },
+    {
+      "id": "tenant_scope",
+      "research": "A02",
+      "verificationIssues": [300],
+      "inputs": "Owned, unknown and foreign synthetic selectors across route, bot, socket, asset, receipt, cache and room boundaries.",
+      "requiredObservations": "An authorized scoped case succeeds. Unknown and foreign outcomes match publicly. No foreign lookup effect, join, write or delivery."
+    },
+    {
+      "id": "auth_transaction",
+      "research": "A03",
+      "verificationIssues": [297],
+      "inputs": "One valid synthetic redemption; missing, expired, rebound and duplicate transaction outcomes; expired or revoked session.",
+      "requiredObservations": "Exactly one valid session. Renewal replaces old authority. Diagnostics, URL, bundle and export contain no sensitive sentinel."
+    },
+    {
+      "id": "ingress",
+      "research": "A04",
+      "verificationIssues": [297, 321],
+      "inputs": "Allowed and unapproved ingress classifications; valid origin with missing session; untrusted forwarded metadata.",
+      "requiredObservations": "Only validated session and allowed ingress reach policy. Untrusted forwarding conveys no authority. Verify real Discord client matrix separately."
+    },
+    {
+      "id": "commit_order",
+      "research": "A05",
+      "verificationIssues": [300],
+      "inputs": "Stage an admitted intent. Order valid commit and invalidation both ways. Separately order invalidation then regrant before old intent reaches commit.",
+      "requiredObservations": "Affirmative current write/action authority and valid commit-first accepts one state change, revision, receipt, outbox and required audit record. Fresh scoped read-only and stale regrant cases have zero accepted effects."
+    },
+    {
+      "id": "commit_dependencies",
+      "research": "A05",
+      "verificationIssues": [300],
+      "inputs": "Preparation succeeds. At commit, independently supply missing or stale policy, membership or trusted time, or unavailable fence/audit.",
+      "requiredObservations": "Every case fails closed with no committed content, revision, receipt or accepted outbox. Bounded denial telemetry only."
+    },
+    {
+      "id": "policy_matrix",
+      "research": "A06",
+      "verificationIssues": [300, 314],
+      "inputs": "Enumerated permitted transition and denied self approval, self escalation, moderator escalation, unknown action and write under lockdown.",
+      "requiredObservations": "Allow only valid capability. Accepted change advances generation and records scoped audit. Denial changes neither board nor permission."
+    },
+    {
+      "id": "bounded_content",
+      "research": "A07",
+      "verificationIssues": [304, 307],
+      "inputs": "Inert synthetic text plus abstract content classifications: unsupported type, active content, mismatched type and expanded size over budget.",
+      "requiredObservations": "Supported inert content renders safely. Rejections publish no file or metadata. Demonstrate scoped SQL, opaque storage paths and no arbitrary fetch capability."
+    },
+    {
+      "id": "receipt_lookup",
+      "research": "A08",
+      "verificationIssues": [300],
+      "inputs": "Cross current read-denial reason with absent, matching and mismatching synthetic receipt state.",
+      "requiredObservations": "Current read denial causes zero receipt/digest reads, no protected output, no durable effects and no unknown outcome settlement. Compare normalized public outcomes."
+    },
+    {
+      "id": "receipt_history",
+      "research": "A08",
+      "verificationIssues": [300, 311],
+      "inputs": "Readable historical matching receipt with write denied; historical digest mismatch; retired intent with absent receipt.",
+      "requiredObservations": "Match settles historical operation only, mismatch returns fenced IDEMPOTENCY_CONFLICT, absent returns fenced LINEAGE_CHANGED. Zero writes. Advance active save state after authorized rejoin, a complete validated snapshot and any contiguous tail needed to reach the active cut."
+    },
+    {
+      "id": "release_order",
+      "research": "A08",
+      "verificationIssues": [300],
+      "inputs": "Run both authority/release orders for each protected output kind, including backpressured chunks. Vary session revocation/expiry, stale membership, read policy and unavailable time/fence.",
+      "requiredObservations": "Valid release-first may complete. Authority loss first suppresses prepared output and following queued chunks. Denied ACK preserves durable accepted state and leaves client outcome unknown."
+    },
+    {
+      "id": "asset_export_release",
+      "research": "A08",
+      "verificationIssues": [300, 311],
+      "inputs": "Valid board/asset metadata and chunk release, then a denied included asset or authority change while chunks are queued. Include a storage boundary without fencing.",
+      "requiredObservations": "Every release requires board and each included asset authorization. No affected metadata/chunk escapes on denial or direct storage bypass."
+    },
+    {
+      "id": "durable_retry",
+      "research": "A08",
+      "verificationIssues": [300],
+      "inputs": "Parallel identical intent, changed digest, rollback and simulated lost ACK or ambiguous commit status.",
+      "requiredObservations": "One accepted commit per identity, no rollback effects. Same identity reconciles under current read/release checks. Unknown remains unresolved without evidence."
+    },
+    {
+      "id": "resource_profile",
+      "research": "A09",
+      "verificationIssues": [307],
+      "inputs": "Use approved finite budgets at below/at/above boundaries. Simulate queue pressure and full quota in one synthetic tenant.",
+      "requiredObservations": "Excess work remains bounded and isolated. Accepted durable events survive slow consumer closure and resync."
+    },
+    {
+      "id": "host_boundary",
+      "research": "A10",
+      "verificationIssues": [318, 321],
+      "inputs": "Review approved service inventory, dependency drift and credential exposure classes.",
+      "requiredObservations": "Unapproved exposure or missing dated test evidence blocks release. Real authorized GoDaddy observations, renewal, WSS and rollback remain required."
+    },
+    {
+      "id": "delete_restore",
+      "research": "A11",
+      "verificationIssues": [311],
+      "inputs": "Fence, interrupt and retry deletion. Restore old data against independent markers and the authoritative exposure watermark. Vary marker coverage and order a new deletion after reconciliation but before exposure.",
+      "requiredObservations": "No stale delivery or resurrection. Live and backup/hold milestones remain distinct. Incomplete restore stays isolated."
+    },
+    {
+      "id": "audit_integrity",
+      "research": "A11",
+      "verificationIssues": [314, 318],
+      "inputs": "Compare permitted append, denied access, redaction sentinels, changed records and truncation of checkpointed history or accepted active tail. Vary independently anchored accepted high-water and append a suffix beyond it.",
+      "requiredObservations": "Only scoped rights succeed. Independent checkpoints flag alteration and truncation. An unavailable anchor blocks verification. An unanchored suffix contributes no accepted history. Sensitive sentinel absent from audit, diagnostics and exported evidence."
+    },
+    {
+      "id": "release_gate",
+      "research": "A10",
+      "verificationIssues": [318, 321],
+      "inputs": "Evidence for exact candidate, stale candidate, missing real environment, fixture-only review, and expired exception.",
+      "requiredObservations": "Only complete eligible evidence passes. Stale, missing or ineligible evidence and unresolved critical/high findings without accepted disposition block release."
+    },
+    {
+      "id": "malformed_command",
+      "research": "A09",
+      "verificationIssues": [300, 307],
+      "inputs": "Use one defect per otherwise valid synthetic command at decoding. Keep unrelated authority fresh.",
+      "requiredObservations": "Produce only the typed safe rejection. No digest or receipt lookup, protected output or durable effects."
+    },
+    {
+      "id": "receipt_release_denial",
+      "research": "A08",
+      "verificationIssues": [300],
+      "inputs": "Authorize prelookup with absent, matching and conflicting receipts in retired lineage. Remove read authority immediately before egress.",
+      "requiredObservations": "Match public denial for the same reason across all branches. Preserve any prior acceptance and do not settle the unknown outcome."
+    },
+    {
+      "id": "internal_records",
+      "research": "A11",
+      "verificationIssues": [311, 314, 321],
+      "inputs": "Validate closed v1 deletion, audit, release evidence and exception records. Vary shape, type, version, scope and required dependencies.",
+      "requiredObservations": "Invalid lifecycle records create no fence, invalid required audit blocks acceptance, and invalid evidence or exceptions confer no eligibility."
+    }
+  ],
+  "receiptLookupMatrix": {
+    "denials": [
+      "UNAUTHENTICATED",
+      "NOT_FOUND",
+      "FORBIDDEN",
+      "DEPENDENCY_UNAVAILABLE"
+    ],
+    "storedStates": [
+      "absent",
+      "matching",
+      "mismatching"
+    ],
+    "denialEffects": {
+      "receiptLookup": false,
+      "digestLookup": false,
+      "protectedOutput": false,
+      "durableChange": false,
+      "settlesUnknown": false
+    }
+  },
+  "releaseMatrix": {
+    "kinds": [
+      "ack",
+      "receipt",
+      "digest_result",
+      "lineage_changed",
+      "live_event",
+      "replay_event",
+      "snapshot_metadata",
+      "snapshot_chunk",
+      "asset_metadata",
+      "asset_chunk",
+      "export_metadata",
+      "export_chunk"
+    ],
+    "authorityLoss": [
+      "session_revoke",
+      "session_expiry",
+      "membership_invalid",
+      "membership_stale",
+      "read_policy_change",
+      "time_unavailable",
+      "fence_unavailable",
+      "policy_stale",
+      "policy_unavailable",
+      "time_stale"
+    ],
+    "orders": {
+      "release_first": {
+        "firstRelease": true,
+        "laterRelease": false
+      },
+      "authority_loss_first": {
+        "firstRelease": false,
+        "laterRelease": false
+      }
+    },
+    "committedAck": {
+      "durableAcceptanceSurvives": true,
+      "deniedAckSettlesUnknown": false
+    }
+  },
+  "historicalReceipt": {
+    "settlesHistoricalOperation": true,
+    "clearsSameOperationPendingRetry": true,
+    "appliesPayloadToActiveLineage": false,
+    "marksActiveLineageSaved": false,
+    "requiresAuthorizedActiveRejoin": true,
+    "requiresValidatedCompleteActiveSnapshot": true,
+    "requiresContiguousTailIfNeeded": true,
+    "advancesOnPartialOrGappedTransfer": false
+  },
+  "stageNegatives": {
+    "commit": {
+      "FORBIDDEN": ["fresh_scoped_read_only"],
+      "POLICY_STALE": ["proven_generation_mismatch"],
+      "DEPENDENCY_UNAVAILABLE": ["policy_stale", "policy_unavailable", "time_stale", "time_unavailable", "fence_unavailable"]
+    },
+    "commitAcceptedEffects": false,
+    "egressProtectedOutput": false,
+    "egress": {
+      "FORBIDDEN": ["read_denied_after_lookup"],
+      "DEPENDENCY_UNAVAILABLE": ["policy_stale", "policy_unavailable", "time_stale", "time_unavailable", "fence_unavailable"]
+    }
+  },
+  "postLookupDenial": {
+    "prepared": {"absent": "LINEAGE_CHANGED", "matching": "receipt", "mismatching": "IDEMPOTENCY_CONFLICT"},
+    "prelookupAuthorized": true,
+    "authorityLossImmediatelyBeforeEgress": true,
+    "sameNormalizedOutcomeForSameDenial": true,
+    "protectedOutput": false,
+    "additionalDurableEffects": false,
+    "priorAcceptedCommitSurvives": true,
+    "settlesUnknown": false
+  },
+  "malformedCommand": {
+    "INVALID_MESSAGE": {
+      "unknown_field": {"add": {"unknownFixtureField": false}},
+      "duplicate_field": {"repeat": "operationId"},
+      "unknown_kind": {"set": {"kind": "UNREGISTERED_FIXTURE_KIND"}},
+      "invalid_id": {"set": {"operationId": "fixture-not-a-uuid"}},
+      "noncanonical_counter": {"set": {"baseRevision": "01"}},
+      "counter_above_uint64": {"set": {"baseRevision": "18446744073709551616"}}
+    },
+    "UNSUPPORTED_VERSION": {"unsupported_version": {"set": {"version": 2}}},
+    "onlySafeRejection": true,
+    "digestLookup": false,
+    "receiptLookup": false,
+    "protectedOutput": false,
+    "durableEffects": false
+  },
+  "internalRecords": {
+    "kinds": ["deletion_job", "audit_event", "release_evidence", "exception", "retention_exception"],
+    "INVALID_RECORD": ["missing_field", "unknown_field", "duplicate_field", "wrong_type", "wrong_scope", "unregistered_value"],
+    "UNSUPPORTED_RECORD_VERSION": ["unsupported_version"],
+    "DEPENDENCY_UNAVAILABLE": ["required_registry_unavailable", "required_authority_unavailable", "required_time_unavailable"],
+    "acceptsInvalidOrUnverifiableRecord": false
+  },
+  "recovery": {
+    "restoreExposes": {"current_complete_reconciled": true, "missing": false, "stale": false, "gapped": false, "later_deletion_unapplied": false},
+    "auditVerifies": {"anchored_complete": true, "anchor_missing": false, "anchor_unavailable": false, "anchor_stale": false, "checkpointed_truncation": false, "accepted_active_tail_truncation": false},
+    "auditAcceptsUnanchoredAppendedSuffix": false
+  }
+}
