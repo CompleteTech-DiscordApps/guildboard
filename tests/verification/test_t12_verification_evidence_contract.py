@@ -351,6 +351,8 @@ def qualifies(data, key, registry, artifact, observation, inventory, trusted_tim
 
 
 def disposition_resolved(finding, candidate, scope, current, records, artifacts, authorities):
+    if type(records) is not dict:
+        return False
     finding_ref, severity, receipt_sha, ref = finding
     record = records.get(ref)
     if record is None:
@@ -520,7 +522,11 @@ def matrix_outcome(required_keys, sources, candidate, scope, findings, dispositi
                 unique_array(cases, minimum=1)
                 if (evidence["nativeIssue"] != native_issue or coverage_artifact["synthetic"] is not True
                         or [coverage_artifact["requirement"], coverage_artifact["row"]] != list(key)
-                        or coverage_artifact["result"] != evidence["result"] or not behaviors <= set(cases)):
+                        or coverage_artifact["result"] != evidence["result"]):
+                    continue
+                observed_cases = set(cases)
+                if (item.outcome is Outcome.VERIFIED_PASS and not behaviors <= observed_cases
+                        or item.outcome is Outcome.VERIFIED_FAIL and not behaviors & observed_cases):
                     continue
         except ValueError:
             continue
@@ -679,6 +685,7 @@ def t13_handoff(bundle, sources, gate_registry, issue_map, findings, disposition
     matrix_subject = [gate, digest(encode(selected))]
     if (selected["candidateSha"] != candidate or not projected
             or not minimum.keys() <= required
+            or not {row for _, row in required if row in DISCORD_ROWS} <= set(clients)
             or not current_grant(sources.authorities, selected["clientScopeRef"], "release-client-scope",
                                  [gate, candidate, scope, sorted(clients)], current)
             or set(selected["prerequisiteRefs"]) != native_gate_dependencies(gate)
@@ -691,7 +698,8 @@ def t13_handoff(bundle, sources, gate_registry, issue_map, findings, disposition
     evidence = [t13_projection(key, candidate, scope, sources, issue_map) for key in projected]
     if (any(row is None for row in evidence) or manifest["evidence"] != evidence
             or not T13_GATE_RECORDS[gate] <= {(row["id"], row["issue"], row["level"])
-                                             for key, row in zip(projected, evidence) if key[0] == row["id"]}
+                                             for key, row in zip(projected, evidence)
+                                             if key in minimum and key[0] == row["id"]}
             or len({row["ref"] for row in evidence}) != len(evidence)
             or (gate != "GB-T13.G2" and t13.release_gate(identity["version"]) != gate)):
         return "pending"
@@ -1054,6 +1062,8 @@ class VerificationEvidenceContractTests(unittest.TestCase):
 
         self.assertEqual(outcome(), "pass")
         self.assertEqual(outcome(closed=True), "pass")
+        for missing in (None, [], {}):
+            self.assertEqual(matrix_outcome(keys, sources, CANDIDATE, scope, findings, missing), "blocked")
         self.assertEqual(outcome(inventory=None), "blocked")
         self.assertEqual(outcome(inventory={**findings, "findings": []}), "blocked")
         empty = self.finding_inventory(keys, sources, [])
@@ -1170,6 +1180,10 @@ class VerificationEvidenceContractTests(unittest.TestCase):
                 for changed in ({"issue": 393}, {"scenarios": required[omitted][1] - {scenario}}):
                     substituted = {**overrides, omitted[0]: {**overrides[omitted[0]], **changed}}
                     self.assertEqual(outcome(keys, self.sources(keys, **substituted)), "blocked")
+                for observed, expected in ((scenario, "fail"), ("outside-required-behavior", "blocked")):
+                    failed = {**overrides, omitted[0]: {**overrides[omitted[0]],
+                                                       "scenarios": {observed}, "result": "fail"}}
+                    self.assertEqual(outcome(keys, self.sources(keys, **failed)), expected)
 
     def test_t13_handoff_requires_qualified_matrix_gate_evidence_and_authority(self):
         issue_map = self.issue_map()
@@ -1207,7 +1221,7 @@ class VerificationEvidenceContractTests(unittest.TestCase):
             "revision": CANDIDATE, "gate": gate, "version": "1.0.0",
         }})
 
-        def stage(entries):
+        def stage(entries, authority=sources.authorities):
             manifest = {**json.loads(original.manifest), "evidence": entries}
             bundle = replace(original, manifest=encode(manifest))
             _, identity = t13.verified_bundle(bundle)
@@ -1217,8 +1231,8 @@ class VerificationEvidenceContractTests(unittest.TestCase):
                         "evidenceRefs": [entry["ref"] for entry in entries],
                         "mvpPublication": manifest["mvpPublication"]}
             ref = identity["manifestSha256"]
-            self.grant(sources.authorities, "release-approval", "t13-approval", [ref, digest(encode(approval_record))])
-            self.grant(sources.authorities, "native-decision", "t13-native",
+            self.grant(authority, "release-approval", "t13-approval", [ref, digest(encode(approval_record))])
+            self.grant(authority, "native-decision", "t13-native",
                        [ref, digest(encode(decision)), manifest["provenanceRef"]])
             return bundle, {ref: approval_record}, {ref: decision}
 
@@ -1248,6 +1262,26 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         expanded_sources = copy.deepcopy(sources)
         grant_policy(expanded_sources.authorities, expanded_clients)
         self.assertEqual(handoff(current=expanded_sources, registry=expanded_clients), "pending")
+        for extra, projection in (
+            (("sdk-launch", "discord-web-firefox"), smoke),
+            (("production-smoke", "vps-load"), ("production-smoke", "vps-load")),
+        ):
+            with self.subTest(extra=extra, projection=projection):
+                extra_keys = keys | {extra}
+                current = self.sources(extra_keys, **overrides)
+                selected = copy.deepcopy(policy)
+                selected[gate].update(matrixKeys=sorted(extra_keys), projectionKeys=[projection])
+                grant_policy(current.authorities, selected)
+                self.grant(current.authorities, "accepted-mvp", "t13-mvp", model.prior.designated_mvp)
+                full_inventory = self.finding_inventory(extra_keys, current)
+                self.assertEqual(matrix_outcome(extra_keys, current, CANDIDATE, "release",
+                                                full_inventory, {}, minimum), "pass")
+                selected_entry = t13_projection(projection, CANDIDATE, "release", current, issue_map)
+                self.assertEqual((selected_entry["id"], selected_entry["issue"], selected_entry["level"]),
+                                 (entry["id"], entry["issue"], entry["level"]))
+                candidate, approved, native = stage([selected_entry], current.authorities)
+                self.assertEqual(t13_handoff(candidate, current, selected, issue_map, full_inventory, {},
+                                             approved, native, model.prior), "pending")
         for ref in ("t13-approval", "t13-native", "t13-mvp", "applicable-matrix", "GB-T13.G1",
                     "GB-T13.G2", "GB-T13.D1", "GB-T0.G1", "complete-findings", "supported-clients"):
             current = copy.deepcopy(sources)
