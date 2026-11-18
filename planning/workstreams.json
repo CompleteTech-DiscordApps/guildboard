@@ -750,7 +750,7 @@
         [
           [
             "Graceful shutdown and restart behavior",
-            "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry; verify systemd/Compose restart preserves state and avoids duplicate acknowledgments"
+            "Stop new work, drain accepted operations, close sockets with reconnect guidance and flush telemetry; verify systemd/Compose restart preserves state and prevents duplicate logical mutations and revision allocation on retries while allowing the retained result to be delivered again after durable commit under the current read authorization fence"
           ],
           [
             "Performance and capacity planning",
