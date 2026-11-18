@@ -45,8 +45,8 @@ must survive sampling or report missing coverage.
 Metric names use a fixed registry covering board-open/edit/reconnect and probe
 outcomes, operation and journey latency, active sockets/boards, admission and
 output depth/capacity, CPU used/allocatable CPU, resident memory/allocatable
-memory, persistent disk used/usable bytes, database health, backup age and backup
-job outcomes. Permitted dimensions are component, declared signal-specific
+memory, persistent disk used/usable bytes, database health, verified
+recovery-point age and backup job outcomes. Permitted dimensions are component, declared signal-specific
 outcome, and fixed solo/collaborative/unknown or cold/warm/unknown cohorts where
 applicable. No correlation token, per-guild label, raw identifier, profile URL or
 dynamic dimension. The registry must publish units, finite dimension products,
@@ -131,7 +131,7 @@ user journeys.
 | Journey objectives | Separately for board-open, edit and probe, 99.5% good over rolling 30 days. Good board-open by 5 seconds, good edit by 1 second. A closed window strictly below target opens an SRE investigation. At 43,200 scheduled probe minutes, 216 bad still meets the candidate, 217 breaches. | A fresh, complete rolling window for that journey meets the target at the approved minimum volume. |
 | Fast journey and probe detection | Provisional exercise rules: alert after 3 consecutive failed/missing scheduled minutes or 2 consecutive closed 5-minute journey windows with ≥20 eligible observations each and >5% known bad each. Coverage gaps open a separate telemetry incident after 2 consecutive incomplete 5-minute windows. Insufficient traffic yields no rate page. Use the independent probe during low/no traffic. | Fast probe requires a fresh approved run of successful scheduled minutes. Fast journey requires fresh, consecutive, complete windows at approved minimum volumes within the configured bad-rate limit. The coverage incident requires fresh, complete coverage windows. |
 | Latency/capacity | Pilot candidate p95/p99 durable receipt ≤100/250 ms, peer echo ≤250/500 ms, board-open ≤3/5 seconds at declared cohort/profile. Open capacity investigation after two consecutive complete 5-minute in-profile windows breaching either applicable percentile or research headroom (CPU ≥60%, resident memory or persistent disk ≥70%). Report observed counts and test with approved minimum sample sizes. Queue saturation uses the approved queue capacity and explicit rejection counter; no accepted durable work is dropped. | Fresh, consecutive, complete in-profile windows with sufficient samples meet the latency and resource recovery limits. For queue saturation, measured depth meets the approved recovery level and rejection counters show no saturation during the recovery windows. |
-| Backup/recovery | Any failed or interrupted job, missing expected job by approved finish deadline, unverifiable chain or freshness beyond approved maximum opens an operations investigation. Integrity failure, unsafe restore destination or known loss of acknowledged data outside the stated trial boundary escalate immediately. Both job deadline and maximum freshness require T5/T10/SRE approval. | A newly verified job completed on schedule, has an intact chain and meets freshness. For integrity, isolation or acknowledged loss, also require responder acknowledgement and an isolated, independently verified rehearsal with a recorded loss disposition. |
+| Backup/recovery | Any failed or interrupted job, missing expected job by approved finish deadline, unverifiable chain, unavailable verified recovery point or recovery-point age beyond the approved maximum opens an operations investigation. Integrity failure, unsafe restore destination or known loss of acknowledged data outside the stated trial boundary escalate immediately. Both the job deadline and maximum recovery-point age require T5/T10/SRE approval. | A new expected job meets its approved finish deadline, has an intact chain and supplies a fresh, independently verified recoverable point for the affected scope. For integrity, isolation or acknowledged loss, also require responder acknowledgement and an isolated, independently verified rehearsal with a recorded loss disposition. |
 | Restart and disaster drill | Candidate ≤60 seconds from process fault to authorized read/write and peer convergence, with zero acknowledged loss. Disaster hypothesis RPO ≤15 minutes and RTO ≤4 hours for the 30 GiB research workload. Breach either measured objective or fail any mandatory integrity/isolation check to fail the drill. | After remediation, a fresh independent drill of the failed type verifies authorization, integrity and isolation, measures every objective and meets each trial boundary. |
 
 Candidate comparisons use complete, aligned windows and declared minimum volumes.
@@ -148,7 +148,19 @@ observation source against the independently approved rule configuration.
 Evidence must be newer than the last breach, within the configured
 freshness bound, complete, and sufficient for the approved recovery window
 count, duration, and minimum samples. Stale, missing, partial or inapplicable
-evidence keeps the alert open. Suppressing duplicate notifications cannot exclude observations from
+evidence keeps the alert open.
+
+For both backup and backup integrity recovery, record the expected job identity,
+completion time and timestamp of the independently verified recoverable point
+for that job's deployment and profile. Use the job's completion time to check its
+approved finish deadline. Completion must follow the last breach and occur no
+later than the approved evidence observation. Use the evaluation time minus the
+recoverable point timestamp to check the approved maximum recovery-point age.
+The recoverable point must be at or before completion and supported by the job's
+verified database cut, required replay, assets and recoverable keys. An
+unavailable, unverified, stale or out-of-order point keeps either alert open.
+
+Suppressing duplicate notifications cannot exclude observations from
 SLIs. Require approved configuration for evaluation and recovery: enabled state,
 sources, profile, thresholds, sample counts, window lengths, freshness,
 consecutive windows and routing. Validate disabled, malformed, inconsistent
@@ -169,17 +181,17 @@ A backup attempt passes when its authenticated encrypted artifacts are readable
 by the designated recovery role, the consistent database cut has a complete
 required replay range, all asset versions referenced at that cut are included or
 recoverable, and integrity verification is complete. Record job schedule,
-start/end, cut and first/last required replay position, manifest and integrity
-status, off-host availability, and key recovery check. Keep backup/restore roles
-separate from serving credentials. The copy must survive loss of the source
-VPS. Keep independently ordered attempt records with unique generation IDs,
+start/end, verified recovery-point timestamp, cut and first/last required replay
+position, manifest and integrity status, off-host availability, and key recovery
+check. Keep backup/restore roles separate from serving credentials. The copy
+must survive loss of the source VPS. Keep independently ordered attempt records with unique generation IDs,
 verification state, lineage and cut. Report the latest attempt's outcome and
 select the latest verified generation eligible for the affected lineage and
 pre-fault recovery range. An interruption leaves that attempt incomplete until
 revalidation. Recovery can select an earlier eligible verified generation and
 its cut. A missing prerequisite or absence of an eligible verified generation
-blocks the restore. Job completion and backup age are independent of restore
-verdict.
+blocks the restore. Job completion, recovery-point age and restore verdict
+describe independent observations.
 
 Restore rehearsals use fresh isolated resources and synthetic canaries.
 Prove target identity, actual write/read isolation, distinct scoped recovery

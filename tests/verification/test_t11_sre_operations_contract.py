@@ -133,7 +133,7 @@ class OperationsContractTest(unittest.TestCase):
 
     def test_envelope(self):
         self.assertEqual(set(self.fixture), {"schema_version", "log", "alert", "edit", "probe", "reconcile", "recovery",
-                                            "eligibility", "alert_recovery", "configuration", "privacy"})
+                                            "eligibility", "alert_recovery", "backup_alert_recovery", "configuration", "privacy"})
         self.assertIs(type(self.fixture["schema_version"]), int)
         self.assertEqual(self.fixture["schema_version"], 1)
 
@@ -476,9 +476,14 @@ class OperationsContractTest(unittest.TestCase):
             "capacity": {"board_open", "edit", "none"},
         }
         integrity_fields = {"responder_acknowledged", "isolated_rehearsal_verified", "loss_disposition_recorded"}
-        configured_backup_jobs = {("synthetic_vps", "pilot_alpha"): ("new_backup_job", 96, 10)}
+        configured_backup_jobs = {
+            ("synthetic_vps", "pilot_alpha"): {
+                "job": "new_backup_job", "finish_deadline": 96, "max_recovery_point_age": 10,
+            },
+        }
         rules = set()
-        for case in self.cases("alert_recovery", fields):
+        cases = (*self.cases("alert_recovery", fields), *self.cases("backup_alert_recovery", fields))
+        for case in cases:
             with self.subTest(case=case["case"]):
                 scope_fields = {"deployment", "rule", "profile", "journey", "cohort"}
                 for scope in (case["active"], case["evidence"]):
@@ -499,13 +504,21 @@ class OperationsContractTest(unittest.TestCase):
                 else:
                     self.assertIsNone(integrity)
                 backup = case["backup_evidence"]
+                recovery_point = None
                 backup_rule = rule in {"backup", "backup_integrity"}
                 if backup_rule:
                     if backup is not None:
-                        self.assertEqual(set(backup), {"job", "completed_second", "chain_verified"})
+                        self.assertEqual(
+                            set(backup), {"job", "completed_second", "chain_verified", "recovery_point"},
+                        )
                         self.synthetic_identity(backup["job"])
                         self.bounded_integer(backup["completed_second"], 86400)
                         self.assertIs(type(backup["chain_verified"]), bool)
+                        recovery_point = backup["recovery_point"]
+                        if recovery_point is not None:
+                            self.assertEqual(set(recovery_point), {"second", "independently_verified"})
+                            self.bounded_integer(recovery_point["second"], 86400)
+                            self.assertIs(type(recovery_point["independently_verified"]), bool)
                 else:
                     self.assertIsNone(backup)
                 self.assertIn(case["signal"], set(signals.values()) | {None})
@@ -517,11 +530,13 @@ class OperationsContractTest(unittest.TestCase):
                 self.bounded_integer(observed, 86400, nullable=True)
                 schedule = configured_backup_jobs.get((case["active"]["deployment"], case["active"]["profile"]))
                 backup_ready = not backup_rule or (
-                    schedule is not None and backup is not None and backup["job"] == schedule[0]
+                    schedule is not None and backup is not None and backup["job"] == schedule["job"]
                     and backup["chain_verified"] and observed is not None
                     and case["last_breach_second"] < backup["completed_second"] <= observed
-                    and backup["completed_second"] <= schedule[1]
-                    and case["evaluated_second"] - backup["completed_second"] <= schedule[2]
+                    and backup["completed_second"] <= schedule["finish_deadline"]
+                    and recovery_point is not None and recovery_point["independently_verified"]
+                    and recovery_point["second"] <= backup["completed_second"]
+                    and case["evaluated_second"] - recovery_point["second"] <= schedule["max_recovery_point_age"]
                 )
                 clear = (
                     case["approved"] and case["sufficient"] and case["signal"] == signals[rule]
