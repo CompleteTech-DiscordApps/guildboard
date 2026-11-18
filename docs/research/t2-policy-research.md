@@ -270,6 +270,91 @@ errors. `git diff --check origin/main...HEAD` passed against main
 remain dated October 26. This run used local fixtures and exercised no runtime
 transport, database, Discord or GoDaddy service.
 
+## Separate protected-release experiment (2026-11-18 UTC)
+
+The finite offline [release model](../../scripts/research/t2_release_model.py)
+and [10 tests](../../tests/research/test_t2_release_model.py) are separately
+versioned **`t2-release-v1`**. They explore the accepted GB-T0.S1 read-delivery
+fence without changing historical policy-model v1, its retained report, or the
+unresolved T2/T6 role and mode decisions. Source/test commit
+`607ac1e3e8e37f6fac67184df463e619f9eca65a` was tested on Linux x86_64,
+Python 3.12.14. The final PR receipt supplies its full documentation head and
+fresh independent review status; this implementation is not its own review.
+
+Preparation and transport release are distinct abstract steps. The four families
+are a newly committed prepared ACK, retained receipt, digest-dependent conflict,
+and three application-queued protected chunks. Each family is crossed with
+session revocation, session expiry, membership invalidation, scoped read-policy
+loss, evidence expiry, unavailable trusted time and unavailable policy. Every
+cut before/between/after releases is enumerated, including release-before-loss
+positive controls and loss-before-release denials.
+
+| Raw finite result | Count |
+| --- | ---: |
+| Enumerated schedules | 70 |
+| Release points denied after authority loss | 42 |
+| Fully released before authority loss | 28 |
+| Previously released packets preserved across the schedules | 63 |
+| Candidate protected packets released after authority loss | 0 |
+| Unsafe initial-check-only comparator packets released after loss | 42 |
+| Release operations changing committed effect tuples | 0 |
+
+The unsafe comparator deliberately omits only the current release check. Its
+42 exposed synthetic packets are a negative control for this bounded experiment,
+not an exploit reproduction or a measured product vulnerability. Every denied
+release has the same safe public status for the same authority loss regardless
+of whether an ACK, receipt, digest conflict or chunk was prepared. It contains no
+protected packet, receipt existence, digest result, revision or lineage. Denial
+cancels the remaining model queue. Previously emitted packets remain visible.
+The commit-before-revoke case retains its revision/receipt/event/outbox tuple
+when the ACK is suppressed; a same-identity retry after trusted read recovery
+returns the retained outcome without repeating effects. A revoke/stale-generation/
+write-loss-before-commit case allocates no content effects. Readable historical
+receipts and conflicts remain releasable after write permission alone is lost.
+
+These outcomes assume trusted scoped facts, complete historical receipt coverage,
+a single fixed synthetic operation identity, indivisible write/check-and-release
+steps sharing the invalidation ordering, and trusted monotonic integer time.
+Deadlines are arbitrary ticks; expiry is checked at the deadline itself and is
+not a numeric freshness recommendation. No real clock, mutex, database transaction,
+wire serialization, backpressure, multi-worker ordering, queue resource bound,
+audit system or crash recovery is implemented. Unknown restore inventory remains
+outside the experiment and retains the T5/T9 unknown-outcome requirement.
+No external input, network or credential is used by this model. Local evidence
+age cannot bound Discord truth age or external invalidation detection latency.
+
+The following commands all exited **0** at the source/test SHA above:
+
+```sh
+python3 -B -m unittest discover -s tests/research -p test_t2_release_model.py -v
+python3 -B scripts/research/t2_release_model.py
+python3 -B tests/research/t2-test-policy-model.py
+python3 -B scripts/research/t2-policy-model.py
+python3 -B -m unittest discover -s tests/research -v
+python3 -B scripts/github-bootstrap/validate.py
+git diff --check
+```
+
+Focused tests: **10 passed**. Historical policy tests: **17 passed**. Existing
+research discovery: **70 passed**, including the new suite; planning CI already
+runs this discovery, with no workflow change. Historical CLI stdout compared
+byte-for-byte equal to the retained report (SHA-256
+`1826d9f1a64f7672334dce54c47cba81b55d0f771edd465d0dfe230c9db1b757`).
+Planning validation: 471 items, 457 expected native relationships, 600 expected
+dependencies and zero errors. No failed command was observed in this recorded
+run. The intentional stale comparator's nonzero exposure is the expected failure
+outcome of that alternative. This is finite model/fixture evidence, not a proof
+of arbitrary schedules, runtime or production behavior, or acceptance of #66.
+
+Alternatives remain explicit: initial-read-only checking exposes all 42 modeled
+post-loss attempts; recalling emitted bytes is impossible at this boundary;
+rolling back an accepted operation because its ACK is denied contradicts the
+accepted contract. The serialized current-authority fence is the accepted
+invariant explored here. Its actual HTTP/WSS/bot/SQL/storage mechanism, boundary
+placement, authoritative time and freshness budgets require downstream design,
+consumer review and real verification. No new transport or policy architecture
+is selected by this research.
+
 ## Real acceptance and remaining decisions
 
 The October configuration inspection found only `.env.example` under repo/app/
@@ -285,12 +370,13 @@ accepted policy/session/SQL contracts and an approved target remain missing.
 | Required Discord privileges | D1–D6 and least-privilege acquisition comparison | Real token/scope/intent permissions; owner/Admin/Manage Guild, overwritten channels, private threads, deleted/reordered roles and missing bot access |
 | Revocation freshness | Four-part guarantee, expiry/refresh/external-change traces | Measure change-to-observation-to-committed-fence timestamps, clock uncertainty, rate limits, Gateway gap/outage/old refresh behavior; accept numeric budgets |
 | Immediate local fence | Accepted GB-T0.S1 write fence, #489's atomicity caveat and old-generation no-effects trace | Barrier-controlled multi-worker SQL/HTTP/WSS/bot races, commit-before/after, expiry-in-queue, crash/retry and audit atomicity |
-| Tenant/receipt/launch boundaries | Foreign-resource tests, initial-read/old-receipt ordering, #491 distinction | Two-guild/object/storage/broadcast authorization, serialized protected release with no metadata leaks, and independent stronger launch/presence proof if product needs it |
+| Tenant/receipt/launch boundaries | Foreign-resource tests, initial-read/old-receipt ordering, #491 distinction | Two-guild/object/storage/broadcast authorization, real serialized protected release with no metadata leaks (the separate release model is finite only), and independent stronger launch/presence proof if product needs it |
 | Versions/primary URLs/alternatives/uncertainty | Seven dated source hashes and model-v1 environment/report | Actual Security & Authorization/consumer review and accepted specification, not author self-certification |
 
 #67 consumes the proposed policy specification; #35 supplies identity/evidence;
 T4/T5/T8 own commit/receipt enforcement; T6 owns modes; T9 reviews privilege and
 privacy; T10/T12/T13 retain mandatory GoDaddy Linux VPS, real verification and
-release gates. Required current-head Copilot/independent Sol MAX, functional/
-security/consumer and CODEOWNER reviews, hosted CI, merge and post-merge evidence
-remain separate. No acceptance checkbox, native blocker or issue closure changed.
+release gates. For this campaign, fresh independent `gpt-6-astra` at `xhigh`
+functional and defensive reviews at the final full head, consumer and applicable
+CODEOWNER review, hosted CI, merge and post-merge evidence remain separate.
+No acceptance checkbox, native blocker or issue closure changed.
