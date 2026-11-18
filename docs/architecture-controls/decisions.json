@@ -85,6 +85,40 @@
       "test_evidence": [
         "tests/engineering/t9-import-content.test.mjs"
       ]
+    },
+    {
+      "id": "DEC-0006",
+      "revision": 1,
+      "boundary": "apps/api/src/deletion-job.ts",
+      "old_sha256": null,
+      "new_sha256": "40ef0852264455f7e9e215f459727ef33519d1cc85a54c9f02120d3844a87883",
+      "rationale": "Define bounded deletion record, transition and independently verified restore-release decisions behind a trusted authority and marker evidence boundary. Actual retention schedules, storage mutation and atomic fencing require approved adapters.",
+      "alternatives": [
+        "Defer the server decision seam until adapters are verified."
+      ],
+      "controls": [
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t9-deletion-job.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0007",
+      "revision": 1,
+      "boundary": "apps/api/src/index.ts",
+      "old_sha256": "58bf1fae55a3b392bebdf3dc05f77a75a45d771e9aa1f4879b12dbc3bde75c5f",
+      "new_sha256": "eacb721144cf6843aec472e6592ec6540404df5cdcabb3869a79c6934a144168",
+      "rationale": "Expose deletion decision types and pure checks to approved server consumers.",
+      "alternatives": [
+        "Defer the server decision seam until adapters are verified."
+      ],
+      "controls": [
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t9-deletion-job.test.mjs"
+      ]
     }
   ]
 }
