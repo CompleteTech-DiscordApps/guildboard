@@ -8,7 +8,10 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from tempfile import mkdtemp
+from uuid import uuid4
+
+
+_DIRECTORY_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
 
 
 class InvalidConfiguration(ValueError):
@@ -90,18 +93,21 @@ def _preflight(config: HarnessConfig) -> None:
         raise InvalidConfiguration("cleanup_timeout_seconds")
     if not isinstance(config.root, Path) or not config.root.is_absolute():
         raise InvalidConfiguration("root")
+
+
+@contextmanager
+def _private_root(path: Path):
     try:
-        root = config.root.lstat()
+        root_fd = os.open(path, _DIRECTORY_FLAGS)
     except (OSError, ValueError):
         raise InvalidConfiguration("root") from None
-    if (
-        not stat.S_ISDIR(root.st_mode)
-        or root.st_uid != os.geteuid()
-        or stat.S_IMODE(root.st_mode) != 0o700
-    ):
-        raise InvalidConfiguration("root")
-    if config.target == "integration":
-        raise PrerequisiteUnavailable("sql_engine,migrations,api,policy,storage,bot")
+    try:
+        root = os.fstat(root_fd)
+        if root.st_uid != os.geteuid() or stat.S_IMODE(root.st_mode) != 0o700:
+            raise InvalidConfiguration("root")
+        yield root_fd
+    finally:
+        os.close(root_fd)
 
 
 def _make_fixture(seed: int) -> Fixture:
@@ -127,14 +133,18 @@ def _make_fixture(seed: int) -> Fixture:
 
 
 class _FixtureRun:
-    def __init__(self, config: HarnessConfig, fixture: Fixture):
+    def __init__(self, config: HarnessConfig, fixture: Fixture, root_fd: int):
         self.fixture = fixture
         self.clock = FixtureClock()
         self.identity = FakeDiscordIdentity(fixture)
-        self._namespace = Path(mkdtemp(prefix="t12-fixture-", dir=config.root))
         self._cleanup_timeout = config.cleanup_timeout_seconds
         self._worker = None
         self._active = True
+        self._root_fd = root_fd
+        self._namespace_name = f"t12-fixture-{uuid4().hex}"
+        self._namespace = config.root / self._namespace_name
+        os.mkdir(self._namespace_name, mode=0o700, dir_fd=root_fd)
+        self._namespace_fd = os.open(self._namespace_name, _DIRECTORY_FLAGS, dir_fd=root_fd)
 
     @property
     def namespace(self) -> Path:
@@ -149,30 +159,45 @@ class _FixtureRun:
             stdin=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            cwd=self.namespace,
+            cwd=f"/proc/self/fd/{self._namespace_fd}",
+            pass_fds=(self._namespace_fd,),
             env={},
         )
         return self._worker.pid
 
     def _close(self) -> None:
         self._active = False
-        if self._worker is not None:
-            # The process has no descendants and is the only handle we signal.
+        try:
+            if self._worker is not None:
+                # The process has no descendants and is the only handle we signal.
+                try:
+                    self._worker.kill()
+                    self._worker.wait(timeout=self._cleanup_timeout)
+                finally:
+                    self._worker.stdin.close()
+            # A failed reap or unexpected contents leave the namespace for inspection.
             try:
-                self._worker.kill()
-                self._worker.wait(timeout=self._cleanup_timeout)
-            finally:
-                self._worker.stdin.close()
-        # A failed reap or unexpected contents leave the namespace for inspection.
-        self.namespace.rmdir()
+                entry = os.stat(
+                    self._namespace_name, dir_fd=self._root_fd, follow_symlinks=False
+                )
+            except FileNotFoundError:
+                raise RuntimeError("fixture namespace identity changed") from None
+            if not os.path.samestat(os.fstat(self._namespace_fd), entry):
+                raise RuntimeError("fixture namespace identity changed")
+            os.rmdir(self._namespace_name, dir_fd=self._root_fd)
+        finally:
+            os.close(self._namespace_fd)
 
 
 @contextmanager
 def fixture_run(config: HarnessConfig):
     """Open an owned fixture namespace after checking the setup."""
     _preflight(config)
-    run = _FixtureRun(config, _make_fixture(config.seed))
-    try:
-        yield run
-    finally:
-        run._close()
+    with _private_root(config.root) as root_fd:
+        if config.target == "integration":
+            raise PrerequisiteUnavailable("sql_engine,migrations,api,policy,storage,bot")
+        run = _FixtureRun(config, _make_fixture(config.seed), root_fd)
+        try:
+            yield run
+        finally:
+            run._close()

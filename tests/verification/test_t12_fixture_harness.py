@@ -10,6 +10,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from scripts.verification import t12_fixture_harness as harness
 from scripts.verification.t12_fixture_harness import (
     FixtureClock,
     HarnessConfig,
@@ -91,7 +92,7 @@ class FixtureHarnessTests(unittest.TestCase):
     def assert_preflight_rejected(self, config, error, diagnostic, expected_entries=None):
         module = "scripts.verification.t12_fixture_harness"
         with (
-            patch(f"{module}.mkdtemp", side_effect=AssertionError("namespace")) as create,
+            patch.object(os, "mkdir", side_effect=AssertionError("namespace")) as create,
             patch.object(subprocess, "Popen", side_effect=AssertionError("worker")) as worker,
             patch(f"{module}.FakeDiscordIdentity", side_effect=AssertionError("identity")) as identity,
             patch.object(socket, "socket", side_effect=AssertionError("socket")) as connect,
@@ -170,6 +171,48 @@ class FixtureHarnessTests(unittest.TestCase):
             finally:
                 unrelated.stdin.close()
                 unrelated.wait(timeout=5)
+
+    def test_root_replacement_keeps_allocation_worker_and_cleanup_in_pinned_root(self):
+        fixture_root = self.root / "fixture-root"
+        original_root = self.root / "original-root"
+        fixture_root.mkdir(mode=0o700)
+        config = replace(self.config, root=fixture_root)
+        make_fixture = harness._make_fixture
+
+        def replace_root(seed):
+            fixture_root.rename(original_root)
+            fixture_root.mkdir(mode=0o700)
+            return make_fixture(seed)
+
+        with patch.object(harness, "_make_fixture", side_effect=replace_root):
+            with fixture_run(config) as run:
+                original_namespace = original_root / run.namespace.name
+                self.assertTrue(original_namespace.is_dir())
+                run.namespace.mkdir(mode=0o700)
+                replacement_sentinel = fixture_root / "replacement-sentinel"
+                replacement_sentinel.write_bytes(b"replacement")
+                pid = run.start_worker()
+                self.assertTrue(Path(f"/proc/{pid}/cwd").samefile(original_namespace))
+        self.assertFalse(original_namespace.exists())
+        self.assertTrue(run.namespace.is_dir())
+        self.assertEqual(replacement_sentinel.read_bytes(), b"replacement")
+        self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+
+    def test_namespace_replacement_preserves_both_directories_and_reaps_worker(self):
+        original_namespace = self.root / "original-namespace"
+        with (
+            self.assertRaisesRegex(RuntimeError, "^fixture namespace identity changed$"),
+            fixture_run(self.config) as run,
+        ):
+            run.namespace.rename(original_namespace)
+            run.namespace.mkdir(mode=0o700)
+            pid = run.start_worker()
+            self.assertTrue(Path(f"/proc/{pid}/cwd").samefile(original_namespace))
+        with self.assertRaises(ChildProcessError):
+            os.waitpid(pid, os.WNOHANG)
+        self.assertEqual(tuple(original_namespace.iterdir()), ())
+        self.assertEqual(tuple(run.namespace.iterdir()), ())
+        self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
 
     def test_untracked_contents_surface_cleanup_failure_and_are_preserved(self):
         with self.assertRaises(OSError), fixture_run(self.config) as run:
