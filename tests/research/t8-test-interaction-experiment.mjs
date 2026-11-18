@@ -87,6 +87,79 @@ test('body type, size, malformed JSON and invalid UTF-8 deny', () => {
   deniedWithoutEffects(signed(Buffer.from([0xff])), 'invalid_json');
 });
 
+test('repeated top-level members deny before provenance or invocation admission', () => {
+  const raw = JSON.stringify(payload());
+  for (const members of ['"context":1,"context":0', '"context":0,"context":1']) {
+    const request = signed(Buffer.from(raw.replace('"context":0', members)));
+    deniedWithoutEffects(request, 'invalid_json');
+    const authority = state();
+    assert.equal(dispatch(signed(), pair.publicKey, authority).result, 'new_receipt');
+    deniedWithoutEffects(request, 'invalid_json', authority);
+    authority.read = false;
+    deniedWithoutEffects(request, 'invalid_json', authority);
+  }
+});
+
+test('repeated nested members deny even in ignored objects and arrays', () => {
+  const raw = JSON.stringify(payload());
+  const bodies = [
+    raw.replace('"permissions":"32"', '"permissions":"8","permissions":"32"'),
+    raw.replace('"name":"board-lock"', '"name":"other","name":"board-lock"'),
+    raw.replace('"roles":[]', '"roles":[],"roles":[]'),
+    raw.replace('"context":0', '"context":0,"extra":[{"note":1,"note":2}]'),
+  ];
+  for (const body of bodies) deniedWithoutEffects(signed(Buffer.from(body)), 'invalid_json');
+});
+
+test('escaped-equivalent member names are duplicates in their own object', () => {
+  const raw = JSON.stringify(payload());
+  const bodies = [
+    raw.replace('"context":0', '"context":0,"con\\u0074ext":0'),
+    raw.replace('"permissions":"32"', '"permissions":"32","permiss\\u0069ons":"32"'),
+    raw.replace('"context":0', '"context":0,"extra":{"\\u65e5":1,"日":2}'),
+    raw.replace('"context":0', '"context":0,"extra":{"a\\\\b":1,"a\\u005cb":2}'),
+  ];
+  for (const body of bodies) deniedWithoutEffects(signed(Buffer.from(body)), 'invalid_json');
+});
+
+test('sibling names and escaped punctuation in string values remain valid', () => {
+  const request = signed(payload({ extra: {
+    left: { note: '"context":0,{[]}\\日本語' },
+    right: [{ note: '"context":0' }, { note: '\\"\\' }],
+    'a"b': 'colon: braces{} brackets[]',
+  } }));
+  assert.equal(authenticate(request, pair.publicKey).ok, true);
+  const authority = state();
+  assert.equal(dispatch(request, pair.publicKey, authority).result, 'new_receipt');
+  assert.equal(authority.effects, 1);
+  assert.equal(authority.audit, 1);
+});
+
+test('malformed nesting and truncated or invalid string tokens deny without admission', () => {
+  for (const body of ['}', '[}', '{]', '{"a":[}', '{"a":{"b":1}',
+    '{"a":"unfinished', '{"a\\q":1}', '{"a":1,}', '["a":1]',
+    '['.repeat(1000), '['.repeat(1000) + ']'.repeat(999) + '}']) {
+    deniedWithoutEffects(signed(Buffer.from(body)), 'invalid_json');
+  }
+});
+
+test('member scanning keeps the existing byte bound without adopting a depth profile', () => {
+  const raw = JSON.stringify(payload()).replace('"context":0',
+    '"context":0,"extra":' + '['.repeat(1000) + '0' + ']'.repeat(1000));
+  const atLimit = Buffer.from(raw + ' '.repeat(FIXTURE.maxBodyBytes - Buffer.byteLength(raw)));
+  assert.equal(atLimit.length, FIXTURE.maxBodyBytes);
+  assert.equal(authenticate(signed(atLimit), pair.publicKey).ok, true);
+  deniedWithoutEffects(signed(Buffer.concat([atLimit, Buffer.from(' ')])), 'body_too_large');
+});
+
+test('original-byte signature verification still precedes repeated-member detection', () => {
+  const request = signed();
+  const duplicateRaw = Buffer.from(request.raw.toString().replace('"context":0',
+    '"context":1,"context":0'));
+  deniedWithoutEffects({ ...request, raw: duplicateRaw }, 'bad_signature');
+  deniedWithoutEffects(signed(duplicateRaw), 'invalid_json');
+});
+
 test('signed stale/future requests deny; synthetic exact window edges accept', () => {
   deniedWithoutEffects(signed(payload(), String(FIXTURE.now - FIXTURE.maxAgeSeconds - 1)), 'outside_fixture_window');
   deniedWithoutEffects(signed(payload(), String(FIXTURE.now + FIXTURE.futureSkewSeconds + 1)), 'outside_fixture_window');
