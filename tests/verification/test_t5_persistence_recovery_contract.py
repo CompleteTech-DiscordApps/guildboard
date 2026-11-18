@@ -207,6 +207,7 @@ class CommitWitness:
 
 
 MODEL_STORE = object()
+MODEL_LINEAGE = object()
 
 
 def model_witness(case, history, revision):
@@ -217,7 +218,7 @@ def model_witness(case, history, revision):
 
 
 def command_result(case, receipts=ORIGINAL_RECEIPTS, history=History(), witness=MODEL_STORE, *,
-                   revision=8, release_denial="NOT_FOUND", write_fence=True, receipt_lineage=None):
+                   revision=8, release_denial="NOT_FOUND", write_fence=True, receipt_lineage=MODEL_LINEAGE):
     """Evaluate one decision without modifying the supplied receipt store."""
     if not case.valid:
         return "INVALID_MESSAGE", []
@@ -231,8 +232,10 @@ def command_result(case, receipts=ORIGINAL_RECEIPTS, history=History(), witness=
         digest, revision = existing
         if case.digest != digest:
             outcome = "IDEMPOTENCY_CONFLICT"
+        elif receipt_lineage is None:
+            outcome = "DEPENDENCY_UNAVAILABLE"
         else:
-            current_lineage = active_lineage if receipt_lineage is None else receipt_lineage
+            current_lineage = active_lineage if receipt_lineage is MODEL_LINEAGE else receipt_lineage
             receipt_kind = "CURRENT" if case.lineage == current_lineage else "HISTORICAL"
             outcome = f"ACK_{receipt_kind}_{revision}"
     elif not write_fence:
@@ -516,7 +519,8 @@ class ContractScenarios(unittest.TestCase):
 
     def test_lost_restore_ack_returns_former_lineage_receipt_without_republishing(self):
         command = replace(RESTORE_COMMAND, lost_ack=True)
-        outcome, effects, published = restore_attempt(Restore(), command, allocator=AllocatorAuthority())
+        allocator = AllocatorAuthority()
+        outcome, effects, published = restore_attempt(Restore(), command, allocator=allocator)
         self.assertEqual(outcome, "NO_RELEASE")
         self.assertEqual(effects, ["state", "lineage", "policy", "event", "receipt",
                                    "outbox", "audit", "shape-b", "asset-b"])
@@ -533,9 +537,9 @@ class ContractScenarios(unittest.TestCase):
 
         reopened = replace(published, history=published.history.restart())
         retry = replace(command, lost_ack=False, write=False, policy_current=False)
-        self.assertEqual(restore_attempt(Restore(), retry, reopened),
+        self.assertEqual(restore_attempt(Restore(), retry, reopened, allocator=allocator),
                          ("ACK_HISTORICAL_8", [], reopened))
-        self.assertEqual(restore_attempt(Restore(), replace(retry, release=False), reopened),
+        self.assertEqual(restore_attempt(Restore(), replace(retry, release=False), reopened, allocator=allocator),
                          ("NOT_FOUND", [], reopened))
         self.assertEqual(restore_attempt(Restore(), replace(command, release=False, lost_ack=False),
                                          allocator=AllocatorAuthority()),
@@ -591,8 +595,8 @@ class ContractScenarios(unittest.TestCase):
             transaction, transaction, transaction,
         )
         self.assertEqual(reopened.artifacts, (*after_first.artifacts, second_artifacts))
-        self.assertEqual(restore_attempt(Restore(), first, reopened), ("ACK_HISTORICAL_8", [], reopened))
-        self.assertEqual(restore_attempt(second_case, second, reopened), ("ACK_HISTORICAL_1", [], reopened))
+        self.assertEqual(restore_attempt(Restore(), first, reopened, allocator=allocator), ("ACK_HISTORICAL_8", [], reopened))
+        self.assertEqual(restore_attempt(second_case, second, reopened, allocator=allocator), ("ACK_HISTORICAL_1", [], reopened))
 
     def test_disaster_applied_cut_requires_bound_recovered_projection(self):
         valid = Disaster()
@@ -738,8 +742,16 @@ class ContractScenarios(unittest.TestCase):
                 self.assertEqual(restore_attempt(restore, replace(command, release=False), stale_state, fresh,
                                                  allocator=allocator), ("NOT_FOUND", [], stale_state))
                 self.assertEqual(allocator, before)
-        self.assertEqual(restore_attempt(restore, Command(), state, fresh, allocator=allocator),
-                         ("ACK_HISTORICAL_7", [], state))
+        for source, expected in (
+            (allocator, "ACK_HISTORICAL_7"),
+            (None, "DEPENDENCY_UNAVAILABLE"),
+            (replace(allocator, current=False), "DEPENDENCY_UNAVAILABLE"),
+        ):
+            with self.subTest(receipt_authority=source):
+                self.assertEqual(restore_attempt(restore, Command(), state, fresh, allocator=source),
+                                 (expected, [], state))
+                self.assertEqual(restore_attempt(restore, Command(release=False), state, fresh,
+                                                 allocator=source), ("NOT_FOUND", [], state))
 
         # Fork the authority fixture to exercise two alternative cutovers.
         restore_allocator = replace(allocator)
@@ -769,8 +781,9 @@ class ContractScenarios(unittest.TestCase):
         restore = Restore(target_lineage="lineage-c")
         reservation = allocator.reservation("guild-a", "board-a", "lineage-c")
         witness = model_witness(command, history, revision=8)
+        committed_allocator = replace(allocator)
         outcome, effects, committed = restore_attempt(restore, command, state, reservation, witness,
-                                                       allocator=replace(allocator))
+                                                       allocator=committed_allocator)
         self.assertEqual(outcome, "RESTORED")
         self.assertTrue(effects)
         artifact, = committed.artifacts
@@ -811,7 +824,8 @@ class ContractScenarios(unittest.TestCase):
                 self.assertEqual(restore_attempt(restore, replace(command, release=False), state,
                                                  reservation, unproven, allocator=replace(allocator)),
                                  ("NOT_FOUND", effects, committed))
-                self.assertEqual(restore_attempt(restore, command, committed, reservation, None),
+                self.assertEqual(restore_attempt(restore, command, committed, reservation, None,
+                                                 allocator=committed_allocator),
                                  ("ACK_HISTORICAL_8", [], committed))
 
     def load_inputs(self, model, inputs):
