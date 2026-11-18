@@ -28,6 +28,7 @@ command, event and receipt wire shapes remain T0 v1.
 | Policy and grants | PK under `(guildId, boardId)` with trusted subject and policy-rule/grant ID. Board FK, versioned rule, expiry where applicable. Authoritative changes advance the board fence atomically. |
 | Lineage | PK `(guildId, boardId, lineageId)`, board FK, immutable origin (creation, document restore or disaster promotion), optional parent lineage and source checkpoint with full scope, and initial/final cut when known. Retired lineages remain resolvable through retained references. |
 | Accepted event | PK `(guildId, boardId, lineageId, revision)`, scoped lineage FK, command identity FK to receipt, event version, kind and deterministic canonical payload. v1 allocates one revision per atomic accepted operation, never per element or delivery. |
+| Receipt coverage | PK under `(guildId, boardId)` with authoritative recovery generation and proof ID. Track the recovery cut and provenance, complete retired-lineage coverage when established, and an unknown default for historical lineages not proven complete after disaster. Publish with the active lineage. |
 | Receipt | PK `(guildId, boardId, lineageId, actorUserId, operationId)`, scoped lineage FK, canonical digest including its codec version, original receipt and unique scoped accepted revision. No FK to a compactable event. Retain evidence across every retained lineage. |
 | Outbox | PK scoped accepted event revision, event FK, bounded delivery state. Only committed events are eligible for delivery. Retain events referenced by unfinished outbox work. |
 | Snapshot/checkpoint | PK `(guildId, boardId, lineageId, snapshotId)`, lineage FK, cut revision, format/codec version, canonical digest, byte length, finalized object reference, immutable asset manifest and optional authorized checkpoint label/attribution. |
@@ -56,9 +57,13 @@ fence. Stop startup or remain isolated when schema, migration identity or
 compatible binary set cannot be verified. Use expansion compatible with still
 running versions, followed by bounded resumable backfill with scoped durable
 progress. Verify nullability, uniqueness and tenant FKs, canonical data and
-receipt identities before activation. Concurrent writes must use a compatible
-write path or be fenced. Switch only when all active binaries support the target.
-Contract only after old processes are fenced and a verified recovery path exists.
+receipt identities before activation. Compatible old readers and writers may continue during additive expansion and
+backfill if their paths preserve both versions' invariants and backfill
+progress. Fence incompatible paths before they can write. Activate only when
+all serving binaries support the target. Before destructive contraction,
+durably fence every old process that can access the removed representation and
+verify the compatible forward-repair or isolated-restore path. A resumed
+contraction must establish those prerequisites again before serving.
 
 An interrupted step is retried idempotently after checking its recorded progress
 and actual effects, including a crash between DDL and journal advancement.
@@ -86,7 +91,7 @@ the supported path.
    authorization at release. A denied request exposes a receipt-independent
    result under T9.
 3. An absent receipt for an inactive lineage normally gets `LINEAGE_CHANGED`.
-   During disaster reconciliation apply §5's uncertainty rule first. A new
+   Apply §5's persisted receipt-coverage rule before concluding absence. A new
    active-lineage operation requires current write authority, current policy
    generation, eligible lifecycle, object/version preconditions and quota.
 4. In one durable transaction commit canonical state, revision, event, receipt,
@@ -154,16 +159,43 @@ measured operating-envelope evidence.
 
 | Boundary | Cutover and outcome |
 | --- | --- |
-| Ordinary process restart | Reopen the same authoritative storage generation and lineage after schema/integrity validation. Recover committed state/outbox and resolve uncertain outcomes with retained receipts or safe same-identity retry. Keep the accepted revision monotonic. |
-| Board document restore | Authorize current write and restore privilege, verified source checkpoint and assets. Serialize against writers and deletion; publish a fresh lineage at its verified baseline revision 0 and a higher policy generation, source checkpoint, prior recoverable head, restored state and scoped audit atomically. Retain all original scoped receipts. The publication is a durable visibility transition; old delivery is fenced. Old matching receipts settle their original acceptance only; a mismatch is a conflict and old absent receipt gets lineage change. Rejoin before rendering the new accepted state. |
+| Ordinary process restart | Reopen the same authoritative storage generation and lineage after schema/integrity validation. Reopen persisted coverage together with committed state/outbox and resolve uncertain outcomes using the same identity under the rules below. Keep the accepted revision monotonic. |
+| Board document restore | Authorize current write and restore privilege, verified source checkpoint and assets. Reconcile the source against current T9 fences under cutover; publish a fresh lineage at its verified baseline revision 0 and a higher policy generation, source checkpoint, prior recoverable head, restored state and scoped audit atomically. Retain all original scoped receipts and their coverage provenance. The publication is a durable visibility transition; old delivery is fenced. Old matching receipts settle their original acceptance only; a mismatch is a conflict and an absent retired receipt follows the persisted coverage rule below. Rejoin before rendering the new accepted state. |
 | Disaster recovery | Restore the manifest, SQL/logs and pinned assets to an isolated generation. Record the actual recovered cut and independently verify integrity and T9 exposure prerequisites. Fence the prior serving generation and use fresh lineage identifiers and current policy fences before admitting new writes. Persist the cut and provenance of any incomplete historical receipt coverage. Matching retained receipts settle original acceptance after current read checks. For a missing pre-recovery receipt without affirmative completeness proof for that operation's history, keep its outcome unknown (`DEPENDENCY_UNAVAILABLE`); this applies even to an unrecognized historical lineage. Never manufacture a receipt or reapply old intent. With proven complete receipt coverage an absent retired identity follows `LINEAGE_CHANGED`. |
 
-Normal restart cannot repair an older backup cut. A document restore preserves
-receipt history and cannot cross guild/board or expose an already fenced target.
+Normal restart reopens the persisted active lineage and receipt coverage as one
+authoritative state. A document restore changes the document and active lineage
+while preserving all existing receipt evidence and uncertainty. Its source
+checkpoint provides content only. The previously active lineage is complete if
+its full accepted receipt history was retained through retirement. A later
+disaster promotion must preserve inherited gaps and add any new gaps from its
+actual recovered cut, including omitted lineages. Compare recovery evidence to
+independently verified cut and provenance before carrying forward a completeness
+claim. A newer checkpoint, restart, document restore or promotion does not by
+itself close a gap. Persist that state atomically with the new active lineage
+before serving. Absent inactive identities return `LINEAGE_CHANGED` when
+coverage is affirmatively complete for that history. With uncertain coverage
+after any disaster they return T0's safe `DEPENDENCY_UNAVAILABLE` and remain
+unknown. Matching retained receipts and digest conflicts take precedence and
+all outcomes remain subject to current read and release authorization.
+
 A disaster cut may lose acknowledged writes after the recovered cut. T7 keeps
 those pending outcomes unresolved and offers deliberate reconciliation, with a
 new identity only for a separately authorized new intent after rejoin. A receipt
 from any retired lineage does not mark active content saved.
+
+A document restore can use a source only within the verified guild and board.
+A fence on the whole target prevents publication. A still-live board can have
+subject data fenced after the checkpoint was recorded. Before publishing its
+new lineage, verify T9 marker coverage from the source cut through the current
+cutover fence and reconcile content, assets, exports and every scoped reference.
+Remove fenced content and references to it from the publishable projection,
+including references whose own attribution survives. Verify canonical state,
+hash and surviving asset reachability for that projection. If coverage or safe
+projection cannot be established, reject the restore with no publication.
+Serialize reconciliation and publication with the board's writers and T9
+deletion ordering, or recheck and reconcile under an equivalent fence. A new
+marker between preparation and publication must be applied before visibility.
 
 The disaster backup manifest records generation, engine/tool/schema/codec
 versions, board lineage/cuts, SQL/log-chain coordinates, object IDs/digests/lengths,

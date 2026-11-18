@@ -1,6 +1,6 @@
 """Offline contract vectors for GB-T5.S1. No application or engine is invoked."""
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 import json
 from pathlib import Path
 import unittest
@@ -28,6 +28,28 @@ class Command:
     capacity: bool = True
     commit: str = "durable"
     lost_ack: bool = False
+
+
+@dataclass(frozen=True)
+class History:
+    active: str = "lineage-a"
+    disaster_seen: bool = False
+    complete_retired: frozenset = frozenset()
+
+    def restart(self):
+        return replace(self)
+
+    def restore(self, new_lineage):
+        return replace(self, active=new_lineage,
+                       complete_retired=self.complete_retired | {self.active})
+
+    def promote(self, new_lineage, proven_complete):
+        previously_complete = self.complete_retired | {self.active}
+        return History(new_lineage, True, previously_complete & proven_complete)
+
+
+@dataclass(frozen=True)
+class CommandScenario(Command):
     recovery: str = "restart"
     complete_history: bool = False
 
@@ -49,6 +71,7 @@ class Snapshot:
 
 @dataclass(frozen=True)
 class Migration:
+    journal: str = "planned"
     catalog: str = "prior"
     digest_matches: bool = True
     journal_matches: bool = True
@@ -86,6 +109,11 @@ class Restore:
     generation_current: bool = True
     audit_ready: bool = True
     commit: bool = True
+    source_deletion_cut: int = 4
+    current_watermark: int = 6
+    markers: tuple = (5, 6)
+    exposure_fence: bool = True
+    coverage_independent: bool = True
 
 
 EFFECTS = ["state", "event", "receipt", "outbox", "quota", "audit"]
@@ -98,7 +126,7 @@ def identity(case):
     return case.guild, case.board, case.lineage, case.actor, case.operation
 
 
-def command_result(case, receipts=ORIGINAL_RECEIPTS):
+def command_result(case, receipts=ORIGINAL_RECEIPTS, history=History()):
     """Evaluate one decision without modifying the supplied receipt store."""
     if not case.valid:
         return "INVALID_MESSAGE", []
@@ -106,7 +134,7 @@ def command_result(case, receipts=ORIGINAL_RECEIPTS):
         return "NOT_FOUND", []
 
     existing = receipts.get(identity(case))
-    active_lineage = "lineage-a" if case.recovery == "restart" else "lineage-b"
+    active_lineage = history.active
     effects = []
     if existing is not None:
         digest, revision = existing
@@ -116,7 +144,7 @@ def command_result(case, receipts=ORIGINAL_RECEIPTS):
             receipt_kind = "CURRENT" if case.lineage == active_lineage else "HISTORICAL"
             outcome = f"ACK_{receipt_kind}_{revision}"
     elif case.lineage != active_lineage:
-        incomplete = case.recovery == "disaster" and not case.complete_history
+        incomplete = history.disaster_seen and case.lineage not in history.complete_retired
         outcome = "DEPENDENCY_UNAVAILABLE" if incomplete else "LINEAGE_CHANGED"
     elif not case.write:
         return "FORBIDDEN", []
@@ -134,6 +162,16 @@ def command_result(case, receipts=ORIGINAL_RECEIPTS):
     return (outcome if case.release else "NOT_FOUND"), effects
 
 
+def command_scenario_result(case):
+    history = History()
+    if case.recovery == "document":
+        history = history.restore("lineage-b")
+    elif case.recovery == "disaster":
+        proven_complete = {"lineage-a"} if case.complete_history else set()
+        history = history.promote("lineage-b", proven_complete)
+    return command_result(case, history=history)
+
+
 def snapshot_result(case):
     verified = (
         case.same_scope and case.same_lineage and case.consistent_cut
@@ -144,14 +182,25 @@ def snapshot_result(case):
     return ("PROMOTED", ["snapshot"]) if verified else ("ISOLATED", [])
 
 
+MIGRATION_STEPS = {
+    "planned": ("prior", "expanded", "EXPANDED", "schema"),
+    "expanded": ("expanded", "backfilled", "BACKFILLED", "data"),
+    "backfilled": ("backfilled", "verified", "VERIFIED", None),
+    "verified": ("verified", "activated", "ACTIVATED", "activation"),
+    "activated": ("activated", "contracted", "CONTRACTED", "schema"),
+}
+
+
 def migration_result(case):
-    if not all((case.digest_matches, case.journal_matches, case.compatible,
-                case.verified, case.old_writer_fenced, case.recoverable)):
+    if not all((case.digest_matches, case.journal_matches, case.compatible, case.verified)):
         return "FENCED", []
-    if case.catalog == "expanded":
+    if case.journal == "activated" and not (case.old_writer_fenced and case.recoverable):
+        return "FENCED", []
+    before, after, outcome, effect = MIGRATION_STEPS[case.journal]
+    if case.catalog == before:
+        return outcome, [effect, "journal"] if effect else ["journal"]
+    if case.catalog == after:
         return "RESUMED", ["journal"]
-    if case.catalog == "prior":
-        return "EXPANDED", ["schema", "journal"]
     return "FENCED", []
 
 
@@ -168,17 +217,42 @@ def disaster_result(case):
     return ("EXPOSED", ["exposure"]) if verified else ("ISOLATED", [])
 
 
+# Synthetic checkpoint rows, with T9 subject attribution and reference targets.
+SOURCE_CONTENT = {"shape-a": "subject-a", "shape-b": "subject-b"}
+SOURCE_REFERENCES = {
+    "asset-a": ("subject-a", "shape-b"),
+    "asset-b": ("subject-b", "shape-b"),
+    "history-a": ("subject-b", "shape-a"),
+}
+MARKER_SUBJECTS = {5: "subject-a", 6: "subject-c", 7: "subject-b"}
+
+
+def restore_projection(case):
+    if not all((case.same_scope, case.authorized, not case.deleted,
+                case.assets_verified, case.generation_current, case.audit_ready,
+                case.commit, case.exposure_fence, case.coverage_independent,
+                case.source_deletion_cut <= case.current_watermark,
+                case.markers == tuple(range(case.source_deletion_cut + 1,
+                                            case.current_watermark + 1)),
+                all(marker in MARKER_SUBJECTS for marker in case.markers))):
+        return None
+    fenced_subjects = {MARKER_SUBJECTS[marker] for marker in case.markers}
+    content = {row for row, subject in SOURCE_CONTENT.items() if subject not in fenced_subjects}
+    references = {row for row, (subject, target) in SOURCE_REFERENCES.items()
+                  if subject not in fenced_subjects and target in content}
+    return sorted(content), sorted(references)
+
+
 def restore_result(case):
-    verified = all((case.same_scope, case.authorized, not case.deleted,
-                    case.assets_verified, case.generation_current,
-                    case.audit_ready, case.commit))
-    if not verified:
+    projection = restore_projection(case)
+    if projection is None:
         return "REJECTED", []
-    return "RESTORED", ["state", "lineage", "policy", "audit"]
+    content, references = projection
+    return "RESTORED", ["state", "lineage", "policy", "audit", *content, *references]
 
 
 MODELS = {
-    "command": (Command, command_result),
+    "command": (CommandScenario, command_scenario_result),
     "snapshot": (Snapshot, snapshot_result),
     "migration": (Migration, migration_result),
     "disaster": (Disaster, disaster_result),
@@ -229,6 +303,40 @@ class ContractScenarios(unittest.TestCase):
                 expected = ("ACK_CURRENT_8", []) if committed else ("ACK_NEW", EFFECTS)
                 self.assertEqual(command_result(retry, reopened), expected)
 
+    def test_disaster_coverage_survives_restart_restore_and_later_disasters(self):
+        history = History().promote("lineage-b", set())
+        missing = Command(operation="operation-lost")
+        unrecognized = Command(lineage="lineage-lost")
+        unknown = ("DEPENDENCY_UNAVAILABLE", [])
+        self.assertEqual(command_result(Command(), history=history), ("ACK_HISTORICAL_7", []))
+        self.assertEqual(command_result(missing, history=history), unknown)
+        history = history.restart()
+        self.assertEqual(history.active, "lineage-b")
+        self.assertEqual(command_result(unrecognized, history=history), unknown)
+        current = Command(lineage=history.active, operation="operation-in-b")
+        receipts = {**ORIGINAL_RECEIPTS, identity(current): (current.digest, 1)}
+        self.assertEqual(command_result(current, receipts, history), ("ACK_CURRENT_1", []))
+
+        self.assertEqual(restore_projection(Restore()), (["shape-b"], ["asset-b"]))
+        history = history.restore("lineage-c").restart()
+        self.assertEqual(history.active, "lineage-c")
+        self.assertEqual(command_result(current, receipts, history), ("ACK_HISTORICAL_1", []))
+        self.assertEqual(command_result(missing, receipts, history), unknown)
+        self.assertEqual(command_result(unrecognized, receipts, history), unknown)
+        absent_b = replace(current, operation="absent-in-b")
+        self.assertEqual(command_result(absent_b, receipts, history), ("LINEAGE_CHANGED", []))
+
+        # The later recovered cut proves B complete but omits a suffix of C.
+        history = history.promote("lineage-d", {"lineage-b"}).restart()
+        self.assertEqual(command_result(absent_b, receipts, history), ("LINEAGE_CHANGED", []))
+        self.assertEqual(command_result(missing, receipts, history), unknown)
+        self.assertEqual(command_result(unrecognized, receipts, history), unknown)
+        self.assertEqual(command_result(Command(lineage="lineage-c"), receipts, history), unknown)
+        self.assertEqual(command_result(replace(missing, release=False), receipts, history),
+                         ("NOT_FOUND", []))
+        self.assertEqual(command_result(Command(lineage=history.active), receipts, history),
+                         ("ACK_NEW", EFFECTS))
+
     def load_inputs(self, model, inputs):
         self.assertIs(type(inputs), dict)
         defaults = {field.name: field.default for field in fields(model)}
@@ -252,7 +360,11 @@ class ContractScenarios(unittest.TestCase):
                 enum = {
                     "commit": {"durable", "rollback", "unknown_committed", "unknown_rolled_back"},
                     "recovery": {"restart", "document", "disaster"},
-                    "catalog": {"prior", "expanded", "unrecognized"},
+                    "catalog": {
+                        "prior", "expanded", "backfilled", "verified", "activated",
+                        "contracted", "unrecognized",
+                    },
+                    "journal": MIGRATION_STEPS.keys(),
                 }.get(key)
                 if enum is not None:
                     self.assertIn(value, enum)

@@ -301,8 +301,9 @@
       "kind": "command",
       "inputs": {
         "recovery": "disaster",
-        "lineage": "lineage-lost",
-        "complete_history": true
+        "lineage": "lineage-a",
+        "complete_history": true,
+        "operation": "absent-proven"
       },
       "outcome": "LINEAGE_CHANGED",
       "effects": []
@@ -432,7 +433,9 @@
     {
       "id": "M01",
       "kind": "migration",
-      "inputs": {},
+      "inputs": {
+        "old_writer_fenced": false
+      },
       "outcome": "EXPANDED",
       "effects": [
         "schema",
@@ -443,7 +446,8 @@
       "id": "M02",
       "kind": "migration",
       "inputs": {
-        "catalog": "expanded"
+        "catalog": "expanded",
+        "old_writer_fenced": false
       },
       "outcome": "RESUMED",
       "effects": [
@@ -481,7 +485,9 @@
       "id": "M06",
       "kind": "migration",
       "inputs": {
-        "old_writer_fenced": false
+        "old_writer_fenced": false,
+        "journal": "activated",
+        "catalog": "activated"
       },
       "outcome": "FENCED",
       "effects": []
@@ -490,7 +496,9 @@
       "id": "M07",
       "kind": "migration",
       "inputs": {
-        "recoverable": false
+        "recoverable": false,
+        "journal": "activated",
+        "catalog": "activated"
       },
       "outcome": "FENCED",
       "effects": []
@@ -500,6 +508,103 @@
       "kind": "migration",
       "inputs": {
         "verified": false
+      },
+      "outcome": "FENCED",
+      "effects": []
+    },
+    {
+      "id": "M09",
+      "kind": "migration",
+      "inputs": {
+        "journal": "activated",
+        "catalog": "activated"
+      },
+      "outcome": "CONTRACTED",
+      "effects": [
+        "schema",
+        "journal"
+      ]
+    },
+    {
+      "id": "M10",
+      "kind": "migration",
+      "inputs": {
+        "journal": "activated",
+        "catalog": "contracted"
+      },
+      "outcome": "RESUMED",
+      "effects": [
+        "journal"
+      ]
+    },
+    {
+      "id": "M11",
+      "kind": "migration",
+      "inputs": {
+        "journal": "activated",
+        "catalog": "contracted",
+        "recoverable": false
+      },
+      "outcome": "FENCED",
+      "effects": []
+    },
+    {
+      "id": "M12",
+      "kind": "migration",
+      "inputs": {
+        "journal": "activated",
+        "catalog": "contracted",
+        "old_writer_fenced": false
+      },
+      "outcome": "FENCED",
+      "effects": []
+    },
+    {
+      "id": "M13",
+      "kind": "migration",
+      "inputs": {
+        "journal": "expanded",
+        "catalog": "expanded",
+        "old_writer_fenced": false
+      },
+      "outcome": "BACKFILLED",
+      "effects": [
+        "data",
+        "journal"
+      ]
+    },
+    {
+      "id": "M14",
+      "kind": "migration",
+      "inputs": {
+        "journal": "backfilled",
+        "catalog": "backfilled"
+      },
+      "outcome": "VERIFIED",
+      "effects": [
+        "journal"
+      ]
+    },
+    {
+      "id": "M15",
+      "kind": "migration",
+      "inputs": {
+        "journal": "verified",
+        "catalog": "verified"
+      },
+      "outcome": "ACTIVATED",
+      "effects": [
+        "activation",
+        "journal"
+      ]
+    },
+    {
+      "id": "M16",
+      "kind": "migration",
+      "inputs": {
+        "journal": "verified",
+        "catalog": "verified",
+        "compatible": false
       },
       "outcome": "FENCED",
       "effects": []
@@ -620,7 +725,9 @@
         "state",
         "lineage",
         "policy",
-        "audit"
+        "audit",
+        "shape-b",
+        "asset-b"
       ]
     },
     {
@@ -673,6 +780,61 @@
       "kind": "restore",
       "inputs": {
         "commit": false
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    },
+    {
+      "id": "R08",
+      "kind": "restore",
+      "inputs": {
+        "current_watermark": 7
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    },
+    {
+      "id": "R09",
+      "kind": "restore",
+      "inputs": {
+        "exposure_fence": false
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    },
+    {
+      "id": "R10",
+      "kind": "restore",
+      "inputs": {
+        "coverage_independent": false
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    },
+    {
+      "id": "R11",
+      "kind": "restore",
+      "inputs": {
+        "current_watermark": 7,
+        "markers": [
+          5,
+          6,
+          7
+        ]
+      },
+      "outcome": "RESTORED",
+      "effects": [
+        "state",
+        "lineage",
+        "policy",
+        "audit"
+      ]
+    },
+    {
+      "id": "R12",
+      "kind": "restore",
+      "inputs": {
+        "assets_verified": false
       },
       "outcome": "REJECTED",
       "effects": []
