@@ -398,6 +398,18 @@ Its actual PR-head outcome and emitted browser version must be read before
 accepting the new matrix as runtime evidence. The local syntax/unit/planning
 passes do not substitute for that browser result.
 
+The [first native candidate run](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/44359238646)
+at head `9d2634a247475018413c9459c7ac4c3b7dafdf98` installed dependencies,
+passed all 17 unit tests and the full audit, built the bundle and executed
+browser input. It stopped in the first viewer trial because the new callback
+recorder's JSON copy omitted `customData: undefined`, while Playwright's direct
+scene copy retained that key. The assertion diff shows that representation
+mismatch on all three otherwise matching elements. Later viewer/navigation
+trials and network controls did not complete in that run. The recorder now uses
+`structuredClone` to preserve the complete element fields on both sides of the
+same strict comparison; no scene field or invariant was removed. A successor
+native run is required.
+
 For #99, matching writable controls distinguish an ignored event from an
 effective editing path, and complete deleted-element/callback observations
 avoid relying only on visible-element counts. This experiment is local UI

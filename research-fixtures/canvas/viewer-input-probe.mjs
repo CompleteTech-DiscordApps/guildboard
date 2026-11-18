@@ -76,7 +76,7 @@ export async function probeViewerInput(browser, origin) {
           }
           const state = window.editor.getAppState();
           window.inputCallbacks.push({
-            elements: JSON.parse(JSON.stringify(elements)),
+            elements: structuredClone(elements),
             selectedIds: Object.keys(state.selectedElementIds).filter(id => state.selectedElementIds[id]),
             viewMode: state.viewModeEnabled,
           });
