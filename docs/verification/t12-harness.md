@@ -72,6 +72,33 @@ retried into success. A failed stop/reap prevents namespace removal, including
 when a pending SIGINT arrives during mask restoration; the tests observe this
 combination with an injected reap timeout.
 
+The pinned root directory descriptor has a separate cancellation guard, active
+before it is yielded to the run. Its cleanup dispatch and unmasked helper entry
+can make one bounded recovery attempt after a single SIGINT. The actual close
+and its outcome bookkeeping run with SIGINT deferred; the caller's original
+interrupt and signal state are preserved when that mask is restored.
+
+The close attempt is recorded before calling `os.close`. Once that operation has
+begun it is never retried, because an error may follow an actual close and the
+descriptor number may already identify a different open object. A failed close
+reports `fixture root descriptor cleanup outcome unknown`; cancellation retains
+the cleanup cause and a note that the descriptor may remain. This is distinct
+from successful worker reaping and namespace removal. No recovery guesses a
+descriptor's owner or closes a replacement. Descriptor acquisition and repeated
+interruptions remain outside the bounded cancellation claim below.
+
+Seven additional root-descriptor regression tests were written independently
+from the issue and the previous baseline, without access to this implementation.
+They cover observed dispatch boundaries, one SIGINT immediately before or after
+the real close, original caller cancellation, returning handlers, preblocked
+SIGINT, and injected close failures. A close-then-raise case actually reuses the
+descriptor number for an independently owned sentinel and verifies that cleanup
+does not close it. Fallback cleanup checks descriptor identity before acting.
+These tests expose the previous failure while preserving all existing tests;
+the corrected implementation passes them under normal and optimized Python.
+The observations are local synthetic process/filesystem evidence within the
+single-interruption scope, not SQL, platform or production acceptance.
+
 Two regression tests first record the normal-exit Python line boundaries before
 the first mask operation, then deliver one real SIGINT at each recorded boundary,
 with successful and injected-failed reap outcomes. The corrected implementation

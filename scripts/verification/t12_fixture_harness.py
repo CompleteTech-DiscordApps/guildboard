@@ -121,13 +121,57 @@ def _private_root(path: Path):
         root_fd = os.open(path, _DIRECTORY_FLAGS)
     except (OSError, ValueError):
         raise InvalidConfiguration("root") from None
+    close_attempted = False
+    close_completed = False
+    close_failure = None
+
+    def close_owned_root():
+        nonlocal close_attempted, close_completed, close_failure
+        try:
+            with _defer_sigint():
+                # A failed close may already have released this descriptor number.
+                # Record the attempt before calling it; never retry that operation.
+                close_attempted = True
+                try:
+                    os.close(root_fd)
+                    close_completed = True
+                except BaseException as error:
+                    close_failure = error
+                    raise
+        except Exception as error:
+            raise RuntimeError("fixture root descriptor cleanup outcome unknown") from error
+
+    # Established before yielding the descriptor, so cleanup dispatch and the
+    # helper's unmasked preamble are inside the same cancellation boundary.
     try:
-        root = os.fstat(root_fd)
-        if root.st_uid != os.geteuid() or stat.S_IMODE(root.st_mode) != 0o700:
-            raise InvalidConfiguration("root")
-        yield root_fd
-    finally:
-        os.close(root_fd)
+        try:
+            root = os.fstat(root_fd)
+            if root.st_uid != os.geteuid() or stat.S_IMODE(root.st_mode) != 0o700:
+                raise InvalidConfiguration("root")
+            yield root_fd
+        except BaseException as error:
+            try:
+                close_owned_root()
+            except BaseException as cleanup_error:
+                if isinstance(error, (KeyboardInterrupt, SystemExit)):
+                    raise error from cleanup_error
+                raise
+            raise
+        else:
+            close_owned_root()
+    except (KeyboardInterrupt, SystemExit) as error:
+        try:
+            if not close_attempted:
+                close_owned_root()
+            if not close_completed:
+                uncertainty = RuntimeError("fixture root descriptor cleanup outcome unknown")
+                if close_failure is error:
+                    raise uncertainty from None
+                raise uncertainty from close_failure
+        except BaseException as cleanup_error:
+            error.add_note("fixture root descriptor cleanup failed; descriptor may remain")
+            raise error from cleanup_error
+        raise
 
 
 def _make_fixture(seed: int) -> Fixture:

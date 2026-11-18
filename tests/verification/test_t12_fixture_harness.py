@@ -1,3 +1,4 @@
+import errno
 import os
 import signal
 import socket
@@ -753,6 +754,303 @@ class FixtureHarnessTests(unittest.TestCase):
             unexpected.write_bytes(b"untracked")
         self.assertEqual(unexpected.read_bytes(), b"untracked")
         self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+
+    def close_retained_descriptor(self, fd, identity):
+        """Fallback closes only the retained test-owned descriptor identity."""
+        try:
+            current = os.fstat(fd)
+        except OSError as error:
+            self.assertEqual(error.errno, errno.EBADF)
+        else:
+            self.assertTrue(os.path.samestat(current, identity), "descriptor identity changed")
+            os.close(fd)
+
+    def root_cleanup_boundaries(self):
+        """Observe normal root cleanup through its first real close dispatch."""
+        boundaries = []
+        recording = False
+        previous_trace, close = sys.gettrace(), os.close
+        root_code = harness._private_root.__wrapped__.__code__
+        root_fd = identity = None
+
+        def trace(frame, event, arg):
+            nonlocal recording
+            if event == "call" and frame.f_code is root_code:
+                recording = True
+            if recording and event == "line" and frame.f_code.co_filename == harness.__file__:
+                boundary = (frame.f_code, frame.f_lineno)
+                if boundary not in boundaries:
+                    boundaries.append(boundary)
+            return trace
+
+        def observe_close(fd):
+            nonlocal recording
+            if fd == root_fd:
+                recording = False
+            return close(fd)
+
+        try:
+            with ExitStack() as stack:
+                with fixture_run(self.config) as run:
+                    root_fd, identity = run._root_fd, os.fstat(run._root_fd)
+                    stack.enter_context(patch.object(os, "close", side_effect=observe_close))
+                    sys.settrace(trace)
+        finally:
+            sys.settrace(previous_trace)
+            if root_fd is not None:
+                self.close_retained_descriptor(root_fd, identity)
+        self.assertTrue(boundaries)
+        self.assert_sentinel_only()
+        return boundaries
+
+    def assert_root_sigint_cleanup(self, *, boundary=None, after_close=False, cancellation=None):
+        children, attempted, fired, delivered = [], [], [], []
+        root_fd = identity = None
+        close, previous_trace = os.close, sys.gettrace()
+        root_code = harness._private_root.__wrapped__.__code__
+        root_cleanup = False
+        interruption = KeyboardInterrupt("real SIGINT during root cleanup")
+        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGUSR1})
+        previous_handler = signal.getsignal(signal.SIGINT)
+        unrelated = subprocess.Popen(
+            [sys.executable, "-I", "-S", "-c", "import sys; sys.stdin.buffer.read()"],
+            stdin=subprocess.PIPE, env={},
+        )
+        self.addCleanup(self.reap_owned_child, unrelated)
+
+        def handle_interrupt(signum, frame):
+            delivered.append(signum)
+            raise interruption
+
+        def interrupt_once():
+            self.assertEqual(fired, [])
+            self.assert_reaped(children[0])
+            self.assertTrue(children[0].stdin.closed)
+            self.assert_sentinel_only()
+            fired.append(signal.SIGINT)
+            signal.raise_signal(signal.SIGINT)
+
+        def trace(frame, event, arg):
+            nonlocal root_cleanup
+            if event == "call" and frame.f_code is root_code:
+                root_cleanup = True
+            if (root_cleanup and not fired and event == "line"
+                    and (frame.f_code, frame.f_lineno) == boundary):
+                interrupt_once()
+            return trace
+
+        def observe_close(fd):
+            if fd != root_fd:
+                return close(fd)
+            attempted.append(fd)
+            if boundary is None and not after_close:
+                interrupt_once()
+            result = close(fd)
+            if boundary is None and after_close:
+                interrupt_once()
+            return result
+
+        try:
+            signal.signal(signal.SIGINT, handle_interrupt)
+            expected = cancellation if cancellation is not None else interruption
+            with self.capture_children(children), ExitStack() as stack:
+                with self.assertRaises(BaseException) as raised:
+                    with fixture_run(self.config) as run:
+                        run.start_worker()
+                        root_fd, identity = run._root_fd, os.fstat(run._root_fd)
+                        stack.enter_context(patch.object(os, "close", side_effect=observe_close))
+                        if boundary is not None:
+                            sys.settrace(trace)
+                        if cancellation is not None:
+                            raise cancellation
+                sys.settrace(previous_trace)
+            self.assertIs(raised.exception, expected)
+            self.assertEqual(fired, [signal.SIGINT])
+            self.assertEqual(delivered, [signal.SIGINT])
+            with self.assertRaises(OSError) as closed:
+                os.fstat(root_fd)
+            self.assertEqual(closed.exception.errno, errno.EBADF)
+            self.assertEqual(attempted, [root_fd])
+            self.assert_reaped(children[0])
+            self.assertIsNone(unrelated.poll())
+            self.assert_sentinel_only()
+            self.assertEqual(
+                signal.pthread_sigmask(signal.SIG_BLOCK, set()), previous_mask | {signal.SIGUSR1}
+            )
+            self.assertIs(signal.getsignal(signal.SIGINT), handle_interrupt)
+        finally:
+            sys.settrace(previous_trace)
+            # Drain a test-generated pending signal safely if a regression failed
+            # to restore the mask; an assertion above records that failure.
+            signal.signal(signal.SIGINT, lambda signum, frame: None)
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+            signal.signal(signal.SIGINT, previous_handler)
+            for child in children:
+                self.reap_owned_child(child)
+            self.reap_owned_child(unrelated)
+            if root_fd is not None:
+                self.close_retained_descriptor(root_fd, identity)
+
+    def test_root_sigint_at_observed_cleanup_dispatch_boundaries(self):
+        for code, line in self.root_cleanup_boundaries():
+            with self.subTest(function=code.co_name, line=line):
+                self.assert_root_sigint_cleanup(boundary=(code, line))
+
+    def test_root_single_sigint_before_and_after_real_close(self):
+        for after_close in (False, True):
+            with self.subTest(after_close=after_close):
+                self.assert_root_sigint_cleanup(after_close=after_close)
+
+    def test_root_close_sigint_preserves_original_caller_cancellation(self):
+        for after_close in (False, True):
+            for cancellation in (KeyboardInterrupt("caller cancellation"), SystemExit(19)):
+                with self.subTest(after_close=after_close, cancellation=type(cancellation).__name__):
+                    self.assert_root_sigint_cleanup(after_close=after_close, cancellation=cancellation)
+
+    def test_root_close_preserves_returning_handler_and_preblocked_sigint(self):
+        for preblocked in (False, True):
+            with self.subTest(preblocked=preblocked):
+                delivered, attempted = [], []
+                close = os.close
+                previous_handler = signal.getsignal(signal.SIGINT)
+                blocked = {signal.SIGUSR1} | ({signal.SIGINT} if preblocked else set())
+                previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
+                root_fd = identity = None
+
+                def handler(signum, frame):
+                    delivered.append(signum)
+
+                def observe_close(fd):
+                    if fd == root_fd:
+                        attempted.append(fd)
+                        signal.raise_signal(signal.SIGINT)
+                    return close(fd)
+
+                try:
+                    signal.signal(signal.SIGINT, handler)
+                    with ExitStack() as stack:
+                        with fixture_run(self.config) as run:
+                            root_fd, identity = run._root_fd, os.fstat(run._root_fd)
+                            stack.enter_context(patch.object(os, "close", side_effect=observe_close))
+                    self.assertEqual(attempted, [root_fd])
+                    with self.assertRaises(OSError) as closed:
+                        os.fstat(root_fd)
+                    self.assertEqual(closed.exception.errno, errno.EBADF)
+                    self.assertEqual(delivered, [] if preblocked else [signal.SIGINT])
+                    self.assertEqual(signal.SIGINT in signal.sigpending(), preblocked)
+                    self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, set()), previous_mask | blocked)
+                    self.assertIs(signal.getsignal(signal.SIGINT), handler)
+                    signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+                    self.assertEqual(delivered, [signal.SIGINT])
+                    self.assert_sentinel_only()
+                finally:
+                    signal.signal(signal.SIGINT, lambda signum, frame: None)
+                    signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+                    signal.signal(signal.SIGINT, previous_handler)
+                    if root_fd is not None:
+                        self.close_retained_descriptor(root_fd, identity)
+
+    def assert_root_close_fault(self, *, reuse_descriptor, cancellation=None, pending_sigint=False):
+        """Injected close failure: optionally close and reuse the owned FD first."""
+        children, attempted, delivered = [], [], []
+        close, open_descriptor = os.close, os.open
+        root_fd = root_identity = replacement_fd = replacement_identity = None
+        failure = OSError(errno.EIO, "injected root close failure")
+        interruption = KeyboardInterrupt("real SIGINT with injected root close failure")
+        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGUSR1})
+        previous_handler = signal.getsignal(signal.SIGINT)
+
+        def handler(signum, frame):
+            delivered.append(signum)
+            raise interruption
+
+        def fail_close(fd):
+            nonlocal replacement_fd, replacement_identity
+            if fd != root_fd:
+                return close(fd)
+            attempted.append(fd)
+            self.assert_reaped(children[0])
+            self.assert_sentinel_only()
+            if len(attempted) > 1:
+                # A retry really closes the replacement, so its survival is an
+                # independent oracle rather than just a mocked call assertion.
+                return close(fd)
+            if reuse_descriptor:
+                close(fd)
+                replacement_fd = open_descriptor(self.sentinel, os.O_RDONLY)
+                replacement_identity = os.fstat(replacement_fd)
+                self.assertEqual(replacement_fd, root_fd, "test must exercise exact descriptor reuse")
+                self.assertFalse(os.path.samestat(replacement_identity, root_identity))
+            try:
+                raise failure
+            finally:
+                if pending_sigint:
+                    signal.raise_signal(signal.SIGINT)
+
+        try:
+            signal.signal(signal.SIGINT, handler)
+            with self.capture_children(children), ExitStack() as stack:
+                with self.assertRaises(BaseException) as raised:
+                    with fixture_run(self.config) as run:
+                        run.start_worker()
+                        root_fd, root_identity = run._root_fd, os.fstat(run._root_fd)
+                        stack.enter_context(patch.object(os, "close", side_effect=fail_close))
+                        if cancellation is not None:
+                            raise cancellation
+            self.assertEqual(attempted, [root_fd], "uncertain close must never be retried")
+            retained_identity = replacement_identity if reuse_descriptor else root_identity
+            self.assertTrue(os.path.samestat(os.fstat(root_fd), retained_identity))
+            if reuse_descriptor:
+                self.assertEqual(os.read(root_fd, 32), b"unrelated")
+            self.assert_reaped(children[0])
+            self.assert_sentinel_only()
+            self.assertEqual(delivered, [signal.SIGINT] if pending_sigint else [])
+            self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, set()), previous_mask | {signal.SIGUSR1})
+            self.assertIs(signal.getsignal(signal.SIGINT), handler)
+            if cancellation is not None:
+                self.assertIs(raised.exception, cancellation)
+            elif pending_sigint:
+                self.assertIs(raised.exception, interruption)
+            chain, pending = [], [raised.exception]
+            while pending:
+                error = pending.pop()
+                if error is None or any(error is prior for prior in chain):
+                    continue
+                chain.append(error)
+                pending.extend((error.__cause__, error.__context__))
+            self.assertIn(failure, chain)
+            diagnostics = " ".join(
+                text for error in chain for text in (str(error), *getattr(error, "__notes__", ()))
+            ).lower()
+            self.assertRegex(diagnostics, r"root.*(?:unknown|uncertain)")
+        finally:
+            signal.signal(signal.SIGINT, lambda signum, frame: None)
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+            signal.signal(signal.SIGINT, previous_handler)
+            for child in children:
+                self.reap_owned_child(child)
+            if root_fd is not None:
+                self.close_retained_descriptor(
+                    root_fd, replacement_identity if replacement_fd == root_fd else root_identity
+                )
+            if replacement_fd is not None and replacement_fd != root_fd:
+                self.close_retained_descriptor(replacement_fd, replacement_identity)
+
+    def test_root_injected_close_failure_reports_uncertainty_without_retry(self):
+        for reuse_descriptor in (False, True):
+            with self.subTest(reuse_descriptor=reuse_descriptor):
+                self.assert_root_close_fault(reuse_descriptor=reuse_descriptor)
+
+    def test_root_injected_close_failure_preserves_caller_cancellation(self):
+        for reuse_descriptor in (False, True):
+            for cancellation in (KeyboardInterrupt("caller cancellation"), SystemExit(23)):
+                with self.subTest(reuse_descriptor=reuse_descriptor, cancellation=type(cancellation).__name__):
+                    self.assert_root_close_fault(reuse_descriptor=reuse_descriptor, cancellation=cancellation)
+
+    def test_root_pending_sigint_reports_injected_close_uncertainty(self):
+        for reuse_descriptor in (False, True):
+            with self.subTest(reuse_descriptor=reuse_descriptor):
+                self.assert_root_close_fault(reuse_descriptor=reuse_descriptor, pending_sigint=True)
 
 
 if __name__ == "__main__":
