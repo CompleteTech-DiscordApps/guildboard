@@ -10,7 +10,7 @@ records how the prerequisite migration was verified.
 ## Source and execution
 
 The tests ran from an exact archive of commit
-`10125e56c3baf133ded89531361c51d4c8f2c227`. Each test installed and activated
+`41323d642dae51e82d2a2bb335888b2b1317c17d`. Each test installed and activated
 the accepted v1 schema through the real verifier in its own newly named
 synthetic database. The [migration SQL](../../database/migrations/0001_initial_innodb.sql)
 SHA-256 was `045a76201bd00c399905a7e19b4f50c74dd141d00ca06eded8f3225c91987f8d`.
@@ -25,7 +25,10 @@ were removed before the serial run.
 
 With the absolute client and socket paths in `GB_SCHEMA_CLIENT` and
 `GB_SCHEMA_SOCKET`, and the disposable fixture administrator in `GB_SCHEMA_USER`,
-run this command from the archive root. See the
+run this command from the archive root. Use the owned fixture with a
+canonical Unix socket path and mode-0700 socket parent and sibling `data`
+directory. The verifier checks the owner and the server's actual datadir
+before creating any test database. See the
 [initial fixture instructions](../../database/README.md).
 
 ```bash
@@ -46,12 +49,12 @@ python3 -B -m unittest discover -s tests/verification -p test_t5_operation_trans
 The five named tests and their assertions are in the
 [operation transaction suite](../../tests/verification/test_t5_operation_transaction.py).
 Raw logs and both exit receipts are indexed in the private campaign inventory
-under `178-transaction.1tW053Rv`.
+under `sql-41323d64.9JbS3d8P`.
 
 | Raw output | SHA-256 |
 | --- | --- |
-| `mysql.out` | `1c8cd2c316a70179463107a7591f0f538ecd5e73b1866945f1973d7c8f6b9124` |
-| `mariadb.out` | `49c73482fabb190897116e1891903f55f7597d7e439fd4bd62433d273a0a5bca` |
+| `mysql-verify.log` | `b150cbe54b8b432d7c7a47f346b4dbb3b97ff12615dee3858ff131966ccd929c` |
+| `mariadb-verify.log` | `44de71cd7c181bd43257cd53beddc287a6c05e384e70211d7f13722a71eb9f66` |
 
 ## Remaining verification
 
