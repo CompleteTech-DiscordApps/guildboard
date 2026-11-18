@@ -231,7 +231,8 @@ CONDUCT_NEEDLES = [
     'Do not post sensitive details publicly', 'Maintainer: @CompleteDotTech',
 ]
 TASK_NEEDLES = [
-    '`python3 -I -m unittest discover -s tests/verification -v`',
+    '`python3 -B -m unittest discover -s tests/verification -v`',
+    '[isolated qualification bootstrap](#executable-qualification)',
     '`python3 scripts/github-bootstrap/validate.py`',
     '`python3 -I scripts/verification/check_licenses.py`',
     'of this deliverable are not claimed',
