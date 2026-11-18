@@ -52,7 +52,40 @@
       "MVP": 118,
       "v1.0": 187
     },
-    "directPrerequisites": [
+    "publicationIssue": "GB-T13.04.01.O1",
+    "integratedCases": ["import-export", "moderation", "modes", "recovery"]
+  },
+  "productionSmoke": {
+    "issue": 417,
+    "state": "open",
+    "status": "blocked",
+    "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."
+  },
+  "nativePrerequisites": {
+    "GB-T13.G1": [
+      "GB-T1.01.01.V1",
+      "GB-T1.02.01.V1",
+      "GB-T1.03.02.V1",
+      "GB-T12.MVP1",
+      "GB-T2.01.02.V1",
+      "GB-T2.03.01.V1",
+      "GB-T3.01.01.V1",
+      "GB-T3.04.02.V1",
+      "GB-T4.01.01.V1",
+      "GB-T4.01.02.V1",
+      "GB-T4.02.02.V1",
+      "GB-T5.02.02.V1",
+      "GB-T8.01.01.V1",
+      "GB-T8.01.02.V1",
+      "GB-T8.02.01.V2"
+    ],
+    "GB-T13.G2": [
+      "GB-T10.04.02.V1",
+      "GB-T11.03.02.V1",
+      "GB-T12.04.01.V1",
+      "GB-T12.04.02.V1"
+    ],
+    "GB-T13.G3": [
       "GB-T0.G1",
       "GB-T1.G1",
       "GB-T10.G1",
@@ -76,15 +109,7 @@
       "GB-T7.G1",
       "GB-T8.G1",
       "GB-T9.G1"
-    ],
-    "publicationIssue": "GB-T13.04.01.O1",
-    "integratedCases": ["import-export", "moderation", "modes", "recovery"]
-  },
-  "productionSmoke": {
-    "issue": 417,
-    "state": "open",
-    "status": "blocked",
-    "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."
+    ]
   },
   "rows": [
     {"id": "accessibility-android", "environment": "discord-android", "class": "real_discord", "issue": 414, "gates": ["GB-T13.G3"], "cases": ["accessible-task-coverage", "keyboard", "manual-at", "screen-reader"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Candidate-scoped client support, approved Discord scope and qualifying receipt unavailable."},
@@ -97,18 +122,18 @@
     {"id": "authorization-negative", "environment": "hosted", "class": "hosted_ci", "issue": 300, "gates": ["GB-T13.G1", "GB-T13.G3"], "cases": ["authorization-negative"], "owner": "Security Engineering", "source": "docs/specifications/GB-T9-S1-security-privacy-contract.md", "status": "pending", "limitation": "No exact-candidate qualifying observation is recorded."},
     {"id": "availability", "environment": "vps-network", "class": "real_godaddy", "issue": 364, "gates": ["GB-T13.G3"], "cases": ["complete-utc-month", "counts-incidents-gaps", "representative-end-to-end-read-and-write"], "owner": "SRE", "source": "docs/requirements/GB-T0-01-01-requirements.md", "status": "blocked", "limitation": "Approved GoDaddy scope and qualifying receipt unavailable."},
     {"id": "bounded-load", "environment": "vps-load", "class": "real_godaddy", "issue": 414, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["bounded-load", "capacity-durable-ack-latency", "process-restart-under-load", "reconnect-latency", "resource-budget", "safety-stop"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Approved GoDaddy scope and qualifying receipt unavailable."},
-    {"id": "browser-e2e", "environment": "local", "class": "local_integration", "issue": 396, "gates": ["GB-T13.G3"], "cases": ["auth", "controlled-launch", "navigation"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "pending", "limitation": "No exact-candidate qualifying observation is recorded."},
+    {"id": "browser-e2e", "environment": "local", "class": "local_integration", "issue": 396, "gates": ["GB-T13.G3"], "cases": ["accessible-controls", "auth", "cancel", "controlled-launch", "drafts", "navigation", "policy-feedback", "ready", "reconnect"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "pending", "limitation": "No exact-candidate qualifying observation is recorded."},
     {"id": "convergence", "environment": "hosted", "class": "hosted_ci", "issue": 407, "gates": ["GB-T13.G3"], "cases": ["concurrent-convergence", "idempotency"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "pending", "limitation": "No exact-candidate qualifying observation is recorded."},
     {"id": "credentials-recovery", "environment": "vps-recovery", "class": "real_godaddy", "issue": 378, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["credential-restore", "retired-credential-denied"], "owner": "SRE", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Approved GoDaddy scope and qualifying receipt unavailable."},
     {"id": "dependency-license-lockfile", "environment": "hosted", "class": "hosted_ci", "issue": 318, "gates": ["GB-T13.G1", "GB-T13.G3"], "cases": ["dependency-license-lockfile"], "owner": "Security Engineering", "source": "docs/specifications/GB-T9-S1-security-privacy-contract.md", "status": "pending", "limitation": "No exact-candidate qualifying observation is recorded."},
-    {"id": "deployed-build-smoke", "environment": "vps-network", "class": "real_godaddy", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["smoke", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
-    {"id": "deployed-client-smoke", "environment": "discord-android", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["deployed-client-journey", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
-    {"id": "deployed-client-smoke", "environment": "discord-ios", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["deployed-client-journey", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
-    {"id": "deployed-client-smoke", "environment": "discord-mac", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["deployed-client-journey", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
-    {"id": "deployed-client-smoke", "environment": "discord-previews", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["deployed-client-journey", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
-    {"id": "deployed-client-smoke", "environment": "discord-web-chromium", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["deployed-client-journey", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
-    {"id": "deployed-client-smoke", "environment": "discord-web-firefox", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["deployed-client-journey", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
-    {"id": "deployed-client-smoke", "environment": "discord-win", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["deployed-client-journey", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
+    {"id": "deployed-build-smoke", "environment": "vps-network", "class": "real_godaddy", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["https-wss", "smoke", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
+    {"id": "deployed-client-smoke", "environment": "discord-android", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["activity-startup", "authenticated-guild", "deployed-client-journey", "mapped-proxy", "reconnect", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
+    {"id": "deployed-client-smoke", "environment": "discord-ios", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["activity-startup", "authenticated-guild", "deployed-client-journey", "mapped-proxy", "reconnect", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
+    {"id": "deployed-client-smoke", "environment": "discord-mac", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["activity-startup", "authenticated-guild", "deployed-client-journey", "mapped-proxy", "reconnect", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
+    {"id": "deployed-client-smoke", "environment": "discord-previews", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["activity-startup", "authenticated-guild", "deployed-client-journey", "mapped-proxy", "reconnect", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
+    {"id": "deployed-client-smoke", "environment": "discord-web-chromium", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["activity-startup", "authenticated-guild", "deployed-client-journey", "mapped-proxy", "reconnect", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
+    {"id": "deployed-client-smoke", "environment": "discord-web-firefox", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["activity-startup", "authenticated-guild", "deployed-client-journey", "mapped-proxy", "reconnect", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
+    {"id": "deployed-client-smoke", "environment": "discord-win", "class": "real_discord", "issue": 417, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["activity-startup", "authenticated-guild", "deployed-client-journey", "mapped-proxy", "reconnect", "verified-build"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
     {"id": "discord-startup", "environment": "discord-android", "class": "real_discord", "issue": 455, "gates": ["GB-T13.G1", "GB-T13.G3"], "cases": ["activity-startup", "authenticated-guild"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Candidate-scoped client support, approved Discord scope and qualifying receipt unavailable."},
     {"id": "discord-startup", "environment": "discord-ios", "class": "real_discord", "issue": 455, "gates": ["GB-T13.G1", "GB-T13.G3"], "cases": ["activity-startup", "authenticated-guild"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Candidate-scoped client support, approved Discord scope and qualifying receipt unavailable."},
     {"id": "discord-startup", "environment": "discord-mac", "class": "real_discord", "issue": 455, "gates": ["GB-T13.G1", "GB-T13.G3"], "cases": ["activity-startup", "authenticated-guild"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Candidate-scoped client support, approved Discord scope and qualifying receipt unavailable."},
@@ -133,7 +158,7 @@
     {"id": "production-recovery", "environment": "vps-recovery", "class": "real_godaddy", "issue": 457, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["backup-recovery-objectives", "continuity", "isolated-restore", "rpo-rto"], "owner": "Maintainer & Documentation", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Approved GoDaddy scope and qualifying receipt unavailable."},
     {"id": "production-smoke", "environment": "vps-network", "class": "real_godaddy", "issue": 457, "gates": ["GB-T13.G2", "GB-T13.G3"], "cases": ["https-wss", "monitoring", "rollback", "smoke"], "owner": "Maintainer & Documentation", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Production smoke requires an approved deployed candidate at the GoDaddy target."},
     {"id": "recovery", "environment": "vps-recovery", "class": "real_godaddy", "issue": 410, "gates": ["GB-T13.G3"], "cases": ["deletion-fences", "recovery-inventories"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Approved GoDaddy scope and qualifying receipt unavailable."},
-    {"id": "regression", "environment": "hosted", "class": "hosted_ci", "issue": 417, "gates": ["GB-T13.G3"], "cases": ["regression"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "pending", "limitation": "No exact-candidate qualifying observation is recorded."},
+    {"id": "regression", "environment": "hosted", "class": "hosted_ci", "issue": 417, "gates": ["GB-T13.G3"], "cases": ["accessibility", "activity-startup", "authenticated-guild", "backend-permissions", "board-lock", "import-export", "live-sync", "moderation", "moderator-role", "modes", "read-only-viewer", "reconnect", "recovery", "regression", "save-board", "security-negatives", "simultaneous-moderators", "verified-build", "whiteboard"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "pending", "limitation": "No exact-candidate qualifying observation is recorded."},
     {"id": "release-fence", "environment": "hosted", "class": "hosted_ci", "issue": 400, "gates": ["GB-T13.G3"], "cases": ["release-fence"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "pending", "limitation": "No exact-candidate qualifying observation is recorded."},
     {"id": "sdk-launch", "environment": "discord-android", "class": "real_discord", "issue": 396, "gates": ["GB-T13.G3"], "cases": ["actual-launch", "sdk-compatibility"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Candidate-scoped client support, approved Discord scope and qualifying receipt unavailable."},
     {"id": "sdk-launch", "environment": "discord-ios", "class": "real_discord", "issue": 396, "gates": ["GB-T13.G3"], "cases": ["actual-launch", "sdk-compatibility"], "owner": "Quality Engineering", "source": "docs/specifications/GB-T12-S1-verification-evidence-contract.md", "status": "blocked", "limitation": "Candidate-scoped client support, approved Discord scope and qualifying receipt unavailable."},
