@@ -286,7 +286,7 @@ def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState()):
 
     projection = restore_projection(case)
     if projection is None or not case.commit:
-        return "REJECTED", [], state
+        return ("REJECTED" if command.release else "NOT_FOUND"), [], state
     content, references = projection
     final_cut = (state.history.active, state.revision + 1)
     publication = RestoreState(
@@ -303,6 +303,8 @@ def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState()):
     )
     effects = ["state", "lineage", "policy", "event", "receipt", "outbox", "audit",
                *content, *references]
+    if not command.release:
+        return "NOT_FOUND", effects, publication
     return ("NO_RELEASE" if command.lost_ack else "RESTORED"), effects, publication
 
 
@@ -384,8 +386,12 @@ class ContractScenarios(unittest.TestCase):
                          ("ACK_HISTORICAL_8", [], reopened))
         self.assertEqual(restore_attempt(Restore(), replace(retry, release=False), reopened),
                          ("NOT_FOUND", [], reopened))
+        self.assertEqual(restore_attempt(Restore(), replace(command, release=False, lost_ack=False)),
+                         ("NOT_FOUND", effects, published))
         self.assertEqual(restore_attempt(Restore(commit=False)),
                          ("REJECTED", [], RestoreState()))
+        self.assertEqual(restore_attempt(Restore(commit=False), replace(command, release=False, lost_ack=False)),
+                         ("NOT_FOUND", [], RestoreState()))
 
     def test_disaster_coverage_survives_restart_restore_and_later_disasters(self):
         history = History().promote("lineage-b", set())
