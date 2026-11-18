@@ -72,6 +72,61 @@ retried into success. A failed stop/reap prevents namespace removal, including
 when a pending SIGINT arrives during mask restoration; the tests observe this
 combination with an injected reap timeout.
 
+The pinned root directory descriptor has a separate exit guard. It saves cleanup
+state before the caller receives the descriptor and retains the incoming caller
+exception as an argument to `__exit__`. This guard masks only root exit; it does
+not defer SIGINT across the fixture body. It defers SIGINT
+before resuming the root generator, so normal and exceptional dispatch, the close,
+and outcome bookkeeping all run under the same mask. This includes exception
+handler entry and propagation, which a normal-exit-only sweep does not exercise.
+The first unmasked guard dispatch is itself protected; its `try` and call share a
+line deliberately, because a standalone `try` can compile to an unprotected NOP.
+
+An interrupt before masking receives one bounded recovery attempt. After the
+generator finishes, even with an error, it is never resumed for another close:
+a failed `os.close` may have released the descriptor number and another object
+may already use it. A failed close reports
+`fixture root descriptor cleanup outcome unknown`. A caller's original
+`KeyboardInterrupt` or `SystemExit` receives any cleanup failure as a cause and a
+note that the descriptor may remain. The guard returns false to preserve that
+exact exception through normal context-manager propagation, rather than exposing
+a final unmasked re-raise of the caller's cancellation. Restoring the exact prior
+mask uses the caller's existing signal handler. Descriptor closure remains a
+separate observation from worker reaping and namespace removal; no recovery
+infers ownership from a possibly reused number.
+
+Seven additional root-descriptor regression tests were written independently
+from the issue and the previous baseline, without access to this implementation.
+They cover observed dispatch boundaries, one SIGINT immediately before or after
+the real close, original caller cancellation, returning handlers, preblocked
+SIGINT, and injected close failures. A close-then-raise case actually reuses the
+descriptor number for an independently owned sentinel and verifies that cleanup
+does not close it. Fallback cleanup checks descriptor identity before acting.
+These tests expose the previous failure while preserving all existing tests;
+the corrected implementation passes them under normal and optimized Python.
+The observations are local synthetic process/filesystem evidence within the
+single-interruption scope, not SQL, platform or production acceptance.
+
+A further regression, authored independently from the rejected baseline,
+records exceptional cleanup from generator resumption through the actual context
+manager's remaining exit steps. It requires observations before and after the
+real close, then replays one SIGINT at each boundary for original
+`KeyboardInterrupt` and `SystemExit` callers. Its observer does not cover exit
+entry before generator resumption; the separate probe below covers that entry.
+
+Exceptional cleanup also requires its own boundary observations. A supplementary
+owned local probe records and replays the root exit guard, root generator and
+mask-helper lines for normal exit, original `KeyboardInterrupt` and original
+`SystemExit`, with successful close, injected retained-descriptor failure and
+close-then-reuse failure. Each replay sends one real SIGINT and checks cancellation
+identity, one close attempt, explicit uncertainty on failure, the retained
+owned/replacement descriptor identity, worker reap and stdin closure, namespace
+removal, an unrelated child and sentinel, and the prior mask and handler. It also
+checks exception-table coverage of the guard's first dispatch instruction. These
+are finite line-boundary observations, not exhaustive instruction schedules or
+proof against asynchronous exception injection. Test-owned fallback cleanup uses
+identity checks and finite child waits.
+
 Two regression tests first record the normal-exit Python line boundaries before
 the first mask operation, then deliver one real SIGINT at each recorded boundary,
 with successful and injected-failed reap outcomes. The corrected implementation

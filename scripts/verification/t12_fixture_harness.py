@@ -8,6 +8,7 @@ import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from functools import wraps
 from pathlib import Path
 from uuid import uuid4
 
@@ -115,7 +116,78 @@ def _preflight(config: HarnessConfig) -> None:
         raise InvalidConfiguration("root")
 
 
-@contextmanager
+class _RootExitGuard:
+    """Defer SIGINT before resuming the root generator's exception dispatch."""
+
+    def __init__(self, manager):
+        self._manager = manager
+        self._finished = False
+        self._failure = None
+
+    def __enter__(self):
+        return self._manager.__enter__()
+
+    def _finish(self, kind, error, traceback):
+        with _defer_sigint():
+            try:
+                result = self._manager.__exit__(kind, error, traceback)
+            except BaseException as failure:
+                self._failure = failure
+            finally:
+                # The generator has finished, including a possibly failed close.
+                # Its descriptor number must never be used for another attempt.
+                self._finished = True
+            if isinstance(error, (KeyboardInterrupt, SystemExit)):
+                if self._failure is not None:
+                    error.add_note("fixture root descriptor cleanup failed; descriptor may remain")
+                    error.__cause__ = self._failure
+                return False
+            if self._failure is not None:
+                raise self._failure
+            return result
+
+    def __exit__(self, kind, error, traceback):
+        # Keep the first dispatch inside the exception range: a standalone try
+        # line can compile to an unprotected NOP at this unmasked boundary.
+        try: return self._finish(kind, error, traceback)
+        except BaseException as interruption:
+            try:
+                if not self._finished:
+                    # One recovery for entry interruption, before close began.
+                    self._finish(kind, error, traceback)
+                if self._failure is not None and self._failure is not interruption:
+                    raise self._failure
+            except BaseException as cleanup_error:
+                if isinstance(cleanup_error, (KeyboardInterrupt, SystemExit)):
+                    cleanup_error.__cause__ = interruption
+                    interruption = cleanup_error
+                else:
+                    interruption.__cause__ = cleanup_error
+                interruption.add_note("fixture root descriptor cleanup failed; descriptor may remain")
+            if isinstance(error, (KeyboardInterrupt, SystemExit)):
+                if self._finished and self._failure is None and isinstance(
+                    interruption, (KeyboardInterrupt, SystemExit)
+                ):
+                    # Successful root cleanup must retain any earlier run failure
+                    # already chained to the caller's cancellation.
+                    return False
+                if error is not interruption:
+                    error.__cause__ = interruption
+                return False
+            raise interruption
+
+
+def _root_contextmanager(function):
+    manager = contextmanager(function)
+
+    @wraps(function)
+    def open_root(path):
+        return _RootExitGuard(manager(path))
+
+    return open_root
+
+
+@_root_contextmanager
 def _private_root(path: Path):
     try:
         root_fd = os.open(path, _DIRECTORY_FLAGS)
@@ -127,7 +199,12 @@ def _private_root(path: Path):
             raise InvalidConfiguration("root")
         yield root_fd
     finally:
-        os.close(root_fd)
+        # Exit is already masked by the guard, including exceptional dispatch.
+        # A failed close may have released/reused the number; never retry it.
+        try:
+            os.close(root_fd)
+        except BaseException as error:
+            raise RuntimeError("fixture root descriptor cleanup outcome unknown") from error
 
 
 def _make_fixture(seed: int) -> Fixture:
