@@ -87,13 +87,22 @@ accepted write. The model evaluates initial read authority and returns abstract
 decision outcomes. Transport release ordering and durability require separate
 verification.
 
-Read/receipt reconciliation is a distinct branch: current identity/tenant/read
-authority first, then retained receipt and digest check, then active lineage and
-new-write checks **only if no committed receipt exists**. A loss of write grant
-or lockdown cannot erase an authorized caller's historical commit evidence; read
-loss prevents disclosure. Historical acceptance cannot replay old payload into
-restored content. The model's receipt booleans stand for trusted lookup results,
-not accepted client fields or a complete storage implementation.
+Read/receipt reconciliation starts with current identity, tenant and read
+authority, followed by lookup in the exact verified serving inventory. A retained
+receipt settles the original command before new-write checks, without
+reapplying its payload. Current read authority also governs release. The model
+assumes trusted lookup and complete coverage for the retired lineage it
+exercises. Its inactive-lineage result after a missing receipt applies to
+that confirmed-absence case.
+
+The accepted [T5 persistence and recovery contract](../specifications/GB-T5-S1-persistence-recovery-contract.md)
+and [T9 security and privacy contract](../specifications/GB-T9-S1-security-privacy-contract.md)
+govern disaster recovery. An absent receipt with unproven historical coverage
+(including an unrecognized historical lineage), or an unverifiable current
+serving inventory, produces `DEPENDENCY_UNAVAILABLE`. Reconciliation keeps
+the original identity. New acknowledgments and committed outbox effects rely
+on current generation and the exact durable transaction witness. This research
+fixture has no disaster coverage, live inventory or durable commit witness.
 
 | Candidate capability/action | Proposed constraints / decision still needed |
 | --- | --- |
