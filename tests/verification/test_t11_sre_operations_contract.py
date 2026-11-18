@@ -59,16 +59,9 @@ def restore_verdict(selected, preflight, verification, loss, objectives):
 def acknowledgment_loss(trial, cut, acknowledgments, recovered):
     if cut is None:
         return "unknown", []
-    scope = (trial["guild"], trial["board"], trial["lineage"])
-    expected = {item for item in acknowledgments["identities"] if item[:3] == scope}
-    present = {item for item in recovered["identities"] if item[:3] == scope}
-
-    def coverage(evidence):
-        if evidence["board_scope"] != scope[:2]:
-            return -1
-        return evidence["coverage"].get(scope[2], -1)
-
-    covered_through = coverage(recovered)
+    expected = acknowledgments["identities"]
+    present = recovered["identities"]
+    covered_through = recovered["covered_through"]
     missing = sorted(item for item in expected - present if item[-1] <= covered_through)
     lost = [list(item) for item in missing]
     evidence = expected | present
@@ -81,7 +74,7 @@ def acknowledgment_loss(trial, cut, acknowledgments, recovered):
     ):
         return "outside_bound", lost
     if (trial["loss_bound"] is None
-            or coverage(acknowledgments) < trial["prefault_high_water"]
+            or acknowledgments["covered_through"] < trial["prefault_high_water"]
             or covered_through < trial["prefault_high_water"]):
         return "unknown", lost
     return ("within_bound" if missing else "none"), lost
@@ -251,7 +244,7 @@ class OperationsContractTest(unittest.TestCase):
         self.assertIs(type(value), str)
         self.assertIsNotNone(re.fullmatch(r"[a-z][a-z0-9_]{0,47}", value))
 
-    def operation_evidence(self, evidence):
+    def operation_evidence(self, evidence, scope):
         self.assertEqual(set(evidence), {"board_scope", "coverage", "identities"})
         self.assertIs(type(evidence["board_scope"]), list)
         self.assertEqual(len(evidence["board_scope"]), 2)
@@ -273,7 +266,12 @@ class OperationsContractTest(unittest.TestCase):
             self.bounded_integer(item[-1], 100)
             self.assertNotIn(tuple(item), identities)
             identities.add(tuple(item))
-        return {"board_scope": tuple(evidence["board_scope"]), "coverage": evidence["coverage"], "identities": identities}
+        if tuple(evidence["board_scope"]) != scope[:2]:
+            return {"covered_through": -1, "identities": set()}
+        return {
+            "covered_through": evidence["coverage"].get(scope[2], -1),
+            "identities": {item for item in identities if item[:3] == scope},
+        }
 
     def test_backup_and_restore_have_independent_verdicts(self):
         fields = {"generations", "trial", "preflight", "verification", "acknowledgments",
@@ -312,11 +310,10 @@ class OperationsContractTest(unittest.TestCase):
                         selected = generation
                 attempt = generations[-1]
                 cut = selected["cut"] if selected else None
-                acknowledgments = self.operation_evidence(case["acknowledgments"])
-                recovered = self.operation_evidence(case["recovered"])
+                acknowledgments = self.operation_evidence(case["acknowledgments"], scope)
+                recovered = self.operation_evidence(case["recovered"], scope)
                 for item in acknowledgments["identities"] | recovered["identities"]:
-                    if item[:3] == scope:
-                        self.assertLessEqual(item[-1], trial["prefault_high_water"])
+                    self.assertLessEqual(item[-1], trial["prefault_high_water"])
                 loss, missing = acknowledgment_loss(trial, cut, acknowledgments, recovered)
                 self.assertIn(case["preflight"], {"isolated", "unsafe", "unavailable"})
                 self.assertIn(case["verification"], {
@@ -368,6 +365,29 @@ class OperationsContractTest(unittest.TestCase):
                     case["expected"],
                 )
 
+    def test_foreign_inventory_cannot_supply_target_acknowledgment_evidence(self):
+        scope = ("guild_a", "board_a", "lineage_a")
+        trial = {"guild": scope[0], "board": scope[1], "lineage": scope[2],
+                 "prefault_high_water": 10, "loss_bound": 0}
+        original = (*scope, "actor_a", "operation_a")
+        conflict = (*scope, "actor_a", "operation_b")
+        recovered = self.operation_evidence({
+            "board_scope": list(scope[:2]), "coverage": {"lineage_a": 10},
+            "identities": [[*original, 8]],
+        }, scope)
+        for foreign_board_scope in (["guild_b", "board_a"], ["guild_a", "board_b"]):
+            with self.subTest(board_scope=foreign_board_scope):
+                foreign = self.operation_evidence({
+                    "board_scope": foreign_board_scope, "coverage": {"lineage_a": 10},
+                    "identities": [[*original, 8], [*conflict, 8]],
+                }, scope)
+                self.assertEqual(foreign["identities"], set())
+                self.assertEqual(acknowledgment_loss(trial, 10, foreign, recovered), ("unknown", []))
+                self.assertEqual(acknowledgment_loss(trial, 10, recovered, foreign), ("unknown", []))
+                self.assertEqual(consistent_canary_times([(original, 8, 5)],
+                                                          foreign["identities"], recovered["identities"]),
+                                 ([5], False))
+
     def test_conflicting_operation_positions_cannot_prove_recovery_or_rpo(self):
         trial = {"guild": "guild_a", "board": "board_a", "lineage": "lineage_a",
                  "prefault_high_water": 10, "loss_bound": 0}
@@ -377,7 +397,7 @@ class OperationsContractTest(unittest.TestCase):
         for operation, position in ((other, 8), (original, 9)):
             with self.subTest(operation=operation, position=position):
                 identities = {(*original, 8), (*operation, position)}
-                inventory = {"board_scope": scope[:2], "coverage": {"lineage_a": 10}, "identities": identities}
+                inventory = {"covered_through": 10, "identities": identities}
                 self.assertEqual(acknowledgment_loss(trial, 10, inventory, inventory), ("contradictory", []))
                 self.assertEqual(consistent_canary_times([(original, 8, 5), (operation, position, 9)],
                                                           identities, identities), ([], True))

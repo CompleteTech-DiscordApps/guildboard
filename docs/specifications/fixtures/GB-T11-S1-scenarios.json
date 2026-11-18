@@ -392,7 +392,7 @@
      "canaries": [{"commit_second":19100,"restore_second":31000,"evidence":"verified_consistent","position":8,"operation":["guild_one","board_one","board_alpha","author_one","edit_a"]},{"commit_second":19000,"restore_second":31000,"evidence":"verified_consistent","position":8,"operation":["guild_one","board_one","board_alpha","author_one","edit_a"]}],
      "rto_seconds": 14400,
      "expected": {"backup":"verified","rpo_seconds":null,"rpo":"unknown","rto":"within_candidate","drill":"undetermined","rto_seconds":14400,"attempt":"generation_two","selected":"generation_two","cut":10,"loss":"none","missing":[],"escalate":false}},
-    {"case": "foreign_coverage_not_creditable",
+    {"case": "foreign_recovery_scope_cannot_credit_rows",
      "generations": [{"id":"generation_two","sequence":2,"lineage":"board_alpha","cut":10,"status":"verified","guild":"guild_one","board":"board_one"}],
      "trial": {"lineage":"board_alpha","prefault_high_water":14,"loss_bound":2,"guild":"guild_one","board":"board_one"},
      "preflight": "isolated",
@@ -402,7 +402,7 @@
      "recovered": {"coverage":{"board_alpha":14},"identities":[["guild_one","board_one","board_alpha","author_one","edit_a",8]],"board_scope":["guild_one","board_foreign"]},
      "canaries": [{"commit_second":19100,"restore_second":31000,"evidence":"verified_consistent","position":8,"operation":["guild_one","board_one","board_alpha","author_one","edit_a"]}],
      "rto_seconds": 14400,
-     "expected": {"backup":"verified","rpo_seconds":900,"rpo":"within_candidate","rto":"within_candidate","drill":"undetermined","rto_seconds":14400,"attempt":"generation_two","selected":"generation_two","cut":10,"loss":"unknown","missing":[],"escalate":false}}
+     "expected": {"backup":"verified","rpo_seconds":null,"rpo":"unknown","rto":"within_candidate","drill":"undetermined","rto_seconds":14400,"attempt":"generation_two","selected":"generation_two","cut":10,"loss":"unknown","missing":[],"escalate":false}}
   ],
   "eligibility": [
     {"case": "authorized_dependency_failure", "authorization": "allowed", "dependency_available": false, "observation": "unavailable",

@@ -218,9 +218,14 @@ and timestamp for each scoped position. Copy, replay and
 restore execution timestamps cannot serve as original commit evidence. Compare
 an independent pre-fault acknowledgment inventory with recovered evidence by
 durable position and the full T0 identity `(guildId, boardId, lineageId,
-actorUserId, operationId)`. Verify coverage for
-both sources in the affected scope through the trial's pre-fault high-water
-mark. Record any gap that prevents establishing presence or absence.
+actorUserId, operationId)`. Use a source only when its declared guild and board
+match the trial, and use only rows whose full guild, board and lineage match
+the trial. Apply these checks to both the acknowledgment comparison and canary
+corroboration. The lineage coverage watermark establishes completeness through
+that position. A verified row in scope can establish positive presence even
+when the inventory has incomplete coverage. Verify coverage for both sources
+through the trial's pre-fault high-water mark. Record any gap that prevents
+establishing presence or absence.
 Require each scoped durable position to identify one operation and each
 operation identity to resolve to one position. Corroborate a canary position
 and identity in the independent recovery inventory before using its timing.
