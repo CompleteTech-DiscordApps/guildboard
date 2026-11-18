@@ -71,7 +71,11 @@ function fixture({
   commitResult = "committed",
   custodyResult = "committed",
   dropRelease = false,
+  throwRelease = false,
   anchorDown = false,
+  accessResult = "recorded",
+  accessDown = false,
+  clockSamples = [],
 } = {}) {
   const records = chain(event(1), event(2), event(3));
   const head = position(records.at(-1));
@@ -86,6 +90,8 @@ function fixture({
   const visits = [];
   const changes = [];
   const custody = [];
+  const access = [];
+  let clockReads = 0;
   const service = createAuditEvidenceService({
     authority: {
       async withFence(subject, auditScope, operation, use) {
@@ -103,9 +109,28 @@ function fixture({
           policyGeneration: "4",
           ...grantUpdate,
         });
+        if (throwRelease) throw new Error("synthetic release failure");
         return dropRelease ? undefined : result;
       },
     },
+    clock: {
+      now() {
+        return clockReads < clockSamples.length ? clockSamples[clockReads++] : now;
+      },
+    },
+    ...(accessDown
+      ? {}
+      : {
+          access: {
+            async record(auditScope, right, record) {
+              assert.deepEqual(auditScope, scope);
+              visits.push(right + "-access");
+              if (accessResult === "throw") throw new Error("synthetic access failure");
+              if (accessResult === "recorded") access.push({ right, record });
+              return accessResult;
+            },
+          },
+        }),
     anchor: {
       async readCurrent(auditScope) {
         assert.deepEqual(auditScope, scope);
@@ -138,7 +163,7 @@ function fixture({
       },
     },
   });
-  return { service, visits, changes, custody, records };
+  return { service, visits, changes, custody, records, access };
 }
 
 function noEffects(state, visits) {
@@ -210,6 +235,7 @@ test("ordinary board writers and moderators cannot inspect, append or preserve a
   assert.deepEqual(await state.service.preserve("reviewer", scope), forbidden);
   assert.deepEqual(await state.service.verify("custodian", scope), forbidden);
   noEffects(state, Array(8).fill("fence"));
+  assert.deepEqual(state.access, []);
 });
 
 test("malformed, expired and cross-guild requests never reach an audit read or effect port", async () => {
@@ -267,8 +293,66 @@ test("verification blocks before primary history reads when independent anchor i
     assert.deepEqual(await state.service.verify("reviewer", scope), unavailable);
     assert.deepEqual(await state.service.append("transition", scope, "grant", null), unavailable);
     assert.deepEqual(await state.service.preserve("custodian", scope), unavailable);
-    noEffects(state, ["fence", "anchor", "fence", "anchor", "fence", "anchor"]);
+    noEffects(state, [
+      "fence",
+      "verify-access",
+      "anchor",
+      "fence",
+      "anchor",
+      "fence",
+      "preserve-access",
+      "anchor",
+    ]);
   }
+});
+
+test("unavailable operator access accounting blocks privileged reads and custody", async () => {
+  for (const options of [
+    { accessDown: true },
+    { accessResult: "unavailable" },
+    { accessResult: "unknown" },
+    { accessResult: "throw" },
+  ]) {
+    const state = fixture(options);
+    assert.deepEqual(await state.service.verify("reviewer", scope), unavailable);
+    assert.deepEqual(await state.service.preserve("custodian", scope), unavailable);
+    noEffects(
+      state,
+      options.accessDown
+        ? ["fence", "fence"]
+        : ["fence", "verify-access", "fence", "preserve-access"],
+    );
+    assert.deepEqual(state.access, []);
+  }
+});
+
+test("anchor freshness covers the live fetch and completed proof", async () => {
+  const between = "2026-11-17T22:45:30.000Z";
+  const cases = [
+    { clockSamples: [between, between], historyRead: false },
+    { clockSamples: [now, later], historyRead: false },
+    { clockSamples: [now, now, later], historyRead: true },
+    { clockSamples: [now, now, between, later], historyRead: true },
+    { clockSamples: [now, between, now], historyRead: true },
+    { clockSamples: [now, now, "invalid"], historyRead: true },
+  ];
+  for (const { clockSamples, historyRead } of cases) {
+    for (const [right, subject, accounting] of [
+      ["verify", "reviewer", ["verify-access"]],
+      ["append", "transition", []],
+      ["preserve", "custodian", ["preserve-access"]],
+    ]) {
+      const state = fixture({ clockSamples });
+      assert.deepEqual(await state.service[right](subject, scope, "grant", null), unavailable);
+      noEffects(state, ["fence", ...accounting, "anchor", ...(historyRead ? ["history"] : [])]);
+    }
+  }
+  const fresh = fixture({
+    clockSamples: [now, between, between, between],
+    anchorUpdate: { observedAt: between },
+  });
+  assert.deepEqual(await fresh.service.verify("reviewer", scope), { ok: true });
+  noEffects(fresh, ["fence", "verify-access", "anchor", "history"]);
 });
 
 test("checks checkpointed history and accepted active tail against the independent head", async () => {
@@ -296,9 +380,11 @@ test("checks checkpointed history and accepted active tail against the independe
     assert.deepEqual(await state.service.append("transition", scope, "grant", null), inconsistent);
     noEffects(state, [
       "fence",
+      "verify-access",
       "anchor",
       "history",
       "fence",
+      "preserve-access",
       "anchor",
       "history",
       "fence",
@@ -308,12 +394,12 @@ test("checks checkpointed history and accepted active tail against the independe
   }
   const state = fixture({ anchorUpdate: { acceptedHead: position(original[1]) } });
   assert.deepEqual(await state.service.verify("reviewer", scope), inconsistent);
-  noEffects(state, ["fence", "anchor", "history"]);
+  noEffects(state, ["fence", "verify-access", "anchor", "history"]);
   const checkpointMismatch = fixture({
     anchorUpdate: { checkpoint: { sequence: "1", hash: "f".repeat(64) } },
   });
   assert.deepEqual(await checkpointMismatch.service.verify("reviewer", scope), inconsistent);
-  noEffects(checkpointMismatch, ["fence", "anchor", "history"]);
+  noEffects(checkpointMismatch, ["fence", "verify-access", "anchor", "history"]);
 });
 
 test("permitted rights verify, produce metadata only and transfer validated evidence privately", async () => {
@@ -338,8 +424,21 @@ test("permitted rights verify, produce metadata only and transfer validated evid
   assert.equal(state.custody[0].access.event.action, "evidence-access");
   assert.equal(state.custody[0].access.event.actorKind, "operator");
   assert.equal(state.custody[0].access.event.policyGeneration, undefined);
+  assert.deepEqual(
+    state.access.map(({ right }) => right),
+    ["verify", "preserve"],
+  );
+  for (const { record } of state.access) {
+    assert.deepEqual(record.scope, scope);
+    assert.equal(record.actorKind, "operator");
+    assert.equal(record.actorRef, ref(5));
+    assert.equal(record.action, "evidence-access");
+    assert.equal(record.occurredAt, now);
+    assert.notEqual(record.eventId, state.custody[0].access.event.eventId);
+  }
   assert.deepEqual(state.visits, [
     "fence",
+    "verify-access",
     "anchor",
     "history",
     "fence",
@@ -347,6 +446,7 @@ test("permitted rights verify, produce metadata only and transfer validated evid
     "history",
     "commit",
     "fence",
+    "preserve-access",
     "anchor",
     "history",
     "custody",
@@ -363,6 +463,7 @@ test("a rejected atomic effect, unknown completion and revoked result remain dis
     "history",
     "commit",
     "fence",
+    "preserve-access",
     "anchor",
     "history",
     "custody",
@@ -374,8 +475,37 @@ test("a rejected atomic effect, unknown completion and revoked result remain dis
   );
   assert.deepEqual(await uncertain.service.preserve("custodian", scope), unknownCommit);
 
-  const revoked = fixture({ dropRelease: true });
-  assert.deepEqual(await revoked.service.verify("reviewer", scope), forbidden);
-  assert.deepEqual(await revoked.service.append("transition", scope, "grant", null), forbidden);
-  assert.equal(revoked.changes.length, 1);
+  for (const release of [{ dropRelease: true }, { throwRelease: true }]) {
+    const revoked = fixture(release);
+    assert.deepEqual(
+      await revoked.service.verify("reviewer", scope),
+      release.dropRelease ? forbidden : unavailable,
+    );
+    assert.deepEqual(
+      await revoked.service.append("transition", scope, "grant", null),
+      unknownCommit,
+    );
+    assert.deepEqual(await revoked.service.preserve("custodian", scope), unknownCommit);
+    assert.equal(revoked.changes.length, 1);
+    assert.equal(revoked.custody.length, 1);
+
+    const denied = fixture({ ...release, commitResult: "rejected", custodyResult: "rejected" });
+    assert.deepEqual(
+      await denied.service.append("transition", scope, "grant", null),
+      release.dropRelease ? forbidden : unavailable,
+    );
+    assert.deepEqual(
+      await denied.service.preserve("custodian", scope),
+      release.dropRelease ? forbidden : unavailable,
+    );
+    assert.deepEqual(denied.changes, []);
+    assert.deepEqual(denied.custody, []);
+
+    const possible = fixture({ ...release, commitResult: "unknown", custodyResult: "unknown" });
+    assert.deepEqual(
+      await possible.service.append("transition", scope, "grant", null),
+      unknownCommit,
+    );
+    assert.deepEqual(await possible.service.preserve("custodian", scope), unknownCommit);
+  }
 });

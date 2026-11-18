@@ -263,7 +263,8 @@ type CommitResult = "committed" | "rejected" | "unknown";
 /** The authority adapter is internal and must resolve a verified server identity,
  * operation-specific right, exact scope, policy generation and trusted time. It
  * keeps the callback ordered against expiry/revocation, including result release.
- * Returning undefined denies without invoking the callback. */
+ * The adapter awaits the callback if invoked. Returning undefined denies before
+ * invoking the callback or suppresses its result when release authority is lost. */
 export interface AuditAuthority<Subject> {
   withFence<T>(
     subject: Subject,
@@ -275,9 +276,24 @@ export interface AuditAuthority<Subject> {
 
 export interface AuditEvidencePorts<Subject, Change> {
   readonly authority: AuditAuthority<Subject>;
+  readonly clock: {
+    /** Fresh trusted time from the same source used by the authority fence. */
+    now(): string;
+  };
+  readonly access: {
+    /** Durably account for the named operator's access before any privileged read.
+     * This independent path must remain usable when the audited history is
+     * unavailable or damaged. "recorded" confirms durable accounting only. */
+    record(
+      scope: AuditScope,
+      right: "verify" | "preserve",
+      event: AuditEventV1,
+    ): Promise<"recorded" | "unavailable">;
+  };
   readonly anchor: {
     /** Fetch the independently held live accepted head and checkpoint for this
-     * exact scope. Cached, self-derived or unverifiably fresh values are unavailable. */
+     * exact scope. observedAt is the trusted time of observation during this
+     * call. Cached, self-derived or unverifiably fresh values are unavailable. */
     readCurrent(scope: AuditScope): Promise<IndependentAuditAnchor | undefined>;
   };
   readonly history: {
@@ -295,7 +311,7 @@ export interface AuditEvidencePorts<Subject, Change> {
       change: Change,
     ): Promise<CommitResult>;
     /** Retain only validated records in independently controlled private custody.
-     * Atomically account for that access with the required audit record and head
+     * Atomically account for the custody transfer with its audit record and head
      * advancement. Before acknowledgement verify integrity at custody transfer. */
     preserve(
       scope: AuditScope,
@@ -342,13 +358,19 @@ type Verified = {
 async function verifyHistory<Subject, Change>(
   ports: AuditEvidencePorts<Subject, Change>,
   scope: AuditScope,
-  now: string,
+  fenceTime: string,
 ): Promise<Verified | Failure> {
+  const startedAt = ports.clock.now();
+  if (!utc(startedAt) || startedAt < fenceTime) return failure("DEPENDENCY_UNAVAILABLE");
   const anchor = await ports.anchor.readCurrent(scope);
+  const now = ports.clock.now();
   if (
     !anchor ||
+    !utc(now) ||
+    now < startedAt ||
     !utc(anchor.observedAt) ||
     !utc(anchor.expiresAt) ||
+    anchor.observedAt < startedAt ||
     anchor.observedAt > now ||
     anchor.expiresAt <= now
   )
@@ -366,7 +388,11 @@ async function verifyHistory<Subject, Change>(
     return failure("DEPENDENCY_UNAVAILABLE");
   if (BigInt(head.sequence) > BigInt(AUDIT_MAX_RECORDS)) return failure("DEPENDENCY_UNAVAILABLE");
 
+  const { expiresAt } = anchor;
   const history = await ports.history.read(scope, AUDIT_MAX_RECORDS);
+  const proofTime = ports.clock.now();
+  if (!utc(proofTime) || proofTime < now || proofTime >= expiresAt)
+    return failure("DEPENDENCY_UNAVAILABLE");
   if (
     history.acceptedSequence !== head.sequence ||
     !Array.isArray(history.records) ||
@@ -394,6 +420,12 @@ async function verifyHistory<Subject, Change>(
     prior = next;
   }
   if (prior.hash !== head.hash) return failure("INTEGRITY_FAILED");
+  // Prove the independently observed head while its observation is still
+  // fresh. The authority fence governs release, and effect adapters compare
+  // against this expected head.
+  const completedAt = ports.clock.now();
+  if (!utc(completedAt) || completedAt < proofTime || completedAt >= expiresAt)
+    return failure("DEPENDENCY_UNAVAILABLE");
   return { ok: true, head, records: Object.freeze(records) };
 }
 
@@ -461,10 +493,23 @@ export function createAuditEvidenceService<Subject, Change>(
         possibleCommit = right !== "verify" && (outcome.ok || outcome.code === "COMMIT_UNKNOWN");
         return outcome;
       });
-      return result ?? failure("FORBIDDEN");
+      return result ?? failure(possibleCommit ? "COMMIT_UNKNOWN" : "FORBIDDEN");
     } catch {
       return failure(possibleCommit ? "COMMIT_UNKNOWN" : "DEPENDENCY_UNAVAILABLE");
     }
+  }
+
+  async function accountAccess(
+    scope: AuditScope,
+    fence: AuditFence,
+    right: "verify" | "preserve",
+  ): Promise<Result> {
+    // This event records admission to read. The preservation transaction owns
+    // the separate record for successful transfer into custody.
+    const parsed = acceptedEvent(fence, scope, "evidence-access");
+    if (!parsed.ok) return failure("DEPENDENCY_UNAVAILABLE");
+    const result = await ports.access.record(scope, right, parsed.event);
+    return result === "recorded" ? { ok: true } : failure("DEPENDENCY_UNAVAILABLE");
   }
 
   return {
@@ -492,20 +537,24 @@ export function createAuditEvidenceService<Subject, Change>(
     },
     verify(subject: Subject, scope: unknown) {
       return run(subject, scope, Object.freeze({ right: "verify" }), async (resolved, fence) => {
+        const access = await accountAccess(resolved, fence, "verify");
+        if (!access.ok) return access;
         const verified = await verifyHistory(ports, resolved, fence.now);
         return verified.ok ? { ok: true } : verified;
       });
     },
     preserve(subject: Subject, scope: unknown) {
       return run(subject, scope, Object.freeze({ right: "preserve" }), async (resolved, fence) => {
+        const access = await accountAccess(resolved, fence, "preserve");
+        if (!access.ok) return access;
         const parsed = acceptedEvent(fence, resolved, "evidence-access");
         if (!parsed.ok) return failure("INVALID_MESSAGE");
         const verified = await verifyHistory(ports, resolved, fence.now);
         if (!verified.ok) return verified;
         if (verified.records.length === AUDIT_MAX_RECORDS) return failure("DEPENDENCY_UNAVAILABLE");
-        const access = nextRecord(verified.head, parsed.event);
+        const record = nextRecord(verified.head, parsed.event);
         return commit(() =>
-          ports.acceptance.preserve(resolved, verified.head, verified.records, access),
+          ports.acceptance.preserve(resolved, verified.head, verified.records, record),
         );
       });
     },
