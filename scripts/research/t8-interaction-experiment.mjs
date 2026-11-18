@@ -33,6 +33,41 @@ export function envelope(privateKey, value = payload(), timestamp = String(FIXTU
   return { raw, timestamp, signature: sign(null, bytes, privateKey).toString('hex') };
 }
 
+// Adapted from packages/canvas/src/import-content.ts, without its wire/depth profile.
+// Inspect names before object mapping; JSON.parse still validates the full syntax.
+// The earlier raw-body byte ceiling bounds scanner work and the iterative stack.
+function hasRepeatedMembers(serialized) {
+  const scopes = [];
+  for (let index = 0; index < serialized.length; index++) {
+    const character = serialized[index];
+    if (character === '{' || character === '[') {
+      scopes.push(character === '{' ? new Set() : null);
+    } else if (character === '}' || character === ']') {
+      const scope = scopes.pop();
+      if (scope === undefined || (scope === null) !== (character === ']')) {
+        throw new SyntaxError();
+      }
+    } else if (character === '"') {
+      const start = index++;
+      while (index < serialized.length && serialized[index] !== '"') {
+        if (serialized[index] === '\\') index++;
+        index++;
+      }
+      if (index >= serialized.length) throw new SyntaxError();
+      let next = index + 1;
+      while (next < serialized.length && /[ \t\r\n]/u.test(serialized.charAt(next))) next++;
+      if (serialized[next] !== ':') continue;
+      const names = scopes.at(-1);
+      if (!names) throw new SyntaxError();
+      // Decode only the name token, including equivalent Unicode/backslash escapes.
+      const name = JSON.parse(serialized.slice(start, index + 1));
+      if (names.has(name)) return true;
+      names.add(name);
+    }
+  }
+  return false;
+}
+
 export function authenticate(request, publicKey, now = FIXTURE.now) {
   // A real server must enforce the byte bound while streaming, preserve raw bytes,
   // reject duplicate headers before normalization and disable unreviewed transforms.
@@ -56,9 +91,10 @@ export function authenticate(request, publicKey, now = FIXTURE.now) {
       || timestamp - now > FIXTURE.futureSkewSeconds) return denied('outside_fixture_window');
   let value;
   try {
-    // Fatal UTF-8 decoding avoids lossy replacement before parsing. The candidate
-    // production codec must additionally reject duplicate JSON keys (not modeled).
-    value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(request.raw));
+    // Signature verification uses original bytes before decoding or member inspection.
+    const serialized = new TextDecoder('utf-8', { fatal: true }).decode(request.raw);
+    if (hasRepeatedMembers(serialized)) return denied('invalid_json');
+    value = JSON.parse(serialized);
   } catch {
     return denied('invalid_json');
   }

@@ -209,9 +209,10 @@ API lookup permissions, live role freshness, registered app ownership, SQL,
 outbox durability, production replay protection or real user acceptance. Fixture
 authority is supplied booleans; tenant IDs are fixed synthetic allowlists; maps
 are unbounded/in-memory; raw transport digest is deliberately conservative and
-is not #481's canonical semantic digest. No duplicate-key parser, transport
-server, concurrent transaction, recovery, rate limiter or persistent replay store
-is implemented. Production needs bounded admission without silent durable
+is not #481's canonical semantic digest. At the original evidence revision no
+duplicate-member detection was implemented; the 2026-11-18 follow-up below adds
+it only to the research fixture. No transport server, concurrent transaction,
+recovery, rate limiter or persistent replay store is implemented. Production needs bounded admission without silent durable
 receipt purging; overload must deny/backpressure safely and preserve outcome
 reconciliation. The tests are research evidence, not product functionality.
 
@@ -332,3 +333,52 @@ The specification needs a trusted original lineage and generation for that
 case, or a decision to deny when that context cannot be established. A signed
 Discord timestamp alone supplies neither. Source observations remain dated
 2026-10-26.
+
+## Repeated JSON member follow-up (2026-11-18 UTC)
+
+At base `270f1dc822d12a8b57888573e3de427cd0314357`, `JSON.parse`
+collapsed repeated members before the research model checked provenance or
+recorded invocation intent. The fixture now adapts the per-object member-name
+inspection in [the existing T9 parser](../../packages/canvas/src/import-content.ts).
+Each object has its own set; names are compared after decoding their JSON
+escapes, including Unicode and backslashes. Arrays separate nested object
+scopes, and quoted string contents are skipped. Repeated names return
+`invalid_json` before object mapping, provenance or invocation admission.
+No production parser import or T9 content envelope/depth profile is adopted.
+The existing 4096-byte raw-body ceiling bounds the iterative scan and stack;
+full JSON syntax validation remains with `JSON.parse`.
+
+Signature validation still covers the original timestamp and raw bytes before
+fatal UTF-8 decoding and member inspection. Denied parsing leaves modeled
+effects, audit, receipts **and invocation bindings** unchanged, including when a
+receipt already exists or current read is denied. This is distinct from the
+opaque admission of a valid, authenticated, provenance-valid invocation.
+
+Seven independently specified regression tests add literal duplicate top-level
+and nested members, equivalent escaped names, ignored objects inside arrays,
+allowed sibling names and escaped punctuation/string contents. They also check
+malformed/truncated nesting and tokens, 1000 nested arrays within the existing
+exact byte ceiling, one byte beyond it, and signature-before-member-denial
+ordering. The 25 existing tests remain intact, including valid Unicode,
+invalid UTF-8, receipt immutability, lineage and admission coverage.
+
+On Linux x64, Node v24.22.3 / OpenSSL 3.5.9 and Python 3.12.14, the expanded
+suite against unchanged fixture code first reported 28 passes and four failures
+(exit 1), demonstrating the repeated-member gap. With this correction:
+
+| Exact offline command | Result |
+| --- | --- |
+| `node --test tests/research/t8-test-interaction-experiment.mjs` | Exit 0; 32 passed, zero failed/skipped |
+| `node scripts/research/t8-interaction-experiment.mjs` | Exit 0; new receipt, existing receipt on retry/write loss, current-read denial, bad-signature tamper; one modeled effect/audit |
+| `python3 -B scripts/github-bootstrap/validate.py` | Exit 0; 471 items, 457 native relationships, 600 dependencies, zero errors |
+| `git diff --check` | Exit 0 |
+
+These results describe the changed working tree based on the full base SHA
+above; the PR records its published head and matching tree. No primary source
+responses were refetched or redated. This corrects research-model fidelity,
+not a demonstrated Discord vulnerability or production wire codec. It supplies
+only additional offline error/abuse evidence for #260's verification/provenance/
+denial row. Real installation, effective command permissions, delivered
+interaction and current membership evidence remain absent; #260 remains open
+and #261 remains blocked on it. Functional, security and consumer review,
+durable admission, HTTP/proxy and GoDaddy acceptance remain pending.
