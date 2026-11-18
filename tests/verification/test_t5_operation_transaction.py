@@ -293,3 +293,23 @@ class OperationTransactionTests(unittest.TestCase):
                 finally:
                     owner.query("ROLLBACK")
             self.assertEqual(observer.query(VIEW), self.committed_view(baseline))
+
+    def test_lock_timeout_leaves_baseline_and_allows_same_identity_retry(self):
+        with self.connection() as observer, self.connection() as owner:
+            baseline = observer.query(VIEW)
+            self.assertEqual(self.stage(owner), RECEIPT)
+            result = subprocess.run(
+                [*self.cli, f"--database={self.db}", "-e",
+                 f"SET SESSION innodb_lock_wait_timeout=1; START TRANSACTION; {HEAD_LOCK}"],
+                capture_output=True, text=True, timeout=5,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertRegex(result.stderr, r"ERROR 1205\b")
+            self.assertEqual(result.stdout, "")
+            self.assertEqual(observer.query(VIEW), baseline)
+            owner.query("ROLLBACK")
+
+            with self.connection() as retry:
+                self.assertEqual(self.stage(retry), RECEIPT)
+                retry.query("COMMIT")
+            self.assertEqual(observer.query(VIEW), self.committed_view(baseline))
