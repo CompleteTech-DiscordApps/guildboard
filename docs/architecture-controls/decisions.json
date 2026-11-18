@@ -386,6 +386,28 @@
         "tests/engineering/t11-operational-metric-recorder.test.mjs",
         "tests/engineering/t11-operational-metrics.test.mjs"
       ]
+    },
+    {
+      "id": "DEC-0023",
+      "revision": 1,
+      "boundary": "apps/api/src/operational-log-reporter.ts",
+      "old_sha256": null,
+      "new_sha256": "3dd2b1689a9916fec809be58a524e7cf15c43c9335b2d15256c04917ba6411e2",
+      "rationale": "Add an internal bounded operational reporter that owns the accepted record/correlation boundary and serializes an explicitly injected sink. Capacity includes the sole active delivery; fixed counters expose loss. Flush deadline or cancellation seals admission and preserves unresolved delivery ownership until settlement. No collector, retention profile, live producer or product outcome authority is enabled.",
+      "alternatives": [
+        "Allow arbitrary caller-constructed records, which would discard the existing correlation provenance boundary.",
+        "Retry or replace a noncooperative in-flight sink, which could create unbounded concurrent effects.",
+        "Defer the reusable process-local queue until all live collection policy and producers are approved."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-operational-log-reporter.test.mjs",
+        "tests/engineering/t11-operational-logs.test.mjs",
+        "tests/engineering/t11-graceful-shutdown.test.mjs"
+      ]
     }
   ]
 }
