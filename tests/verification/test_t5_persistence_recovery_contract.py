@@ -49,6 +49,7 @@ class History:
     known_lineages: frozenset = frozenset({"lineage-a"})
     guild: str = "guild-a"
     board: str = "board-a"
+    storage_generation: str = "generation-a"
 
     def restart(self):
         return replace(self)
@@ -67,6 +68,7 @@ class History:
             return None
         return replace(self, active=new_lineage, disaster_seen=self.disaster_seen or disaster,
                        complete_retired=complete_retired,
+                       storage_generation=f"generation-{new_lineage}" if disaster else self.storage_generation,
                        known_lineages=self.known_lineages | {self.active, new_lineage})
 
 
@@ -154,11 +156,28 @@ def identity(case):
     return case.guild, case.board, case.lineage, case.actor, case.operation
 
 
-def command_result(case, receipts=ORIGINAL_RECEIPTS, history=History()):
+@dataclass(frozen=True)
+class CommitWitness:
+    generation: str
+    operation: tuple
+    intent_digest: str
+    receipt_transaction: str
+    outbox_transaction: str
+
+
+MODEL_STORE = object()
+
+
+def model_witness(case, history):
+    transaction = f"{history.storage_generation}/{case.operation}"
+    return CommitWitness(history.storage_generation, identity(case), case.digest, transaction, transaction)
+
+
+def command_result(case, receipts=ORIGINAL_RECEIPTS, history=History(), witness=MODEL_STORE):
     """Evaluate one decision without modifying the supplied receipt store."""
     if not case.valid:
         return "INVALID_MESSAGE", []
-    if not case.read or (case.guild, case.board) != ("guild-a", "board-a"):
+    if not case.read or (case.guild, case.board) != (history.guild, history.board):
         return "NOT_FOUND", []
 
     existing = receipts.get(identity(case))
@@ -185,7 +204,13 @@ def command_result(case, receipts=ORIGINAL_RECEIPTS, history=History()):
         outcome = "DEPENDENCY_UNAVAILABLE"
     else:
         effects = EFFECTS
-        outcome = "NO_RELEASE" if case.lost_ack else "ACK_NEW"
+        expected = model_witness(case, history)
+        if witness is MODEL_STORE:
+            witness = expected
+        if type(witness) is not CommitWitness or witness != expected:
+            outcome = "DEPENDENCY_UNAVAILABLE"
+        else:
+            outcome = "NO_RELEASE" if case.lost_ack else "ACK_NEW"
 
     return (outcome if case.release else "NOT_FOUND"), effects
 
@@ -321,10 +346,11 @@ class RestoreState:
 RESTORE_COMMAND = Command(operation="operation-restore", digest="digest-restore")
 
 
-def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState(), reservation=FIXTURE_RESERVATION):
+def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState(), reservation=FIXTURE_RESERVATION,
+                    witness=MODEL_STORE):
     receipts = dict(ORIGINAL_RECEIPTS)
     receipts.update(state.receipts)
-    outcome, effects = command_result(command, receipts, state.history)
+    outcome, effects = command_result(command, receipts, state.history, witness)
     if not effects:
         return outcome, [], state
 
@@ -569,6 +595,31 @@ class ContractScenarios(unittest.TestCase):
                                  ("ISOLATED", [], history))
         self.assertEqual(command_result(old, history=history), ("DEPENDENCY_UNAVAILABLE", []))
         self.assertEqual(command_result(replace(old, release=False), history=history), ("NOT_FOUND", []))
+
+    def test_current_commit_witness_binds_scope_intent_and_atomic_records(self):
+        history = History().promote("lineage-b", FIXTURE_RESERVATION, set())
+        state = RestoreState(history=history)
+        command = replace(RESTORE_COMMAND, lineage=history.active)
+        restore = Restore(target_lineage="lineage-c")
+        reservation = VerifiedLineageReservation("lineage-c")
+        witness = model_witness(command, history)
+        outcome, effects, committed = restore_attempt(restore, command, state, reservation, witness)
+        self.assertEqual(outcome, "RESTORED")
+        self.assertTrue(effects)
+        for unproven in (
+            None, replace(witness, generation=History().storage_generation),
+            replace(witness, operation=("foreign", *witness.operation[1:])),
+            replace(witness, intent_digest="other"),
+            replace(witness, receipt_transaction="other"),
+            replace(witness, outbox_transaction="other"),
+        ):
+            with self.subTest(witness=unproven):
+                self.assertEqual(restore_attempt(restore, command, state, reservation, unproven),
+                                 ("DEPENDENCY_UNAVAILABLE", effects, committed))
+                self.assertEqual(restore_attempt(restore, replace(command, release=False), state,
+                                                 reservation, unproven), ("NOT_FOUND", effects, committed))
+                self.assertEqual(restore_attempt(restore, command, committed, reservation, None),
+                                 ("ACK_HISTORICAL_8", [], committed))
 
     def load_inputs(self, model, inputs):
         self.assertIs(type(inputs), dict)

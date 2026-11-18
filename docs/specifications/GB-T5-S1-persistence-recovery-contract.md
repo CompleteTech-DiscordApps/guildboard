@@ -101,9 +101,15 @@ the supported path.
    or serialization races, rollback and reevaluate the same identity through
    step 1. A proven rollback consumes no committed revision, capacity, outbox
    or acceptance record. Bound retries/deadlines and recheck authorization.
-5. Release the accepted ACK only after a durable commit witness and at the
-   T0/T9 serialized read-release fence. A failed release preserves prior durable
-   state and the receipt. Outbox is at-least-once delivery with recipient
+5. Release a new acceptance only after a durable commit witness and at the
+   T0/T9 serialized read-release fence. Verify the witness against the current
+   authoritative storage generation and exact accepted transaction. Bind the
+   receipt and event/outbox record to that same transaction and to the scoped
+   operation identity, semantic digest and committed revision. A stale,
+   unfenced, unavailable or mismatched generation or transaction cannot witness
+   a new acceptance or outbox release. Leave ambiguous outcomes unresolved.
+   Retained historical receipts follow steps 1–3. A failed release preserves
+   prior durable state and the receipt. Outbox is at-least-once delivery with recipient
    authorization per release. Consumers deduplicate by scoped lineage/revision
    and recover gaps. A timeout, uncertain COMMIT result or lost ACK preserves the
    original identity, digest and preconditions. Return the T0 safe

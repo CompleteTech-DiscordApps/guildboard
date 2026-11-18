@@ -88,7 +88,8 @@ put it in URLs, logs, support evidence or exports.
    reason. Compare absent, matching and conflicting receipts at both prelookup
    denial and release denial. In the latter case, authorize at prelookup and
    then remove authority immediately before egress. Compare a prepared
-   `LINEAGE_CHANGED`, retained receipt and `IDEMPOTENCY_CONFLICT`. The public response/close behavior must conceal lookup branch,
+   `LINEAGE_CHANGED`, history-dependent `DEPENDENCY_UNAVAILABLE`, a retained
+   receipt and `IDEMPOTENCY_CONFLICT`. The public response/close behavior must conceal lookup branch,
    receipt existence, digest match, lineage and revision, including size and
    timing signals under the declared measurement envelope. Normalize observable
    metadata, allowing only unrelated opaque per-request correlation. A denied
