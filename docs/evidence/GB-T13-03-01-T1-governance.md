@@ -8,6 +8,11 @@ Native dependency readback found #421 closed and #438 open. The [maintainer's
 claim][claim] records the documentation scope and preserves the outstanding
 ratification and approval requirements.
 
+On 2026-11-18 UTC, the read-only GitHub repository setting query
+`gh api repos/CompleteTech-DiscordApps/guildboard/private-vulnerability-reporting --jq '.enabled'`
+returned `true`. This records the repository setting. Delivery, routing and
+response behavior still require appropriate verification.
+
 ## Scope and observations
 
 | #438 clause | Published source and evidence |
