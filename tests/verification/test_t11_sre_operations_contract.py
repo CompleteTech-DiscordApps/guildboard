@@ -413,8 +413,11 @@ class OperationsContractTest(unittest.TestCase):
     def test_canary_timestamp_consistency_precedes_temporal_eligibility(self):
         original = ("guild_a", "board_a", "lineage_a", "actor_a", "operation_a")
         next_operation = (*original[:4], "operation_b")
-        source = {(*original, 8), (*next_operation, 9)}
+        source = {(*original, 8)}
         pre_fault = (original, 8, 5)
+        earlier = (original, 8, 4)
+        self.assertEqual(consistent_canary_times([pre_fault, earlier], source, source, {pre_fault, earlier}),
+                         ([], False))
         self.assertEqual(consistent_canary_times([pre_fault, (original, 8, 11)], source, source, {pre_fault}),
                          ([], False))
         self.assertEqual(consistent_canary_times([pre_fault, (next_operation, 9, 11)], source, source, {pre_fault}),
