@@ -7,7 +7,7 @@
       "claimId": "board-runtime-evidence",
       "ownerRole": "Moderation and policy owners, with T2/T6 and editor/user experience T3/T5/T7 consumers",
       "audience": "administrator",
-      "revision": "5f6203558ffa709b59f588ac98ff72eb692794e6",
+      "revision": "32a7b1ebecbb1b24c0b693531d873e031510b536",
       "claimStatus": "unresolved",
       "evidenceIds": [],
       "followUpIssue": "GB-T13.02.02.V1"
@@ -18,7 +18,7 @@
       "claimId": "map-roles",
       "ownerRole": "Moderation and policy owners, with T2/T6 and editor/user experience T3/T5/T7 consumers",
       "audience": "administrator",
-      "revision": "5f6203558ffa709b59f588ac98ff72eb692794e6",
+      "revision": "32a7b1ebecbb1b24c0b693531d873e031510b536",
       "claimStatus": "planned",
       "evidenceIds": []
     },
@@ -28,7 +28,7 @@
       "claimId": "manage-boards",
       "ownerRole": "Moderation and policy owners, with T2/T6 and editor/user experience T3/T5/T7 consumers",
       "audience": "administrator",
-      "revision": "5f6203558ffa709b59f588ac98ff72eb692794e6",
+      "revision": "32a7b1ebecbb1b24c0b693531d873e031510b536",
       "claimStatus": "planned",
       "evidenceIds": []
     },
@@ -38,7 +38,7 @@
       "claimId": "drawing-requests",
       "ownerRole": "Moderation and policy owners, with T2/T6 and editor/user experience T3/T5/T7 consumers",
       "audience": "moderator",
-      "revision": "5f6203558ffa709b59f588ac98ff72eb692794e6",
+      "revision": "32a7b1ebecbb1b24c0b693531d873e031510b536",
       "claimStatus": "planned",
       "evidenceIds": []
     },
@@ -48,7 +48,7 @@
       "claimId": "lock-and-modes",
       "ownerRole": "Moderation and policy owners, with T2/T6 and editor/user experience T3/T5/T7 consumers",
       "audience": "moderator",
-      "revision": "5f6203558ffa709b59f588ac98ff72eb692794e6",
+      "revision": "32a7b1ebecbb1b24c0b693531d873e031510b536",
       "claimStatus": "planned",
       "evidenceIds": []
     },
@@ -56,9 +56,9 @@
       "issue": "GB-T13.02.02.T1",
       "path": "docs/board-user-guide.md",
       "claimId": "join-and-draw",
-      "ownerRole": "Moderation and policy owners, with T2/T6 and editor/user experience T3/T5/T7 consumers",
+      "ownerRole": "Editor and user experience owners, with T3/T5/T7 consumers",
       "audience": "end-user",
-      "revision": "5f6203558ffa709b59f588ac98ff72eb692794e6",
+      "revision": "32a7b1ebecbb1b24c0b693531d873e031510b536",
       "claimStatus": "planned",
       "evidenceIds": []
     },
@@ -66,9 +66,9 @@
       "issue": "GB-T13.02.02.T1",
       "path": "docs/board-user-guide.md",
       "claimId": "save-and-history",
-      "ownerRole": "Moderation and policy owners, with T2/T6 and editor/user experience T3/T5/T7 consumers",
+      "ownerRole": "Editor and user experience owners, with T3/T5/T7 consumers",
       "audience": "end-user",
-      "revision": "5f6203558ffa709b59f588ac98ff72eb692794e6",
+      "revision": "32a7b1ebecbb1b24c0b693531d873e031510b536",
       "claimStatus": "planned",
       "evidenceIds": []
     },
@@ -76,9 +76,9 @@
       "issue": "GB-T13.02.02.T1",
       "path": "docs/board-user-guide.md",
       "claimId": "accessible-options",
-      "ownerRole": "Moderation and policy owners, with T2/T6 and editor/user experience T3/T5/T7 consumers",
+      "ownerRole": "Editor and user experience owners, with T3/T5/T7 consumers",
       "audience": "end-user",
-      "revision": "5f6203558ffa709b59f588ac98ff72eb692794e6",
+      "revision": "32a7b1ebecbb1b24c0b693531d873e031510b536",
       "claimStatus": "unresolved",
       "evidenceIds": [],
       "followUpIssue": "GB-T13.02.02.V1"
@@ -87,9 +87,9 @@
       "issue": "GB-T13.02.02.T1",
       "path": "docs/board-user-guide.md",
       "claimId": "permission-recovery",
-      "ownerRole": "Moderation and policy owners, with T2/T6 and editor/user experience T3/T5/T7 consumers",
+      "ownerRole": "Editor and user experience owners, with T3/T5/T7 consumers",
       "audience": "end-user",
-      "revision": "5f6203558ffa709b59f588ac98ff72eb692794e6",
+      "revision": "32a7b1ebecbb1b24c0b693531d873e031510b536",
       "claimStatus": "planned",
       "evidenceIds": []
     },
@@ -99,7 +99,7 @@
       "claimId": "manual-verification",
       "ownerRole": "Moderation and policy owners, with T2/T6 and editor/user experience T3/T5/T7 consumers",
       "audience": "moderator",
-      "revision": "5f6203558ffa709b59f588ac98ff72eb692794e6",
+      "revision": "32a7b1ebecbb1b24c0b693531d873e031510b536",
       "claimStatus": "unresolved",
       "evidenceIds": [],
       "followUpIssue": "GB-T13.02.02.V1"
