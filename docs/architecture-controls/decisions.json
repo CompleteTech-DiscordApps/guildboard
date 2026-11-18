@@ -153,6 +153,165 @@
       "test_evidence": [
         "tests/engineering/t9-resource-admission.test.mjs"
       ]
+    },
+    {
+      "id": "DEC-0010",
+      "revision": 1,
+      "boundary": "apps/api/src/private-asset-publication.ts",
+      "old_sha256": null,
+      "new_sha256": "129e4bd9fa8492308de2515bb620cedf89d4f65935e91ee4413419f1e910c2af",
+      "rationale": "Publish bounded canonical asset bytes in a trusted private Linux directory. A same-directory hard link provides atomic no-clobber installation; file and directory sync gate success and verified retries. A failed attempt can leave private unreferenced bytes for later fenced reconciliation.",
+      "alternatives": [
+        "An ordinary rename can replace an existing immutable object. Writing directly to the final name exposes completion races."
+      ],
+      "controls": [
+        "docs/specifications/GB-T5-S1-persistence-recovery-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t5-private-asset-publication.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0011",
+      "revision": 1,
+      "boundary": "apps/api/src/index.ts",
+      "old_sha256": "edcef52bfa9adccf26b8bf90761e8106df68f8a73c53b9d7bdeafb027a14d578",
+      "new_sha256": "a01e9df258113c5788e7de603bb9a3388f8cee2362cf7dbe0a6142b8c3eb3270",
+      "rationale": "Expose the private filesystem publication interface to trusted API consumers before application reference publication.",
+      "alternatives": [
+        "Keep the module internal to its source path until a consumer integrates it."
+      ],
+      "controls": [
+        "docs/specifications/GB-T5-S1-persistence-recovery-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t5-private-asset-publication.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0012",
+      "revision": 1,
+      "boundary": "database/README.md",
+      "old_sha256": "90b6d0f88ca03152dfa97c2011af690872cac859fa666aadb18128bf60cfdea7",
+      "new_sha256": "d5c508d75ecd576024f59451ad25f79bccdb0d1eccd76397da885f750af08a98",
+      "rationale": "Describe tenant-safe isolated migration, exact supported engines and the verified recovery boundary.",
+      "alternatives": [
+        "Retain the empty database scaffold until a supported exact-schema and interruption fixture is available."
+      ],
+      "controls": [
+        "docs/specifications/GB-T5-S1-persistence-recovery-contract.md"
+      ],
+      "test_evidence": [
+        "tests/verification/test_t5_initial_schema.py"
+      ]
+    },
+    {
+      "id": "DEC-0013",
+      "revision": 1,
+      "boundary": "database/migrations/0001_initial_innodb.sql",
+      "old_sha256": null,
+      "new_sha256": "045a76201bd00c399905a7e19b4f50c74dd141d00ca06eded8f3225c91987f8d",
+      "rationale": "Install the accepted T5 v1 relations with scoped InnoDB keys and hard references.",
+      "alternatives": [
+        "Retain the empty database scaffold until a supported exact-schema and interruption fixture is available."
+      ],
+      "controls": [
+        "docs/specifications/GB-T5-S1-persistence-recovery-contract.md"
+      ],
+      "test_evidence": [
+        "tests/verification/test_t5_initial_schema.py"
+      ]
+    },
+    {
+      "id": "DEC-0014",
+      "revision": 1,
+      "boundary": "database/verify_initial_schema.py",
+      "old_sha256": null,
+      "new_sha256": "b71760dfd3ee9da6ad35d09958fbe024a0b27275ca6307c6a45be979268602dd",
+      "rationale": "Verify the exact catalog and generation before installing or resuming a bounded initial migration.",
+      "alternatives": [
+        "Retain the empty database scaffold until a supported exact-schema and interruption fixture is available."
+      ],
+      "controls": [
+        "docs/specifications/GB-T5-S1-persistence-recovery-contract.md"
+      ],
+      "test_evidence": [
+        "tests/verification/test_t5_initial_schema.py"
+      ]
+    },
+    {
+      "id": "DEC-0015",
+      "revision": 1,
+      "boundary": "apps/api/src/operational-logs.ts",
+      "old_sha256": null,
+      "new_sha256": "8dd0ed4248638dd0c9a302ea34e0744b09f51f830bd1ac9e329fa9495c2d06b0",
+      "rationale": "Provide closed operational log and error records with bounded, expiring, server-issued scoped correlation.",
+      "alternatives": [
+        "Keep structured log consumers unavailable until a live exporter and retention policy are approved."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-operational-logs.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0016",
+      "revision": 1,
+      "boundary": "apps/api/src/index.ts",
+      "old_sha256": "a01e9df258113c5788e7de603bb9a3388f8cee2362cf7dbe0a6142b8c3eb3270",
+      "new_sha256": "c14c50df62d0575ca04a9130726953ed43cbfe94a0a99b30d5d1d8530243e9c4",
+      "rationale": "Expose the validated operational log boundary through the server API workspace entry.",
+      "alternatives": [
+        "Keep structured log consumers unavailable until a live exporter and retention policy are approved."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-operational-logs.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0017",
+      "revision": 1,
+      "boundary": "apps/api/src/operational-metrics.ts",
+      "old_sha256": null,
+      "new_sha256": "c84c441c3a6f6f77d86e48104ba2706e7420a269c02e7cbefde244b0d3b65ff7",
+      "rationale": "Validate the fixed metric registry, finite dimensions and immutable approved histogram layouts.",
+      "alternatives": [
+        "Keep metric validation unavailable until the approved runtime signals and collector are wired."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-operational-metrics.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0018",
+      "revision": 1,
+      "boundary": "apps/api/src/index.ts",
+      "old_sha256": "c14c50df62d0575ca04a9130726953ed43cbfe94a0a99b30d5d1d8530243e9c4",
+      "new_sha256": "ea9725522d9faea326a7f949fdb813abf8499f5174f83922287e3d3a639466a3",
+      "rationale": "Expose the bounded metric validation boundary for future authorized server telemetry consumers.",
+      "alternatives": [
+        "Keep metric validation unavailable until the approved runtime signals and collector are wired."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-operational-metrics.test.mjs"
+      ]
     }
   ]
 }

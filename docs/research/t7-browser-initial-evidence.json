@@ -1,0 +1,24 @@
+{
+  "browser_sandbox": "Cached image entrypoint explicitly uses --no-sandbox; not production isolation evidence.",
+  "checks_sha256": "9fb176445d4fd7c84be7491eacd48d28c333bd3b53fdfc4c3af22abd4a6c070f",
+  "container": "guildboard-t7-984d01ef7304",
+  "context": "desktop-linux",
+  "error": "### Error\nError: dialog keeps Tab inside failed: null",
+  "error_type": "RuntimeError",
+  "image": "mcp/playwright@sha256:8771dc4666e7c11440bfc6a0c6b00480e9a15b8891b45f29a52d7d995f8d1492",
+  "limits": {
+    "cpus": 1,
+    "host_mounts": false,
+    "memory_mib": 768,
+    "network": "none",
+    "pids": 256
+  },
+  "mcp_server": {
+    "name": "Playwright",
+    "version": "1.61.0-alpha-1781023400000"
+  },
+  "observed_at_utc": "2026-10-26T00:25:48.789849+00:00",
+  "owned_container_absent": true,
+  "prototype_sha256": "1665f1dcc317c5e6e0d989fbe3b5e0233a5b734f2785db139c5190998f667d9d",
+  "result": "blocked-or-failed"
+}
