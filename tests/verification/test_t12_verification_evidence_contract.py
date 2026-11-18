@@ -317,8 +317,10 @@ def qualifies(data, key, registry, artifact, observation, inventory, trusted_tim
                "environmentId": record["environmentId"], "configurationRef": approval["configurationRef"],
                "artifactSha256": record["artifactSha256"]}
     cleanup = "verified" if approval["resourceful"] else "untouched"
-    refs = [approval["authorityRef"], *approval["prerequisiteRefs"]]
-    require(all(ref in authorities.grants for ref in refs), "DEPENDENCY_UNAVAILABLE")
+    refs = [("qualification", approval["authorityRef"]),
+            *(("prerequisite", ref) for ref in approval["prerequisiteRefs"])]
+    require(all(ref in authorities.grants and (purpose, ref) in authorities.issuers
+                for purpose, ref in refs), "DEPENDENCY_UNAVAILABLE")
     subject = [*key, digest(encode(approval))]
     outcome = Outcome.INELIGIBLE
     if (
@@ -562,6 +564,7 @@ def gate_coverage(gate, clients, selected=()):
         **{("discord-startup", row): (455, {"activity-startup", "authenticated-guild"}) for row in clients},
     }
     production = {
+        ("production-network", "vps-network"): (353, {"https", "wss", "heartbeat", "private-data-plane"}),
         ("production-smoke", "vps-network"): (457, {"https-wss", "monitoring", "rollback", "smoke"}),
         ("production-recovery", "vps-recovery"): (457, {"isolated-restore", "rpo-rto", "continuity"}),
         ("credentials-recovery", "vps-recovery"): (378, {"credential-restore", "retired-credential-denied"}),
@@ -570,6 +573,7 @@ def gate_coverage(gate, clients, selected=()):
         ("deployed-build-smoke", "vps-network"): (417, {"verified-build", "smoke"}),
         **{("production-discord", row): (353, {"mapped-proxy", "upgrade", "reconnect",
               "large-message", "oversize-denial", "resync-without-acceptance"}) for row in clients},
+        **{("deployed-client-smoke", row): (417, {"verified-build", "deployed-client-journey"}) for row in clients},
     }
     if gate == "GB-T13.G1":
         return mvp
@@ -581,6 +585,7 @@ def gate_coverage(gate, clients, selected=()):
         ("integrated", "hosted"): (455, MVP_BEHAVIORS | {"modes", "moderation", "import-export", "recovery"}),
         ("harness", "offline"): (393, {"owned-setup", "invalid-config", "interrupted-cleanup"}),
         ("browser-e2e", browser): (396, {"controlled-launch", "auth", "navigation"}),
+        **{("sdk-launch", row): (396, {"actual-launch", "sdk-compatibility"}) for row in clients},
         ("isolation", "hosted"): (403, {"tenant-isolation", "content-scope"}),
         ("convergence", "hosted"): (407, {"idempotency", "concurrent-convergence"}),
         ("recovery", "vps-recovery"): (410, {"recovery-inventories", "deletion-fences"}),
@@ -592,9 +597,18 @@ def gate_coverage(gate, clients, selected=()):
 
 
 @cache
+def native_plan():
+    return read_json(ROOT / "planning/guildboard-backlog.json")["items"]
+
+
+@cache
 def native_gate_dependencies(gate):
-    items = read_json(ROOT / "planning/guildboard-backlog.json")["items"]
-    return frozenset(next(item["dependencies"] for item in items if item["id"] == gate))
+    return frozenset(next(item["dependencies"] for item in native_plan() if item["id"] == gate))
+
+
+@cache
+def canonical_native_issue(number):
+    return next((item["id"] for item in native_plan() if item["github"]["number"] == number), None)
 
 
 def t13_projection(key, candidate, scope, sources, issue_map):
@@ -610,7 +624,7 @@ def t13_projection(key, candidate, scope, sources, issue_map):
     evidence = record["evidence"]
     level = T13_LEVELS.get(evidence["evidenceClass"])
     issue = issue_map.get(evidence["nativeIssue"])
-    if level is None or issue is None:
+    if level is None or issue is None or issue != canonical_native_issue(evidence["nativeIssue"]):
         return None
     identifier, ref = sources.registry[key]["projection"]
     entry = {"id": identifier, "issue": issue, "revision": evidence["candidateSha"],
@@ -940,6 +954,12 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "INVALID_RECORD"):
             passing(encode(record), row, sparse_registry, artifact, observation, inventory, current, authorities)
 
+    def test_missing_independent_issuer_keeps_qualification_unavailable(self):
+        record, key, registry, artifact, observation, inventory, current, authorities = self.qualification_inputs()
+        authorities.issuers.pop(("qualification", registry[key]["authorityRef"]))
+        with self.assertRaisesRegex(ValueError, "^DEPENDENCY_UNAVAILABLE$"):
+            qualifies(encode(record), key, registry, artifact, observation, inventory, current, authorities)
+
     def test_target_cleanup_and_observations_are_independently_bound(self):
         record, row, registry, artifact, observation, inventory, current, authorities = self.qualification_inputs()
         for field, values in [
@@ -1089,6 +1109,7 @@ class VerificationEvidenceContractTests(unittest.TestCase):
             "result": "pass", "ref": ref,
         })
         self.assertIsNone(t13_projection(key, CANDIDATE, "release", sources, {393: "393"}))
+        self.assertIsNone(t13_projection(key, CANDIDATE, "release", sources, {393: "GB-T12.G1"}))
         self.assertIsNone(t13_projection(key, CANDIDATE, "release", sources, None))
         self.assertIsNone(project(replace(sources, receipt_refs={key: []})))
         approval = sources.registry[key]
@@ -1132,9 +1153,11 @@ class VerificationEvidenceContractTests(unittest.TestCase):
             ("GB-T13.G2", ("production-smoke", "vps-network"), "rollback"),
             ("GB-T13.G2", ("production-discord", "discord-win"), "oversize-denial"),
             ("GB-T13.G2", ("credentials-recovery", "vps-recovery"), "retired-credential-denied"),
+            ("GB-T13.G2", ("production-network", "vps-network"), "private-data-plane"),
+            ("GB-T13.G2", ("deployed-client-smoke", "discord-win"), "deployed-client-journey"),
         ):
             with self.subTest(gate=gate, omitted=omitted, scenario=scenario):
-                required = gate_coverage(gate, ["discord-win"])
+                required = gate_coverage(gate, ["discord-win", "discord-mac"])
                 keys = set(required)
                 overrides = {key[0]: {"issue": issue, "scenarios": cases}
                              for key, (issue, cases) in required.items()}
@@ -1235,6 +1258,7 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         for field, removed in (("matrixKeys", ("recovery", "vps-recovery")),
                                ("matrixKeys", ("harness", "offline")),
                                ("matrixKeys", ("browser-e2e", "local")),
+                               ("matrixKeys", ("sdk-launch", "discord-win")),
                                ("matrixKeys", ("isolation", "hosted")),
                                ("matrixKeys", ("convergence", "hosted")),
                                ("prerequisiteRefs", "GB-T13.G2")):
