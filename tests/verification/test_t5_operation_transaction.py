@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from hashlib import sha256
 import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
 import time
@@ -86,6 +87,16 @@ class OperationTransactionTests(unittest.TestCase):
         user = os.environ["GB_SCHEMA_USER"]
         self.assertTrue(client.is_absolute() and client.is_file() and socket.is_absolute() and socket.is_socket())
         self.assertNotIn("MYSQL_PWD", os.environ)
+        self.assertEqual(socket.resolve(strict=True), socket)
+        self.assertEqual(socket.stat().st_uid, os.geteuid())
+        fixture_root = socket.parent.stat()
+        self.assertEqual(fixture_root.st_uid, os.geteuid())
+        self.assertEqual(stat.S_IMODE(fixture_root.st_mode), 0o700)
+        fixture_data = socket.parent / "data"
+        self.assertTrue(fixture_data.is_dir() and fixture_data.resolve(strict=True) == fixture_data)
+        data_metadata = fixture_data.stat()
+        self.assertEqual(data_metadata.st_uid, os.geteuid())
+        self.assertEqual(stat.S_IMODE(data_metadata.st_mode), 0o700)
         self.db = "gb178_" + uuid.uuid4().hex
         self.cli = [str(client), "--no-defaults"]
         if client.name == "mysql":
@@ -100,9 +111,12 @@ class OperationTransactionTests(unittest.TestCase):
                 [*self.cli, "-e", sql], capture_output=True, text=True, timeout=10, check=True,
             ).stdout.strip()
 
-        version, private = admin("SELECT VERSION(), @@global.skip_networking").split("\t")
+        version, private, datadir = admin(
+            "SELECT VERSION(), @@global.skip_networking, @@global.datadir"
+        ).split("\t")
         self.assertIn(version, SCHEMA.CATALOG)
         self.assertEqual(private, "1")
+        self.assertEqual(Path(datadir).resolve(strict=True), fixture_data)
         admin(f"CREATE DATABASE {self.db}")
         self.addCleanup(admin, f"DROP DATABASE {self.db}")
         result = subprocess.run(
