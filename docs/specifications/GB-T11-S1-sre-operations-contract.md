@@ -142,6 +142,7 @@ Preserve earliest trigger time,
 route with a bounded reason and runbook reference, and escalate unacknowledged
 pages by the approved rota. Clear each active rule only after observing its
 recovery signal for the same deployment, rule, profile, journey and cohort.
+Require the approved rule to apply to the incident's journey and cohort.
 Compare those identifiers on the observation with the active alert. Verify the
 observation source against the independently approved rule configuration.
 Evidence must be newer than the last breach, within the configured
@@ -154,7 +155,10 @@ consecutive windows and routing. Validate disabled, malformed, inconsistent
 or missing configuration with names-only diagnostics. The affected evaluator
 reports loss of coverage, emits no candidate verdict or page, and cannot
 clear an active alert. Independent service protection, including authorization,
-isolation and integrity guards, continues to enforce its own policy. SRE and QE
+isolation and integrity guards, continues to enforce its own policy. The
+independent incident path still immediately routes unsafe restore destinations,
+integrity failures and known acknowledgment loss outside the approved trial
+boundary. SRE and QE
 must reconcile the #356 workload and #388 QE candidate before approving a shared
 profile. Alert routing, progression/cooldown and numeric policies require pilot
 observations and owner approval.
@@ -208,10 +212,13 @@ Use one trusted UTC timeline for declaration, incident/fault and recovered
 canary commit. Choose the latest consistent restored synthetic canary whose
 original pre-fault durable commit and restored lineage/cut match trusted
 evidence. RPO is incident/fault time minus that original commit time. Exclude
-inconsistent, unverified, post-fault and unrestored canaries. Copy, replay and
+inconsistent, unverified, post-fault and unrestored canaries. Require an observed
+restore at or after the fault and a consistent original durable commit identity
+and timestamp for each scoped position. Copy, replay and
 restore execution timestamps cannot serve as original commit evidence. Compare
 an independent pre-fault acknowledgment inventory with recovered evidence by
-original lineage, durable position and operation identity. Verify coverage for
+durable position and the full T0 identity `(guildId, boardId, lineageId,
+actorUserId, operationId)`. Verify coverage for
 both sources in the affected scope through the trial's pre-fault high-water
 mark. Record any gap that prevents establishing presence or absence.
 Any acknowledged operation known missing at or before the selected recovery
