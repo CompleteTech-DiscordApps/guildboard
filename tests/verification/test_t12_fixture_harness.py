@@ -145,6 +145,45 @@ class FixtureHarnessTests(unittest.TestCase):
             "sql_engine,migrations,api,policy,storage,bot",
         )
 
+    def test_namespace_open_failure_rolls_back_creation(self):
+        open_directory = os.open
+        failure = OSError("namespace open failed")
+
+        def fail_namespace_open(path, flags, *, dir_fd=None):
+            if dir_fd is not None:
+                self.assertTrue((self.root / path).is_dir())
+                raise failure
+            return open_directory(path, flags)
+
+        with patch.object(os, "open", side_effect=fail_namespace_open):
+            with self.assertRaises(OSError) as raised, fixture_run(self.config):
+                self.fail("failed acquisition entered the run")
+        self.assertIs(raised.exception, failure)
+        self.assert_sentinel_only()
+
+    def test_namespace_open_failure_preserves_untracked_contents(self):
+        open_directory = os.open
+
+        def fail_namespace_open(path, flags, *, dir_fd=None):
+            if dir_fd is not None:
+                (self.root / path / "untracked").write_bytes(b"untracked")
+                raise OSError("namespace open failed")
+            return open_directory(path, flags)
+
+        with patch.object(os, "open", side_effect=fail_namespace_open):
+            with (
+                self.assertRaisesRegex(
+                    RuntimeError, "^could not roll back fixture namespace acquisition$"
+                ),
+                fixture_run(self.config),
+            ):
+                self.fail("failed acquisition entered the run")
+        namespaces = set(self.root.iterdir()) - {self.sentinel}
+        self.assertEqual(len(namespaces), 1)
+        namespace = namespaces.pop()
+        self.assertEqual((namespace / "untracked").read_bytes(), b"untracked")
+        self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+
     @unittest.skipUnless(os.name == "posix", "requires waitpid on an owned POSIX child")
     def test_interruption_reaps_only_owned_worker_and_preserves_sentinel(self):
         # The separately owned process uses its stdin as a lifetime handle.

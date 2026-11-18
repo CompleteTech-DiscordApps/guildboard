@@ -16,7 +16,10 @@ the run synchronously. The harness validates the opened root and allocates the
 namespace relative to its directory descriptor. The worker enters the pinned
 namespace through procfs. Cleanup checks that the original namespace name
 still identifies the pinned directory before removing it relative to the pinned
-root. Treat `run.namespace` as a pathname and keep the root and namespace names
+root. If opening the new namespace fails, the harness checks its recorded
+identity before attempting to remove the empty directory. It reports a failure
+if it cannot verify the entry or remove it safely. Treat `run.namespace` as a
+pathname and keep the root and namespace names
 stable while using it for fixture I/O.
 
 The harness assumes cooperative ownership of the private root. Processes sharing
@@ -38,6 +41,7 @@ deadline on real elapsed time.
 | E02 unavailable integration prerequisites | Selecting `integration` yields `PrerequisiteUnavailable` with the missing capability names for the SQL engine, migrations, API, policy, storage and bot. The same preflight observations confirm zero setup effects. |
 | Fixture selectors and identity | Two boards share the subject guild. A foreign board reuses board, asset, receipt and lineage selectors. The in-memory adapter distinguishes guild membership records for the same user ID and returns no membership for an unmatched pair. The dataset includes viewer, moderator, revoked, foreign control and distinct observer records. The test checks that the adapter path creates no socket. |
 | Directory ownership | Replacing the root pathname before allocation leaves allocation, worker cwd and removal in the opened root. Replacing the namespace entry after it has been pinned causes cleanup to reap the child, report an identity change and preserve both directories. Independent filesystem observations verify the replacement directories and unrelated sentinel bytes. |
+| Acquisition failure | An injected namespace open failure propagates the original error and removes the empty namespace. If the namespace contains an unexpected file, rollback reports a failure and preserves the file. Both tests verify that the unrelated sentinel remains unchanged. |
 | E03 catchable interruption | After the owned worker starts, the test delivers SIGINT to its own Python process while the fixture context is active. The context stops new worker starts and signals and reaps its one tracked child. The test checks the child was reaped, a separately owned child survives and only the unchanged filesystem sentinel remains. Unexpected contents in the namespace surface a cleanup failure and are preserved. |
 
 The interruption case uses one fixed ordering (enter, start, interrupt, reap)

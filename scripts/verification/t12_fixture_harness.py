@@ -144,7 +144,33 @@ class _FixtureRun:
         self._namespace_name = f"t12-fixture-{uuid4().hex}"
         self._namespace = config.root / self._namespace_name
         os.mkdir(self._namespace_name, mode=0o700, dir_fd=root_fd)
-        self._namespace_fd = os.open(self._namespace_name, _DIRECTORY_FLAGS, dir_fd=root_fd)
+        try:
+            created = self._namespace_entry()
+        except OSError as error:
+            raise RuntimeError("could not verify created fixture namespace") from error
+        if not stat.S_ISDIR(created.st_mode) or created.st_uid != os.geteuid():
+            raise RuntimeError("could not verify created fixture namespace")
+
+        try:
+            self._namespace_fd = os.open(self._namespace_name, _DIRECTORY_FLAGS, dir_fd=root_fd)
+        except OSError:
+            try:
+                self._remove_namespace(created)
+            except (OSError, RuntimeError) as error:
+                raise RuntimeError("could not roll back fixture namespace acquisition") from error
+            raise
+
+    def _namespace_entry(self) -> os.stat_result:
+        return os.stat(self._namespace_name, dir_fd=self._root_fd, follow_symlinks=False)
+
+    def _remove_namespace(self, expected: os.stat_result) -> None:
+        try:
+            entry = self._namespace_entry()
+        except FileNotFoundError:
+            raise RuntimeError("fixture namespace identity changed") from None
+        if not os.path.samestat(expected, entry):
+            raise RuntimeError("fixture namespace identity changed")
+        os.rmdir(self._namespace_name, dir_fd=self._root_fd)
 
     @property
     def namespace(self) -> Path:
@@ -176,15 +202,7 @@ class _FixtureRun:
                 finally:
                     self._worker.stdin.close()
             # A failed reap or unexpected contents leave the namespace for inspection.
-            try:
-                entry = os.stat(
-                    self._namespace_name, dir_fd=self._root_fd, follow_symlinks=False
-                )
-            except FileNotFoundError:
-                raise RuntimeError("fixture namespace identity changed") from None
-            if not os.path.samestat(os.fstat(self._namespace_fd), entry):
-                raise RuntimeError("fixture namespace identity changed")
-            os.rmdir(self._namespace_name, dir_fd=self._root_fd)
+            self._remove_namespace(os.fstat(self._namespace_fd))
         finally:
             os.close(self._namespace_fd)
 
