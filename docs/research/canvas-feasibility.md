@@ -561,3 +561,142 @@ blocked its secondary loopback origin before that server received any request.
 Callback counts describe this run and are not fixed assertions. No browser
 sandbox, network safeguard or prior check was relaxed. This is hosted synthetic
 browser evidence, with no Discord, AT, physical-input or production acceptance.
+
+
+## Synthetic clipboard delivery and identity probe, 2026-11-18
+
+Related #98 / GB-T3.R1. `clipboard-probe.mjs`, called by `npm run probe`,
+adds two fresh writable/viewer pairs: plain-text paste and ordinary copy/paste
+of a synthetic grouped rectangle with bound text. Each target receives two
+Control+V inputs. A separate writable donor uses pointer selection and
+Control+C for each group trial, so a viewer receives the same real editor
+clipboard format without needing editing permission. Only initial synthetic
+seeding uses `updateScene`; exercised copy/paste uses ordinary keyboard events.
+No manually dispatched clipboard events or post-input scene injection count as
+evidence. Existing viewer, creation, history, asset and network probes remain.
+
+### Inspected pins and clipboard isolation
+
+The installed Excalidraw **0.18.1** development artifacts `dist/dev/index.js`
+(paste handler and clipboard action) and `dist/dev/chunk-4FTI6OG3.js`
+(clipboard serialization/parsing and duplication) were inspected before
+assertions were chosen. Corresponding immutable primary source at
+`a2ec2889babf7d2295469c6d90ebe77fae57df84`:
+
+- [clipboard serialization, event text parsing and copy](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/clipboard.ts#L181)
+  carries selected elements as clipboard JSON; the text path reads the event.
+- [paste delivery](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/components/App.tsx#L2999)
+  checks canvas focus/cursor and dispatches parsed elements or text.
+  [Element insertion](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/components/App.tsx#L3224)
+  duplicates the incoming set, appends it to originals including tombstones,
+  and selects pasted content.
+- [duplicateElements](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/element/newElement.ts#L686)
+  generates element/group IDs and maps `containerId`, `boundElements`, arrow
+  bindings and frame references when their targets are inside the copied set.
+  This probe exercises text/container references in both directions; it does
+  not claim arrow/frame or external-reference coverage.
+- [view-mode listener guard](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/components/App.tsx#L2649)
+  skips editor paste listeners. This is a UI observation, never server authority.
+
+Clipboard APIs are confined to an additional disposable **Linux** managed
+Chromium process, with sandbox enabled and `--ozone-platform=headless`
+explicitly selected. The launch environment removes `DISPLAY`,
+`WAYLAND_DISPLAY` and `XAUTHORITY`; no connected browser/native desktop is
+attached. Before clipboard access, the code requires managed Chromium
+**141.0.7390.37** (Playwright **1.56.1**) and checks the effective headless/Ozone
+flags and absence of `--no-sandbox` through CDP. `CHROMIUM_PATH` is deliberately
+not used for this additional process. Other platforms or versions return an
+explicit unavailable result before clipboard calls; launch or isolation failures
+fail the command. This restriction follows source inspection, not a claim about
+all headless browsers.
+
+Chromium 141.0.7390.37's [Ozone headless implementation](https://github.com/chromium/chromium/blob/141.0.7390.37/ui/ozone/platform/headless/ozone_platform_headless.cc)
+does not override platform clipboard access; the [base accessor](https://github.com/chromium/chromium/blob/141.0.7390.37/ui/ozone/public/ozone_platform.cc)
+returns null, and the [clipboard factory](https://github.com/chromium/chromium/blob/141.0.7390.37/ui/base/clipboard/clipboard_factory_ozone.cc)
+then selects `ClipboardNonBacked`. Its [class definition](https://github.com/chromium/chromium/blob/141.0.7390.37/ui/base/clipboard/clipboard_non_backed.h)
+identifies an in-memory clipboard without underlying platform synchronization.
+This is the source basis for the isolated in-process clipboard. Every trial overwrites it with known synthetic text
+before any read, copy or paste observation. No preexisting clipboard content is
+inspected or reused, and no host/user clipboard is read or written.
+
+Each fresh context blocks service workers and permits only the exact loopback
+fixture origin. Waits are bounded; callbacks cap at 200, paste events at eight,
+and recorded clipboard text at 65,536 characters. Any evidence overflow fails.
+Trusted paste events must deliver the exact synthetic payload in both modes;
+the group donor must receive a trusted copy event. Complete scenes, callback
+streams, focus, active tool, selection and delivery metadata are retained in
+JSON output, including failure diagnostics. Original elements and the explicit
+tombstone must remain structurally exact at every target checkpoint, callback
+and paste event, and throughout donor selection/copy. Writable controls require
+exact text or two bound group members, fresh IDs disjoint from originals and
+prior pastes, fresh group IDs, both remapped binding directions, a complete
+callback for each paste, and unchanged prior pasted elements throughout the
+second paste. Viewer complete scenes and all observed callbacks must equal
+their baselines. Synthetic element content is safe to retain; this recorder is
+not intended for production boards.
+
+### Commands and current evidence
+
+Implementation started from source `1f6aed8ed5c388da8f1de7114eeb7a0a564d1996`.
+On Debian **13.6** / Node **24.22.3** / npm **11.9.0**, from the isolated
+`research-fixtures/canvas` directory:
+
+| Command | Exit / result |
+| --- | --- |
+| `npm ci --ignore-scripts --offline --no-audit --no-fund` | 0; clean locked install, 252 packages |
+| `npm test` | 0; all 17 existing unit tests, no skips |
+| `npm run probe` | 1; bundle builds, managed Chromium headless shell absent; no page/input assertions |
+| `npm run probe:network` | 1; same missing managed browser; no network assertions |
+| `CHROMIUM_PATH=/usr/bin/chromium npm run probe` | 1; bundle builds, system Chromium 156.0.8078.79 aborts before pages on denied process-singleton socket |
+| `CHROMIUM_PATH=/usr/bin/chromium npm run probe:network` | 1; same sandbox-enabled launch failure before pages |
+
+From the repository root, `node --check research-fixtures/canvas/clipboard-probe.mjs`,
+`node --check research-fixtures/canvas/probe.mjs`,
+`python3 -B scripts/github-bootstrap/validate.py` and `git diff --check` pass
+(exit 0). No local clipboard trial has executed. The existing Ubuntu 22.04
+hosted canvas workflow installs the pinned managed browser and runs the same
+probe; its observed result follows. A mock, bundle, syntax check or prior
+hosted run is not clipboard runtime evidence.
+
+Continue the controlled experiment; adoption remains gated. Drop/context-menu,
+malformed or oversized clipboard acceptance, arrow/frame references, arbitrary
+imports, physical/assistive input, Discord clipboard permissions and iframe
+behavior, concurrency, authoritative undo, server validation and GoDaddy
+verification remain open. This finite benign probe does not specify canonical
+paste intent or trusted affected-set derivation. #98 stays incomplete/open;
+#99 and #133 remain blocked. ADR 0001/0004 and mandatory GoDaddy direction are
+unchanged. Fresh independent functional/security review and post-merge verification
+remain separate gates.
+
+
+### Hosted clipboard observation
+
+[Native fixture run 44415264601, job 135193770619](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/44415264601/job/135193770619)
+passed at implementation head `e31d0a9d3d9693695c631a6607b0664c7a8c1fe1`,
+tested as synthetic merge `f5097422c447603cdd97245aad3948579a06b1bc` against
+source `1f6aed8ed5c388da8f1de7114eeb7a0a564d1996`. Logs record Ubuntu
+**22.04.5**, Node **24.22.2**, npm **11.19.1**, and managed sandbox-enabled
+Chromium **141.0.7390.37**. Locked install, all 17 unit tests, full audit
+(zero reported vulnerabilities), editor probe and network controls passed.
+The clipboard result is explicitly `synthetic-clipboard-passed`, rather than
+an unavailable/skip result.
+
+| Trial | Delivered paste events | Target callbacks | Actual result |
+| --- | --- | --- | --- |
+| Plain text / writable | 2 trusted, exact synthetic text | 6 | Two fresh live text IDs with exact text; second paste preserves first |
+| Plain text / viewer | 2 trusted, same exact text | 0 | Complete baseline unchanged at both deliveries/checkpoints |
+| Bound group / writable | 2 trusted, exact copied JSON | 6 | Two distinct rectangle/text pairs; fresh groups; both binding directions remapped internally; prior pair exact |
+| Bound group / viewer | 2 trusted, same copied JSON | 0 | Complete baseline unchanged at both deliveries/checkpoints |
+
+Each group donor received one trusted keyboard copy event and five callbacks;
+its complete original scene and tombstone stayed exact. Every target retained
+all seeded fields/tombstone throughout the recorded callbacks and checkpoints.
+The isolated process reported zero page errors, blocked requests or evidence
+overflows. Every target finished focused on a canvas `DIV` with the selection
+tool; writable targets selected their newest pasted text or pair, and viewers
+had no selection. These are observations from this finite synthetic Linux run;
+zero viewer callbacks does not establish callback suppression universally.
+No claim is made for host clipboard access, malicious formats, platforms,
+server authorization, authoritative undo or broader #98 acceptance. The later
+evidence-only documentation update leaves both fixture files byte-identical
+to this tested implementation head.

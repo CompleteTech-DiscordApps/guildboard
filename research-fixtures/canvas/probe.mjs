@@ -7,6 +7,7 @@ import {probeHydration} from './hydration-probe.mjs';
 import {probeKeyboardUndo} from './keyboard-undo-probe.mjs';
 import {probeViewerInput} from './viewer-input-probe.mjs';
 import {probeTextCreation} from './text-creation-probe.mjs';
+import {probeClipboard} from './clipboard-probe.mjs';
 import {browserLaunchOptions, isFixtureNetworkRequest, startFixtureServer} from './fixture-runtime.mjs';
 
 const server = await startFixtureServer(process.cwd());
@@ -121,10 +122,11 @@ try {
   const keyboardNavigation = await probeKeyboardUndo(browser, origin);
   const viewerInput = await probeViewerInput(browser, origin);
   const textCreation = await probeTextCreation(browser, origin);
+  const clipboard = await probeClipboard(origin);
   assert.deepEqual(blockedRequests, []);
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({
-    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks, hydration, keyboardControl, keyboardNavigation, assets, compound, viewerInput, textCreation,
+    result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks, hydration, keyboardControl, keyboardNavigation, assets, compound, viewerInput, textCreation, clipboard,
     checks: ['remote ID preserved', 'NEVER remote baseline survives local undo',
       'view-mode Delete with selected content leaves scene unchanged',
       'view-mode undo with retained local history leaves scene unchanged',
@@ -134,7 +136,7 @@ try {
     limitations: ['Not yet tested in Discord', 'No server permission checks',
       'No touch/stylus or accessibility acceptance', 'No concurrent remote overwrites or rollback after reconnect or permission changes',
       'Earlier smoke selection is API-supplied; fresh viewer-input trials use real pointer/keyboard input',
-      'Paste/drop/context-menu paths remain untested; fresh text creation is bounded synthetic browser evidence'],
+      'Drop/context-menu paths remain untested; text creation and available clipboard trials are bounded synthetic browser evidence'],
   }, null, 2));
 } finally {
   try { await browser?.close(); }
