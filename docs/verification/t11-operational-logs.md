@@ -27,16 +27,22 @@ untrusted data outside the governing authority and retry identity checks.
 
 Call `issueCorrelation` on first submission and pass the same scope to record
 constructors for later request, operation and board observations in that
-journey. Retry callers retain the same journey scope including the first
-submission time. Successful issuance keeps the canonical 128-bit random
-token in a bounded private process-local table. The lifetime starts at the
-first submission, retries leave the deadline fixed, and expiry is exclusive.
-Expired entries are ineligible for lookup and are reclaimed on issuance or
-when encountered during lookup. The table exports only the associated
-opaque token as part of a valid record. A different process or boundary
-has no mapping. The caller must treat a failed issuance or lookup as
-observation loss with unknown journey coverage. It must preserve the
-original submission and its product outcome independently of telemetry.
+journey. The first well-formed scope binds the private journey reference to
+its board, session and first submission time, including when issuance fails.
+Exact retries can recover from a transient issuance failure within the
+original lifetime. Successful issuance keeps the canonical 128-bit random
+token in a bounded private process-local table. Exact retries reuse the token
+and its fixed deadline. The lifetime starts at the first submission and
+expiry is exclusive. An unreferenced host timer reclaims the live mapping
+even while the boundary is idle. Monotonic deadline checks on issuance and
+lookup also reclaim expired entries when timer dispatch is delayed. Weak
+identity tracking prevents expired journeys from receiving a new token and
+lets garbage collection reclaim the identity with its journey. The table
+exports only the associated opaque token as part of a valid record. A
+different process or boundary has no mapping. The caller must treat a
+failed issuance or lookup as observation loss with unknown journey coverage.
+It must preserve the original submission and its product outcome
+independently of telemetry.
 
 ## Collection and access status
 
@@ -54,11 +60,12 @@ tests is synthetic.
 ## Local evidence
 
 Linux x86_64 with Node.js v24.22.3. On base
-`35b0c113a6a530a7ca6c7553a415f56a8e62043d` plus the implementation,
-`node --test tests/engineering/t11-operational-logs.test.mjs` passed eight
+`7efd107d72c298a796ba57bd997a1920c8ad6c68` plus the expiry remediation,
+`node --test tests/engineering/t11-operational-logs.test.mjs` passed 12
 tests. The suite compiles the API workspace into a temporary directory and
 exercises record and classified error acceptance, unsafe payload rejection
 with accessor and proxy traps left untouched, server-issued scope binding,
-mapping capacity and expiry, monotonic time failure and no stdout or stderr
-writes. This is offline API-boundary evidence. Hosted and real-platform
-acceptance require their own evidence.
+mapping capacity, idle and synchronous expiry, first-identity enforcement,
+exact retries, clock and scheduler failure, and no stdout or stderr writes.
+`npm run lint` passed. This is offline API-boundary evidence. Hosted and
+real-platform acceptance require their own evidence.

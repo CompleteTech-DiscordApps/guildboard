@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { clearTimeout, setTimeout } from "node:timers";
 import { types } from "node:util";
 
 const components = [
@@ -66,9 +67,28 @@ type Options = Readonly<{
   maxCorrelations: number;
   correlationTtlMs: number;
   monotonicNow: () => number;
+  /** Server-owned scheduler. Invoke the callback once, asynchronously, after the delay. */
+  scheduleExpiry?: (expire: () => void, delayMs: number) => () => void;
 }>;
 
-type Correlation = OperationalJourneyScope & Readonly<{ token: string; expiresAt: number }>;
+type Correlation = Readonly<{
+  token: string;
+  expiresAt: number;
+  cancelExpiry: () => void;
+}>;
+
+type JourneyIdentity = Readonly<{
+  board: WeakRef<object>;
+  session: WeakRef<object>;
+  startedAt: number;
+}>;
+
+const maxTimerDelayMs = 2_147_483_647;
+
+function scheduleHostExpiry(expire: () => void, delayMs: number): () => void {
+  const timer = setTimeout(expire, delayMs).unref();
+  return () => clearTimeout(timer);
+}
 
 function ownFields<Key extends string>(
   value: unknown,
@@ -123,11 +143,11 @@ function readScope(value: unknown): OperationalJourneyScope | undefined {
   return { journey, board, session, startedAt };
 }
 
-function sameScope(entry: Correlation, scope: OperationalJourneyScope): boolean {
+function sameScope(identity: JourneyIdentity, scope: OperationalJourneyScope): boolean {
   return (
-    entry.board === scope.board &&
-    entry.session === scope.session &&
-    entry.startedAt === scope.startedAt
+    identity.board.deref() === scope.board &&
+    identity.session.deref() === scope.session &&
+    identity.startedAt === scope.startedAt
   );
 }
 
@@ -136,17 +156,22 @@ export function createOperationalLogBoundary({
   maxCorrelations,
   correlationTtlMs,
   monotonicNow,
+  scheduleExpiry = scheduleHostExpiry,
 }: Options) {
   if (
     !Number.isSafeInteger(maxCorrelations) ||
     maxCorrelations <= 0 ||
     !Number.isSafeInteger(correlationTtlMs) ||
     correlationTtlMs <= 0 ||
-    typeof monotonicNow !== "function"
+    typeof monotonicNow !== "function" ||
+    typeof scheduleExpiry !== "function"
   )
     throw new RangeError("Invalid operational correlation configuration");
 
   const entries = new Map<object, Correlation>();
+  // The journey owns its first identity even after its token is reclaimed.
+  const identities = new WeakMap<object, JourneyIdentity>();
+  const issued = new WeakSet<object>();
   let lastTime = 0;
 
   function readTime(): number | undefined {
@@ -160,24 +185,69 @@ export function createOperationalLogBoundary({
     }
   }
 
+  function removeEntry(journey: object, entry: Correlation): void {
+    entries.delete(journey);
+    entry.cancelExpiry();
+  }
+
+  function startExpiry(journey: object, remainingMs: number): () => void {
+    let active = true;
+    let cancel = scheduleNext(remainingMs);
+    return () => {
+      active = false;
+      cancel();
+    };
+
+    function scheduleNext(remaining: number): () => void {
+      const delay = Math.min(Math.ceil(remaining), maxTimerDelayMs);
+      return scheduleExpiry(() => {
+        if (!active) return;
+        if (remaining > delay) {
+          const now = readTime();
+          const entry = entries.get(journey);
+          if (now !== undefined && entry && entry.expiresAt > now) {
+            try {
+              cancel = scheduleNext(Math.min(remaining - delay, entry.expiresAt - now));
+              return;
+            } catch {
+              // Reclaim immediately when the remaining lifetime cannot be scheduled.
+            }
+          }
+        }
+        active = false;
+        entries.delete(journey);
+      }, delay);
+    }
+  }
+
   function issueCorrelation(scope: OperationalJourneyScope): "available" | "coverage_unknown" {
     const trusted = readScope(scope);
     if (!trusted) return "coverage_unknown";
+    const identity = identities.get(trusted.journey);
+    if (identity && !sameScope(identity, trusted)) return "coverage_unknown";
+    if (!identity) {
+      identities.set(trusted.journey, {
+        board: new WeakRef(trusted.board),
+        session: new WeakRef(trusted.session),
+        startedAt: trusted.startedAt,
+      });
+    }
     const now = readTime();
     if (now === undefined || trusted.startedAt > now) return "coverage_unknown";
     const expiresAt = trusted.startedAt + correlationTtlMs;
     if (expiresAt <= now || expiresAt > Number.MAX_SAFE_INTEGER) return "coverage_unknown";
 
     for (const [journey, entry] of entries) {
-      if (entry.expiresAt <= now) entries.delete(journey);
+      if (entry.expiresAt <= now) removeEntry(journey, entry);
     }
-    const existing = entries.get(trusted.journey);
-    if (existing) return sameScope(existing, trusted) ? "available" : "coverage_unknown";
-    if (entries.size >= maxCorrelations) return "coverage_unknown";
+    if (entries.has(trusted.journey)) return "available";
+    if (issued.has(trusted.journey) || entries.size >= maxCorrelations) return "coverage_unknown";
 
     try {
       const token = randomBytes(16).toString("hex");
-      entries.set(trusted.journey, { ...trusted, token, expiresAt });
+      const cancelExpiry = startExpiry(trusted.journey, expiresAt - now);
+      entries.set(trusted.journey, { token, expiresAt, cancelExpiry });
+      issued.add(trusted.journey);
       return "available";
     } catch {
       return "coverage_unknown";
@@ -216,12 +286,14 @@ export function createOperationalLogBoundary({
     if (scope === undefined) return { status: "record", record: Object.freeze(record) };
 
     const trusted = readScope(scope);
-    const entry = trusted && entries.get(trusted.journey);
-    if (!trusted || !entry || !sameScope(entry, trusted)) return { status: "coverage_unknown" };
+    if (!trusted) return { status: "coverage_unknown" };
+    const entry = entries.get(trusted.journey);
+    const identity = identities.get(trusted.journey);
+    if (!entry || !identity || !sameScope(identity, trusted)) return { status: "coverage_unknown" };
     const now = readTime();
     if (now === undefined) return { status: "coverage_unknown" };
     if (entry.expiresAt <= now) {
-      entries.delete(trusted.journey);
+      removeEntry(trusted.journey, entry);
       return { status: "coverage_unknown" };
     }
     return { status: "record", record: Object.freeze({ ...record, correlation: entry.token }) };
