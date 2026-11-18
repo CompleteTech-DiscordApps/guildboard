@@ -88,9 +88,11 @@ decision outcomes. Transport release ordering and durability require separate
 verification.
 
 Read/receipt reconciliation starts with current identity, tenant and read
-authority, followed by lookup in the exact verified serving inventory. A retained
-receipt settles the original command before new-write checks, without
-reapplying its payload. Current read authority also governs release. The model
+authority, followed by lookup in the exact verified serving inventory. A
+matching retained receipt settles the original command without reapplying
+its payload. A changed digest on the same operation identity conflicts.
+Both outcomes precede new-write checks and require current read authority
+at protected release. The model
 assumes trusted lookup and complete coverage for the retired lineage it
 exercises. Its inactive-lineage result after a missing receipt applies to
 that confirmed-absence case.
@@ -100,9 +102,11 @@ and [T9 security and privacy contract](../specifications/GB-T9-S1-security-priva
 govern disaster recovery. An absent receipt with unproven historical coverage
 (including an unrecognized historical lineage), or an unverifiable current
 serving inventory, produces `DEPENDENCY_UNAVAILABLE`. Reconciliation keeps
-the original identity. New acknowledgments and committed outbox effects rely
-on current generation and the exact durable transaction witness. This research
-fixture has no disaster coverage, live inventory or durable commit witness.
+the original identity. New ACK and outbox event release require a durable
+commit witness tied to the exact accepted transaction in the current
+authoritative storage generation. The transaction itself atomically commits
+the state, receipt and outbox effects. This research fixture has no disaster
+coverage, live inventory or durable commit witness.
 
 | Candidate capability/action | Proposed constraints / decision still needed |
 | --- | --- |
