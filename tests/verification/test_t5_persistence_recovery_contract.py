@@ -207,7 +207,6 @@ class CommitWitness:
 
 
 MODEL_STORE = object()
-MODEL_LINEAGE = object()
 
 
 def model_witness(case, history, revision):
@@ -218,28 +217,29 @@ def model_witness(case, history, revision):
 
 
 def command_result(case, receipts=ORIGINAL_RECEIPTS, history=History(), witness=MODEL_STORE, *,
-                   revision=8, release_denial="NOT_FOUND", write_fence=True, receipt_lineage=MODEL_LINEAGE):
+                   revision=8, release_denial="NOT_FOUND", serving_cut_current=True, receipt_overlay=()):
     """Evaluate one decision without modifying the supplied receipt store."""
     if not case.valid:
         return "INVALID_MESSAGE", []
     if not case.read or (case.guild, case.board) != (history.guild, history.board):
         return "NOT_FOUND", []
 
-    existing = receipts.get(identity(case))
+    if not serving_cut_current:
+        return ("DEPENDENCY_UNAVAILABLE" if case.release else release_denial), []
+
+    operation = identity(case)
+    existing = dict(receipt_overlay).get(operation)
+    if existing is None:
+        existing = receipts.get(operation)
     active_lineage = history.active
     effects = []
     if existing is not None:
         digest, revision = existing
         if case.digest != digest:
             outcome = "IDEMPOTENCY_CONFLICT"
-        elif receipt_lineage is None:
-            outcome = "DEPENDENCY_UNAVAILABLE"
         else:
-            current_lineage = active_lineage if receipt_lineage is MODEL_LINEAGE else receipt_lineage
-            receipt_kind = "CURRENT" if case.lineage == current_lineage else "HISTORICAL"
+            receipt_kind = "CURRENT" if case.lineage == active_lineage else "HISTORICAL"
             outcome = f"ACK_{receipt_kind}_{revision}"
-    elif not write_fence:
-        outcome = "DEPENDENCY_UNAVAILABLE"
     elif case.lineage != active_lineage:
         incomplete = history.disaster_seen and case.lineage not in history.complete_retired
         outcome = "DEPENDENCY_UNAVAILABLE" if incomplete else "LINEAGE_CHANGED"
@@ -401,17 +401,14 @@ RESTORE_COMMAND = Command(operation="operation-restore", digest="digest-restore"
 
 def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState(), reservation=FIXTURE_RESERVATION,
                     witness=MODEL_STORE, *, allocator=None):
-    receipts = dict(ORIGINAL_RECEIPTS)
-    receipts.update(state.receipts)
     history = state.history
-    current_serving = allocator is not None and allocator.current
-    write_fence = current_serving and (
+    serving_cut_current = allocator is not None and allocator.current and (
         history.storage_generation, history.active, state.revision
     ) == (allocator.generation, allocator.serving_lineage, allocator.serving_revision)
     final_revision = state.revision + 1
     outcome, effects = command_result(
-        command, receipts, history, witness, revision=final_revision, write_fence=write_fence,
-        receipt_lineage=allocator.serving_lineage if current_serving else None,
+        command, history=history, witness=witness, revision=final_revision,
+        serving_cut_current=serving_cut_current, receipt_overlay=state.receipts,
     )
     if not effects:
         return outcome, [], state
@@ -742,14 +739,10 @@ class ContractScenarios(unittest.TestCase):
                 self.assertEqual(restore_attempt(restore, replace(command, release=False), stale_state, fresh,
                                                  allocator=allocator), ("NOT_FOUND", [], stale_state))
                 self.assertEqual(allocator, before)
-        for source, expected in (
-            (allocator, "ACK_HISTORICAL_7"),
-            (None, "DEPENDENCY_UNAVAILABLE"),
-            (replace(allocator, current=False), "DEPENDENCY_UNAVAILABLE"),
-        ):
+        for source in (allocator, None, replace(allocator, current=False)):
             with self.subTest(receipt_authority=source):
                 self.assertEqual(restore_attempt(restore, Command(), state, fresh, allocator=source),
-                                 (expected, [], state))
+                                 ("DEPENDENCY_UNAVAILABLE", [], state))
                 self.assertEqual(restore_attempt(restore, Command(release=False), state, fresh,
                                                  allocator=source), ("NOT_FOUND", [], state))
 
@@ -771,6 +764,35 @@ class ContractScenarios(unittest.TestCase):
         self.assertEqual((outcome, effects, promoted.active), ("EXPOSED", ["exposure"], "lineage-c"))
         self.assertEqual(promoted.storage_generation, allocator.generation)
         self.assertIn(("guild-a", "board-a", "lineage-c"), allocator.consumed)
+
+    def test_restore_receipt_lookup_requires_authoritative_serving_inventory(self):
+        allocator = AllocatorAuthority()
+        _, _, before_disaster = restore_attempt(Restore(), allocator=allocator)
+        self.assertEqual(before_disaster.receipts, ((identity(RESTORE_COMMAND), (RESTORE_COMMAND.digest, 8)),))
+        outcome, _, promoted = disaster_attempt(Disaster(), History(), "lineage-c",
+                                                reservation=allocator.reservation("guild-a", "board-a", "lineage-c"),
+                                                allocator=allocator)
+        self.assertEqual((outcome, promoted.active), ("EXPOSED", "lineage-c"))
+        retained = Command(operation="retained-before-recovery")
+        current = RestoreState(history=promoted, revision=0,
+                               receipts=((identity(retained), (retained.digest, 6)),))
+        self.assertNotIn(identity(RESTORE_COMMAND), dict(current.receipts))
+        for attempt in (RESTORE_COMMAND, replace(RESTORE_COMMAND, digest="different")):
+            for state in (before_disaster, current):
+                with self.subTest(attempt=attempt, state=state):
+                    self.assertEqual(restore_attempt(Restore(), attempt, state, allocator=allocator),
+                                     ("DEPENDENCY_UNAVAILABLE", [], state))
+                    self.assertEqual(restore_attempt(Restore(), replace(attempt, release=False), state,
+                                                     allocator=allocator), ("NOT_FOUND", [], state))
+                    self.assertEqual(restore_attempt(Restore(), replace(attempt, read=False), state,
+                                                     allocator=allocator), ("NOT_FOUND", [], state))
+
+        self.assertEqual(restore_attempt(Restore(), retained, current, allocator=allocator),
+                         ("ACK_HISTORICAL_6", [], current))
+        self.assertEqual(restore_attempt(Restore(), replace(retained, digest="different"), current,
+                                         allocator=allocator), ("IDEMPOTENCY_CONFLICT", [], current))
+        self.assertEqual(restore_attempt(Restore(), replace(retained, release=False), current,
+                                         allocator=allocator), ("NOT_FOUND", [], current))
 
     def test_current_commit_witness_binds_scope_intent_and_atomic_records(self):
         allocator = AllocatorAuthority()

@@ -176,6 +176,14 @@ lineage omitted from the recovered cut. Require a current authoritative reservat
 for the exact guild, board and new lineage at cutover, independent of the recovered
 lineage inventory. A durable allocator in a separately fenced namespace may supply
 that reservation. Missing or mismatched evidence keeps the candidate isolated.
+For an ordinary document restore attempt or retry, first verify current scoped
+read authority. Before consulting receipts or their coverage, also verify that
+the inventory belongs to the independently established current serving
+generation, lineage and revision. A stale or unverifiable inventory yields safe
+`DEPENDENCY_UNAVAILABLE` semantics, subject to the T0/T9 release fence. It
+cannot produce an acknowledgment, digest conflict or absence result. An eligible
+retained receipt in the current inventory settles only its original operation.
+
 A document restore changes the document and active lineage
 while preserving all existing receipt evidence and uncertainty. Its source
 checkpoint provides content only. The previously active lineage is complete if
