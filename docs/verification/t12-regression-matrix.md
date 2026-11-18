@@ -159,3 +159,36 @@ approval evidence. #416 and #417 remain open; G1/G2/G3 remain pending and
 production smoke remains blocked. Fresh independent functional and defensive
 review at the full head, required hosted CI, protected merge and applicable
 post-merge verification remain required before the bounded issue may close.
+
+## Synthetic availability-row follow-up (2026-11-18)
+
+Independent review found one further existing row omission, tracked by
+[#594](https://github.com/CompleteTech-DiscordApps/guildboard/issues/594).
+The G3 handoff now requires the committed `availability/vps-network` row for
+[#364](https://github.com/CompleteTech-DiscordApps/guildboard/issues/364), with
+`complete-utc-month`, `counts-incidents-gaps` and
+`representative-end-to-end-read-and-write`. G1 and G2 requirements are unchanged.
+
+The independent literal expectations include the same three cases. The existing
+complete-control, omission, substitution and required/unrelated failure checks
+exercise each availability case through matrix qualification and the full T13
+handoff under both controlled-browser environments. A separate whole-row test
+accounts for every committed matrix row for each gate, client subset and browser
+boundary. It names the six separately qualified T9 security rows explicitly;
+the only other separately qualified row is G3's historical MVP publication,
+whose bytes, receipt and G1 approval T13 verifies. Neither path is a waiver.
+
+Before the helper correction, the new whole-row test failed in all four G3
+client/browser combinations, identifying exactly the missing availability row.
+The command exited 1 with four subtest assertion failures and no errors. This
+negative control is retained separately from successful validation. Replay the
+combined normal/optimized suites and report commands above; the PR records the
+exact resulting head, results and independent reviews. The base for this
+follow-up is `8861c8eb796299b52d1cfb16741d84e10a2df5f4`.
+
+All receipts here remain synthetic. Requiring a case name does not observe or
+measure a month: actual qualified monitoring, complete UTC-month records,
+incident/gap accounting, representative end-to-end reads/writes and independent
+environment-specific results are still missing. #364, #416 and #417 remain open,
+all release gates remain pending, and no deployment or production approval is
+established. Historical validation receipts above are preserved.

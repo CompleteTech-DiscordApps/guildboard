@@ -225,6 +225,33 @@ class RegressionMatrixTest(unittest.TestCase):
                             if key != ("integrated", "hosted") or gate != regression.G3:
                                 self.assertEqual(floor_cases, cases)
 
+    def test_every_planned_row_has_an_explicit_gate_qualification_path(self):
+        report = regression.audit(regression.ROOT, self.matrix)
+        separate_security = {
+            ("threat-model", "hosted"), ("authorization-negative", "hosted"),
+            ("upload-import", "hosted"), ("dependency-license-lockfile", "hosted"),
+            ("secret-static-triage", "hosted"), ("independent-security-review", "review"),
+        }
+        self.assertEqual(contract.SECURITY_KEYS, separate_security)
+        for clients in (["discord-win"], sorted(contract.DISCORD_ROWS)):
+            for gate in regression.GATES:
+                for browser in ("local", "hosted"):
+                    with self.subTest(gate=gate, clients=clients, browser=browser):
+                        planned = {(row["id"], row["environment"]) for row in report["rows"]
+                                   if gate in row["gates"] and
+                                   (row["environment"] not in contract.DISCORD_ROWS or
+                                    row["environment"] in clients)}
+                        required = contract.gate_coverage(gate, clients, {("browser-e2e", browser)})
+                        accounted = {("browser-e2e", "local") if key[0] == "browser-e2e" else key
+                                     for key in required}
+                        if gate != regression.G2:
+                            accounted |= separate_security
+                        if gate == regression.G3:
+                            # T13 separately verifies the historical publication bytes,
+                            # receipt and G1 approval; this is not a coverage exemption.
+                            accounted.add(("mvp-publication", "review"))
+                        self.assertEqual(planned, accounted)
+
     def test_rejects_missing_or_substituted_evidence(self):
         for attack, diagnostic in (
             (lambda m: m["mvp"].pop("activity-startup"), "mandatory MVP"),
