@@ -240,6 +240,42 @@
       "test_evidence": [
         "tests/verification/test_t5_initial_schema.py"
       ]
+    },
+    {
+      "id": "DEC-0015",
+      "revision": 1,
+      "boundary": "apps/api/src/operational-logs.ts",
+      "old_sha256": null,
+      "new_sha256": "8dd0ed4248638dd0c9a302ea34e0744b09f51f830bd1ac9e329fa9495c2d06b0",
+      "rationale": "Provide closed operational log and error records with bounded, expiring, server-issued scoped correlation.",
+      "alternatives": [
+        "Keep structured log consumers unavailable until a live exporter and retention policy are approved."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-operational-logs.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0016",
+      "revision": 1,
+      "boundary": "apps/api/src/index.ts",
+      "old_sha256": "a01e9df258113c5788e7de603bb9a3388f8cee2362cf7dbe0a6142b8c3eb3270",
+      "new_sha256": "c14c50df62d0575ca04a9130726953ed43cbfe94a0a99b30d5d1d8530243e9c4",
+      "rationale": "Expose the validated operational log boundary through the server API workspace entry.",
+      "alternatives": [
+        "Keep structured log consumers unavailable until a live exporter and retention policy are approved."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-operational-logs.test.mjs"
+      ]
     }
   ]
 }
