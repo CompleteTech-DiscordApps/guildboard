@@ -896,6 +896,79 @@ class FixtureHarnessTests(unittest.TestCase):
             with self.subTest(function=code.co_name, line=line):
                 self.assert_root_sigint_cleanup(boundary=(code, line))
 
+    def exceptional_root_cleanup_boundaries(self, cancellation):
+        """Observe caller cancellation through root dispatch and propagation."""
+        boundaries, phases = [], set()
+        recording = closed = False
+        previous_trace, close = sys.gettrace(), os.close
+        root_code = harness._private_root.__wrapped__.__code__
+        root_factory = harness._private_root
+        root_manager = exit_frame = None
+        root_fd = identity = None
+
+        def retain_manager(*args, **kwargs):
+            nonlocal root_manager
+            root_manager = root_factory(*args, **kwargs)
+            return root_manager
+
+        def trace(frame, event, arg):
+            nonlocal recording, exit_frame
+            if (event == "call" and root_manager is not None
+                    and frame.f_code is type(root_manager).__exit__.__code__
+                    and any(value is root_manager for value in frame.f_locals.values())):
+                exit_frame = frame
+            # Replay starts when the root generator resumes; adapter entry before
+            # that activation is outside this regression's observed boundaries.
+            if event == "call" and frame.f_code is root_code:
+                recording = True
+            if (recording and event == "line"
+                    and (frame is exit_frame or frame.f_code.co_filename == harness.__file__)):
+                boundary = (frame.f_code, frame.f_lineno)
+                if boundary not in boundaries:
+                    boundaries.append(boundary)
+                    phases.add("after close" if closed else "before close")
+            if frame is exit_frame and event == "return":
+                recording = False
+            return trace
+
+        def observe_close(fd):
+            nonlocal closed
+            result = close(fd)
+            if fd == root_fd:
+                closed = True
+            return result
+
+        try:
+            with ExitStack() as stack:
+                stack.enter_context(patch.object(harness, "_private_root", side_effect=retain_manager))
+                with self.assertRaises(BaseException) as raised:
+                    with fixture_run(self.config) as run:
+                        root_fd, identity = run._root_fd, os.fstat(run._root_fd)
+                        stack.enter_context(patch.object(os, "close", side_effect=observe_close))
+                        sys.settrace(trace)
+                        raise cancellation
+                sys.settrace(previous_trace)
+            self.assertIs(raised.exception, cancellation)
+            self.assertEqual(phases, {"before close", "after close"})
+            self.assertIn(root_code, {code for code, _ in boundaries})
+            self.assertIsNotNone(exit_frame)
+            self.assert_sentinel_only()
+            return boundaries
+        finally:
+            sys.settrace(previous_trace)
+            if root_fd is not None:
+                self.close_retained_descriptor(root_fd, identity)
+
+    def test_root_sigint_at_observed_exceptional_dispatch_and_propagation(self):
+        for cancellation in (KeyboardInterrupt("caller cancellation"), SystemExit(23)):
+            for code, line in self.exceptional_root_cleanup_boundaries(cancellation):
+                with self.subTest(cancellation=type(cancellation).__name__, function=code.co_name, line=line):
+                    # A fresh caller exception and one real SIGINT per boundary;
+                    # this is independent of the injected-close-fault tests.
+                    self.assert_root_sigint_cleanup(
+                        boundary=(code, line), cancellation=type(cancellation)(*cancellation.args),
+                    )
+
     def test_root_single_sigint_before_and_after_real_close(self):
         for after_close in (False, True):
             with self.subTest(after_close=after_close):
