@@ -49,8 +49,11 @@ put it in URLs, logs, support evidence or exports.
    Under current read authority, a matching retained receipt prepares the original
    receipt even after write access is revoked and even in a retired lineage. A
    collision prepares `IDEMPOTENCY_CONFLICT`. An absent receipt proceeds to
-   lineage checking. On retired lineage return `LINEAGE_CHANGED` with no write.
-   Treat any lineage or state dependent response as a protected result.
+   lineage checking. An absent retired receipt with complete coverage returns
+   `LINEAGE_CHANGED` with no write. After disaster recovery, use T5's independent
+   coverage evidence. Without affirmative completeness for the requested history,
+   return `DEPENDENCY_UNAVAILABLE`, with no new write. Treat either outcome as a
+   protected result subject to the release fence.
 3. Every new active-lineage operation requires an affirmative current allow for
    its specific write or action. A fresh scoped read-only session still receives
    `FORBIDDEN` for a new write and creates no accepted effects. T2/T4/T5 serialize
@@ -85,7 +88,8 @@ put it in URLs, logs, support evidence or exports.
    reason. Compare absent, matching and conflicting receipts at both prelookup
    denial and release denial. In the latter case, authorize at prelookup and
    then remove authority immediately before egress. Compare a prepared
-   `LINEAGE_CHANGED`, retained receipt and `IDEMPOTENCY_CONFLICT`. The public response/close behavior must conceal lookup branch,
+   `LINEAGE_CHANGED`, history-dependent `DEPENDENCY_UNAVAILABLE`, a retained
+   receipt and `IDEMPOTENCY_CONFLICT`. The public response/close behavior must conceal lookup branch,
    receipt existence, digest match, lineage and revision, including size and
    timing signals under the declared measurement envelope. Normalize observable
    metadata, allowing only unrelated opaque per-request correlation. A denied
