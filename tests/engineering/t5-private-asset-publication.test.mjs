@@ -1,8 +1,18 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { chmod, mkdir, mkdtemp, open, readFile, readdir, stat, symlink } from "node:fs/promises";
+import {
+  chmod,
+  lstat,
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  readdir,
+  stat,
+  symlink,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
@@ -11,7 +21,13 @@ import { pathToFileURL } from "node:url";
 const output = mkdtempSync(
   path.join(process.env.ENGINEERING_TEST_TMP || os.tmpdir(), "gb-private-assets-"),
 );
-after(() => rmSync(output, { recursive: true, force: true }));
+const ownedChildren = [];
+after(async () => {
+  // Never remove a fixture while one of its publishers may still be running.
+  const cleanup = await Promise.allSettled(ownedChildren.map(stopPublisherChild));
+  for (const result of cleanup) assert.equal(result.status, "fulfilled", result.reason?.message);
+  rmSync(output, { recursive: true, force: true });
+});
 writeFileSync(path.join(output, "package.json"), '{"type":"module"}');
 const build = spawnSync(
   process.execPath,
@@ -43,6 +59,152 @@ async function fixture(t) {
   const root = await mkdtemp(path.join(output, "store-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   return { root, maxBytes: 128 * 1024 };
+}
+
+// Serialized into a new Node process; no production publisher hooks are installed.
+async function publisherChild() {
+  const request = await new Promise((resolve) => process.once("message", resolve));
+  const watchdog = setTimeout(() => process.exit(1), 30_000);
+  process.on("disconnect", () => process.exit(1));
+  const { open } = await import("node:fs/promises");
+  const { publishPrivateAsset } = await import(request.moduleUrl);
+  const directory = await open(request.store.root, "r");
+  const prototype = Object.getPrototypeOf(directory);
+  await directory.close();
+  const original = prototype.sync;
+  const syncs = [];
+  let fileSyncs = 0;
+  const send = (message) =>
+    new Promise((resolve, reject) => {
+      process.send({ ...message, pid: process.pid, syncs }, (error) =>
+        error ? reject(error) : resolve(),
+      );
+    });
+  const pause = async () => {
+    await send({ type: "barrier", barrier: request.barrier });
+    // The referenced IPC disconnect listener and watchdog keep this process alive.
+    await new Promise(() => {});
+  };
+  prototype.sync = async function () {
+    const kind = (await this.stat()).isDirectory() ? "directory" : "file";
+    syncs.push(`${kind}:start`);
+    if (kind === "directory" && request.barrier === "before-directory-sync") await pause();
+    await original.call(this);
+    syncs.push(`${kind}:done`);
+    if (kind === "file") fileSyncs += 1;
+    if (
+      (kind === "file" && fileSyncs === 2 && request.barrier === "verified-stage") ||
+      (kind === "directory" && request.barrier === "after-directory-sync")
+    )
+      await pause();
+  };
+  try {
+    const result = await publishPrivateAsset(
+      request.store,
+      request.intent,
+      Buffer.from(request.bytes, "base64"),
+    );
+    await send({ type: "result", result });
+  } finally {
+    prototype.sync = original;
+    clearTimeout(watchdog);
+    process.removeAllListeners("disconnect");
+    process.disconnect();
+  }
+}
+
+async function withinDeadline(promise, label) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} exceeded 5 seconds`)), 5_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function startPublisherChild(store, intent, bytes, barrier) {
+  const child = spawn(
+    process.execPath,
+    ["--input-type=module", "--eval", `(${publisherChild})();`],
+    {
+      stdio: ["ignore", "ignore", "pipe", "ipc"],
+    },
+  );
+  const messages = [];
+  const errors = [];
+  let stderr = "";
+  child.stderr.on("data", (data) => {
+    stderr = (stderr + data).slice(0, 4096);
+  });
+  const response = new Promise((resolve, reject) => {
+    child.on("message", (message) => {
+      messages.push(message);
+      resolve(message);
+    });
+    child.on("error", (error) => {
+      errors.push(error);
+      reject(error);
+    });
+    child.once("close", () => reject(new Error(`Publisher exited before response: ${stderr}`)));
+    child.send(
+      {
+        moduleUrl: pathToFileURL(path.join(output, "index.js")).href,
+        store,
+        intent,
+        bytes: bytes.toString("base64"),
+        barrier,
+      },
+      (error) => {
+        if (error) {
+          errors.push(error);
+          reject(error);
+        }
+      },
+    );
+  });
+  // A cleanup path may run before its response is awaited.
+  response.catch(() => {});
+  const closed = new Promise((resolve) =>
+    child.once("close", (code, signal) => resolve({ code, signal })),
+  );
+  const owned = { child, response, closed, messages, errors };
+  ownedChildren.push(owned);
+  return owned;
+}
+
+async function stopPublisherChild(owned) {
+  const { child, closed } = owned;
+  if (child.pid && child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+  return withinDeadline(closed, "Publisher exit");
+}
+
+async function inspectPrivateFile(store, name, expected, mode) {
+  const file = path.join(store.root, name);
+  const entry = await lstat(file, { bigint: true });
+  assert.equal(entry.isFile(), true);
+  assert.equal(entry.mode & 0o7777n, BigInt(mode));
+  assert.equal(entry.uid, BigInt(process.geteuid()));
+  assert.equal(entry.dev, (await stat(store.root, { bigint: true })).dev);
+  assert.equal(entry.size, BigInt(expected.length));
+  assert.equal(entry.nlink, 1n);
+  const stored = await readFile(file);
+  assert.deepEqual(stored, expected);
+  assert.equal(createHash("sha256").update(stored).digest("hex"), intentFor(expected).sha256);
+  return {
+    dev: entry.dev,
+    ino: entry.ino,
+    mode: entry.mode,
+    uid: entry.uid,
+    size: entry.size,
+    nlink: entry.nlink,
+    mtimeNs: entry.mtimeNs,
+    ctimeNs: entry.ctimeNs,
+  };
 }
 
 test("validates scope, limits, length and digest before storage I/O", async (t) => {
@@ -210,3 +372,87 @@ test("file sync failure removes its own stage and a directory sync failure can r
   assert.deepEqual(syncs, ["file", "directory"]);
   assert.deepEqual(await readdir(store.root), [name]);
 });
+
+const fileSync = ["file:start", "file:done"];
+const directorySync = ["directory:start", "directory:done"];
+for (const [barrier, interruptedSyncs] of [
+  ["verified-stage", [...fileSync, ...fileSync]],
+  ["before-directory-sync", [...fileSync, ...fileSync, "directory:start"]],
+  ["after-directory-sync", [...fileSync, ...fileSync, ...directorySync]],
+]) {
+  test(`process death at ${barrier} recovers in a fresh child`, async (t) => {
+    // These roots remain under the suite-owned output until every child is reaped.
+    const store = {
+      root: await mkdtemp(path.join(output, "process-store-")),
+      maxBytes: 128 * 1024,
+    };
+    await chmod(store.root, 0o700);
+    assert.equal((await stat(store.root)).mode & 0o7777, 0o700);
+    const bytes = Buffer.alloc(96 * 1024 + 17);
+    for (let i = 0; i < bytes.length; i += 1) bytes[i] = i % 251;
+    const intent = intentFor(bytes);
+    const sentinelName = "stage-unrelated-process-sentinel";
+    const sentinelBytes = Buffer.from("unrelated synthetic private stage");
+    writeFileSync(path.join(store.root, sentinelName), sentinelBytes, { flag: "wx", mode: 0o600 });
+    const sentinel = await inspectPrivateFile(store, sentinelName, sentinelBytes, 0o600);
+
+    const interrupted = startPublisherChild(store, intent, bytes, barrier);
+    const reached = await withinDeadline(interrupted.response, `${barrier} barrier`);
+    assert.deepEqual(reached, {
+      type: "barrier",
+      barrier,
+      pid: interrupted.child.pid,
+      syncs: interruptedSyncs,
+    });
+    assert.deepEqual(await stopPublisherChild(interrupted), { code: null, signal: "SIGKILL" });
+    assert.deepEqual(interrupted.errors, []);
+    assert.deepEqual(
+      interrupted.messages,
+      [reached],
+      "interrupted child must not deliver a result",
+    );
+
+    const before = (await readdir(store.root)).sort();
+    const remaining = before.filter((name) => name !== sentinelName);
+    assert.equal(remaining.length, 1);
+    const [interruptedName] = remaining;
+    const staged = barrier === "verified-stage";
+    assert.match(interruptedName, staged ? /^stage-[a-f0-9-]{36}$/u : /^asset-[a-f0-9]{64}$/u);
+    assert.equal(before.filter((name) => name.startsWith("asset-")).length, staged ? 0 : 1);
+    const interruptedFile = await inspectPrivateFile(store, interruptedName, bytes, 0o400);
+    assert.deepEqual(await inspectPrivateFile(store, sentinelName, sentinelBytes, 0o600), sentinel);
+
+    // Only start the retry after confirmed close/exit of the interrupted process.
+    const retry = startPublisherChild(store, intent, bytes);
+    assert.notEqual(retry.child, interrupted.child);
+    const result = await withinDeadline(retry.response, "Fresh publisher result");
+    assert.deepEqual(result, {
+      type: "result",
+      result: staged ? published : existing,
+      pid: retry.child.pid,
+      syncs: [...fileSync, ...(staged ? fileSync : []), ...directorySync],
+    });
+    assert.deepEqual(await withinDeadline(retry.closed, "Fresh publisher exit"), {
+      code: 0,
+      signal: null,
+    });
+    assert.deepEqual(retry.errors, []);
+    assert.deepEqual(retry.messages, [result]);
+
+    const after = (await readdir(store.root)).sort();
+    const finals = after.filter((name) => name.startsWith("asset-"));
+    assert.equal(finals.length, 1);
+    assert.match(finals[0], /^asset-[a-f0-9]{64}$/u);
+    await inspectPrivateFile(store, finals[0], bytes, 0o400);
+    assert.deepEqual(after, staged ? [...before, finals[0]].sort() : before);
+    assert.deepEqual(
+      await inspectPrivateFile(store, interruptedName, bytes, 0o400),
+      interruptedFile,
+    );
+    assert.deepEqual(await inspectPrivateFile(store, sentinelName, sentinelBytes, 0o600), sentinel);
+    assert.equal((await stat(store.root)).mode & 0o7777, 0o700);
+    t.diagnostic(
+      `${barrier}: SIGKILL exit confirmed; fresh child returned ${result.result.outcome}; one exact final object and unchanged private entries`,
+    );
+  });
+}
