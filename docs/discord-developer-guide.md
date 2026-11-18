@@ -1,5 +1,6 @@
 # Discord developer guide
 
+<a id="discord-runtime-evidence"></a>
 This setup guide records the planned Guildboard integration for
 [GB-T13.01.02.T1 (#427)](https://github.com/CompleteTech-DiscordApps/guildboard/issues/427).
 Public Discord guidance was checked on 2026-11-17 America/New_York.
@@ -9,6 +10,28 @@ contract to exercise. Use the local checks below for reproducible evidence
 while the [T1 identity](workstreams/T1.md), [T8 transports](workstreams/T8.md)
 and [T10 deployment](workstreams/T10.md) workstreams resolve the runtime setup.
 
+## Claim status and handoff
+
+Accountable expertise: Identity & Discord and transport owners; client and
+security consumers review the affected scope. Audience: contributors. The
+[claim register](evidence/GB-T13-01-02-T1-guide-claims.json) pins each explicit
+anchor to exact guide bytes under the [T13 contract](specifications/GB-T13-S1-documentation-release-contract.md#guide-ownership-and-claims).
+
+| Claim anchor | Status | Next validating owner and scope |
+| --- | --- | --- |
+| [discord-runtime-evidence](#discord-runtime-evidence) | unresolved | GB-T13.01.02.V1 [#428](https://github.com/CompleteTech-DiscordApps/guildboard/issues/428): real install, launch, clients and proxy evidence with T1/T8/T10 owners. |
+| [discord-registration-mappings](#discord-registration-mappings) | planned | T1/T10: reviewed application, redirect and mapping decisions. |
+| [discord-scopes-installation](#discord-scopes-installation) | planned | T1/T8: least-privilege scopes, installation and verified interactions. |
+| [discord-sdk-lifecycle](#discord-sdk-lifecycle) | planned | T1: runtime adoption, lifecycle and credential/session handling. |
+| [discord-http-wss-contract](#discord-http-wss-contract) | planned | T1/T8: published schemas, interface versions and compatibility. |
+| [discord-verification-handoff](#discord-verification-handoff) | unresolved | GB-T13.01.02.V1 #428: every positive/failure scenario and affected scope before D1/G3 handoff. |
+
+The dated source review, SDK archive/helper experiment and configuration
+checks below retain their original scope. Local helper execution and pure
+parser tests do not verify integrated Guildboard services, Discord clients
+or GoDaddy ingress. This handoff adds no new runtime or platform result.
+
+<a id="discord-registration-mappings"></a>
 ## Application registration and mapping decisions
 
 1. For an authorized test environment, create a team-owned development
@@ -57,6 +80,7 @@ persistent board assets stay private behind the server. Preserve the accepted
 read-authorization boundary for every protected asset delivery. [Discord
 networking][network] · [Architecture](architecture.md#interaction-architecture-gb-t00102t1)
 
+<a id="discord-scopes-installation"></a>
 ## Scopes and bot installation
 
 | Permission layer | Candidate and decision |
@@ -85,6 +109,7 @@ The bot uses the same tenant-scoped command service as the Activity.
 [Discord interactions][interactions] ·
 [Server authority](specifications/GB-T0-S1-system-contract.md#3-identity-and-authorization-invariant)
 
+<a id="discord-sdk-lifecycle"></a>
 ## Embedded App SDK lifecycle and credentials
 
 The checked research pin is `@discord/embedded-app-sdk` **2.5.0**. The
@@ -126,6 +151,7 @@ public ID as a decimal string and returns names-only failure diagnostics.
 Service startup wiring and Discord credential configuration still need their
 runtime contracts. Never log a successful parser result.
 
+<a id="discord-http-wss-contract"></a>
 ## Planned OpenAPI and WebSocket contract
 
 Discord's [API version table][rest] lists REST **v10** as available. Pin
@@ -149,6 +175,7 @@ published Guildboard OpenAPI artifact or supported WSS wire version.
 [System contract §§3–6](specifications/GB-T0-S1-system-contract.md#3-identity-and-authorization-invariant) ·
 [T8 scope](workstreams/T8.md#api-compatibility)
 
+<a id="discord-verification-handoff"></a>
 ## Evidence and independent verification
 
 From the repository root, with the project's Node 24 toolchain and Python
