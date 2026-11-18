@@ -12,6 +12,7 @@ import unittest
 from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import Enum
+from functools import cache
 from pathlib import Path
 
 import test_t13_release_contract as t13
@@ -239,19 +240,23 @@ class AuthorityRegistry:
 
 
 def current_grant(registry, ref, purpose, subject, current, since=None):
-    if type(registry) is not AuthorityRegistry:
+    if (type(registry) is not AuthorityRegistry or type(registry.issuers) is not dict
+            or type(registry.grants) is not dict):
         return False
     issuer = registry.issuers.get((purpose, ref))
     grant = registry.grants.get(ref)
     if issuer is None or grant is None:
         return False
-    closed(grant, "subject authorityRef issuedAt expiresAt decision")
-    token(grant["authorityRef"])
-    token(grant["decision"])
-    require(grant["decision"] in {"approved", "withdrawn"})
-    return (grant["authorityRef"] == issuer and encode(grant["subject"]) == encode(subject)
-            and grant["decision"] == "approved"
-            and instant(grant["issuedAt"]) <= (since or current) <= current < instant(grant["expiresAt"]))
+    try:
+        closed(grant, "subject authorityRef issuedAt expiresAt decision")
+        token(grant["authorityRef"])
+        token(grant["decision"])
+        require(grant["decision"] in {"approved", "withdrawn"})
+        issued, expires = instant(grant["issuedAt"]), instant(grant["expiresAt"])
+        return (grant["authorityRef"] == issuer and encode(grant["subject"]) == encode(subject)
+                and grant["decision"] == "approved" and issued <= (since or current) <= current < expires)
+    except (TypeError, ValueError):
+        return False
 
 
 def qualifies(data, key, registry, artifact, observation, inventory, trusted_time, authorities):
@@ -514,6 +519,29 @@ T13_GATE_RECORDS = {
     "GB-T13.G3": {("production-smoke", "GB-T13.G2", "real-godaddy")},
 }
 
+T13_GATE_ROWS = {
+    "GB-T13.G1": {("integrated", "hosted")},
+    "GB-T13.G2": {("production-smoke", "vps-network"), ("production-recovery", "vps-recovery")},
+    "GB-T13.G3": {
+        ("integrated", "hosted"), ("production-smoke", "vps-network"),
+        ("production-recovery", "vps-recovery"), ("recovery", "vps-recovery"),
+        ("platform-network", "vps-network"), ("bounded-load", "vps-load"),
+        ("release-fence", "hosted"), ("regression", "hosted"),
+        *((f"accessibility-{suffix}", row) for suffix, row in (
+            ("win", "discord-win"), ("mac", "discord-mac"),
+            ("chromium", "discord-web-chromium"), ("firefox", "discord-web-firefox"),
+            ("ios", "discord-ios"), ("android", "discord-android"),
+            ("previews", "discord-previews"),
+        )),
+    },
+}
+
+
+@cache
+def native_gate_dependencies(gate):
+    items = read_json(ROOT / "planning/guildboard-backlog.json")["items"]
+    return frozenset(next(item["dependencies"] for item in items if item["id"] == gate))
+
 
 def t13_projection(key, candidate, scope, sources, issue_map):
     try:
@@ -537,7 +565,9 @@ def t13_projection(key, candidate, scope, sources, issue_map):
 
 def t13_handoff(bundle, sources, gate_registry, issue_map, findings, dispositions,
                 approvals, native_decisions, historical):
-    if type(sources) is not EvidenceSources or type(bundle) is not t13.Bundle:
+    if (type(sources) is not EvidenceSources or type(bundle) is not t13.Bundle
+            or type(gate_registry) is not dict or type(approvals) is not dict
+            or type(native_decisions) is not dict):
         return "pending"
     if (verified := t13.verified_bundle(bundle)) is None:
         return "pending"
@@ -570,6 +600,8 @@ def t13_handoff(bundle, sources, gate_registry, issue_map, findings, disposition
     scope = selected["scope"]
     matrix_subject = [gate, digest(encode(selected))]
     if (selected["candidateSha"] != candidate or not projected
+            or not T13_GATE_ROWS[gate] <= required
+            or set(selected["prerequisiteRefs"]) != native_gate_dependencies(gate)
             or not set(projected) <= required
             or not current_grant(sources.authorities, selected["authorityRef"], "gate-matrix", matrix_subject, current)
             or not all(current_grant(sources.authorities, ref, "gate-prerequisite", [ref, *matrix_subject], current)
@@ -693,11 +725,27 @@ class VerificationEvidenceContractTests(unittest.TestCase):
     def test_e05_deduplicates_only_matching_scoped_identity_and_digest(self):
         for run, commands in self.fixture["operationControls"].items():
             committed = {}
+            conflicts = 0
             for command in commands:
-                closed(command, "guild board author operationId payload")
-                identity = tuple(command[name] for name in ("guild", "board", "author", "operationId"))
-                payload_digest = digest(command["payload"].encode())
-                self.assertEqual(committed.setdefault(identity, payload_digest), payload_digest)
+                closed(command, "guildId boardId lineageId actorUserId operationId kind payload baseRevision expectedPolicyGeneration")
+                identity = tuple(command[name] for name in (
+                    "guildId", "boardId", "lineageId", "actorUserId", "operationId",
+                ))
+                intent = {name: command[name] for name in (
+                    "kind", "payload", "lineageId", "baseRevision", "expectedPolicyGeneration",
+                )}
+                intent_digest = digest(encode(intent))
+                if committed.setdefault(identity, intent_digest) != intent_digest:
+                    conflicts += 1
+            self.assertEqual(conflicts, int(run == "same-id-changed-precondition"))
+            if run == "distinct-lineage":
+                self.assertEqual(len(committed), 2)
+                self.assertEqual(len({identity[2] for identity in committed}), 2)
+                self.assertEqual(len(set(committed.values())), 2)
+                continue
+            if run == "same-id-changed-precondition":
+                self.assertEqual(len(committed), 1)
+                continue
             self.assertEqual(len(set(committed.values())), 1)
             observed = self.observations[run]["values"]
             self.assertEqual((observed["durableEffects"], observed["acceptedReceipts"]),
@@ -805,7 +853,7 @@ class VerificationEvidenceContractTests(unittest.TestCase):
             with self.subTest(field=field):
                 mutated = copy.deepcopy(record)
                 mutated["evidence"][field] = value
-                self.assertFalse(passing(encode(mutated), *inputs))
+                self.assertIs(qualifies(encode(mutated), *inputs).outcome, Outcome.INELIGIBLE)
         changed_environment = copy.deepcopy(record)
         changed_environment["environmentId"] = changed_environment["evidence"]["environment"] = "other-build"
         self.assertFalse(passing(encode(changed_environment), *inputs))
@@ -1015,11 +1063,15 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         gate = "GB-T13.G3"
         policy = {gate: {"authorityRef": "applicable-matrix", "candidateSha": CANDIDATE, "scope": "release",
                          "matrixKeys": sorted(keys), "projectionKeys": [smoke],
-                         "prerequisiteRefs": ["native-prerequisites"]}}
-        subject = [gate, digest(encode(policy[gate]))]
-        self.grant(sources.authorities, "gate-matrix", "applicable-matrix", subject)
-        self.grant(sources.authorities, "gate-prerequisite", "native-prerequisites",
-                   ["native-prerequisites", *subject])
+                         "prerequisiteRefs": sorted(native_gate_dependencies(gate))}}
+
+        def grant_policy(authorities, selection):
+            subject = [gate, digest(encode(selection[gate]))]
+            self.grant(authorities, "gate-matrix", "applicable-matrix", subject)
+            for ref in selection[gate]["prerequisiteRefs"]:
+                self.grant(authorities, "gate-prerequisite", ref, [ref, *subject], f"owner-{ref}")
+
+        grant_policy(sources.authorities, policy)
         self.grant(sources.authorities, "accepted-mvp", "t13-mvp", model.prior.designated_mvp)
         original, _, approval = model.stage(scenario={"candidatePatch": {
             "revision": CANDIDATE, "gate": gate, "version": "1.0.0",
@@ -1055,21 +1107,29 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         self.assertEqual(handoff(historical=None), "pending")
         self.assertEqual(handoff(registry={}), "pending")
         self.assertEqual(handoff(current=[entry]), "pending")
-        for ref in ("t13-approval", "t13-native", "t13-mvp", "applicable-matrix", "native-prerequisites",
-                    "complete-findings"):
+        for ref in ("t13-approval", "t13-native", "t13-mvp", "applicable-matrix", "GB-T13.G1",
+                    "GB-T13.G2", "GB-T13.D1", "GB-T0.G1", "complete-findings"):
             current = copy.deepcopy(sources)
             current.authorities.grants[ref]["decision"] = "withdrawn"
             self.assertEqual(handoff(current=current), "pending")
+            current.authorities.grants[ref]["expiresAt"] = []
+            self.assertEqual(handoff(current=current), "pending")
+        for field, removed in (("matrixKeys", ("recovery", "vps-recovery")),
+                               ("prerequisiteRefs", "GB-T13.G2")):
+            partial = copy.deepcopy(policy)
+            partial[gate][field].remove(removed)
+            current = copy.deepcopy(sources)
+            grant_policy(current.authorities, partial)
+            partial_findings = self.finding_inventory(set(partial[gate]["matrixKeys"]), current)
+            self.assertEqual(t13_handoff(bundle, current, partial, issue_map, partial_findings, {},
+                                         approvals, decisions, model.prior), "pending")
         alternatives = copy.deepcopy(policy)
         integration = ("integrated", "hosted")
         alternatives[gate]["projectionKeys"] = [integration]
         alternate = t13_projection(integration, CANDIDATE, "release", sources, issue_map)
         altered, approved, native = stage([alternate])
         other_sources = copy.deepcopy(sources)
-        alternate_subject = [gate, digest(encode(alternatives[gate]))]
-        self.grant(other_sources.authorities, "gate-matrix", "applicable-matrix", alternate_subject)
-        self.grant(other_sources.authorities, "gate-prerequisite", "native-prerequisites",
-                   ["native-prerequisites", *alternate_subject])
+        grant_policy(other_sources.authorities, alternatives)
         self.assertEqual(handoff(candidate=altered, approved=approved, native=native, current=other_sources,
                                  registry=alternatives), "pending")
         for new_entries in ([], [{**entry, "id": "network"}], [{**entry, "level": "integration"}]):

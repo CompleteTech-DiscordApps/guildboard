@@ -29,7 +29,8 @@
     {"key": ["bounded-load", "vps-load"], "issue": 414},
     {"key": ["regression", "hosted"], "issue": 417},
     {"key": ["integrated", "hosted"], "issue": 455},
-    {"key": ["production-smoke", "vps-network"], "issue": 457}
+    {"key": ["production-smoke", "vps-network"], "issue": 457},
+    {"key": ["production-recovery", "vps-recovery"], "issue": 457}
   ],
   "claims": [
     {"id": "valid", "scenario": "E01", "state": "completed", "cleanup": "verified", "expected": [1, 1, 1], "result": "pass"},
@@ -59,12 +60,100 @@
   ],
   "operationControls": {
     "duplicate": [
-      {"guild": "synthetic-guild", "board": "synthetic-board", "author": "synthetic-writer", "operationId": "op1", "payload": "shared-payload"},
-      {"guild": "synthetic-guild", "board": "synthetic-board", "author": "synthetic-writer", "operationId": "op1", "payload": "shared-payload"}
+      {
+        "guildId": "synthetic-guild",
+        "boardId": "synthetic-board",
+        "lineageId": "lineage-a",
+        "actorUserId": "synthetic-writer",
+        "operationId": "op1",
+        "kind": "add",
+        "payload": "shared-payload",
+        "baseRevision": 1,
+        "expectedPolicyGeneration": 2
+      },
+      {
+        "guildId": "synthetic-guild",
+        "boardId": "synthetic-board",
+        "lineageId": "lineage-a",
+        "actorUserId": "synthetic-writer",
+        "operationId": "op1",
+        "kind": "add",
+        "payload": "shared-payload",
+        "baseRevision": 1,
+        "expectedPolicyGeneration": 2
+      }
     ],
     "distinct-id-same-digest": [
-      {"guild": "synthetic-guild", "board": "synthetic-board", "author": "synthetic-writer", "operationId": "op1", "payload": "shared-payload"},
-      {"guild": "synthetic-guild", "board": "synthetic-board", "author": "synthetic-writer", "operationId": "op2", "payload": "shared-payload"}
+      {
+        "guildId": "synthetic-guild",
+        "boardId": "synthetic-board",
+        "lineageId": "lineage-a",
+        "actorUserId": "synthetic-writer",
+        "operationId": "op1",
+        "kind": "add",
+        "payload": "shared-payload",
+        "baseRevision": 1,
+        "expectedPolicyGeneration": 2
+      },
+      {
+        "guildId": "synthetic-guild",
+        "boardId": "synthetic-board",
+        "lineageId": "lineage-a",
+        "actorUserId": "synthetic-writer",
+        "operationId": "op2",
+        "kind": "add",
+        "payload": "shared-payload",
+        "baseRevision": 1,
+        "expectedPolicyGeneration": 2
+      }
+    ],
+    "distinct-lineage": [
+      {
+        "guildId": "synthetic-guild",
+        "boardId": "synthetic-board",
+        "lineageId": "lineage-a",
+        "actorUserId": "synthetic-writer",
+        "operationId": "op1",
+        "kind": "add",
+        "payload": "shared-payload",
+        "baseRevision": 1,
+        "expectedPolicyGeneration": 2
+      },
+      {
+        "guildId": "synthetic-guild",
+        "boardId": "synthetic-board",
+        "lineageId": "lineage-b",
+        "actorUserId": "synthetic-writer",
+        "operationId": "op1",
+        "kind": "add",
+        "payload": "shared-payload",
+        "baseRevision": 1,
+        "expectedPolicyGeneration": 2
+      }
+    ],
+    "same-id-changed-precondition": [
+      {
+        "guildId": "synthetic-guild",
+        "boardId": "synthetic-board",
+        "lineageId": "lineage-a",
+        "actorUserId": "synthetic-writer",
+        "operationId": "op1",
+        "kind": "add",
+        "payload": "shared-payload",
+        "baseRevision": 1,
+        "expectedPolicyGeneration": 2
+      },
+      {
+        "guildId": "synthetic-guild",
+        "boardId": "synthetic-board",
+        "lineageId": "lineage-a",
+        "actorUserId": "synthetic-writer",
+        "operationId": "op1",
+        "kind": "add",
+        "payload": "shared-payload",
+        "baseRevision": 1,
+        "expectedPolicyGeneration": 3
+      }
     ]
   },
   "observations": [

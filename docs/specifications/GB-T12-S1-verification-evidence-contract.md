@@ -81,8 +81,10 @@ included in this specification.
 | E07 | Cover the three separate recovery cases below, including failed complete snapshot validation (F10), read denial after restore, historical receipt retry, digest conflict and unknown retired lineage. Verify each recovered boundary against independent SQL, receipt/outbox and persistent asset inventories. Compare canonical hashes and revisions and fence old writers. |
 | E08 | Resolve actual release artifacts and required rows against current approval. Stale, missing or ineligible evidence remains pending or blocked. Keep verified failures visible separately. Review complete T9 security inputs and disposition evidence below.
 
-Use T0 scoping for the operation identity, including guild, board and operation
-ID, and the original author binding where required. Capture the scoped
+Use T0 scoping for operation identity as
+`(guildId, boardId, lineageId, actorUserId, operationId)`. The canonical intent
+digest covers kind, payload, lineage, base revision and expected policy
+generation. Transport request identity is outside the digest. Capture the scoped
 committed operation and receipt inventory independently of
 application state, and independently observe ACKs actually handed off before
 the fault. Retain both before recovery with the fault boundary, lineage,
@@ -234,8 +236,10 @@ expected rejection and zero effects. The target run itself remains blocked or
 failed. Unavailable prerequisites and interruption cannot yield a passing target
 receipt. Maintain detection-sensitive positive and negative observations.
 
-Reject malformed input, wrong scope and unregistered rows, tokens or references
-as `INVALID_RECORD`. A globally valid bounded JSON object with a positive bounded
+Reject malformed input and unrecognized gate rows as `INVALID_RECORD`. A
+well-formed field that differs from the approved scope, artifact reference or
+other bound metadata produces ineligible evidence. A globally valid bounded
+JSON object with a positive bounded
 integer version field other than 1 returns
 `UNSUPPORTED_RECORD_VERSION` after structural decoding and before interpreting
 version-specific fields. A missing registry, authority, artifact or trustworthy
@@ -309,7 +313,12 @@ The release matrix records stable requirement ID, scenario and environment IDs,
 native verification issue, required class, responsible verifier role, candidate
 SHA and artifact digest, result and trace receipt, open findings and authorized
 disposition. It resolves the full applicable T12/T9 row set from a currently
-approved gate matrix with current native prerequisites. Each assessment
+approved gate matrix with current native prerequisites. Approval can add
+applicable rows but cannot remove the mandatory gate coverage. Resolve each
+native prerequisite declared for that gate individually against its accepting
+authority. Bind each decision to the exact candidate, scope and matrix, or
+require the T13 compatibility assessment for historical evidence. Missing,
+malformed or withdrawn authority leaves the gate pending. Each assessment
 requalifies the current receipt, artifact, observers and grant for the same
 requirement/row key, candidate, scope and trusted time. Separate
 requirements may share one environment and carry separate receipts. Bare
@@ -346,7 +355,9 @@ requirements to the projected entries. Recompute the entries from the approved
 sources and require an exact match to the staged manifest. A caller-supplied
 entry can confer no gate credit even if it equals a manifest entry. G1 requires
 current real Discord startup evidence for GB-T12.MVP1. G2 requires current
-GoDaddy production and recovery evidence. G3 independently requires the
+GoDaddy production and recovery evidence. G3 also requires integrated and
+regression results, the release fence, applicable client accessibility and
+isolated platform network, load and recovery evidence. G3 independently requires the
 `production-smoke` GB-T13.G2 `real-godaddy` entry and the authoritative
 historical #471 evidence described below. The complete applicable matrix and
 native prerequisites apply to each gate. For release automation #446 and
