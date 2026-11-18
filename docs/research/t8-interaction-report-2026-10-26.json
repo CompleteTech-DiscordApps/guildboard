@@ -1,0 +1,24 @@
+{
+  "schema": "t8-interaction-experiment-v1",
+  "node": "v24.18.0",
+  "openssl": "3.5.7",
+  "platform": "win32",
+  "arch": "x64",
+  "classification": "real local crypto; hypothetical in-memory authorization and receipts",
+  "fixture": {
+    "maxAgeSeconds": 300,
+    "futureSkewSeconds": 30,
+    "maxBodyBytes": 4096,
+    "windowsAreProposedSynthetic": true
+  },
+  "first": "new_receipt",
+  "duplicate": "existing_receipt",
+  "readableReceiptAfterWriteLoss": "existing_receipt",
+  "unreadableReceipt": "current_read_denied",
+  "tamper": "bad_signature",
+  "effects": 1,
+  "audit": 1,
+  "realDiscordDelivery": false,
+  "registeredAppConfiguration": false,
+  "databaseVerification": false
+}
