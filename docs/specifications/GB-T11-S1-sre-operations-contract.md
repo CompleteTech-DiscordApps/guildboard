@@ -206,13 +206,24 @@ governing accepted [system contract](GB-T0-S1-system-contract.md) and the
 merged through [#534](https://github.com/CompleteTech-DiscordApps/guildboard/pull/534).
 Prove isolation using authorized non-production resources and independent guards.
 
-Before exposure, reconcile authoritative deletion markers and their high-water
-mark from an independent source. Verify contiguous coverage from the backup's
-applied cut through a serialized exposure fence, or recheck and reconcile
-under an equivalent fence. Reapply current revocations and verify deleted or
-revoked content, assets, exports and references remain inaccessible. Missing,
-stale or gapped evidence or a later unapplied marker keeps the target isolated.
-These deletion markers are distinct from the synthetic target isolation marker.
+Apply the accepted [T5 disaster restore contract](GB-T5-S1-persistence-recovery-contract.md#5-distinct-recovery-boundaries)
+before exposure. Independently authenticate the applied deletion cut of the exact
+chosen backup generation, including the recovered SQL and log cut, assets,
+exports and scoped references. Verify that the recovered projection reflects
+deletion through that cut. If this proof is unavailable, reconcile from an
+independently established earlier cut covering the actual recovered projection
+or keep the target isolated. Verify contiguous authoritative deletion coverage
+from the proven cut through a serialized exposure fence, or recheck and
+reconcile under an equivalent fence. Reapply current revocations and verify
+deleted or revoked content, assets, exports and references remain inaccessible.
+Require independently anchored audit continuity through the accepted audit
+head, including its active tail, before serving.
+
+Missing, stale or gapped evidence or a later unapplied marker keeps the target
+isolated. Deletion markers are distinct from the synthetic target isolation
+marker. The fixture models these as qualified observations bound to the exact
+selected generation and scope. Concrete artifact and audit proof verification
+belongs to the T5 and T9 implementations.
 
 Verify manifest authenticity, decryption/key recovery, replay continuity,
 consistent cut and lineage, database hashes, referenced assets, and authorized

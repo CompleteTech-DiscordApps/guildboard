@@ -44,13 +44,23 @@ def objective(seconds, limit):
     return "breached" if seconds > limit else "within_candidate"
 
 
-def restore_verdict(selected, preflight, verification, loss, objectives):
+def restore_exposure_verified(selected, proof):
+    return (
+        selected is not None and proof is not None
+        and all(proof[key] == selected[key] for key in ("id", "guild", "board", "lineage", "cut"))
+        and all(proof[key] for key in ("applied_cut_verified", "projection_verified", "audit_tail_verified"))
+    )
+
+
+def restore_verdict(selected, preflight, verification, loss, objectives, exposure_verified):
     if preflight == "unsafe":
         return "denied"
     if preflight == "unavailable" or selected is None:
         return "blocked"
     if verification != "complete" or loss in {"at_or_before_cut", "outside_bound", "contradictory"}:
         return "failed"
+    if not exposure_verified:
+        return "blocked"
     if "breached" in objectives:
         return "breached"
     return "undetermined" if loss == "unknown" or "unknown" in objectives else "within_candidate"
@@ -279,9 +289,23 @@ class OperationsContractTest(unittest.TestCase):
 
     def test_backup_and_restore_have_independent_verdicts(self):
         fields = {"generations", "trial", "preflight", "verification", "acknowledgments",
-                  "recovered", "fault_second", "canaries", "rto_seconds"}
+                  "recovered", "fault_second", "canaries", "rto_seconds", "exposure_proof"}
         trials = list(self.cases("recovery", fields))
         passing = next(case for case in trials if case["case"] == "backup_restore_pass")
+        for field, rejected in (
+            ("applied_cut_verified", False), ("projection_verified", False),
+            ("audit_tail_verified", False), ("id", "foreign_generation"),
+            ("board", "foreign_board"), ("cut", 9),
+        ):
+            trials.append({
+                **passing, "case": f"restore_exposure_rejects_{field}",
+                "exposure_proof": {**passing["exposure_proof"], field: rejected},
+                "expected": {**passing["expected"], "drill": "blocked"},
+            })
+        trials.append({
+            **passing, "case": "restore_exposure_requires_proof", "exposure_proof": None,
+            "expected": {**passing["expected"], "drill": "blocked"},
+        })
         original = passing["canaries"][0]
         conflicting_identity = {**original, "commit_second": None,
                                 "operation": [*original["operation"][:-1], "different_operation"]}
@@ -341,6 +365,17 @@ class OperationsContractTest(unittest.TestCase):
                 self.assertIn(case["verification"], {
                     "complete", "unstarted", "interrupted", "integrity_failed", "marker_gap",
                 })
+                proof = case["exposure_proof"]
+                if proof is not None:
+                    identity_fields = ("id", "guild", "board", "lineage")
+                    evidence_fields = ("applied_cut_verified", "projection_verified", "audit_tail_verified")
+                    self.assertEqual(set(proof), {*identity_fields, "cut", *evidence_fields})
+                    for key in identity_fields:
+                        self.synthetic_identity(proof[key])
+                    self.bounded_integer(proof["cut"], 100)
+                    for key in evidence_fields:
+                        self.assertIs(type(proof[key]), bool)
+                exposure_verified = restore_exposure_verified(selected, proof)
                 self.bounded_integer(case["fault_second"], 86400, nullable=True)
                 self.bounded_integer(case["rto_seconds"], 86400, nullable=True)
                 self.assertIs(type(case["canaries"]), list)
@@ -385,7 +420,9 @@ class OperationsContractTest(unittest.TestCase):
                                   or loss in {"at_or_before_cut", "outside_bound", "contradictory"}),
                      "rpo_seconds": rpo_seconds,
                      "rto_seconds": case["rto_seconds"], "rpo": outcomes[0], "rto": outcomes[1],
-                     "drill": restore_verdict(selected, case["preflight"], case["verification"], loss, outcomes)},
+                     "drill": restore_verdict(
+                         selected, case["preflight"], case["verification"], loss, outcomes, exposure_verified,
+                     )},
                     case["expected"],
                 )
 
