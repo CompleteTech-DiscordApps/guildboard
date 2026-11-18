@@ -46,8 +46,10 @@ leaves service supervisor selection to T10.
    TTLs. [GoDaddy DNS guidance](https://www.godaddy.com/help/manage-dns-records-680)
 2. Obtain a trusted certificate for the origin hostname and serve the full
    chain via Nginx. HTTP-01 requires reachable port 80 and the challenge route.
-   DNS-01 requires control of the delegated challenge record and narrowly scoped
-   credentials when automated. Redirect other approved HTTP traffic to HTTPS.
+   DNS-01 requires publishing the challenge TXT record at the authoritative
+   `_acme-challenge.<domain>` destination. Publish it directly or use CNAME or
+   NS delegation. Use narrowly scoped credentials for automation. Redirect
+   other approved HTTP traffic to HTTPS.
    Schedule renewal and external expiry alerts; after renewal validate the config
    and reload Nginx, then verify the externally served certificate and chain.
    Exercise renewal in staging and check the actual reload hook separately.
