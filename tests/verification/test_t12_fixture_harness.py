@@ -396,6 +396,133 @@ class FixtureHarnessTests(unittest.TestCase):
         self.assert_reaped(children[0])
         self.assert_sentinel_only()
 
+    def cleanup_dispatch_boundaries(self):
+        """Record Python line boundaries from normal dispatch to the first mask."""
+        boundaries = []
+        recording = True
+        previous = sys.gettrace()
+
+        def trace(frame, event, arg):
+            nonlocal recording
+            if event == "call" and frame.f_code is harness._defer_sigint.__wrapped__.__code__:
+                recording = False
+            if recording and event == "line" and frame.f_code.co_filename == harness.__file__:
+                boundaries.append((frame.f_code, frame.f_lineno))
+            return trace
+
+        try:
+            with fixture_run(self.config):
+                sys.settrace(trace)
+        finally:
+            sys.settrace(previous)
+        self.assertIn(harness._FixtureRun._close.__code__, {code for code, _ in boundaries})
+        self.assertIn(harness.fixture_run.__wrapped__.__code__, {code for code, _ in boundaries})
+        self.assert_sentinel_only()
+        return boundaries
+
+    def assert_cleanup_dispatch_interruptions(self, fail_reap):
+        boundaries = self.cleanup_dispatch_boundaries()
+        unrelated = subprocess.Popen(
+            [sys.executable, "-I", "-S", "-c", "import sys; sys.stdin.buffer.read()"],
+            stdin=subprocess.PIPE, env={},
+        )
+        self.addCleanup(self.reap_owned_child, unrelated)
+        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGUSR1})
+        handler, previous_trace = signal.getsignal(signal.SIGINT), sys.gettrace()
+        close = os.close
+        try:
+            for code, line in boundaries:
+                with self.subTest(function=code.co_name, line=line, fail_reap=fail_reap):
+                    children, interruptions, removals, closes = [], [], [], []
+                    namespace_fd = None
+
+                    def trace(frame, event, arg):
+                        if (not interruptions and event == "line"
+                                and frame.f_code is code and frame.f_lineno == line):
+                            try:
+                                signal.raise_signal(signal.SIGINT)
+                            except KeyboardInterrupt as error:
+                                interruptions.append(error)
+                                raise
+                            self.fail("SIGINT did not interrupt cleanup dispatch")
+                        return trace
+
+                    def observe_close(fd):
+                        if fd == namespace_fd:
+                            closes.append(fd)
+                        return close(fd)
+
+                    try:
+                        with self.capture_children(children), ExitStack() as stack:
+                            with self.assertRaises(KeyboardInterrupt) as raised:
+                                with fixture_run(self.config) as run:
+                                    run.start_worker()
+                                    namespace_fd = run._namespace_fd
+                                    namespace_identity = os.fstat(namespace_fd)
+                                    remove = run._remove_namespace
+
+                                    def observe_remove(expected):
+                                        self.assert_reaped(children[0])
+                                        self.assertTrue(children[0].stdin.closed)
+                                        removals.append(run.namespace)
+                                        remove(expected)
+
+                                    run._remove_namespace = observe_remove
+                                    stack.enter_context(patch.object(os, "close", side_effect=observe_close))
+                                    if fail_reap:
+                                        wait = stack.enter_context(patch.object(
+                                            children[0], "wait",
+                                            side_effect=subprocess.TimeoutExpired("owned-worker", 1),
+                                        ))
+                                    sys.settrace(trace)
+                            sys.settrace(previous_trace)
+                        self.assertEqual(len(interruptions), 1)
+                        self.assertIs(raised.exception, interruptions[0])
+                        self.assertEqual(closes, [namespace_fd])
+                        with self.assertRaises(OSError):
+                            os.fstat(namespace_fd)
+                        if fail_reap:
+                            self.assertEqual(str(raised.exception.__cause__), "fixture worker cleanup outcome unknown")
+                            self.assertIsInstance(raised.exception.__cause__.__cause__, subprocess.TimeoutExpired)
+                            self.assertIn("fixture cleanup failed; resources may remain", raised.exception.__notes__)
+                            wait.assert_called_once_with(timeout=self.config.cleanup_timeout_seconds)
+                            self.assertEqual(removals, [])
+                            self.assertTrue(run.namespace.is_dir())
+                            self.assertTrue(children[0].stdin.closed)
+                        else:
+                            self.assertIsNone(raised.exception.__cause__)
+                            self.assertEqual(removals, [run.namespace])
+                            self.assert_reaped(children[0])
+                            self.assert_sentinel_only()
+                        self.assertEqual(self.sentinel.read_bytes(), b"unrelated")
+                        self.assertIsNone(unrelated.poll())
+                        self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, set()), previous_mask | {signal.SIGUSR1})
+                        self.assertIs(signal.getsignal(signal.SIGINT), handler)
+                    finally:
+                        sys.settrace(previous_trace)
+                        # The regression must safely fail on a leaking implementation.
+                        for child in children:
+                            self.reap_owned_child(child)
+                        if namespace_fd is not None:
+                            try:
+                                opened = os.fstat(namespace_fd)
+                            except OSError:
+                                pass
+                            else:
+                                self.assertTrue(os.path.samestat(opened, namespace_identity))
+                                close(namespace_fd)
+                            if run.namespace.exists():
+                                self.assertTrue(os.path.samestat(run.namespace.stat(), namespace_identity))
+                                run.namespace.rmdir()
+        finally:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+
+    def test_sigint_at_cleanup_dispatch_and_preamble_recovers(self):
+        self.assert_cleanup_dispatch_interruptions(fail_reap=False)
+
+    def test_sigint_at_cleanup_dispatch_and_preamble_chains_failed_recovery(self):
+        self.assert_cleanup_dispatch_interruptions(fail_reap=True)
+
     def test_sigint_at_cleanup_mask_read_recovers_before_propagating(self):
         previous = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGUSR1})
         handler = signal.getsignal(signal.SIGINT)

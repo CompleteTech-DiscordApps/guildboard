@@ -160,6 +160,9 @@ class _FixtureRun:
         self._cleanup_timeout = config.cleanup_timeout_seconds
         self._worker = None
         self._worker_acquisition_pending = False
+        # Recovery state exists before the caller can acquire any worker.
+        self._cleanup_completed = False
+        self._cleanup_failure = None
         self._active = True
         self._root_fd = root_fd
         self._namespace_name = f"t12-fixture-{uuid4().hex}"
@@ -218,12 +221,8 @@ class _FixtureRun:
 
     def _close(self) -> None:
         self._active = False
-        cleanup_completed = False
-        cleanup_failure = None
-
-        def cleanup():
-            nonlocal cleanup_completed, cleanup_failure
-            with _defer_sigint():
+        with _defer_sigint():
+            try:
                 try:
                     if self._worker is not None:
                         # The process has no descendants and is the only handle we signal.
@@ -238,30 +237,15 @@ class _FixtureRun:
                         raise RuntimeError("fixture worker acquisition outcome unknown")
                     # A failed reap or unexpected contents retain the namespace.
                     self._remove_namespace(os.fstat(self._namespace_fd))
-                    cleanup_completed = True
-                except Exception as error:
-                    # Preserve a resource failure if restoring the mask dispatches
-                    # cancellation; that failure must not trigger another removal.
-                    cleanup_failure = error
-                    raise
-
-        try:
-            try:
-                cleanup()
-            except (KeyboardInterrupt, SystemExit) as error:
-                try:
-                    if cleanup_failure is not None:
-                        raise cleanup_failure
-                    if not cleanup_completed:
-                        # A signal can interrupt entry before the mask is installed.
-                        # Keep the descriptor for one bounded recovery attempt.
-                        cleanup()
-                except BaseException as cleanup_error:
-                    error.add_note("fixture cleanup failed; resources may remain")
-                    raise error from cleanup_error
+                finally:
+                    os.close(self._namespace_fd)
+            except Exception as error:
+                # A pending interrupt at mask restoration must preserve an
+                # uncertain resource outcome, including a failed descriptor close.
+                self._cleanup_failure = error
                 raise
-        finally:
-            os.close(self._namespace_fd)
+            finally:
+                self._cleanup_completed = True
 
 
 @contextmanager
@@ -272,17 +256,30 @@ def fixture_run(config: HarnessConfig):
         if config.target == "integration":
             raise PrerequisiteUnavailable("sql_engine,migrations,api,policy,storage,bot")
         run = _FixtureRun(config, _make_fixture(config.seed), root_fd)
+        # This guard is active before a worker can exist, including throughout
+        # normal-exit dispatch and _close's preamble before masking SIGINT.
         try:
-            yield run
-        except BaseException as error:
             try:
-                run._close()
-            except BaseException as cleanup_error:
-                if isinstance(error, (KeyboardInterrupt, SystemExit)):
-                    # Preserve cancellation while reporting the failed cleanup.
-                    error.add_note("fixture cleanup failed; resources may remain")
-                    raise error from cleanup_error
+                yield run
+            except BaseException as error:
+                try:
+                    run._close()
+                except BaseException as cleanup_error:
+                    if isinstance(error, (KeyboardInterrupt, SystemExit)):
+                        raise error from cleanup_error
+                    raise
                 raise
+            else:
+                run._close()
+        except (KeyboardInterrupt, SystemExit) as error:
+            try:
+                if not run._cleanup_completed:
+                    # Exactly one recovery attempt; entry interruption has not
+                    # closed the descriptor needed to identify the namespace.
+                    run._close()
+                if run._cleanup_failure is not None:
+                    raise run._cleanup_failure
+            except BaseException as cleanup_error:
+                error.add_note("fixture cleanup failed; resources may remain")
+                raise error from cleanup_error
             raise
-        else:
-            run._close()

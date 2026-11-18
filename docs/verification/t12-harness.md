@@ -57,15 +57,31 @@ continues to reject restoration. The private probe child inherits the temporary
 mask and is stopped using its own process handle and SIGKILL, then reaped with
 the configured timeout. It starts no descendants.
 
-If catchable cancellation interrupts cleanup before the SIGINT mask is installed,
-the namespace descriptor remains open for one recovery attempt. The original
+Cleanup outcome state is initialized before the caller can start a worker.
+An outer cancellation guard is active during caller execution and normal-exit
+cleanup dispatch, including the cleanup preamble before SIGINT masking. If
+catchable cancellation interrupts that entry path, the namespace descriptor
+remains open for one recovery attempt. The original
 cancellation propagates after the known worker is stopped and reaped and the
 namespace is removed. If recovery fails, cancellation instead carries the
 cleanup failure as its cause and a note that resources may remain. Completed
 resource cleanup is not repeated when restoring the caller's mask delivers a
-pending interrupt. A resource failure is retained even if a pending SIGINT
-arrives while restoring the mask; it prevents removal and is not retried into
-success. The tests observe this combination with an injected reap timeout.
+pending interrupt. The namespace descriptor is closed within the masked resource
+attempt. Any resource failure is recorded before restoring the mask and is not
+retried into success. A failed stop/reap prevents namespace removal, including
+when a pending SIGINT arrives during mask restoration; the tests observe this
+combination with an injected reap timeout.
+
+Two regression tests first record the normal-exit Python line boundaries before
+the first mask operation, then deliver one real SIGINT at each recorded boundary,
+with successful and injected-failed reap outcomes. The corrected implementation
+has three such boundaries: context-manager dispatch, cleanup's inactive-state
+assignment, and entry into signal deferral. Independent observations check worker
+reaping before removal, one descriptor close, the original interrupt object,
+namespace retention on failure, the caller's mask and handler, an unrelated child,
+and sentinel bytes. On the previous implementation these regressions fail at
+dispatch and in the cleanup preamble; their fallback cleanup stops and reaps only
+test-owned children with finite waits and closes only the verified owned descriptor.
 
 Before calling `Popen`, the run records acquisition uncertainty. Only storing
 the returned handle clears that uncertainty. Any constructor exception therefore
