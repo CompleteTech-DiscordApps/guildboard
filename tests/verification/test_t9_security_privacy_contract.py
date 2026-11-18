@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from test_t5_persistence_recovery_contract import (
-    Command, FIXTURE_RESERVATION, History, ORIGINAL_RECEIPTS, command_result,
+    AllocatorAuthority, Command, FIXTURE_RESERVATION, History, ORIGINAL_RECEIPTS, command_result,
 )
 
 
@@ -201,8 +201,10 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
             'settlesUnknown': False,
         }, matrix)
 
-        complete = History().promote('lineage-b', FIXTURE_RESERVATION, {'lineage-a'})
-        incomplete = History().promote('lineage-b', FIXTURE_RESERVATION, set())
+        complete = History().promote('lineage-b', FIXTURE_RESERVATION, {'lineage-a'},
+                                     allocator=AllocatorAuthority())
+        incomplete = History().promote('lineage-b', FIXTURE_RESERVATION, set(),
+                                       allocator=AllocatorAuthority())
         command = Command()
         branches = {
             'absent': (command, {}, complete, 'LINEAGE_CHANGED'),
