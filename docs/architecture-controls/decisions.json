@@ -17,6 +17,40 @@
       "test_evidence": [
         "tests/architecture-controls/test_gate.py"
       ]
+    },
+    {
+      "id": "DEC-0002",
+      "revision": 1,
+      "boundary": "apps/api/src/audit-evidence.ts",
+      "old_sha256": null,
+      "new_sha256": "75a16a0db70f262b613cbe1e044a135dd570c509ee61255fea561730c1741837",
+      "rationale": "Introduce a bounded server-side audit evidence service with closed records, independently sampled integrity proof, accountable privileged reads and an injected private custody boundary. Durable custody, incident lifecycle and independently anchored acceptance require verified adapters.",
+      "alternatives": [
+        "Defer the API-side model until the custody adapters are available."
+      ],
+      "controls": [
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t9-audit-evidence.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0003",
+      "revision": 1,
+      "boundary": "apps/api/src/index.ts",
+      "old_sha256": "9bc09c5598267291cd1ee9db2c66e83c50d173f82cd3ae08753478ad1f68e67d",
+      "new_sha256": "58bf1fae55a3b392bebdf3dc05f77a75a45d771e9aa1f4879b12dbc3bde75c5f",
+      "rationale": "Expose the audit evidence model from the API package so authorized server-side consumers can integrate it. This entry point adds no network route or initialized adapter.",
+      "alternatives": [
+        "Require server consumers to import the internal module path."
+      ],
+      "controls": [
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t9-audit-evidence.test.mjs"
+      ]
     }
   ]
 }
