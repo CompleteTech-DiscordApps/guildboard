@@ -1,10 +1,38 @@
-# GB-T4.R1 — proposed conflict and sequencing decision
+# GB-T4.R1 — accepted bounded conflict and sequencing research
 
-Issue [#132](https://github.com/CompleteTech-DiscordApps/guildboard/issues/132), researched 2026-10-24 UTC. **Recommendation for review, not an accepted specification or implemented service.** #133 and the T4 release gate remain open. Parent #131, full issue acceptance and its zero-comment/no-native-blocker state were inspected.
+Issue [#132](https://github.com/CompleteTech-DiscordApps/guildboard/issues/132), researched 2026-10-24 UTC. **Accepted bounded research; executable specification and runtime adoption remain open.** The original inspection of parent #131, the full issue acceptance criteria and the issue's zero-comment/no-native-blocker state describes the 2026-10-24 snapshot only. The later acceptance below supersedes that historical status observation.
 
-## Recommended experiment boundary
+## Current research disposition (2026-11-18 UTC)
 
-Use a server-authoritative per-board log with per-element expected-version checks and atomic compound intents. Serialize each accepted command against current tenant/session/policy and the board revision, then commit canonical content, scoped receipt, outbox and audit together. Assign one revision per accepted compound. Reject stale affected-element intent rather than guessing a transform; unrelated unchanged elements may proceed despite an older board base revision. This is a conservative proposal, not a claim that arbitrary Excalidraw edits commute.
+[#132 completed](https://github.com/CompleteTech-DiscordApps/guildboard/issues/132#issuecomment-6965635556)
+after [PR #484](https://github.com/CompleteTech-DiscordApps/guildboard/pull/484)
+merged as `7cafe6b0822a52e1dd14085eccbdeec3c1632358`.
+[Fresh independent review](https://github.com/CompleteTech-DiscordApps/guildboard/pull/484#issuecomment-6965458018)
+covered exact head `1e894d036adf9bb7bb63455c16893f19c410b802` against
+`38be950d8550aaae7179f189bdb45f8826a21154`, including the pinned source
+comparison, alternatives, finite-model evidence and uncertainty. The acceptance
+receipt records all 19 post-merge model cases passing on Linux x86-64 / Python
+3.14.8 and six successful exact default-push workflows. These linked receipts
+supersede the proposal-era pending research review, merge and post-merge status;
+the dated experimental observations below remain evidence for their original
+revisions only.
+
+[PR #490](https://github.com/CompleteTech-DiscordApps/guildboard/pull/490)
+merged T5 transaction, retention and recovery research as
+`65e052dc2c923439890d50deac1d542799942666`. This is a merged research artifact,
+not implementation evidence for the receipt-retention proposal.
+[#133](https://github.com/CompleteTech-DiscordApps/guildboard/issues/133)
+remains open for a consumer-reviewed executable protocol and is still natively
+blocked by open [#99](https://github.com/CompleteTech-DiscordApps/guildboard/issues/99),
+which is blocked by open [#98](https://github.com/CompleteTech-DiscordApps/guildboard/issues/98).
+The full [#169 T4 handoff](https://github.com/CompleteTech-DiscordApps/guildboard/issues/169)
+retains its mandatory incomplete runtime prerequisites. Browser adapter,
+authoritative concurrent undo, SQL durability/recovery, authenticated transport,
+production retention and real platform evidence remain downstream requirements.
+
+## Research decision and downstream experiment boundary
+
+Use a server-authoritative per-board log with per-element expected-version checks and atomic compound intents. Serialize each accepted command against current tenant/session/policy and the board revision, then commit canonical content, scoped receipt, outbox and audit together. Assign one revision per accepted compound. Reject stale affected-element intent rather than guessing a transform; unrelated unchanged elements may proceed despite an older board base revision. This accepted research selects a conservative direction for downstream specification and experiments; arbitrary Excalidraw edits are not proven to commute.
 
 An editor version/versionNonce is client-controlled metadata, not a server sequence or authority token. The adapter must retain server versions separately, identify every affected/bound element, and preserve tombstones. Undo is a new bounded, currently authorized inverse intent with current preconditions; it must not replace the scene or undo another participant's accepted work. A rejected optimistic edit needs deterministic rollback and an explicit unsaved/rejected UI state. These mappings remain browser and integration experiments, not proven by the model below.
 
@@ -77,7 +105,7 @@ Propose a receipt key scoped by guild, board, lineage, actor and operation ID. D
 
 The [accepted T0 read delivery fence](../specifications/GB-T0-S1-system-contract.md#3-identity-and-authorization-invariant) also requires serialized current session, membership and scoped read checks at each release into transport. Apply that fence to prepared or queued ACKs, historical receipts, `IDEMPOTENCY_CONFLICT` and `LINEAGE_CHANGED`. If revocation, expiry or invalidation wins after lookup and before release, suppress the protected response and later queued chunks. Return the same authorized safe outcome for an absent receipt, a matching digest and a conflicting digest. Preserve any already accepted commit. The synchronous model exercises pre-lookup authorization and leaves the release-time interleaving to the protocol specification and integration tests.
 
-**Cross-restore candidate:** the model now retains scoped receipts when `Board.restore` resets content and active events. After current identity/read checks and closed-domain validation, receipt lookup uses the command's lineage before rejecting old-lineage commands or checking the active revision bound. An identical committed retry returns its historical receipt even after write loss; a changed digest conflicts; an old command without a matching actor-scoped receipt gets `LINEAGE_CHANGED`. The historical revision belongs to the command's retired lineage and must never be installed as an active-lineage revision or replayed into restored content. The lookup order follows sections 5–6 of the [accepted T0 system boundary contract](../specifications/GB-T0-S1-system-contract.md#5-ordering-conflict-idempotency-and-save-semantics). The T4 conflict recommendation and #490's receipt-retention candidate remain provisional. The model does not implement durable receipt storage, retention quotas, client reconciliation or repeatable lineage allocation.
+**Cross-restore candidate:** the model now retains scoped receipts when `Board.restore` resets content and active events. After current identity/read checks and closed-domain validation, receipt lookup uses the command's lineage before rejecting old-lineage commands or checking the active revision bound. An identical committed retry returns its historical receipt even after write loss; a changed digest conflicts; an old command without a matching actor-scoped receipt gets `LINEAGE_CHANGED`. The historical revision belongs to the command's retired lineage and must never be installed as an active-lineage revision or replayed into restored content. The lookup order follows sections 5–6 of the [accepted T0 system boundary contract](../specifications/GB-T0-S1-system-contract.md#5-ordering-conflict-idempotency-and-save-semantics). The T4 conflict recommendation and #490's receipt-retention candidate were provisional at that follow-up; the current merged research disposition is recorded above. The model does not implement durable receipt storage, retention quotas, client reconciliation or repeatable lineage allocation.
 
 The receipt-retention follow-up begun on 2026-11-12 was tested at `3de06ef8c8e675b13f8fa38f79026bcc4f3dac1e` on **2026-11-13 at 02:44:45 UTC**, using Python 3.14.8 on Linux: **17 tests pass**. The appended `followup_observations` entry in the [evidence](evidence/collaboration-model-2026-10-24.json) retains the exact timestamp, source hashes, command and raw output separately from the unchanged October observations. Before remediation, two restore regressions failed against model revision `e5fbefe91e402fc361910e57e643702af245727a`: lost-ack recovery returned `LINEAGE_CHANGED`, and only the new-lineage receipt survived. The November tests cover retired-lineage receipt recovery after modeled restore, old-lineage denial without a receipt, a historical base revision above the reset revision, changed-payload conflict, current session/read/tenant checks, actor isolation, uncommitted old commands, unchanged restored content/events, and an independent same-ID new-lineage command.
 
@@ -91,6 +119,6 @@ Reordered delivery may buffer only within a fixed budget; gaps never advance acc
 
 The model intentionally omits real identity/membership verification, action/object-specific permissions, browser rendering, geometry/bindings/groups, asset references, float/canonical-JSON semantics, uint64 rollover, actual persistence/crashes, asynchronous concurrency, snapshot installation, durable receipt retention/compaction, undo transforms, backpressure byte budgets, performance and arbitrary malformed-object handling. Its scalar/compound bounds are not adopted production limits. Restore is a single transition to one second toy lineage, not repeatable production lineage allocation. Do not copy this model as a server implementation.
 
-- [#132 research](https://github.com/CompleteTech-DiscordApps/guildboard/issues/132) submits a recommended conflict and sequencing decision for fresh realtime systems, security and consuming engineering review. Review the pinned source comparison, alternatives, executable finite-model evidence and stated uncertainty. Research acceptance, protected merge and post-merge verification of the research artifacts remain open.
+- [#132 research acceptance](https://github.com/CompleteTech-DiscordApps/guildboard/issues/132#issuecomment-6965635556) records the completed bounded decision, merged artifacts and post-merge model evidence. The current disposition above links the exact-head review. This acceptance leaves the model limitations and downstream specification, integration and platform requirements open.
 - [#133 specification](https://github.com/CompleteTech-DiscordApps/guildboard/issues/133) must define versioned payload schemas, canonical digest encoding, operation footprints, conflict and undo rules, and reconnect invariants with negative fixtures and consuming engineering review before implementation. Invalidate read authority between preparation and release for absent, matching and conflicting receipts. Expect the same safe denial, zero protected output including `LINEAGE_CHANGED`, and any accepted write still durable.
 - Downstream verification must exercise the pinned editor adapter in a browser, including footprint derivation, ordering, stale inverse rejection and rollback. It must also exercise actual SQL transaction, fault and recovery behavior, and authenticated transport replay, credential renewal, backpressure and interrupted snapshot recovery. Discord iframe/WSS, platform identity, GoDaddy Linux VPS and real load/capacity remain separate release gates. The offline finite model establishes only the enumerated scalar transitions.
