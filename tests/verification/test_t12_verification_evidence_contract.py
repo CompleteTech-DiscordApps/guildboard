@@ -444,8 +444,11 @@ def qualified_receipt(key, sources):
     )), "DEPENDENCY_UNAVAILABLE")
     ref = sources.receipt_refs.get(key)
     approval = sources.registry.get(key)
+    if ref is None or approval is None:
+        return None, None
+    require(type(ref) is str and t13.safe_ref(ref))
     raw = sources.receipts.get(ref)
-    if raw is None or approval is None:
+    if raw is None:
         return None, None
     require(type(approval) is dict and type(approval.get("metadata")) is dict)
     artifact_ref = approval["metadata"].get("artifactRef")
@@ -553,7 +556,7 @@ MVP_BEHAVIORS = {
 DISCORD_ROWS = {row for row in EXTERNAL if row.startswith("discord-")}
 
 
-def gate_coverage(gate, clients):
+def gate_coverage(gate, clients, selected=()):
     mvp = {
         ("integrated", "hosted"): (455, MVP_BEHAVIORS),
         **{("discord-startup", row): (455, {"activity-startup", "authenticated-guild"}) for row in clients},
@@ -561,18 +564,26 @@ def gate_coverage(gate, clients):
     production = {
         ("production-smoke", "vps-network"): (457, {"https-wss", "monitoring", "rollback", "smoke"}),
         ("production-recovery", "vps-recovery"): (457, {"isolated-restore", "rpo-rto", "continuity"}),
-        **{("production-discord", row): (353, {"mapped-proxy", "upgrade", "reconnect"}) for row in clients},
+        ("credentials-recovery", "vps-recovery"): (378, {"credential-restore", "retired-credential-denied"}),
+        ("platform-network", "vps-network"): (414, {"platform-network"}),
+        ("bounded-load", "vps-load"): (414, {"bounded-load"}),
+        ("deployed-build-smoke", "vps-network"): (417, {"verified-build", "smoke"}),
+        **{("production-discord", row): (353, {"mapped-proxy", "upgrade", "reconnect",
+              "large-message", "oversize-denial", "resync-without-acceptance"}) for row in clients},
     }
     if gate == "GB-T13.G1":
         return mvp
     if gate == "GB-T13.G2":
         return production
+    browser = "hosted" if ("browser-e2e", "hosted") in selected else "local"
     return {
         **mvp, **production,
         ("integrated", "hosted"): (455, MVP_BEHAVIORS | {"modes", "moderation", "import-export", "recovery"}),
+        ("harness", "offline"): (393, {"owned-setup", "invalid-config", "interrupted-cleanup"}),
+        ("browser-e2e", browser): (396, {"controlled-launch", "auth", "navigation"}),
+        ("isolation", "hosted"): (403, {"tenant-isolation", "content-scope"}),
+        ("convergence", "hosted"): (407, {"idempotency", "concurrent-convergence"}),
         ("recovery", "vps-recovery"): (410, {"recovery-inventories", "deletion-fences"}),
-        ("platform-network", "vps-network"): (414, {"platform-network"}),
-        ("bounded-load", "vps-load"): (414, {"bounded-load"}),
         ("release-fence", "hosted"): (400, {"release-fence"}),
         ("regression", "hosted"): (417, {"regression"}),
         **{("accessibility-" + row.removeprefix("discord-web-").removeprefix("discord-"), row):
@@ -587,6 +598,8 @@ def native_gate_dependencies(gate):
 
 
 def t13_projection(key, candidate, scope, sources, issue_map):
+    if type(issue_map) is not dict:
+        return None
     try:
         qualification, record = qualified_receipt(key, sources)
     except ValueError:
@@ -648,7 +661,7 @@ def t13_handoff(bundle, sources, gate_registry, issue_map, findings, disposition
     required = {tuple(key) for key in selected["matrixKeys"]}
     projected = [tuple(key) for key in selected["projectionKeys"]]
     scope = selected["scope"]
-    minimum = gate_coverage(gate, clients)
+    minimum = gate_coverage(gate, clients, required)
     matrix_subject = [gate, digest(encode(selected))]
     if (selected["candidateSha"] != candidate or not projected
             or not minimum.keys() <= required
@@ -1076,6 +1089,8 @@ class VerificationEvidenceContractTests(unittest.TestCase):
             "result": "pass", "ref": ref,
         })
         self.assertIsNone(t13_projection(key, CANDIDATE, "release", sources, {393: "393"}))
+        self.assertIsNone(t13_projection(key, CANDIDATE, "release", sources, None))
+        self.assertIsNone(project(replace(sources, receipt_refs={key: []})))
         approval = sources.registry[key]
         authority, prerequisite = approval["authorityRef"], approval["prerequisiteRefs"][0]
         for mutate in (
@@ -1115,6 +1130,8 @@ class VerificationEvidenceContractTests(unittest.TestCase):
             ("GB-T13.G1", ("integrated", "hosted"), "board-lock"),
             ("GB-T13.G2", ("production-discord", "discord-win"), "mapped-proxy"),
             ("GB-T13.G2", ("production-smoke", "vps-network"), "rollback"),
+            ("GB-T13.G2", ("production-discord", "discord-win"), "oversize-denial"),
+            ("GB-T13.G2", ("credentials-recovery", "vps-recovery"), "retired-credential-denied"),
         ):
             with self.subTest(gate=gate, omitted=omitted, scenario=scenario):
                 required = gate_coverage(gate, ["discord-win"])
@@ -1201,6 +1218,8 @@ class VerificationEvidenceContractTests(unittest.TestCase):
             self.assertEqual(handoff(current=replace(sources, **{container: None})), "pending")
         self.assertEqual(handoff(current=replace(sources, authorities=replace(sources.authorities, grants=None))),
                          "pending")
+        self.assertEqual(handoff(current=replace(sources, receipt_refs={**sources.receipt_refs, smoke: []})),
+                         "pending")
         expanded_clients = copy.deepcopy(policy)
         expanded_clients[gate]["clientRows"].append("discord-web-firefox")
         expanded_sources = copy.deepcopy(sources)
@@ -1214,6 +1233,10 @@ class VerificationEvidenceContractTests(unittest.TestCase):
             current.authorities.grants[ref]["expiresAt"] = []
             self.assertEqual(handoff(current=current), "pending")
         for field, removed in (("matrixKeys", ("recovery", "vps-recovery")),
+                               ("matrixKeys", ("harness", "offline")),
+                               ("matrixKeys", ("browser-e2e", "local")),
+                               ("matrixKeys", ("isolation", "hosted")),
+                               ("matrixKeys", ("convergence", "hosted")),
                                ("prerequisiteRefs", "GB-T13.G2")):
             partial = copy.deepcopy(policy)
             partial[gate][field].remove(removed)
