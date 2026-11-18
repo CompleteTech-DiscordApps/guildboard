@@ -1,0 +1,196 @@
+{
+  "evidence_kind": "primary-document-observations-not-accessibility-acceptance",
+  "sources": [
+    {
+      "bytes": 403852,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://docs.discord.com/developers/activities/development-guides/layout",
+      "http_status": 200,
+      "id": "D1",
+      "observed_at_utc": "2026-10-26T00:28:16.627773+00:00",
+      "sha256": "04b33a1fb9a7c339c1cff108395559d6b01c961529d530bcabf2a89beb3685dc",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/activities/development-guides/layout"
+    },
+    {
+      "bytes": 400410,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://docs.discord.com/developers/activities/development-guides/mobile",
+      "http_status": 200,
+      "id": "D2",
+      "observed_at_utc": "2026-10-26T00:28:16.628266+00:00",
+      "sha256": "39c83ae94d1bd9a969f907c3e74bdea8e435c56b56af7a773e31cad086da5a37",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/activities/development-guides/mobile"
+    },
+    {
+      "bytes": 365552,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://docs.discord.com/developers/activities/development-guides/production-readiness",
+      "http_status": 200,
+      "id": "D3",
+      "observed_at_utc": "2026-10-26T00:28:16.628736+00:00",
+      "sha256": "d0dcc7b873f39fad2b09315710a1d7fb4bc1ee9dfb8bc9edaab4520dcb963044",
+      "status": "fetched",
+      "url": "https://docs.discord.com/developers/activities/development-guides/production-readiness"
+    },
+    {
+      "bytes": 75240,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/",
+      "http_status": 200,
+      "id": "E1",
+      "observed_at_utc": "2026-10-26T00:28:16.629058+00:00",
+      "sha256": "c419b46f43f020cc6c8c92865a8ce606b6e3d4925f5b3dcc1dc3d054b179b0af",
+      "status": "fetched",
+      "url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/"
+    },
+    {
+      "bytes": 148523,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/excalidraw-api",
+      "http_status": 200,
+      "id": "E2",
+      "observed_at_utc": "2026-10-26T00:28:16.863187+00:00",
+      "sha256": "1f87020592282d2166ced0ac268e234783378a1f134a3f4b6f94fd80cd804ac6",
+      "status": "fetched",
+      "url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/excalidraw-api"
+    },
+    {
+      "bytes": 512457,
+      "document_version": "WCAG2.2 Recommendation2024-12-12",
+      "final_url": "https://www.w3.org/TR/2024/REC-WCAG22-20241212/",
+      "http_status": 200,
+      "id": "W1",
+      "observed_at_utc": "2026-10-26T00:28:16.964885+00:00",
+      "sha256": "6e3c5fe397257cae509a2fb4752b73062cf8cbeb92c2cec618989b17e4cf7057",
+      "status": "fetched",
+      "url": "https://www.w3.org/TR/2024/REC-WCAG22-20241212/"
+    },
+    {
+      "bytes": 43147,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/",
+      "http_status": 200,
+      "id": "W2",
+      "observed_at_utc": "2026-10-26T00:28:16.973809+00:00",
+      "sha256": "9cd3863a6369ecb1e2ebbeaa15644f273545db67f690c3d72b3dda1ea234a88e",
+      "status": "fetched",
+      "url": "https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/"
+    },
+    {
+      "bytes": 48929,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html",
+      "http_status": 200,
+      "id": "W3",
+      "observed_at_utc": "2026-10-26T00:28:17.003475+00:00",
+      "sha256": "c3905630a35b6e8246aba32c1769f3ff82b217d464d41e4b1b2a34b9df5771c6",
+      "status": "fetched",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html"
+    },
+    {
+      "bytes": 65155,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html",
+      "http_status": 200,
+      "id": "W4",
+      "observed_at_utc": "2026-10-26T00:28:17.058228+00:00",
+      "sha256": "361694575d2a4ca5834de57dbc44b24c27ecc67956625703a140b9f1d79c62d4",
+      "status": "fetched",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html"
+    },
+    {
+      "bytes": 60299,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html",
+      "http_status": 200,
+      "id": "W5",
+      "observed_at_utc": "2026-10-26T00:28:17.082576+00:00",
+      "sha256": "d5a085f7be8814e4f01520db08d41d09b62491f40dc0fb6fb4941ec762cf3746",
+      "status": "fetched",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html"
+    },
+    {
+      "bytes": 85770,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html",
+      "http_status": 200,
+      "id": "W6",
+      "observed_at_utc": "2026-10-26T00:28:17.122475+00:00",
+      "sha256": "bc0b7f0afa54f9f3817026aa3e070251174ccf6db1244c927a1e83e9819a6183",
+      "status": "fetched",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html"
+    },
+    {
+      "bytes": 80477,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+      "http_status": 200,
+      "id": "W7",
+      "observed_at_utc": "2026-10-26T00:28:17.140060+00:00",
+      "sha256": "a06d8a7dad2b3c9cadf1d93b1a5372d58adbab65be51e4c4680124d4e47c9999",
+      "status": "fetched",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html"
+    },
+    {
+      "bytes": 203097,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html",
+      "http_status": 200,
+      "id": "W8",
+      "observed_at_utc": "2026-10-26T00:28:17.140256+00:00",
+      "sha256": "2f48093e72b1070c07a7d4aa9e9c5c07815607e8af7c46da9b292cd40086bb7a",
+      "status": "fetched",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html"
+    },
+    {
+      "bytes": 36817,
+      "document_version": "rolling official guidance; no client support inferred",
+      "final_url": "https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html",
+      "http_status": 200,
+      "id": "W9",
+      "observed_at_utc": "2026-10-26T00:28:17.158642+00:00",
+      "sha256": "14af35e29c3c990a8de49207a26b260c1812eb09b2c70b25f3750a9f114c12f2",
+      "status": "fetched",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html"
+    }
+  ],
+  "refreshes": [
+    {
+      "purpose": "Distinguish the historical E1 response from its present-day redirect and the separately verified current props documentation. Original sources entries are unchanged.",
+      "observations": [
+        {
+          "id": "E1-original-redirect",
+          "url": "https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/",
+          "final_url": "https://plus.excalidraw.com/docs/sdk",
+          "observed_at_utc": "2026-11-13T05:56:55.993134+00:00",
+          "http_status": 200,
+          "bytes": 99217,
+          "sha256": "c4e5a4ba162ce9eac2bd1e55030b5da0abeb6bb89ebfebd8d425d28313b3c9ba",
+          "contains_props": {
+            "viewModeEnabled": false,
+            "handleKeyboardGlobally": false,
+            "autoFocus": false,
+            "onChange": false
+          }
+        },
+        {
+          "id": "E1-current",
+          "url": "https://plus.excalidraw.com/docs/sdk/excalidraw/api/props",
+          "final_url": "https://plus.excalidraw.com/docs/sdk/excalidraw/api/props",
+          "observed_at_utc": "2026-11-13T05:56:56.090782+00:00",
+          "http_status": 200,
+          "bytes": 185245,
+          "sha256": "a3a9990a241ec86df3b8327d0b56c322a5b494aa984cac206efa66cbf7e6699c",
+          "contains_props": {
+            "viewModeEnabled": true,
+            "handleKeyboardGlobally": true,
+            "autoFocus": true,
+            "onChange": true
+          }
+        }
+      ]
+    }
+  ]
+}
