@@ -306,6 +306,13 @@ handoff. Its response-time read fence also applies to delayed
 results such as followups. The synchronous fixture cannot validate that fence
 under concurrency or acquire current Discord membership and channel evidence.
 
+The bounded Activity research in [#491](https://github.com/CompleteTech-DiscordApps/guildboard/pull/491)
+is integrated. The actual platform evidence under #34 and #35 remains open.
+The [accepted T9 contract](../specifications/GB-T9-S1-security-privacy-contract.md)
+requires T8 to decode versioned records before protected lookup, return safe
+errors and reauthorize protected responses at serialized release. The T8
+specification and its integration tests carry those requirements forward.
+
 The fixture preserves the lineage and expected generation supplied by the
 caller at first admission. If the first delivery arrives after restore, the
 fixture has no historical admission from which to recover original intent.
