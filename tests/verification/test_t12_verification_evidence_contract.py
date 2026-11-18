@@ -604,6 +604,8 @@ def gate_coverage(gate, clients, selected=()):
         ("convergence", "hosted"): (407, {"idempotency", "concurrent-convergence"}),
         ("recovery", "vps-recovery"): (410, {"recovery-inventories", "deletion-fences"}),
         ("release-fence", "hosted"): (400, {"release-fence"}),
+        ("availability", "vps-network"): (364, {"complete-utc-month", "counts-incidents-gaps",
+            "representative-end-to-end-read-and-write"}),
         ("regression", "hosted"): (417, {"regression", "verified-build", "accessibility"}
             | MVP_BEHAVIORS | {"modes", "moderation", "import-export", "recovery"}),
         **{("accessibility-" + row.removeprefix("discord-web-").removeprefix("discord-"), row):
@@ -658,6 +660,8 @@ def literal_gate_expectations(gate, clients, browser="local"):
         ("convergence", "hosted"): (407, {"idempotency", "concurrent-convergence"}),
         ("recovery", "vps-recovery"): (410, {"recovery-inventories", "deletion-fences"}),
         ("release-fence", "hosted"): (400, {"release-fence"}),
+        ("availability", "vps-network"): (364, {"complete-utc-month", "counts-incidents-gaps",
+            "representative-end-to-end-read-and-write"}),
         ("regression", "hosted"): (417, {"regression", "verified-build", "accessibility"} | mvp | stable),
         **{("accessibility-" + client.removeprefix("discord-web-").removeprefix("discord-"), client):
             (414, {"manual-at", "keyboard", "screen-reader", "accessible-task-coverage"}) for client in clients},
