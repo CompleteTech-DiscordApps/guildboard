@@ -57,6 +57,42 @@ function exceedsDepth(serialized: string): boolean {
   return false;
 }
 
+/** Inspect names before JSON.parse can collapse them; leave value/syntax parsing to it. */
+function hasRepeatedMembers(serialized: string): boolean {
+  const scopes: (Set<string> | null)[] = [];
+  for (let index = 0; index < serialized.length; index++) {
+    const character = serialized[index];
+    if (character === "{" || character === "[") {
+      // The earlier depth check handles well-formed nesting. Bound malformed nesting too.
+      if (scopes.length >= IMPORT_CONTENT_LIMITS.jsonDepth) throw new SyntaxError();
+      scopes.push(character === "{" ? new Set<string>() : null);
+    } else if (character === "}" || character === "]") {
+      const scope = scopes.pop();
+      if (scope === undefined || (scope === null) !== (character === "]")) {
+        throw new SyntaxError();
+      }
+    } else if (character === '"') {
+      const start = index++;
+      while (index < serialized.length && serialized[index] !== '"') {
+        if (serialized[index] === "\\") index++;
+        index++;
+      }
+      if (index >= serialized.length) throw new SyntaxError();
+
+      let next = index + 1;
+      while (next < serialized.length && /[ \t\r\n]/u.test(serialized.charAt(next))) next++;
+      if (serialized[next] !== ":") continue;
+      const names = scopes.at(-1);
+      if (!names) throw new SyntaxError();
+      // Decode only the string token so equivalent JSON escapes name the same member.
+      const name = JSON.parse(serialized.slice(start, index + 1)) as string;
+      if (names.has(name)) return true;
+      names.add(name);
+    }
+  }
+  return false;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -95,6 +131,7 @@ export function parseImportContent(
 
   let decoded: unknown;
   try {
+    if (hasRepeatedMembers(serialized)) return { ok: false, code: "INVALID_MESSAGE" };
     decoded = JSON.parse(serialized);
   } catch {
     return { ok: false, code: "INVALID_MESSAGE" };
