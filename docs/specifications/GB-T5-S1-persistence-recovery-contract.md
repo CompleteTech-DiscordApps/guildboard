@@ -164,7 +164,10 @@ measured operating-envelope evidence.
 | Disaster recovery | Restore the manifest, SQL/logs and pinned assets to an isolated generation. Record the actual recovered cut and independently verify integrity and T9 exposure prerequisites. Fence the prior serving generation and use fresh lineage identifiers and current policy fences before admitting new writes. Persist the cut and provenance of any incomplete historical receipt coverage. Matching retained receipts settle original acceptance after current read checks. For a missing pre-recovery receipt without affirmative completeness proof for that operation's history, keep its outcome unknown (`DEPENDENCY_UNAVAILABLE`); this applies even to an unrecognized historical lineage. Never manufacture a receipt or reapply old intent. With proven complete receipt coverage an absent retired identity follows `LINEAGE_CHANGED`. |
 
 Normal restart reopens the persisted active lineage and receipt coverage as one
-authoritative state. A document restore changes the document and active lineage
+authoritative state. A document restore or disaster promotion can only activate
+an identifier that has never served within the scoped board, including any
+lineage omitted from the recovered cut. If freshness cannot be verified, keep
+the candidate isolated. A document restore changes the document and active lineage
 while preserving all existing receipt evidence and uncertainty. Its source
 checkpoint provides content only. The previously active lineage is complete if
 its full accepted receipt history was retained through retirement. A later
@@ -211,11 +214,15 @@ and scoped audit. That revision is the former lineage's exact final cut.
 Keep the former lineage's recoverable state and record the source checkpoint.
 In the same transaction, record the fresh lineage at revision 0 with its
 verified projected state, make it active and advance the policy generation.
-A failed transaction leaves the former head active and records no acceptance.
+A proven rollback leaves the former head active and records no acceptance.
+Retain each scoped lineage's final cut and restore artifacts across later
+restores and restarts, subject to current retention and deletion rules.
 An outbox entry signals the lifecycle transition subject to current T0/T9
 release fences. Delivery from the former lineage cannot update the fresh
-document. A lost ACK reconciles through the original former-lineage receipt
-and repeats none of the restore effects.
+document. Apply §3's durable commit witness and release rules to restore.
+After an uncertain commit or lost ACK, retry with the original operation
+identity. A matching former-lineage receipt settles acceptance without
+repeating the restore effects.
 
 The disaster backup manifest records generation, engine/tool/schema/codec
 versions, board lineage/cuts, SQL/log-chain coordinates, object IDs/digests/lengths,
