@@ -94,7 +94,7 @@ def consistent_canary_times(candidates, acknowledged, restored, eligible=None):
         if known_positions != {position} or known_operations != {operation}:
             disputed_positions.update(known_positions | {position})
             continue
-        if (*operation, position) not in restored:
+        if (*operation, position) not in restored or timestamp is None:
             continue
         commits_by_position.setdefault(position, set()).add((operation, timestamp))
     times = [timestamp for position, matches in commits_by_position.items()
@@ -278,7 +278,16 @@ class OperationsContractTest(unittest.TestCase):
     def test_backup_and_restore_have_independent_verdicts(self):
         fields = {"generations", "trial", "preflight", "verification", "acknowledgments",
                   "recovered", "fault_second", "canaries", "rto_seconds"}
-        for case in self.cases("recovery", fields):
+        trials = list(self.cases("recovery", fields))
+        passing = next(case for case in trials if case["case"] == "backup_restore_pass")
+        original = passing["canaries"][0]
+        conflicting_identity = {**original, "commit_second": None,
+                                "operation": [*original["operation"][:-1], "different_operation"]}
+        trials.append({**passing, "case": "identity_conflict_without_clock",
+                       "canaries": [*passing["canaries"], conflicting_identity],
+                       "expected": {**passing["expected"], "loss": "contradictory", "escalate": True,
+                                    "rpo_seconds": None, "rpo": "unknown", "drill": "failed"}})
+        for case in trials:
             with self.subTest(case=case["case"]):
                 trial = case["trial"]
                 self.assertEqual(set(trial), {"guild", "board", "lineage", "prefault_high_water", "loss_bound"})
@@ -342,11 +351,11 @@ class OperationsContractTest(unittest.TestCase):
                     self.bounded_integer(canary["position"], 100)
                     if (cut is not None and operation[:3] == scope
                             and canary["position"] <= cut
-                            and canary["evidence"] == "verified_consistent"
-                            and canary["commit_second"] is not None):
+                            and canary["evidence"] == "verified_consistent"):
                         evidence = (operation, canary["position"], canary["commit_second"])
                         canary_commits.append(evidence)
-                        if (canary["restore_second"] is not None and case["fault_second"] is not None
+                        if (canary["commit_second"] is not None and canary["restore_second"] is not None
+                                and case["fault_second"] is not None
                                 and canary["commit_second"] < case["fault_second"] <= canary["restore_second"]):
                             temporally_eligible.add(evidence)
                 valid_commits, conflicting_canary = consistent_canary_times(
@@ -408,7 +417,7 @@ class OperationsContractTest(unittest.TestCase):
         evidence = {(*original, 8)}
         self.assertEqual(consistent_canary_times([(original, 8, 5)], evidence, evidence), ([5], False))
         self.assertEqual(consistent_canary_times([(original, 8, 5)], evidence, set()), ([], False))
-        for contradicts in ((other, 8, 9), (original, 9, 9)):
+        for contradicts in ((other, 8, 9), (original, 9, 9), (other, 8, None)):
             self.assertEqual(consistent_canary_times([contradicts], evidence, evidence), ([], True))
             self.assertEqual(consistent_canary_times([(original, 8, 5), contradicts], evidence, evidence),
                              ([], True))
@@ -444,7 +453,8 @@ class OperationsContractTest(unittest.TestCase):
             "disaster": "verified_disaster_rehearsal",
         }
         fields = {"active", "evidence", "approved_source", "signal", "approved", "sufficient", "observed_second",
-                  "last_breach_second", "evaluated_second", "freshness_seconds", "integrity_recovery"}
+                  "last_breach_second", "evaluated_second", "freshness_seconds", "integrity_recovery",
+                  "backup_evidence"}
         cohorts = {"board_open": {"all", "cold", "warm", "unknown"},
                    "edit": {"all", "solo", "collaborative", "unknown"},
                    "probe": {"all"}, "none": {"none"}}
@@ -455,6 +465,7 @@ class OperationsContractTest(unittest.TestCase):
             "capacity": {"board_open", "edit", "none"},
         }
         integrity_fields = {"responder_acknowledged", "isolated_rehearsal_verified", "loss_disposition_recorded"}
+        configured_backup_jobs = {("synthetic_vps", "pilot_alpha"): ("new_backup_job", 96, 10)}
         rules = set()
         for case in self.cases("alert_recovery", fields):
             with self.subTest(case=case["case"]):
@@ -471,19 +482,21 @@ class OperationsContractTest(unittest.TestCase):
                 self.synthetic_identity(case["approved_source"])
                 rule = case["active"]["rule"]
                 integrity = case["integrity_recovery"]
-                backup = None
                 if rule == "backup_integrity":
-                    self.assertEqual(set(integrity), integrity_fields | {"backup"})
-                    self.assertTrue(all(type(integrity[field]) is bool for field in integrity_fields))
-                    backup = integrity["backup"]
-                    if backup is not None:
-                        self.assertEqual(set(backup), {"job", "completed_second", "deadline_second", "chain_verified"})
-                        self.synthetic_identity(backup["job"])
-                        self.bounded_integer(backup["completed_second"], 86400)
-                        self.bounded_integer(backup["deadline_second"], 86400)
-                        self.assertIs(type(backup["chain_verified"]), bool)
+                    self.assertEqual(set(integrity), integrity_fields)
+                    self.assertTrue(all(type(value) is bool for value in integrity.values()))
                 else:
                     self.assertIsNone(integrity)
+                backup = case["backup_evidence"]
+                backup_rule = rule in {"backup", "backup_integrity"}
+                if backup_rule:
+                    if backup is not None:
+                        self.assertEqual(set(backup), {"job", "completed_second", "chain_verified"})
+                        self.synthetic_identity(backup["job"])
+                        self.bounded_integer(backup["completed_second"], 86400)
+                        self.assertIs(type(backup["chain_verified"]), bool)
+                else:
+                    self.assertIsNone(backup)
                 self.assertIn(case["signal"], set(signals.values()) | {None})
                 for field in ("approved", "sufficient"):
                     self.assertIs(type(case[field]), bool)
@@ -491,19 +504,20 @@ class OperationsContractTest(unittest.TestCase):
                     self.bounded_integer(case[field], 86400)
                 observed = case["observed_second"]
                 self.bounded_integer(observed, 86400, nullable=True)
-                integrity_ready = integrity is None or (
-                    all(integrity[field] for field in integrity_fields)
-                    and backup is not None and backup["chain_verified"] and observed is not None
+                schedule = configured_backup_jobs.get((case["active"]["deployment"], case["active"]["profile"]))
+                backup_ready = not backup_rule or (
+                    schedule is not None and backup is not None and backup["job"] == schedule[0]
+                    and backup["chain_verified"] and observed is not None
                     and case["last_breach_second"] < backup["completed_second"] <= observed
-                    and backup["completed_second"] <= backup["deadline_second"]
-                    and case["evaluated_second"] - backup["completed_second"] <= case["freshness_seconds"]
+                    and backup["completed_second"] <= schedule[1]
+                    and case["evaluated_second"] - backup["completed_second"] <= schedule[2]
                 )
                 clear = (
                     case["approved"] and case["sufficient"] and case["signal"] == signals[rule]
                     and case["active"]["journey"] in applicable.get(rule, {"none"})
                     and all(case["active"][key] == case["evidence"][key] for key in scope_fields)
                     and case["evidence"]["source"] == case["approved_source"]
-                    and integrity_ready
+                    and backup_ready and (integrity is None or all(integrity.values()))
                     and observed is not None
                     and case["last_breach_second"] < observed <= case["evaluated_second"]
                     and case["evaluated_second"] - observed <= case["freshness_seconds"]
