@@ -71,6 +71,82 @@ test("rejects invalid envelopes, unsupported versions and unknown entry fields",
   });
 });
 
+test("rejects repeated decoded member names in envelopes and entries", () => {
+  for (const input of [
+    '{"version":1,"version":1,"entries":[]}',
+    '{"version":2,"version":1,"entries":[]}',
+    '{"version":1,"version":2,"entries":[]}',
+    '{"version":1,"entries":[],"entries":[]}',
+    String.raw`{"version":1,"\u0076ersion":1,"entries":[]}`,
+    String.raw`{"\u0076ersion":1,"v\u0065rsion":1,"entries":[]}`,
+    String.raw`{"version":1,"entries":[],"entri\u0065s":[]}`,
+    '{"version":1,"entries":[{"kind":"text","kind":"text","text":"Draft"}]}',
+    '{"version":1,"entries":[{"kind":"text","text":"First","text":"Second"}]}',
+    String.raw`{"version":1,"entries":[{"kind":"text","text":"First","te\u0078t":"Second"}]}`,
+    `{"version":1,"entries":[{"kind":"link","text":"Guide","url":"${approvedUrl}","url":"${approvedUrl}"}]}`,
+    '{"version":1,"entries":[{"kind":"asset","text":"Map","assetId":"asset_A","assetId":"asset_B"}]}',
+  ]) {
+    assert.deepEqual(parseImportContent(input, policy), invalid);
+  }
+});
+
+test("keeps member scopes independent and accepts escaped names and ordinary strings", () => {
+  const entries = [
+    textEntry(String.raw`{"text":"First","text":"Second"}, [ ] : \\ \"`),
+    textEntry('Quotes " and backslashes \\ then brackets {} [] : ,'),
+    textEntry("Escapes: \b\f\n\r\t / \\ café 🗺️"),
+    linkEntry(approvedUrl),
+    linkEntry(approvedUrl),
+    assetEntry("asset_A"),
+    assetEntry("asset_B"),
+  ];
+  assert.deepEqual(parseImportContent(envelope(entries), policy), {
+    ok: true,
+    content: { version: 1, entries },
+  });
+  const escaped = String.raw`{
+    "\u0076ersion" : 1,
+    "entr\u0069es" : [
+      {"k\u0069nd" : "text", "te\u0078t" : "First\/line\n\u0061"},
+      {"kind" : "text", "text" : "Second"}
+    ]
+  }`;
+  assert.deepEqual(parseImportContent(escaped), {
+    ok: true,
+    content: { version: 1, entries: [textEntry("First/line\na"), textEntry("Second")] },
+  });
+});
+
+test("malformed strings, delimiters and JSON syntax remain invalid", () => {
+  for (const input of [
+    '{"version":1,"entries":[{"kind":"text","text":"unfinished}]}',
+    String.raw`{"version":1,"entries":[{"kind":"text","text":"bad\q"}]}`,
+    String.raw`{"version":1,"entries":[{"kind":"text","text":"bad\u00"}]}`,
+    String.raw`{"version":1,"entries":[{"kind":"text","te\u00xt":"Draft"}]}`,
+    '{"version":1,"entries":[{"kind":"text","text":"line\nbreak"}]}',
+    '{"version":1,"entries":[],}',
+    '{"version":1 "entries":[]}',
+    '{"version":1,"entries":[]] }',
+    ']{"version":1,"entries":[]}',
+    '{"version":1,"entries":[]} false',
+  ]) {
+    assert.deepEqual(parseImportContent(input), invalid);
+  }
+});
+
+test("preserves byte and depth rejection before repeated-member validation", () => {
+  const repeated = '{"version":1,"version":1,"entries":[]}';
+  const exactBytes = repeated + " ".repeat(IMPORT_CONTENT_LIMITS.encodedBytes - repeated.length);
+  assert.deepEqual(parseImportContent(exactBytes), invalid);
+  assert.deepEqual(parseImportContent(exactBytes + " "), tooLarge);
+  assert.deepEqual(
+    parseImportContent('{"version":1,"version":1,"entries":[{"nested":[]}]}'),
+    tooLarge,
+  );
+  const manyMembers = Array.from({ length: 2000 }, (_, index) => `"field${index}":0`).join(",");
+  assert.deepEqual(parseImportContent(`{${manyMembers}}`), invalid);
+});
+
 test("bounds UTF-8 input, nesting, entry count, text and URL lengths", () => {
   const empty = envelope([]);
   const exactBytes = empty + " ".repeat(IMPORT_CONTENT_LIMITS.encodedBytes - empty.length);
