@@ -501,11 +501,12 @@ SECURITY_KEYS = {(name, "review" if name == "independent-security-review" else "
                  for name in SECURITY_INPUTS}
 
 
-def matrix_outcome(required_keys, sources, candidate, scope, findings, dispositions, coverage=None):
+def matrix_outcome(required_keys, sources, candidate, scope, findings, dispositions, coverage=None,
+                   security_keys=SECURITY_KEYS):
     """Re-resolve every selected row from the current independent sources."""
     if coverage is not None and not coverage.keys() <= required_keys:
         return "blocked"
-    keys = required_keys | SECURITY_KEYS
+    keys = required_keys | security_keys
     eligible, receipts = {}, []
     for key in sorted(keys):
         try:
@@ -686,6 +687,7 @@ def t13_handoff(bundle, sources, gate_registry, issue_map, findings, disposition
     projected = [tuple(key) for key in selected["projectionKeys"]]
     scope = selected["scope"]
     minimum = gate_coverage(gate, clients, required)
+    security_keys = set() if gate == "GB-T13.G2" else SECURITY_KEYS
     matrix_subject = [gate, digest(encode(selected))]
     if (selected["candidateSha"] != candidate or not projected
             or not minimum.keys() <= required
@@ -697,7 +699,8 @@ def t13_handoff(bundle, sources, gate_registry, issue_map, findings, disposition
             or not current_grant(sources.authorities, selected["authorityRef"], "gate-matrix", matrix_subject, current)
             or not all(current_grant(sources.authorities, ref, "gate-prerequisite", [ref, *matrix_subject], current)
                        for ref in selected["prerequisiteRefs"])
-            or matrix_outcome(required, sources, candidate, scope, findings, dispositions, minimum) != "pass"):
+            or matrix_outcome(required, sources, candidate, scope, findings, dispositions, minimum,
+                              security_keys) != "pass"):
         return "pending"
     evidence = [t13_projection(key, candidate, scope, sources, issue_map) for key in projected]
     if (any(row is None for row in evidence) or manifest["evidence"] != evidence
@@ -914,10 +917,10 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         for ref in approval["prerequisiteRefs"]:
             self.grant(authorities, "prerequisite", ref, [ref, *subject])
 
-    def sources(self, keys, **overrides):
+    def sources(self, keys, *, security_keys=SECURITY_KEYS, **overrides):
         sources = EvidenceSources({}, {}, {}, {}, {}, {}, "2026-11-17T00:01:00Z",
                                   AuthorityRegistry({}, {}))
-        for key in keys | SECURITY_KEYS:
+        for key in keys | security_keys:
             record, _, registry, artifact, observed, inventory, _, authorities = self.qualification_inputs(
                 *key, scope="release", **{"finding_refs": [], **overrides.get(key[0], {})})
             approval = registry[key]
@@ -932,8 +935,8 @@ class VerificationEvidenceContractTests(unittest.TestCase):
             sources.authorities.grants.update(authorities.grants)
         return sources
 
-    def finding_inventory(self, keys, sources, findings=()):
-        matrix_keys = sorted(keys | SECURITY_KEYS)
+    def finding_inventory(self, keys, sources, findings=(), *, security_keys=SECURITY_KEYS):
+        matrix_keys = sorted(keys | security_keys)
         inventory = {"authorityRef": "complete-findings", "candidateSha": CANDIDATE, "scope": "release",
                      "receiptSha256s": [qualified_receipt(key, sources)[0].receipt_sha256 for key in matrix_keys],
                      "findings": list(findings)}
@@ -1182,21 +1185,65 @@ class VerificationEvidenceContractTests(unittest.TestCase):
                 keys = set(required)
                 overrides = {key[0]: {"issue": issue, "scenarios": cases}
                              for key, (issue, cases) in required.items()}
-                valid = self.sources(keys, **overrides)
+                security_keys = set() if gate == "GB-T13.G2" else SECURITY_KEYS
+                valid = self.sources(keys, security_keys=security_keys, **overrides)
                 def outcome(selection, current):
-                    findings = self.finding_inventory(selection, current)
-                    return matrix_outcome(selection, current, CANDIDATE, "release", findings, {}, required)
+                    findings = self.finding_inventory(selection, current, security_keys=security_keys)
+                    return matrix_outcome(selection, current, CANDIDATE, "release", findings, {}, required,
+                                          security_keys)
                 self.assertEqual(outcome(keys, valid), "pass")
                 self.assertEqual(outcome(keys - {omitted}, valid), "blocked")
                 for changed in ({"issue": 393}, {"scenarios": required[omitted][1] - {scenario}}):
                     substituted = {**overrides, omitted[0]: {**overrides[omitted[0]], **changed}}
-                    self.assertEqual(outcome(keys, self.sources(keys, **substituted)), "blocked")
+                    self.assertEqual(outcome(keys, self.sources(keys, security_keys=security_keys,
+                                                               **substituted)), "blocked")
                 for observed, expected in ((scenario, "fail"), ("outside-required-behavior", "blocked")):
                     passed = required[omitted][1] - {observed} if expected == "blocked" else set()
                     failed = {**overrides, omitted[0]: {**overrides[omitted[0]],
                                                        "scenarios": {observed}, "result": "fail",
                                                        "passing_cases": passed}}
-                    self.assertEqual(outcome(keys, self.sources(keys, **failed)), expected)
+                    self.assertEqual(outcome(keys, self.sources(keys, security_keys=security_keys,
+                                                               **failed)), expected)
+
+    def test_g2_handoff_qualifies_production_and_recovery_without_release_security_rows(self):
+        gate = "GB-T13.G2"
+        scope = "release"
+        clients = ["discord-win"]
+        minimum = gate_coverage(gate, clients)
+        keys = set(minimum)
+        projection = [("production-smoke", "vps-network"), ("production-recovery", "vps-recovery")]
+        overrides = {key[0]: {"issue": issue, "scenarios": cases} for key, (issue, cases) in minimum.items()}
+        sources = self.sources(keys, security_keys=set(), **overrides)
+        self.assertTrue(SECURITY_KEYS.isdisjoint(sources.registry))
+        findings = self.finding_inventory(keys, sources, security_keys=set())
+        matrix = {"authorityRef": "g2-matrix", "candidateSha": CANDIDATE, "scope": scope,
+                  "matrixKeys": sorted(keys), "projectionKeys": projection, "clientRows": clients,
+                  "clientScopeRef": "g2-client-scope", "prerequisiteRefs": sorted(native_gate_dependencies(gate))}
+        matrix_subject = [gate, digest(encode(matrix))]
+        self.grant(sources.authorities, "gate-matrix", "g2-matrix", matrix_subject)
+        self.grant(sources.authorities, "release-client-scope", "g2-client-scope",
+                   [gate, CANDIDATE, scope, clients], "platform-support-owner")
+        for ref in matrix["prerequisiteRefs"]:
+            self.grant(sources.authorities, "gate-prerequisite", ref, [ref, *matrix_subject], f"owner-{ref}")
+        issue_map = self.issue_map()
+        evidence = [t13_projection(key, CANDIDATE, scope, sources, issue_map) for key in projection]
+        model = t13.ReleaseContractScenarios()
+        model.setUp()
+        original, _, approval = model.stage(scenario={"candidatePatch": {"gate": gate, "revision": CANDIDATE}})
+        manifest = {**json.loads(original.manifest), "evidence": evidence}
+        bundle = replace(original, manifest=encode(manifest))
+        _, identity = t13.verified_bundle(bundle)
+        approval = {**approval, "identity": identity}
+        decision = {"identity": identity, "gate": gate, "decision": "accepted",
+                    "authority": t13.NATIVE_AUTHORITY, "decisionRef": "native/production.json",
+                    "evidenceRefs": [entry["ref"] for entry in evidence], "mvpPublication": None}
+        ref = identity["manifestSha256"]
+        self.grant(sources.authorities, "release-approval", "t13-approval", [ref, digest(encode(approval))])
+        self.grant(sources.authorities, "native-decision", "t13-native",
+                   [ref, digest(encode(decision)), manifest["provenanceRef"]])
+        self.assertEqual(t13_handoff(bundle, sources, {gate: matrix}, issue_map, findings, {},
+                                     {ref: approval}, {ref: decision}, None), "verified")
+        self.assertEqual(matrix_outcome(keys, sources, CANDIDATE, scope, findings, {}, minimum), "blocked")
 
     def test_t13_handoff_requires_qualified_matrix_gate_evidence_and_authority(self):
         issue_map = self.issue_map()

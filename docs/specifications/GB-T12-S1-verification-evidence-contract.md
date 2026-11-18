@@ -372,8 +372,10 @@ preview rows enter active coverage only with an applicable decision. Only the
 exact mandatory, behavior-verified rows can fulfill required release entries.
 G3 independently requires the `production-smoke` GB-T13.G2 `real-godaddy`
 entry and the authoritative
-historical #471 evidence described below. The complete applicable matrix and
-native prerequisites apply to each gate. For release automation #446 and
+historical #471 evidence described below. G2 qualifies production and recovery
+evidence and its native prerequisites. The release security evidence matrix
+applies to G1 and G3. Exact evidence qualification and authority apply to each
+gate. For release automation #446 and
 publication #471/#473, resolve actual staged payload, checksum index, build
 provenance, manifest and reviewed notes bytes. T12's digest identifies the
 redacted execution artifact. T13's candidate artifact digest hashes the
