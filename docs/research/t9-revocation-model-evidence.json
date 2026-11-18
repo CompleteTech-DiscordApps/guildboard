@@ -1,0 +1,116 @@
+{
+  "counterexample": {
+    "actions": [
+      "prepare",
+      "revoke",
+      "commit"
+    ],
+    "commit_fence": [
+      {
+        "action": "prepare",
+        "after": {
+          "accepted": 0,
+          "can_write": true,
+          "generation": 0,
+          "prepared_generation": 0
+        },
+        "before": {
+          "accepted": 0,
+          "can_write": true,
+          "generation": 0,
+          "prepared_generation": null
+        }
+      },
+      {
+        "action": "revoke",
+        "after": {
+          "accepted": 0,
+          "can_write": false,
+          "generation": 1,
+          "prepared_generation": 0
+        },
+        "before": {
+          "accepted": 0,
+          "can_write": true,
+          "generation": 0,
+          "prepared_generation": 0
+        }
+      },
+      {
+        "action": "commit",
+        "after": {
+          "accepted": 0,
+          "can_write": false,
+          "generation": 1,
+          "prepared_generation": null
+        },
+        "before": {
+          "accepted": 0,
+          "can_write": false,
+          "generation": 1,
+          "prepared_generation": 0
+        }
+      }
+    ],
+    "prepare_only": [
+      {
+        "action": "prepare",
+        "after": {
+          "accepted": 0,
+          "can_write": true,
+          "generation": 0,
+          "prepared_generation": 0
+        },
+        "before": {
+          "accepted": 0,
+          "can_write": true,
+          "generation": 0,
+          "prepared_generation": null
+        }
+      },
+      {
+        "action": "revoke",
+        "after": {
+          "accepted": 0,
+          "can_write": false,
+          "generation": 1,
+          "prepared_generation": 0
+        },
+        "before": {
+          "accepted": 0,
+          "can_write": true,
+          "generation": 0,
+          "prepared_generation": 0
+        }
+      },
+      {
+        "action": "commit",
+        "after": {
+          "accepted": 1,
+          "can_write": false,
+          "generation": 1,
+          "prepared_generation": null
+        },
+        "before": {
+          "accepted": 0,
+          "can_write": false,
+          "generation": 1,
+          "prepared_generation": 0
+        }
+      }
+    ]
+  },
+  "evidence_kind": "abstract-model-only",
+  "histories_per_design": 1364,
+  "limitations": [
+    "One actor and object; sequential atomic abstract events only.",
+    "No Discord, browser, tenant, session, SQL, network or crash evidence.",
+    "Atomic fencing is an assumption, not an implemented database result."
+  ],
+  "maximum_trace_length": 5,
+  "model_version": 1,
+  "stale_or_revoked_commits": {
+    "commit_fence": 0,
+    "prepare_only": 132
+  }
+}
