@@ -153,6 +153,42 @@
       "test_evidence": [
         "tests/engineering/t9-resource-admission.test.mjs"
       ]
+    },
+    {
+      "id": "DEC-0010",
+      "revision": 1,
+      "boundary": "apps/api/src/private-asset-publication.ts",
+      "old_sha256": null,
+      "new_sha256": "129e4bd9fa8492308de2515bb620cedf89d4f65935e91ee4413419f1e910c2af",
+      "rationale": "Publish bounded canonical asset bytes in a trusted private Linux directory. A same-directory hard link provides atomic no-clobber installation; file and directory sync gate success and verified retries. A failed attempt can leave private unreferenced bytes for later fenced reconciliation.",
+      "alternatives": [
+        "An ordinary rename can replace an existing immutable object. Writing directly to the final name exposes completion races."
+      ],
+      "controls": [
+        "docs/specifications/GB-T5-S1-persistence-recovery-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t5-private-asset-publication.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0011",
+      "revision": 1,
+      "boundary": "apps/api/src/index.ts",
+      "old_sha256": "edcef52bfa9adccf26b8bf90761e8106df68f8a73c53b9d7bdeafb027a14d578",
+      "new_sha256": "a01e9df258113c5788e7de603bb9a3388f8cee2362cf7dbe0a6142b8c3eb3270",
+      "rationale": "Expose the private filesystem publication interface to trusted API consumers before application reference publication.",
+      "alternatives": [
+        "Keep the module internal to its source path until a consumer integrates it."
+      ],
+      "controls": [
+        "docs/specifications/GB-T5-S1-persistence-recovery-contract.md",
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t5-private-asset-publication.test.mjs"
+      ]
     }
   ]
 }
