@@ -140,8 +140,8 @@
       "id": "receipt_release_denial",
       "research": "A08",
       "verificationIssues": [300],
-      "inputs": "Authorize prelookup with absent, matching and conflicting receipts in retired lineage. Remove read authority immediately before egress.",
-      "requiredObservations": "Match public denial for the same reason across all branches. Preserve any prior acceptance and do not settle the unknown outcome."
+      "inputs": "Authorize prelookup with absent receipts under both complete and incomplete retired-lineage coverage, plus matching and conflicting retained receipts. Remove read authority immediately before egress.",
+      "requiredObservations": "Match normalized public denials, response bytes and metadata for the same reason across all four branches. Preserve any prior acceptance and leave the unknown outcome unresolved."
     },
     {
       "id": "internal_records",
@@ -237,7 +237,12 @@
     }
   },
   "postLookupDenial": {
-    "prepared": {"absent": "LINEAGE_CHANGED", "matching": "receipt", "mismatching": "IDEMPOTENCY_CONFLICT"},
+    "prepared": {
+      "absent": "LINEAGE_CHANGED",
+      "absent_incomplete_history": "DEPENDENCY_UNAVAILABLE",
+      "matching": "receipt",
+      "mismatching": "IDEMPOTENCY_CONFLICT"
+    },
     "prelookupAuthorized": true,
     "authorityLossImmediatelyBeforeEgress": true,
     "sameNormalizedOutcomeForSameDenial": true,

@@ -1,11 +1,16 @@
 """Offline checks of the GB-T9.S1 declarative handoff and fixture expectations."""
 
 from copy import deepcopy
+from dataclasses import replace
 import itertools
 import json
 from pathlib import Path
 import unittest
 from unittest.mock import patch
+
+from test_t5_persistence_recovery_contract import (
+    Command, FIXTURE_RESERVATION, History, ORIGINAL_RECEIPTS, command_result,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -178,10 +183,13 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
 
     def test_post_lookup_denial_covers_all_prepared_branches(self):
         matrix = self.fixture['postLookupDenial']
-        self.assertEqual(set(self.fixture['receiptLookupMatrix']['storedStates']), matrix['prepared'].keys())
+        self.assertEqual(set(self.fixture['receiptLookupMatrix']['storedStates']) |
+                         {'absent_incomplete_history'}, matrix['prepared'].keys())
         self.assertExactJSON({
             'prepared': {
-                'absent': 'LINEAGE_CHANGED', 'matching': 'receipt',
+                'absent': 'LINEAGE_CHANGED',
+                'absent_incomplete_history': 'DEPENDENCY_UNAVAILABLE',
+                'matching': 'receipt',
                 'mismatching': 'IDEMPOTENCY_CONFLICT',
             },
             'prelookupAuthorized': True,
@@ -192,6 +200,42 @@ class T9SecurityPrivacyContractTests(unittest.TestCase):
             'priorAcceptedCommitSurvives': True,
             'settlesUnknown': False,
         }, matrix)
+
+        complete = History().promote('lineage-b', FIXTURE_RESERVATION, {'lineage-a'})
+        incomplete = History().promote('lineage-b', FIXTURE_RESERVATION, set())
+        command = Command()
+        branches = {
+            'absent': (command, {}, complete, 'LINEAGE_CHANGED'),
+            'absent_incomplete_history': (command, {}, incomplete, 'DEPENDENCY_UNAVAILABLE'),
+            'matching': (command, dict(ORIGINAL_RECEIPTS), incomplete, 'ACK_HISTORICAL_7'),
+            'mismatching': (replace(command, digest='other'), dict(ORIGINAL_RECEIPTS),
+                            incomplete, 'IDEMPOTENCY_CONFLICT'),
+        }
+        def public_response(outcome, denied):
+            response = {'code' if denied else 'outcome': outcome}
+            payload = json.dumps(response, separators=(',', ':')).encode('ascii')
+            return payload, {'byteLength': len(payload), 'closeReason': outcome if denied else None}
+
+        prepared_bytes = set()
+        for branch, (attempt, receipts, history, expected) in branches.items():
+            with self.subTest(branch=branch):
+                previous_receipts = dict(receipts)
+                outcome, effects = command_result(attempt, receipts, history)
+                self.assertEqual((outcome, effects), (expected, []))
+                self.assertEqual(matrix['prepared'][branch], 'receipt' if branch == 'matching' else outcome)
+                prepared_bytes.add(public_response(outcome, denied=False)[0])
+                for denial in self.fixture['receiptLookupMatrix']['denials']:
+                    with self.subTest(denial=denial):
+                        denied, effects = command_result(
+                            replace(attempt, release=False), receipts, history, release_denial=denial,
+                        )
+                        self.assertEqual((denied, effects), (denial, []))
+                        expected_bytes = b'{"code":"' + denial.encode('ascii') + b'"}'
+                        self.assertEqual(public_response(denied, denied=True), (
+                            expected_bytes, {'byteLength': len(expected_bytes), 'closeReason': denial},
+                        ))
+                        self.assertEqual(receipts, previous_receipts)
+        self.assertEqual(len(prepared_bytes), 4)
 
     def test_malformed_command_rejects_before_lookup_or_effects(self):
         self.assertExactJSON({
