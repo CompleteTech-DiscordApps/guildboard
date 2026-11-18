@@ -20,7 +20,11 @@ even when the affected scope or evidence coverage remains uncertain.
    authorization. Reference the approved configuration and affected consumers
    by role. For invalid configuration record field names only and hold the
    requested action. If authority or a prerequisite is unavailable, continue
-   authorized containment and escalate the gap. For routine rotation, verify
+   authorized containment and escalate the gap. Commit mandatory audit
+   metadata atomically with the authoritative transition. When the required
+   audit path is unavailable or atomic acceptance is unproven, hold the
+   transition and continue separately authorized safeguards.
+   For routine rotation, verify
    replacement access and dependent service readiness before retiring
    superseded access, following the [rotation procedure][rotation]. For
    suspected compromise, T9 and the responsible system owner may approve
@@ -59,7 +63,7 @@ even when the affected scope or evidence coverage remains uncertain.
   If preservation is interrupted or integrity is uncertain, keep partial
   evidence restricted, record the gap and verify it before use or transfer.
   [T9 audit integrity and incident evidence][audit]
-- With approved audience and content, use GitHub's private vulnerability
+- With approved audience, channel and content, use GitHub's private vulnerability
   reporting feature when enabled. If confirmed unavailable, verify the
   maintainer contact method on the actual profile named in SECURITY.md
   before sharing details. When the private route is unknown or unverified,
@@ -80,7 +84,7 @@ gaps, owner and next review in the maintenance record.
 | Check | Decision and evidence |
 | --- | --- |
 | Dependency updates | Review the proposed version and advisories, committed lockfile, package integrity, licenses and applicable regressions under the existing upgrade gate. Retain the dated audit and review evidence for the candidate. If any required check or advisory disposition is incomplete, hold the update and assign the next action. [Upgrade policy][upgrades] |
-| Backup health | Verify the expected job against the approved finish deadline and maximum recovery-point age. Require the intact chain and a fresh, independently verified recovery point for the affected scope. Investigate interrupted or missing jobs, inaccessible evidence or a stale point. Immediately escalate integrity failures, unsafe restore targets or known acknowledged loss outside the trial boundary under T11. [T11 candidate alert rules][alerts] · [Isolated restore][restore] |
+| Backup health | Verify the expected job against the approved finish deadline and maximum recovery-point age. Require an independently verified fresh recovery point and verified intact chain bound to the expected job, deployment and profile. Investigate interrupted or missing jobs, unavailable chain proof or a stale point. Immediately escalate confirmed integrity failures, unsafe restore targets or known acknowledged loss outside the trial boundary under T11. [T11 candidate alert rules][alerts] · [Isolated restore][restore] |
 | Post-incident improvements | Record each gap or corrective action once against a restricted incident reference. Assign an accountable owner, measurable completion criterion, evidence reference and review date. Link existing work when it already covers the action. At the next review keep unresolved items open, update the next decision, and close an item only after the recorded criterion has verified evidence. Use the existing mandatory gate for release blockers and the maintenance intake for eligible nonessential improvements. [Maintenance intake][maintenance] |
 
 ## Synthetic acceptance

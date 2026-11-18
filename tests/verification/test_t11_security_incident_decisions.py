@@ -9,6 +9,7 @@ class Containment:
     configuration_valid: bool = True
     approval_matches_scope: bool = True
     required_audit_available: bool = True
+    atomic_audit_verified: bool = True
     effects_reconciled: bool = True
     urgent_revocation_approved: bool = False
     replacement_ready: bool = True
@@ -21,7 +22,7 @@ class Containment:
 def containment_decision(case):
     if not case.configuration_valid:
         return "invalid_configuration", "hold"
-    if not (case.approval_matches_scope and case.required_audit_available):
+    if not (case.approval_matches_scope and case.required_audit_available and case.atomic_audit_verified):
         return "blocked", "hold"
     if not case.effects_reconciled:
         return "reconcile_before_retry", "hold"
@@ -54,8 +55,8 @@ def evidence_handoff(case):
     )
 
 
-def private_route(feature_available, fallback_verified, audience_and_content_approved):
-    if audience_and_content_approved:
+def private_route(feature_available, fallback_verified, *, audience_approved, channel_approved, content_approved):
+    if audience_approved and channel_approved and content_approved:
         if feature_available is True:
             return "github_private_report"
         if feature_available is False and fallback_verified:
@@ -68,17 +69,19 @@ class BackupCheck:
     finish_second: int | None = 90
     recovery_point_second: int | None = 86
     same_scope_independently_verified: bool = True
-    integrity_failure: bool = False
+    chain_state: str = "intact"
+    chain_identity: tuple[str, str, str] | None = ("job_a", "deployment_a", "profile_a")
     unsafe_restore: bool = False
     acknowledged_loss_outside_boundary: bool = False
 
 
-def backup_decision(check, *, finish_deadline, now, maximum_point_age):
-    if check.integrity_failure or check.unsafe_restore or check.acknowledged_loss_outside_boundary:
+def backup_decision(check, *, expected_identity, finish_deadline, now, maximum_point_age):
+    if check.chain_state == "corrupt" or check.unsafe_restore or check.acknowledged_loss_outside_boundary:
         return "escalate"
     finished = check.finish_second
     point = check.recovery_point_second
     if (finished is not None and point is not None and check.same_scope_independently_verified
+            and check.chain_state == "intact" and check.chain_identity == expected_identity
             and point <= finished <= min(finish_deadline, now) and now - point <= maximum_point_age):
         return "verified"
     return "investigate"
@@ -87,7 +90,8 @@ def backup_decision(check, *, finish_deadline, now, maximum_point_age):
 def maintenance_decisions(upgrade_verified, backup, corrective_criterion_verified):
     return (
         "ready_for_review" if upgrade_verified else "hold_update",
-        backup_decision(backup, finish_deadline=95, now=100, maximum_point_age=15),
+        backup_decision(backup, expected_identity=("job_a", "deployment_a", "profile_a"),
+                        finish_deadline=95, now=100, maximum_point_age=15),
         "close_item" if corrective_criterion_verified else "keep_item_open",
     )
 
@@ -104,6 +108,7 @@ class SecurityIncidentDecisionTest(unittest.TestCase):
             ("configuration_valid", "invalid_configuration"),
             ("approval_matches_scope", "blocked"),
             ("required_audit_available", "blocked"),
+            ("atomic_audit_verified", "blocked"),
         ):
             with self.subTest(field=field):
                 case = replace(Containment(), **{field: False})
@@ -156,7 +161,14 @@ class SecurityIncidentDecisionTest(unittest.TestCase):
             (False, True, False, "retain_privately_and_escalate"),
         ):
             with self.subTest(feature=feature, fallback=fallback, approved=approved):
-                self.assertEqual(private_route(feature, fallback, approved), expected)
+                self.assertEqual(private_route(feature, fallback, audience_approved=approved,
+                                               channel_approved=True, content_approved=True), expected)
+        for feature in (True, False):
+            for missing in ("audience_approved", "channel_approved", "content_approved"):
+                with self.subTest(feature=feature, missing=missing):
+                    approvals = dict.fromkeys(("audience_approved", "channel_approved", "content_approved"), True)
+                    approvals[missing] = False
+                    self.assertEqual(private_route(feature, True, **approvals), "retain_privately_and_escalate")
 
     def test_independent_post_release_checks_keep_open_items_visible(self):
         healthy = BackupCheck()
@@ -171,13 +183,19 @@ class SecurityIncidentDecisionTest(unittest.TestCase):
             {"recovery_point_second": 84},
             {"recovery_point_second": 91},
             {"same_scope_independently_verified": False},
+            {"chain_state": "unknown"},
+            {"chain_identity": None},
+            {"chain_identity": ("job_b", "deployment_a", "profile_a")},
+            {"chain_identity": ("job_a", "deployment_b", "profile_a")},
+            {"chain_identity": ("job_a", "deployment_a", "profile_b")},
         ):
             with self.subTest(inputs=inputs):
                 self.assertEqual(maintenance_decisions(True, replace(healthy, **inputs), False),
                                  ("ready_for_review", "investigate", "keep_item_open"))
-        for field in ("integrity_failure", "unsafe_restore", "acknowledged_loss_outside_boundary"):
-            with self.subTest(field=field):
-                self.assertEqual(maintenance_decisions(False, replace(healthy, **{field: True}), False),
+        for inputs in ({"chain_state": "corrupt"}, {"unsafe_restore": True},
+                       {"acknowledged_loss_outside_boundary": True}):
+            with self.subTest(inputs=inputs):
+                self.assertEqual(maintenance_decisions(False, replace(healthy, **inputs), False),
                                  ("hold_update", "escalate", "keep_item_open"))
 
 
