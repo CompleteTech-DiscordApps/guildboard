@@ -360,8 +360,9 @@ production observations for HTTPS/WSS, monitoring, rollback and smoke, an
 isolated recovery result, and the actual Discord proxy and reconnect journey.
 Each mandatory row links the required native issue, class, and covered behaviors
 to its exact independently observed artifact. A passing row covers every
-required behavior. An independently observed failure in any required case
-fails the row while outstanding cases are still pending. G3 also requires
+required behavior. Record case-level outcomes in the independently observed
+artifact. A failed required case fails the row while outstanding cases are
+still pending. A failed ancillary case supplies no required-case result. G3 also requires
 integrated and regression results, the release fence, applicable client accessibility and
 isolated platform network, load and recovery evidence. Resolve the applicable
 Discord environments from an independently approved candidate-scoped support

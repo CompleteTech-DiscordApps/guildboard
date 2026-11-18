@@ -514,19 +514,21 @@ def matrix_outcome(required_keys, sources, candidate, scope, findings, dispositi
                 native_issue, behaviors = coverage[key]
                 evidence = record["evidence"]
                 coverage_artifact = decode_json(sources.artifacts[evidence["artifactRef"]], 16384)
-                closed(coverage_artifact, "synthetic requirement row cases result")
-                cases = coverage_artifact["cases"]
-                require(type(cases) is list)
-                for case in cases:
-                    token(case)
-                unique_array(cases, minimum=1)
+                closed(coverage_artifact, "synthetic requirement row passedCases failedCases result")
+                passed = coverage_artifact["passedCases"]
+                failed = coverage_artifact["failedCases"]
+                for cases in (passed, failed):
+                    require(type(cases) is list)
+                    for case in cases:
+                        token(case)
+                    unique_array(cases)
+                require(not set(passed) & set(failed))
                 if (evidence["nativeIssue"] != native_issue or coverage_artifact["synthetic"] is not True
                         or [coverage_artifact["requirement"], coverage_artifact["row"]] != list(key)
                         or coverage_artifact["result"] != evidence["result"]):
                     continue
-                observed_cases = set(cases)
-                if (item.outcome is Outcome.VERIFIED_PASS and not behaviors <= observed_cases
-                        or item.outcome is Outcome.VERIFIED_FAIL and not behaviors & observed_cases):
+                if (item.outcome is Outcome.VERIFIED_PASS and (failed or not behaviors <= set(passed))
+                        or item.outcome is Outcome.VERIFIED_FAIL and not behaviors & set(failed)):
                     continue
         except ValueError:
             continue
@@ -860,14 +862,15 @@ class VerificationEvidenceContractTests(unittest.TestCase):
                                  "fail")
 
     def qualification_inputs(self, requirement="harness", row="offline", scope="test-only",
-                             result="pass", issue=393, finding_refs=None, scenarios=None):
+                             result="pass", issue=393, finding_refs=None, scenarios=None, passing_cases=()):
         record, artifact = self.receipt()
         record["requirementId"], record["gateRow"] = requirement, row
         record["evidence"].update(scope=scope, evidenceClass=CLASS_BY_ROW[row], result=result,
                                   nativeIssue=issue, artifactRef=f"{requirement}-{row}")
         if scenarios is not None:
-            artifact = encode({"synthetic": True, "requirement": requirement, "row": row,
-                               "cases": sorted(scenarios), "result": result})
+            artifact = encode({"synthetic": True, "requirement": requirement, "row": row, "result": result,
+                               "passedCases": sorted(scenarios if result == "pass" else passing_cases),
+                               "failedCases": sorted(scenarios) if result == "fail" else []})
             record["artifactSha256"] = digest(artifact)
             record["environmentId"] = record["evidence"]["environment"] = f"synthetic-{row}"
             record["evidence"]["scenarioIds"] = ["E08"]
@@ -1181,8 +1184,10 @@ class VerificationEvidenceContractTests(unittest.TestCase):
                     substituted = {**overrides, omitted[0]: {**overrides[omitted[0]], **changed}}
                     self.assertEqual(outcome(keys, self.sources(keys, **substituted)), "blocked")
                 for observed, expected in ((scenario, "fail"), ("outside-required-behavior", "blocked")):
+                    passed = required[omitted][1] - {observed} if expected == "blocked" else set()
                     failed = {**overrides, omitted[0]: {**overrides[omitted[0]],
-                                                       "scenarios": {observed}, "result": "fail"}}
+                                                       "scenarios": {observed}, "result": "fail",
+                                                       "passing_cases": passed}}
                     self.assertEqual(outcome(keys, self.sources(keys, **failed)), expected)
 
     def test_t13_handoff_requires_qualified_matrix_gate_evidence_and_authority(self):
