@@ -18,7 +18,7 @@ const build = spawnSync(
 );
 assert.equal(build.status, 0, build.stderr + build.stdout);
 const { createGracefulShutdownCoordinator } = await import(
-  pathToFileURL(path.join(output, "graceful-shutdown.js"))
+  pathToFileURL(path.join(output, "index.js"))
 );
 
 const completedDrain = { outcome: "settled", pendingOperations: 0, failedOperations: 0 };

@@ -312,6 +312,42 @@
       "test_evidence": [
         "tests/engineering/t11-operational-metrics.test.mjs"
       ]
+    },
+    {
+      "id": "DEC-0019",
+      "revision": 1,
+      "boundary": "apps/api/src/graceful-shutdown.ts",
+      "old_sha256": null,
+      "new_sha256": "85e1076113a44d8a0d9104ff2544c973a602842ce0a83ee9d3cb6920fd036358",
+      "rationale": "Stop admission and coordinate bounded drain, reconnect and telemetry callbacks without changing durable release authority.",
+      "alternatives": [
+        "Defer reusable shutdown coordination until an approved runtime and supervisor integration exists."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T0-S1-system-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-graceful-shutdown.test.mjs"
+      ]
+    },
+    {
+      "id": "DEC-0020",
+      "revision": 1,
+      "boundary": "apps/api/src/index.ts",
+      "old_sha256": "ea9725522d9faea326a7f949fdb813abf8499f5174f83922287e3d3a639466a3",
+      "new_sha256": "7aa8c92f286ad06f8124f99b5023b3c33992d737c2039e1fa342bfbefe08f73c",
+      "rationale": "Expose the process-local shutdown coordinator through the public server API workspace.",
+      "alternatives": [
+        "Defer reusable shutdown coordination until an approved runtime and supervisor integration exists."
+      ],
+      "controls": [
+        "docs/specifications/GB-T11-S1-sre-operations-contract.md",
+        "docs/specifications/GB-T0-S1-system-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t11-graceful-shutdown.test.mjs"
+      ]
     }
   ]
 }

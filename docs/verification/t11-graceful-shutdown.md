@@ -28,7 +28,9 @@ budgets for the trusted socket-close/reconnect and telemetry-flush callbacks.
 Each callback runs once, even if the earlier phase failed or exceeded its
 deadline. A timed-out callback receives an abort signal. Callbacks must
 cooperate with cancellation and avoid blocking the event loop. Synchronous
-work and a stalled event loop can delay timer dispatch.
+work and a stalled event loop can delay timer dispatch. Report callback failures
+through the returned completion. Handle errors in detached host listeners
+inside the adapter before they reach the host's uncaught-error boundary.
 
 The host owns the socket set, the reconnect guidance permitted by the
 transport, and the approved telemetry adapter. It can use the finite shutdown
