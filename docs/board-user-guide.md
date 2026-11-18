@@ -1,5 +1,6 @@
 # Guildboard board guide
 
+<a id="board-runtime-evidence"></a>
 This provisional guide for [GB-T13.02.02.T1 (#434)][guide] describes planned
 workflows for guild administrators, moderators and board participants. The
 [repository status][status] records a foundation and application scaffolds.
@@ -15,6 +16,34 @@ isolated runs. Client support, accessibility and complete workflows remain
 unresolved. Dated Discord Activity and GoDaddy Linux VPS evidence belongs to
 the respective platform and release owners. See the [documentation
 contract][docs-contract] for claim ownership and evidence requirements.
+
+## Claim status and handoff
+
+Accountable expertise for administrator and moderator claims: Moderation and
+policy owners, with T2/T6 consumers. End-user claims are accountable to Editor
+and user experience owners, with T3/T5/T7 consumers. Consumers review their
+respective scope. Audiences: administrators, moderators and end users.
+The [claim register](evidence/GB-T13-02-02-T1-guide-claims.json)
+pins the existing anchors and the runtime gap to exact guide bytes.
+
+| Claim anchor | Status | Next validating owner and scope |
+| --- | --- | --- |
+| [board-runtime-evidence](#board-runtime-evidence) | unresolved | GB-T13.02.02.V1 [#435][verification]: complete candidate workflows and claimed clients with feature owners. |
+| [map-roles](#map-roles) | planned | T1/T2: role precedence, authority and mapping outcomes. |
+| [manage-boards](#manage-boards) | planned | T2/T5: scoped lifecycle, visibility and retention outcomes. |
+| [drawing-requests](#drawing-requests) | planned | T2: grants, requests, expiry and revocation. |
+| [lock-and-modes](#lock-and-modes) | planned | T2/T6: lockdown fences, transitions and presentation. |
+| [join-and-draw](#join-and-draw) | planned | T3/T7: authorized tools, conflicts and participant feedback. |
+| [save-and-history](#save-and-history) | planned | T5/T7: durable acceptance, history and lineage recovery. |
+| [accessible-options](#accessible-options) | unresolved | GB-T13.02.02.V1 #435 with T3/T7: keyboard, screen reader, touch and client scope. |
+| [permission-recovery](#permission-recovery) | planned | T1/T2/T7: permitted recovery without widening access. |
+| [manual-verification](#manual-verification) | unresolved | GB-T13.02.02.V1 #435: execute and retain each scenario before D1/G3 handoff. |
+
+Every planned section still requires implementation and verification; its
+embedded design uncertainties remain open. The unresolved runtime and manual
+verification claims cover these gaps under #435. Existing canvas fixtures and
+persistence research remain isolated feasibility evidence, with no integrated
+board workflow, accessible client or real platform pass inferred from them.
 
 <a id="map-roles"></a>
 ## Guild administrators
