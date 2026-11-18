@@ -57,6 +57,132 @@ class RegressionMatrixTest(unittest.TestCase):
         self.assertTrue(all(entry["issue"].endswith("/417") and entry["status"] == "blocked"
                             for entry in deployed))
 
+    def test_scope_bindings_select_exact_cases_and_preserve_unmapped_clauses(self):
+        report = regression.audit(regression.ROOT, self.matrix)
+        clauses = {(row["feature"], row["text"]): row for row in report["requirements"]}
+        expected = {
+            ("GB-T9.04.01", "Run dependency, secret and static analysis checks with triaged findings"): {
+                "dependency-license-lockfile": {"dependency-license-lockfile"},
+                "secret-static-triage": {"secret-static-triage"},
+            },
+            ("GB-T9.04.01", "verify lockfile provenance and license obligations"): {
+                "dependency-license-lockfile": {"dependency-license-lockfile"},
+            },
+            ("GB-T10.04.02", "Run external HTTPS/WSS, reconnect, large-message, idle-timeout and renewal tests against real VPS"): {
+                "production-network": {"https", "wss", "reconnect-restart", "large-message",
+                                       "idle-below-threshold", "idle-above-threshold", "tls-renewal"},
+            },
+            ("GB-T10.04.02", "prove firewall/database isolation and Discord launch"): {
+                "production-network": {"firewall-isolation", "sql-asset-isolation"},
+                "production-discord": {"activity-startup"},
+            },
+            ("GB-T12.01.02", "Exercise actual UI launch/ready/auth/navigation with controlled SDK mocks "
+             "and separately real supported Discord clients"): {
+                "browser-e2e": {"controlled-launch", "ready", "auth", "navigation"},
+                "sdk-launch": {"actual-launch", "sdk-compatibility"},
+            },
+            ("GB-T12.04.01", "Run keyboard/screen-reader scenarios, load/resource budgets and real GoDaddy HTTPS/WSS/idle timeout checks"): {
+                **{f"accessibility-{suffix}": {"keyboard", "screen-reader"} for suffix in
+                   ("win", "mac", "chromium", "firefox", "ios", "android", "previews")},
+                "bounded-load": {"bounded-load", "resource-budget"},
+                "platform-network": {"https", "wss", "idle-below-threshold", "idle-above-threshold"},
+            },
+            ("GB-T12.04.02", "run production smoke after deployment"): {
+                "deployed-build-smoke": {"verified-build", "smoke", "https-wss"},
+                "deployed-client-smoke": {"verified-build", "deployed-client-journey"},
+            },
+        }
+        self.assertEqual({key for key, row in clauses.items() if row["scopeMappingStatus"] == "mapped"},
+                         set(expected))
+        source_trace = regression.load(regression.ROOT, regression.TRACE)
+        for identity, case_sets in expected.items():
+            requirement = clauses[identity]
+            links = requirement["scopeObservationLinks"]
+            self.assertEqual({link["row"][0] for link in links}, set(case_sets))
+            self.assertEqual(len(links), len({tuple(link["row"]) for link in links}))
+            for link in links:
+                with self.subTest(identity=identity, row=link["row"]):
+                    self.assertEqual(set(link["cases"]), case_sets[link["row"][0]])
+                    self.assertEqual(len(link["cases"]), len(case_sets[link["row"][0]]))
+                    self.assertEqual(link["requirementSource"], requirement["source"])
+                    index = int(link["requirementSource"].rsplit("/", 1)[1])
+                    self.assertEqual((source_trace[index]["feature"], source_trace[index]["requirement"]), identity)
+                    self.assertEqual(link["source"], regression.T9 if identity[0].startswith("GB-T9") else regression.T12)
+                    self.assertIn(link["status"], {"pending", "blocked"})
+            client_links = [link for link in links if link["row"][1].startswith("discord-")]
+            if client_links:
+                self.assertEqual({link["row"][1] for link in client_links}, contract.DISCORD_ROWS)
+        self.assertEqual(sum(row["scopeMappingStatus"] == "unmapped" for row in clauses.values()), 298)
+        for identity, requirement in clauses.items():
+            if identity not in expected:
+                self.assertEqual(requirement["scopeObservationLinks"], [])
+                self.assertEqual(requirement["scopeEvidenceStatus"], "pending")
+        # A recovery inventory or broad permissions row alone cannot represent
+        # every crash/ACK/asset or session/UI clause. Keep those handoffs open.
+        for feature in ("GB-T12.01.01", "GB-T12.02.01", "GB-T12.02.02", "GB-T12.03.01", "GB-T12.03.02"):
+            self.assertTrue(all(row["scopeMappingStatus"] == "unmapped" for row in clauses.values()
+                                if row["feature"] == feature))
+
+    def test_mapped_clauses_reject_stale_text_feature_and_missing_source(self):
+        original_load = regression.load
+        original_trace = original_load(regression.ROOT, regression.TRACE)
+        for identity in regression.TRACE_SCOPES:
+            index = next(i for i, row in enumerate(original_trace)
+                         if (row["feature"], row["requirement"]) == identity)
+            for field in ("requirement", "feature"):
+                trace = copy.deepcopy(original_trace)
+                trace[index][field] += "-stale"
+                with self.subTest(identity=identity, field=field), patch.object(regression, "load", side_effect=(
+                    lambda root, name: trace if name == regression.TRACE else original_load(root, name)
+                )):
+                    with self.assertRaisesRegex(ValueError, "trace scope clause missing or stale"):
+                        regression.audit(regression.ROOT, self.matrix)
+            report = regression.audit(regression.ROOT, self.matrix)
+            remaining = [row for row in report["requirements"] if (row["feature"], row["text"]) != identity]
+            with self.subTest(identity=identity, field="missing"), self.assertRaisesRegex(
+                    ValueError, "trace scope clause missing or stale"):
+                regression.scope_observations(remaining, report["rows"], contract.DISCORD_ROWS)
+
+    def test_scope_resolution_rejects_wrong_row_issue_source_cases_and_duplicates(self):
+        report = regression.audit(regression.ROOT, self.matrix)
+        for identity, targets in regression.TRACE_SCOPES.items():
+            for index, target in enumerate(targets):
+                name, environment, issue, source, cases = target
+                for replacement, diagnostic in (
+                    (("wrong-row", environment, issue, source, cases), "missing scope observation"),
+                    ((name, "wrong-environment", issue, source, cases), "missing scope observation"),
+                    ((name, environment, issue + 1, source, cases), "wrong scope native issue"),
+                    ((name, environment, issue, "wrong-source", cases), "wrong scope observation source"),
+                    ((name, environment, issue, source, ("invented-case",)), "missing canonical scope cases"),
+                    ((name, environment, issue, source, ()), "empty or duplicate scope cases"),
+                    ((name, environment, issue, source, (*cases, cases[0])), "empty or duplicate scope cases"),
+                ):
+                    changed = dict(regression.TRACE_SCOPES)
+                    changed[identity] = (*targets[:index], replacement, *targets[index + 1:])
+                    with self.subTest(identity=identity, row=name, diagnostic=diagnostic), patch.object(
+                            regression, "TRACE_SCOPES", changed):
+                        with self.assertRaisesRegex(ValueError, diagnostic):
+                            regression.scope_observations(report["requirements"], report["rows"], contract.DISCORD_ROWS)
+            changed = {**regression.TRACE_SCOPES, identity: (*targets, targets[0])}
+            with self.subTest(identity=identity, duplicate=True), patch.object(regression, "TRACE_SCOPES", changed):
+                with self.assertRaisesRegex(ValueError, "duplicate scope observation"):
+                    regression.scope_observations(report["requirements"], report["rows"], contract.DISCORD_ROWS)
+
+    def test_scope_resolution_rejects_identity_and_native_handoff_substitution(self):
+        for identity in regression.TRACE_SCOPES:
+            for change, diagnostic in (
+                ({"gate": regression.G1}, "wrong trace scope identity"),
+                ({"handoff": "GB-T0.D1"}, "wrong trace scope identity"),
+                ({"workstream": "T0"}, "wrong trace scope identity"),
+                ({"verification": ["GB-T0.01.01.V1"]}, "wrong scope native issue"),
+            ):
+                report = regression.audit(regression.ROOT, self.matrix)
+                requirement = next(row for row in report["requirements"]
+                                   if (row["feature"], row["text"]) == identity)
+                requirement.update(change)
+                with self.subTest(identity=identity, change=change), self.assertRaisesRegex(ValueError, diagnostic):
+                    regression.scope_observations(report["requirements"], report["rows"], contract.DISCORD_ROWS)
+
     def test_rows_match_accepted_t12_gate_and_behavior_floors(self):
         report = regression.audit(regression.ROOT, self.matrix)
         self.assertEqual(set(report["platformEnvironments"]), contract.EXTERNAL)
