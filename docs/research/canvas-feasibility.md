@@ -351,7 +351,7 @@ hydration, undo, asset and compound checks remain intact.
 | Trial on independent writable and viewer pages | Writable positive control asserted | Viewer invariant asserted |
 | --- | --- | --- |
 | Click rectangle edge, then Delete | Pointer selection contains the rectangle ID; Delete tombstones it | Complete scene stays identical, including all IDs and deletion flags |
-| Control+A, then Delete | Both live IDs selected; both become tombstones | Complete scene stays identical |
+| Control+A, then Delete | Both live IDs selected; no live elements remain | Complete scene stays identical |
 | Drag rectangle edge by (80, 40) | Same rectangle ID moves by exactly that delta | Complete scene stays identical; viewport observations are separate |
 | Double-click existing text, Control+A, type, Escape | Text editor opens and the same text ID contains the replacement string | Complete scene stays identical |
 
