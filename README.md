@@ -1,29 +1,32 @@
 # Guildboard
 
-An open-source, real-time moderated whiteboard Discord Activity with collaborative drawing, Discord role-based editing, persistent boards, secure moderation, and GoDaddy self-hosting.
+Guildboard is an open-source project for a moderated, collaborative whiteboard inside Discord.
 
-**State: engineering roadmap and repository foundation. The application is not implemented or deployed.** There is no production website or Discord installation link yet.
+<a id="foundation-status"></a>
+## Repository status
 
-- [Engineering & Delivery Project](https://github.com/users/CompleteDotTech/projects/7)
-- [Canonical backlog](planning/guildboard-backlog.json)
-- [Architecture boundaries](docs/architecture.md)
-- [Development setup](docs/development.md)
+The current foundation provides a lockfile-based workspace build, import-boundary checks, a pure configuration parser and local verification fixtures. The Activity, API and bot workspaces are scaffolds. There is no runnable Guildboard application, public website, Discord installation link or production deployment.
+
+Follow the [development setup](docs/development.md) to build and test the foundation on Linux. It requires Git, Node.js 24 with npm, and Python 3.11 or later.
+
+<a id="planned-system"></a>
+## Planned system
+
+The planned React/TypeScript Activity sends board requests over HTTPS/WSS. The server verifies Discord and session evidence, derives tenant scope and enforces current access policy. The API and bot route authorized board and moderation intent through the shared command service. Board state, revisions and receipts use private SQL, and assets use private persistent storage. The production target is a GoDaddy Linux VPS with Nginx HTTPS/WSS.
+
+- [Architecture and interaction flows](docs/architecture.md)
+- [Accepted T0 boundaries and foundation evidence](docs/workstreams/T0.md#t0-integration-and-handoff)
+- [MVP acceptance traceability](planning/MVP-ACCEPTANCE.md)
+
+## Contribute
+
 - [Contribution process](CONTRIBUTING.md)
 - [Security reporting](SECURITY.md)
+- [Engineering & Delivery Project](https://github.com/users/CompleteDotTech/projects/7)
+- [Canonical backlog](planning/guildboard-backlog.json)
 - [Verified bootstrap report](planning/BOOTSTRAP-REPORT.md)
-- [MVP acceptance traceability](planning/MVP-ACCEPTANCE.md)
 - [Live audit artifacts](planning/audit/)
-
-## Intended system
-
-React/TypeScript Activity and Excalidraw adapter; Fastify HTTP/WebSocket backend; Discord bot; shared versioned contracts; MySQL/MariaDB operations, snapshots and metadata; private persistent asset storage. Production must run on a **GoDaddy Linux VPS** with Nginx HTTPS/WSS. Detailed dependency/version choices await the roadmap's evidence and ADR gates.
-
-`apps/activity`, `apps/api`, `apps/bot`, `packages/contracts`, `packages/auth`, `packages/canvas`, `packages/collaboration`, `database`, `infra/godaddy`, `tests` and `docs` establish ownership boundaries. These directories contain design/runbook scaffolding, not a working product.
-
-## Planning tooling
-
-Python 3.11+ and GitHub CLI are required. Authenticate `gh` with repository, workflow and project permissions; credentials remain in the CLI keyring. Run `python3 scripts/github-bootstrap/validate.py` locally. Remote audit: `python3 scripts/github-bootstrap/audit.py`. Read the bootstrap guide before mutation.
 
 ## License
 
-MIT for original repository content. Dependency, asset and redistribution licensing must be reviewed before adoption; an MIT repository license is not a compatibility determination for future dependencies.
+Original repository content is available under the [MIT license](LICENSE). Review dependency, asset and redistribution terms before adoption.
