@@ -613,8 +613,9 @@ all headless browsers.
 Chromium 141.0.7390.37's [Ozone headless implementation](https://github.com/chromium/chromium/blob/141.0.7390.37/ui/ozone/platform/headless/ozone_platform_headless.cc)
 does not override platform clipboard access; the [base accessor](https://github.com/chromium/chromium/blob/141.0.7390.37/ui/ozone/public/ozone_platform.cc)
 returns null, and the [clipboard factory](https://github.com/chromium/chromium/blob/141.0.7390.37/ui/base/clipboard/clipboard_factory_ozone.cc)
-then selects `ClipboardNonBacked`. This is the source basis for the isolated
-in-process clipboard. Every trial overwrites it with known synthetic text
+then selects `ClipboardNonBacked`. Its [class definition](https://github.com/chromium/chromium/blob/141.0.7390.37/ui/base/clipboard/clipboard_non_backed.h)
+identifies an in-memory clipboard without underlying platform synchronization.
+This is the source basis for the isolated in-process clipboard. Every trial overwrites it with known synthetic text
 before any read, copy or paste observation. No preexisting clipboard content is
 inspected or reused, and no host/user clipboard is read or written.
 
@@ -654,8 +655,8 @@ From the repository root, `node --check research-fixtures/canvas/clipboard-probe
 `python3 -B scripts/github-bootstrap/validate.py` and `git diff --check` pass
 (exit 0). No local clipboard trial has executed. The existing Ubuntu 22.04
 hosted canvas workflow installs the pinned managed browser and runs the same
-probe; its result is pending at this implementation snapshot. A mock, bundle,
-syntax check or prior hosted run is not clipboard runtime evidence.
+probe; its observed result follows. A mock, bundle, syntax check or prior
+hosted run is not clipboard runtime evidence.
 
 Continue the controlled experiment; adoption remains gated. Drop/context-menu,
 malformed or oversized clipboard acceptance, arrow/frame references, arbitrary
@@ -664,5 +665,38 @@ behavior, concurrency, authoritative undo, server validation and GoDaddy
 verification remain open. This finite benign probe does not specify canonical
 paste intent or trusted affected-set derivation. #98 stays incomplete/open;
 #99 and #133 remain blocked. ADR 0001/0004 and mandatory GoDaddy direction are
-unchanged. Fresh independent functional/security review, hosted results and
-post-merge verification remain separate gates.
+unchanged. Fresh independent functional/security review and post-merge verification
+remain separate gates.
+
+
+### Hosted clipboard observation
+
+[Native fixture run 44415264601, job 135193770619](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/44415264601/job/135193770619)
+passed at implementation head `e31d0a9d3d9693695c631a6607b0664c7a8c1fe1`,
+tested as synthetic merge `f5097422c447603cdd97245aad3948579a06b1bc` against
+source `1f6aed8ed5c388da8f1de7114eeb7a0a564d1996`. Logs record Ubuntu
+**22.04.5**, Node **24.22.2**, npm **11.19.1**, and managed sandbox-enabled
+Chromium **141.0.7390.37**. Locked install, all 17 unit tests, full audit
+(zero reported vulnerabilities), editor probe and network controls passed.
+The clipboard result is explicitly `synthetic-clipboard-passed`, rather than
+an unavailable/skip result.
+
+| Trial | Delivered paste events | Target callbacks | Actual result |
+| --- | --- | --- | --- |
+| Plain text / writable | 2 trusted, exact synthetic text | 6 | Two fresh live text IDs with exact text; second paste preserves first |
+| Plain text / viewer | 2 trusted, same exact text | 0 | Complete baseline unchanged at both deliveries/checkpoints |
+| Bound group / writable | 2 trusted, exact copied JSON | 6 | Two distinct rectangle/text pairs; fresh groups; both binding directions remapped internally; prior pair exact |
+| Bound group / viewer | 2 trusted, same copied JSON | 0 | Complete baseline unchanged at both deliveries/checkpoints |
+
+Each group donor received one trusted keyboard copy event and five callbacks;
+its complete original scene and tombstone stayed exact. Every target retained
+all seeded fields/tombstone throughout the recorded callbacks and checkpoints.
+The isolated process reported zero page errors, blocked requests or evidence
+overflows. Every target finished focused on a canvas `DIV` with the selection
+tool; writable targets selected their newest pasted text or pair, and viewers
+had no selection. These are observations from this finite synthetic Linux run;
+zero viewer callbacks does not establish callback suppression universally.
+No claim is made for host clipboard access, malicious formats, platforms,
+server authorization, authoritative undo or broader #98 acceptance. The later
+evidence-only documentation update leaves both fixture files byte-identical
+to this tested implementation head.
