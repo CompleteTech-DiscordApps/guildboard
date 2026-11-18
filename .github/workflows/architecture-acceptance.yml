@@ -32,4 +32,4 @@ jobs:
           PYTHONDONTWRITEBYTECODE: '1'
           REVISION: ${{ github.sha }}
           RUNNER_SCRATCH: ${{ runner.temp }}
-        run: python3 -B candidate/scripts/verification/verify_architecture_controls.py --base "$GITHUB_WORKSPACE/first-install" --installed "$GITHUB_WORKSPACE/installed-policy" --tmp "$RUNNER_SCRATCH" --revision "$REVISION"
+        run: python3 -B candidate/scripts/verification/verify_architecture_controls.py --base "$GITHUB_WORKSPACE/first-install" --installed "$GITHUB_WORKSPACE/installed-policy" --tmp "$RUNNER_SCRATCH" --revision "$REVISION" --exercise-evolved-candidate
