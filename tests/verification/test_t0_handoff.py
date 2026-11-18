@@ -1,7 +1,8 @@
 """Offline checks for the '## T0 integration and handoff' section of docs/workstreams/T0.md.
 
 Stdlib only, repository-root relative, no network. Run from the repository root:
-    python3 -I -B -m unittest discover -s tests/verification -v
+    python3 -B -m unittest discover -s tests/verification -v
+For isolated Python, use the Git-checked bootstrap in the T0 qualification guide.
 Every check returns a list of error strings; mutation tests call checks on altered text.
 """
 import json

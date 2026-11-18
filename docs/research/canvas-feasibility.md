@@ -103,7 +103,7 @@ conversion is exercised by the browser probe. The full matrix below remains open
 1. Remote hydration with NEVER: preserve IDs/tombstones; observe callback counts/origin; prove repeated accepted state does not emit proposed writes.
 2. Local edit A then remote edit B then undo/redo: preserve B, express only accepted A inverse, reject stale revisions and prevent forbidden resurrection. Current probe passes only a simpler remote baseline/local-history undo scenario; it does not test concurrent remote overwrites or server-fenced inverse intent.
 3. Reject optimistic local change and rollback; repeat after role revocation/epoch change, reconnect and restore. The bounded local rollback below filters the hydration echo and reproduces a native undo/redo failure. Accepted-intent history and session-change paths remain open.
-4. Viewer keyboard shortcuts, pointer drag, delete, paste, drop, text input, context menu and imperative hydration; navigation remains available, server denies every forged mutation. The earlier smoke supplies selected content through the API and retained history for Delete/undo controls, with a writable undo positive control. The 2026-11-18 fresh-page input matrix below observes pointer/keyboard selection, drag, Delete and existing-text trials in native fixture Chromium, with matching writable controls and separate navigation. Paste/drop/context-menu, text creation and every server denial remain unverified.
+4. Viewer keyboard shortcuts, pointer drag, delete, paste, drop, text input, context menu and imperative hydration; navigation remains available, server denies every forged mutation. The earlier smoke supplies selected content through the API and retained history for Delete/undo controls, with a writable undo positive control. The 2026-11-18 fresh-page input matrix below observes pointer/keyboard selection, drag, Delete and existing-text trials in native fixture Chromium, with matching writable controls and separate navigation. The fresh creation experiment below adds bounded creation/draft-removal evidence; paste/drop/context-menu and every server denial remain unverified.
 5. Asset add/roundtrip/export, missing files, excessive data, malformed imports, external URL requests, fonts/CSP and private-file denial.
 6. Keyboard-only/assistive technology, touch and real stylus; drag interruption, focus restoration and repeated controls.
 7. Compound groups/arrows/text/sticky-note representation; deterministic IDs/bindings, multi-element atomicity and concurrent changes.
@@ -449,3 +449,115 @@ permissions. It does not establish server denial, revocation, concurrency,
 paste/drop/context-menu behavior, text creation, touch/stylus, assistive
 technology, Discord iframe/proxy/client behavior, GoDaddy behavior, performance
 budgets or license/security acceptance. #98 remains open and #99 remains blocked.
+
+## Fresh text creation and draft removal, 2026-11-18
+
+The [creation probe](../../research-fixtures/canvas/text-creation-probe.mjs),
+invoked by `npm run probe` alongside every earlier probe, adds four matched
+writable/viewer pairs. Each trial starts in a fresh page at 1200×800 with live
+`creation-rectangle`, live `creation-text` and deleted `creation-tombstone`.
+Only scene seeding and view-mode setup use the editor API. Actual pointer and
+keyboard input open an empty canvas position at (900, 500), type
+`Fresh synthetic text`, and finish or remove that draft. No API-supplied tool,
+selection, generated element or text mutation substitutes for input.
+
+| Creation route | Finish or removal control | Required writable observation |
+| --- | --- | --- |
+| Double-click empty canvas | Control+Enter | New live text ID, exact intended text, closed editor |
+| `t`, then click empty canvas | Escape | Same generated ID and exact text survive submission |
+| `t`, then click empty canvas | Outside click at (1050, 650) | Same generated ID and exact text survive blur submission |
+| Double-click empty canvas | Type, Control+A, Backspace, Escape | Typed positive control first; cleared draft closes as a tombstone with the same generated ID |
+
+The pinned [text editor keyboard handler](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/element/textWysiwyg.tsx#L372-L399)
+submits on both Escape and Control+Enter. The pinned
+[submission callback](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/components/App.tsx#L4896-L4943)
+marks empty submitted text deleted. The removal control therefore explicitly
+clears a typed draft before Escape; Escape alone is tested as a finish control.
+These source findings were also checked against the installed 0.18.1 package's
+source map. They do not establish general undo or server cancellation semantics.
+
+Each writable trial must focus the real text editor, expose a new nonempty ID,
+retain that ID through typing and closure, contain exact `text` and
+`originalText`, and emit complete callbacks containing the typed scene and final
+scene. Final elements must stay identical through a separate two-frame settling
+window. The removal path must first satisfy the nonempty typed positive control.
+All seeded elements, their order and every field must stay exactly equal at
+each checkpoint and every callback, including the pre-existing tombstone.
+Duplicate IDs or additional new IDs fail. Viewer checkpoints and every observed
+callback must exactly equal their complete baseline, with no text editor.
+
+Evidence includes complete before/open/typed/cleared/finished/settled elements,
+callback sequences tagged by phase, active tool, selected IDs, viewport,
+text-editor value/focus/caret selection and focused element tag/role/label.
+The callback cap is 200 per trial and overflow fails. Frame waits have a
+five-second limit; actions and predicate waits have ten-second defaults. The
+exact-origin route guard, blocked service workers, page-error checks and browser
+sandbox remain enabled. Observations are bounded windows and synthetic input;
+they do not rule out all delayed effects or establish physical-input behavior.
+
+Source baseline: `270f1dc822d12a8b57888573e3de427cd0314357`. Editor and tooling
+pins remain Excalidraw 0.18.1, React/ReactDOM 18.3.1, Playwright 1.56.1 and
+esbuild 0.25.12. No dependency, workflow, browser-launch or network policy changed.
+Local verification on Debian 13.6 / Node 24.22.3 / npm 11.9.0:
+
+| Exact command | Exit and evidence |
+| --- | --- |
+| `npm ci --ignore-scripts --offline --no-audit` (fixture directory) | 0; 252 locked packages, lifecycle scripts disabled |
+| `npm test` (fixture directory) | 0; 17 passes, zero skips; existing unit coverage |
+| `CHROMIUM_PATH=/usr/bin/chromium npm run probe` (fixture directory) | 1; bundle built, Chromium launch aborted before any page |
+| `CHROMIUM_PATH=/usr/bin/chromium npm run probe:network` (fixture directory) | 1; Chromium launch aborted before network controls |
+| `node --check research-fixtures/canvas/text-creation-probe.mjs` | 0; syntax only |
+| `node --check research-fixtures/canvas/probe.mjs` | 0; syntax only |
+| `python3 -B scripts/github-bootstrap/validate.py` | 0; 471 manifest items, no errors |
+| `git diff --check` | 0 |
+
+The expected managed Playwright build 1194 executable was absent from its cache.
+Explicit system Chromium 156.0.8078.79 retained `chromiumSandbox: true` but
+failed with a denied process-singleton `socket()` and subsequent denied ptrace.
+No new text-input assertions executed locally. The existing path-triggered
+Canvas feasibility fixture workflow supplies the permitted hosted browser run;
+its first candidate result is recorded below. Unit and syntax results do not
+prove creation, finish/removal or viewer behavior.
+
+For #99, distinguish submission from draft removal and require stable generated
+identity plus full seeded-scene preservation. UI callbacks remain observations,
+not authenticated writes. Paste/drop/context-menu, server authorization,
+revocation, concurrent accepted-intent undo, persistence, touch/stylus, assistive
+technology, physical input, Discord iframe/proxy/clients, GoDaddy, performance
+and license/security acceptance remain open. #98 remains incomplete; #99 remains
+blocked. The earlier matrix's text-creation limitation describes its historical
+coverage; the hosted browser evidence below establishes only the narrower synthetic
+creation and draft-removal observations.
+
+
+The [native candidate run](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/44397549277/job/135131398980)
+passed at PR #591 code head `2e979c4e0b1bd32974777f56229e30d252c2188b`,
+checking out synthetic merge `27c88b1efcef5ea3585d7e365c69fd294f498c6a`.
+On Ubuntu 22.04.5 / Node 24.22.3 / npm 11.19.1 / sandbox-enabled managed
+Chromium 141.0.7390.37 (Playwright build 1194), locked installation,
+`npm test` (17 passes, zero skips), `npm audit --audit-level=low` (zero
+reported vulnerabilities), browser installation, `npm run probe` and
+`npm run probe:network` all exited 0. Full scene and callback evidence appears
+under `textCreation` in that job log; all earlier editor probes also completed.
+
+| Observed fresh creation path | Writable result / callbacks | Viewer result / callbacks |
+| --- | --- | --- |
+| Double-click, type, Control+Enter | New live ID with exact text; generated ID selected / 28 | No editor or new ID; complete scene unchanged / 7 |
+| `t` + click, type, Escape | Tool became text; new live ID with exact text; generated ID selected / 26 | Tool stayed selection; no editor; scene unchanged / 4 |
+| `t` + click, type, outside click | Tool became text; new live ID with exact text; no selected ID / 28 | No editor; complete scene unchanged / 8 |
+| Double-click, type, clear, Escape | Typed text first, then empty tombstone with the same generated ID; no selected ID / 28 | No editor; complete scene unchanged / 7 |
+
+Every writable editor opened empty and focused, then held the exact intended
+text with the caret collapsed at its end. All four finished with no text editor,
+active selection tool and focus on a DIV within the canvas. Keyboard submission
+selected the newly generated ID; outside-click submission and draft removal
+left no selection. Every writable ID remained stable through typing, closure,
+settling and every callback that contained it. Each seeded rectangle, existing
+text and explicit tombstone preserved every element field and order in every
+checkpoint and callback. All viewer checkpoints and callbacks exactly matched
+their baselines. Both aggregate and new probe reported zero page errors and
+zero blocked requests; the separate cross-origin network negative control
+blocked its secondary loopback origin before that server received any request.
+Callback counts describe this run and are not fixed assertions. No browser
+sandbox, network safeguard or prior check was relaxed. This is hosted synthetic
+browser evidence, with no Discord, AT, physical-input or production acceptance.
