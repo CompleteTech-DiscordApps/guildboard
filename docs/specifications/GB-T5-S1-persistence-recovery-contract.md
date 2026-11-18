@@ -31,7 +31,7 @@ command, event and receipt wire shapes remain T0 v1.
 | Receipt coverage | PK under `(guildId, boardId)` with authoritative recovery generation and proof ID. Track the recovery cut and provenance, complete retired-lineage coverage when established, and an unknown default for historical lineages not proven complete after disaster. Publish with the active lineage. |
 | Receipt | PK `(guildId, boardId, lineageId, actorUserId, operationId)`, scoped lineage FK, canonical digest including its codec version, original receipt and unique scoped accepted revision. No FK to a compactable event. Retain evidence across every retained lineage. |
 | Outbox | PK scoped accepted event revision, event FK, bounded delivery state. Only committed events are eligible for delivery. Retain events referenced by unfinished outbox work. |
-| Snapshot/checkpoint | PK `(guildId, boardId, lineageId, snapshotId)`, lineage FK, cut revision, format/codec version, canonical digest, byte length, finalized object reference, immutable asset manifest and optional authorized checkpoint label/attribution. |
+| Snapshot/checkpoint | PK `(guildId, boardId, lineageId, snapshotId)`, lineage FK, cut revision, format/codec version, canonical digest, byte length, finalized object reference, immutable asset manifest, verified applied deletion cut and proof reference for restorable checkpoints, and optional authorized checkpoint label/attribution. |
 | Asset and reachability | PK `(guildId, boardId, assetId)`, board FK, bounded validated metadata, hash, byte length, opaque immutable object reference, finalized state. Reference edges and pins bind the full scope on both ends and record their source cut/owner. |
 | Audit and deletion | T9 logical schemas and authorized access. Scoped indexes and referential checks must preserve actor/action attribution and deletion scope. Independently protected deletion coverage and audit anchors remain outside the recoverable generation. |
 
@@ -160,7 +160,7 @@ measured operating-envelope evidence.
 | Boundary | Cutover and outcome |
 | --- | --- |
 | Ordinary process restart | Reopen the same authoritative storage generation and lineage after schema/integrity validation. Reopen persisted coverage together with committed state/outbox and resolve uncertain outcomes using the same identity under the rules below. Keep the accepted revision monotonic. |
-| Board document restore | Authorize current write and restore privilege, verified source checkpoint and assets. Reconcile the source against current T9 fences under cutover; publish a fresh lineage at its verified baseline revision 0 and a higher policy generation, source checkpoint, prior recoverable head, restored state and scoped audit atomically. Retain all original scoped receipts and their coverage provenance. The publication is a durable visibility transition; old delivery is fenced. Old matching receipts settle their original acceptance only; a mismatch is a conflict and an absent retired receipt follows the persisted coverage rule below. Rejoin before rendering the new accepted state. |
+| Board document restore | Authorize current write and restore privilege, verified source checkpoint and assets. Reconcile the source against current T9 fences under cutover. Commit the former-lineage lifecycle record and activate the fresh lineage at baseline revision 0 in one transaction as specified below. Retain all original scoped receipts and their coverage provenance. The publication is a durable visibility transition; old delivery is fenced. Old matching receipts settle their original acceptance only; a mismatch is a conflict and an absent retired receipt follows the persisted coverage rule below. Rejoin before rendering the new accepted state. |
 | Disaster recovery | Restore the manifest, SQL/logs and pinned assets to an isolated generation. Record the actual recovered cut and independently verify integrity and T9 exposure prerequisites. Fence the prior serving generation and use fresh lineage identifiers and current policy fences before admitting new writes. Persist the cut and provenance of any incomplete historical receipt coverage. Matching retained receipts settle original acceptance after current read checks. For a missing pre-recovery receipt without affirmative completeness proof for that operation's history, keep its outcome unknown (`DEPENDENCY_UNAVAILABLE`); this applies even to an unrecognized historical lineage. Never manufacture a receipt or reapply old intent. With proven complete receipt coverage an absent retired identity follows `LINEAGE_CHANGED`. |
 
 Normal restart reopens the persisted active lineage and receipt coverage as one
@@ -187,8 +187,14 @@ from any retired lineage does not mark active content saved.
 A document restore can use a source only within the verified guild and board.
 A fence on the whole target prevents publication. A still-live board can have
 subject data fenced after the checkpoint was recorded. Before publishing its
-new lineage, verify T9 marker coverage from the source cut through the current
-cutover fence and reconcile content, assets, exports and every scoped reference.
+new lineage, independently verify the checkpoint's applied deletion cut and
+uninterrupted marker coverage through the current cutover fence. Require trusted
+proof that binds the applied cut to the exact scoped checkpoint, lineage and
+revision, canonical content and immutable asset/reference manifest. A cut
+claimed by the source does not establish that earlier markers were applied.
+When proof is absent, replay from an independently established earlier cut
+that includes all relevant unapplied markers, or reject. Reconcile content,
+assets, exports and every scoped reference.
 Remove fenced content and references to it from the publishable projection,
 including references whose own attribution survives. Verify canonical state,
 hash and surviving asset reachability for that projection. If coverage or safe
@@ -196,6 +202,20 @@ projection cannot be established, reject the restore with no publication.
 Serialize reconciliation and publication with the board's writers and T9
 deletion ordering, or recheck and reconcile under an equivalent fence. A new
 marker between preparation and publication must be applied before visibility.
+
+Treat a new document restore as one accepted T0 lifecycle command scoped to
+the former active lineage. Under the scoped board/policy fence, allocate its
+next revision and write the lifecycle event, durable receipt keyed by the
+original operation identity and digest, outbox reference at that revision,
+and scoped audit. That revision is the former lineage's exact final cut.
+Keep the former lineage's recoverable state and record the source checkpoint.
+In the same transaction, record the fresh lineage at revision 0 with its
+verified projected state, make it active and advance the policy generation.
+A failed transaction leaves the former head active and records no acceptance.
+An outbox entry signals the lifecycle transition subject to current T0/T9
+release fences. Delivery from the former lineage cannot update the fresh
+document. A lost ACK reconciles through the original former-lineage receipt
+and repeats none of the restore effects.
 
 The disaster backup manifest records generation, engine/tool/schema/codec
 versions, board lineage/cuts, SQL/log-chain coordinates, object IDs/digests/lengths,

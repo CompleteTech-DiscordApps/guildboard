@@ -725,6 +725,9 @@
         "state",
         "lineage",
         "policy",
+        "event",
+        "receipt",
+        "outbox",
         "audit",
         "shape-b",
         "asset-b"
@@ -827,6 +830,9 @@
         "state",
         "lineage",
         "policy",
+        "event",
+        "receipt",
+        "outbox",
         "audit"
       ]
     },
@@ -835,6 +841,27 @@
       "kind": "restore",
       "inputs": {
         "assets_verified": false
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    },
+    {
+      "id": "R13",
+      "kind": "restore",
+      "inputs": {
+        "source_deletion_cut": 5,
+        "markers": [
+          6
+        ]
+      },
+      "outcome": "REJECTED",
+      "effects": []
+    },
+    {
+      "id": "R14",
+      "kind": "restore",
+      "inputs": {
+        "source_projection_tampered": true
       },
       "outcome": "REJECTED",
       "effects": []

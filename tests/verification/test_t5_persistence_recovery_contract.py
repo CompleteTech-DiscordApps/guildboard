@@ -1,6 +1,7 @@
 """Offline contract vectors for GB-T5.S1. No application or engine is invoked."""
 
 from dataclasses import dataclass, fields, replace
+from hashlib import sha256
 import json
 from pathlib import Path
 import unittest
@@ -110,6 +111,7 @@ class Restore:
     audit_ready: bool = True
     commit: bool = True
     source_deletion_cut: int = 4
+    source_projection_tampered: bool = False
     current_watermark: int = 6
     markers: tuple = (5, 6)
     exposure_fence: bool = True
@@ -227,28 +229,86 @@ SOURCE_REFERENCES = {
 MARKER_SUBJECTS = {5: "subject-a", 6: "subject-c", 7: "subject-b"}
 
 
+def checkpoint_digest(content, references):
+    return sha256(json.dumps([content, references], sort_keys=True).encode()).digest()
+
+
+# The authenticated checkpoint record binds this cut to these exact source rows.
+CHECKPOINT_PROOF = (4, checkpoint_digest(SOURCE_CONTENT, SOURCE_REFERENCES))
+
+
 def restore_projection(case):
+    source_content = dict(SOURCE_CONTENT)
+    if case.source_projection_tampered:
+        source_content["shape-a"] = "subject-b"
+    source_digest = checkpoint_digest(source_content, SOURCE_REFERENCES)
     if not all((case.same_scope, case.authorized, not case.deleted,
                 case.assets_verified, case.generation_current, case.audit_ready,
-                case.commit, case.exposure_fence, case.coverage_independent,
+                case.exposure_fence, case.coverage_independent,
+                CHECKPOINT_PROOF == (case.source_deletion_cut, source_digest),
                 case.source_deletion_cut <= case.current_watermark,
                 case.markers == tuple(range(case.source_deletion_cut + 1,
                                             case.current_watermark + 1)),
                 all(marker in MARKER_SUBJECTS for marker in case.markers))):
         return None
     fenced_subjects = {MARKER_SUBJECTS[marker] for marker in case.markers}
-    content = {row for row, subject in SOURCE_CONTENT.items() if subject not in fenced_subjects}
+    content = {row for row, subject in source_content.items() if subject not in fenced_subjects}
     references = {row for row, (subject, target) in SOURCE_REFERENCES.items()
                   if subject not in fenced_subjects and target in content}
     return sorted(content), sorted(references)
 
 
-def restore_result(case):
+@dataclass(frozen=True)
+class RestoreState:
+    history: History = History()
+    revision: int = 7
+    policy_generation: int = 1
+    retired_cut: tuple = ()
+    receipt: tuple = ()
+    event: tuple = ()
+    outbox: tuple = ()
+    audit: tuple = ()
+    content: tuple = ()
+    references: tuple = ()
+
+
+RESTORE_COMMAND = Command(operation="operation-restore", digest="digest-restore")
+
+
+def restore_attempt(case, command=RESTORE_COMMAND, state=RestoreState()):
+    receipts = dict(ORIGINAL_RECEIPTS)
+    if state.receipt:
+        key, receipt = state.receipt
+        receipts[key] = receipt
+    outcome, effects = command_result(command, receipts, state.history)
+    if not effects:
+        return outcome, [], state
+
     projection = restore_projection(case)
-    if projection is None:
-        return "REJECTED", []
+    if projection is None or not case.commit:
+        return "REJECTED", [], state
     content, references = projection
-    return "RESTORED", ["state", "lineage", "policy", "audit", *content, *references]
+    final_cut = (state.history.active, state.revision + 1)
+    publication = RestoreState(
+        history=state.history.restore("lineage-b"),
+        revision=0,
+        policy_generation=state.policy_generation + 1,
+        retired_cut=final_cut,
+        receipt=(identity(command), (command.digest, final_cut[1])),
+        event=(final_cut, command.operation, "restore", "lineage-b", 0),
+        outbox=final_cut,
+        audit=(final_cut, "restore", "lineage-b"),
+        content=tuple(content),
+        references=tuple(references),
+    )
+    effects = ["state", "lineage", "policy", "event", "receipt", "outbox", "audit",
+               *content, *references]
+    return ("NO_RELEASE" if command.lost_ack else "RESTORED"), effects, publication
+
+
+def restore_result(case):
+    outcome, effects, _ = restore_attempt(case)
+    return outcome, effects
 
 
 MODELS = {
@@ -270,7 +330,7 @@ class ContractScenarios(unittest.TestCase):
         self.assertEqual(fixture["version"], 1)
         scenarios = fixture["scenarios"]
         self.assertIs(type(scenarios), list)
-        self.assertTrue(1 <= len(scenarios) <= 80)
+        self.assertTrue(1 <= len(scenarios) <= 82)
         seen = set()
         covered = set()
         for case in scenarios:
@@ -302,6 +362,30 @@ class ContractScenarios(unittest.TestCase):
                 retry = Command(operation=attempt.operation)
                 expected = ("ACK_CURRENT_8", []) if committed else ("ACK_NEW", EFFECTS)
                 self.assertEqual(command_result(retry, reopened), expected)
+
+    def test_lost_restore_ack_returns_former_lineage_receipt_without_republishing(self):
+        command = replace(RESTORE_COMMAND, lost_ack=True)
+        outcome, effects, published = restore_attempt(Restore(), command)
+        self.assertEqual(outcome, "NO_RELEASE")
+        self.assertEqual(effects, ["state", "lineage", "policy", "event", "receipt",
+                                   "outbox", "audit", "shape-b", "asset-b"])
+        former_cut = ("lineage-a", 8)
+        self.assertEqual(published.retired_cut, former_cut)
+        self.assertEqual(published.receipt, (identity(command), (command.digest, 8)))
+        self.assertEqual(published.event, (former_cut, command.operation, "restore", "lineage-b", 0))
+        self.assertEqual(published.outbox, former_cut)
+        self.assertEqual(published.audit, (former_cut, "restore", "lineage-b"))
+        self.assertEqual((published.history.active, published.revision, published.policy_generation),
+                         ("lineage-b", 0, 2))
+
+        reopened = replace(published, history=published.history.restart())
+        retry = replace(command, lost_ack=False, write=False, policy_current=False)
+        self.assertEqual(restore_attempt(Restore(), retry, reopened),
+                         ("ACK_HISTORICAL_8", [], reopened))
+        self.assertEqual(restore_attempt(Restore(), replace(retry, release=False), reopened),
+                         ("NOT_FOUND", [], reopened))
+        self.assertEqual(restore_attempt(Restore(commit=False)),
+                         ("REJECTED", [], RestoreState()))
 
     def test_disaster_coverage_survives_restart_restore_and_later_disasters(self):
         history = History().promote("lineage-b", set())
