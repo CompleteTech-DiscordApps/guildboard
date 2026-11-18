@@ -134,6 +134,18 @@ class StageCandidateTests(unittest.TestCase):
         self.assertEqual((original / release.NOTES).read_bytes(), first[release.NOTES])
         self.assertFalse((original / release.RECEIPT).exists())
 
+    def test_assembly_uses_literal_git_objects_for_source_provenance(self):
+        with patch.object(release.subprocess, "run", wraps=subprocess.run) as run:
+            self.assemble()
+
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertTrue(commands)
+        for command in commands:
+            with self.subTest(command=command):
+                self.assertEqual(command[:5], [
+                    "git", "--no-optional-locks", "--no-replace-objects", "-C", str(self.checkout),
+                ])
+
     def test_build_recipe_must_match_the_completed_output_inventory(self):
         original = self.assemble()
         updated = b"// fixture build recipe changed\n"

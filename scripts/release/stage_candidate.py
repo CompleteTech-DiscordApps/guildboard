@@ -255,9 +255,10 @@ def file_bytes(root, paths):
 
 
 def git(source, *args):
+    # Resolve provenance from the literal objects named by the revision.
     try:
         return subprocess.run(
-            ["git", "--no-optional-locks", "-C", str(source.absolute()), *args],
+            ["git", "--no-optional-locks", "--no-replace-objects", "-C", str(source.absolute()), *args],
             check=True, capture_output=True, timeout=15,
         ).stdout
     except (OSError, subprocess.SubprocessError):
