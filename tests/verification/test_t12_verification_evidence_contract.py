@@ -574,14 +574,14 @@ def gate_coverage(gate, clients, selected=()):
     production = {
         ("production-network", "vps-network"): (353, {"https", "wss", "heartbeat", "private-data-plane",
             "tls-chain", "tls-renewal", "idle-below-threshold", "idle-above-threshold", "reconnect-restart",
-            "firewall-isolation", "sql-asset-isolation"}),
+            "firewall-isolation", "sql-asset-isolation", "large-message", "oversize-denial"}),
         ("production-smoke", "vps-network"): (457, {"https-wss", "monitoring", "rollback", "smoke"}),
         ("production-recovery", "vps-recovery"): (457, {"isolated-restore", "rpo-rto", "continuity"}),
         ("credentials-recovery", "vps-recovery"): (378, {"credential-restore", "retired-credential-denied"}),
         ("platform-network", "vps-network"): (414, {"platform-network", "https", "wss", "idle-below-threshold", "idle-above-threshold"}),
         ("bounded-load", "vps-load"): (414, {"bounded-load", "resource-budget", "safety-stop"}),
         ("deployed-build-smoke", "vps-network"): (417, {"verified-build", "smoke"}),
-        **{("production-discord", row): (353, {"mapped-proxy", "upgrade", "reconnect",
+        **{("production-discord", row): (353, {"activity-startup", "mapped-proxy", "upgrade", "reconnect",
               "large-message", "oversize-denial", "resync-without-acceptance"}) for row in clients},
         **{("deployed-client-smoke", row): (417, {"verified-build", "deployed-client-journey"}) for row in clients},
     }
@@ -1165,6 +1165,8 @@ class VerificationEvidenceContractTests(unittest.TestCase):
         for gate, omitted, scenario in (
             ("GB-T13.G1", ("integrated", "hosted"), "board-lock"),
             ("GB-T13.G2", ("production-discord", "discord-win"), "mapped-proxy"),
+            ("GB-T13.G2", ("production-discord", "discord-win"), "activity-startup"),
+            ("GB-T13.G2", ("production-network", "vps-network"), "large-message"),
             ("GB-T13.G2", ("production-smoke", "vps-network"), "rollback"),
             ("GB-T13.G2", ("production-discord", "discord-win"), "oversize-denial"),
             ("GB-T13.G2", ("credentials-recovery", "vps-recovery"), "retired-credential-denied"),
