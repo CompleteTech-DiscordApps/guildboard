@@ -49,7 +49,7 @@ def restore_verdict(selected, preflight, verification, loss, objectives):
         return "denied"
     if preflight == "unavailable" or selected is None:
         return "blocked"
-    if verification != "complete" or loss in {"at_or_before_cut", "outside_bound"}:
+    if verification != "complete" or loss in {"at_or_before_cut", "outside_bound", "contradictory"}:
         return "failed"
     if "breached" in objectives:
         return "breached"
@@ -61,6 +61,7 @@ def acknowledgment_loss(trial, cut, acknowledgments, recovered):
         return "unknown", []
     scope = (trial["guild"], trial["board"], trial["lineage"])
     expected = {item for item in acknowledgments["identities"] if item[:3] == scope}
+    present = {item for item in recovered["identities"] if item[:3] == scope}
 
     def coverage(evidence):
         if evidence["board_scope"] != scope[:2]:
@@ -68,8 +69,11 @@ def acknowledgment_loss(trial, cut, acknowledgments, recovered):
         return evidence["coverage"].get(scope[2], -1)
 
     covered_through = coverage(recovered)
-    missing = sorted(item for item in expected - recovered["identities"] if item[-1] <= covered_through)
+    missing = sorted(item for item in expected - present if item[-1] <= covered_through)
     lost = [list(item) for item in missing]
+    evidence = expected | present
+    if len(evidence) != len({item[:-1] for item in evidence}) or len(evidence) != len({item[-1] for item in evidence}):
+        return "contradictory", lost
     if any(item[-1] <= cut for item in missing):
         return "at_or_before_cut", lost
     if trial["loss_bound"] is not None and any(
@@ -81,6 +85,16 @@ def acknowledgment_loss(trial, cut, acknowledgments, recovered):
             or covered_through < trial["prefault_high_water"]):
         return "unknown", lost
     return ("within_bound" if missing else "none"), lost
+
+
+def consistent_canary_times(candidates):
+    commits_by_position = {}
+    positions_by_operation = {}
+    for operation, position, timestamp in candidates:
+        commits_by_position.setdefault(position, set()).add((operation, timestamp))
+        positions_by_operation.setdefault(operation, set()).add(position)
+    return [timestamp for matches in commits_by_position.values() if len(matches) == 1
+            for operation, timestamp in matches if len(positions_by_operation[operation]) == 1]
 
 
 class OperationsContractTest(unittest.TestCase):
@@ -301,7 +315,7 @@ class OperationsContractTest(unittest.TestCase):
                 self.bounded_integer(case["rto_seconds"], 86400, nullable=True)
                 self.assertIs(type(case["canaries"]), list)
                 self.assertLessEqual(len(case["canaries"]), 8)
-                commits_by_position = {}
+                canary_commits = []
                 for canary in case["canaries"]:
                     self.assertEqual(set(canary), {"commit_second", "restore_second", "evidence", "operation", "position"})
                     self.bounded_integer(canary["commit_second"], 86400, nullable=True)
@@ -322,8 +336,8 @@ class OperationsContractTest(unittest.TestCase):
                             and canary["commit_second"] is not None
                             and case["fault_second"] is not None
                             and canary["commit_second"] < case["fault_second"] <= canary["restore_second"]):
-                        commits_by_position.setdefault(canary["position"], set()).add((operation, canary["commit_second"]))
-                valid_commits = [next(iter(matches))[1] for matches in commits_by_position.values() if len(matches) == 1]
+                        canary_commits.append((operation, canary["position"], canary["commit_second"]))
+                valid_commits = consistent_canary_times(canary_commits)
                 rpo_seconds = case["fault_second"] - max(valid_commits) if valid_commits else None
                 outcomes = (objective(rpo_seconds, 900), objective(case["rto_seconds"], 14400))
                 self.assertEqual(
@@ -332,12 +346,25 @@ class OperationsContractTest(unittest.TestCase):
                      "loss": loss, "missing": missing,
                      "escalate": (case["preflight"] == "unsafe"
                                   or case["verification"] in {"integrity_failed", "marker_gap"}
-                                  or loss in {"at_or_before_cut", "outside_bound"}),
+                                  or loss in {"at_or_before_cut", "outside_bound", "contradictory"}),
                      "rpo_seconds": rpo_seconds,
                      "rto_seconds": case["rto_seconds"], "rpo": outcomes[0], "rto": outcomes[1],
                      "drill": restore_verdict(selected, case["preflight"], case["verification"], loss, outcomes)},
                     case["expected"],
                 )
+
+    def test_conflicting_operation_positions_cannot_prove_recovery_or_rpo(self):
+        trial = {"guild": "guild_a", "board": "board_a", "lineage": "lineage_a",
+                 "prefault_high_water": 10, "loss_bound": 0}
+        scope = ("guild_a", "board_a", "lineage_a")
+        original = (*scope, "actor_a", "operation_a")
+        other = (*scope, "actor_a", "operation_b")
+        for operation, position in ((other, 8), (original, 9)):
+            with self.subTest(operation=operation, position=position):
+                identities = {(*original, 8), (*operation, position)}
+                inventory = {"board_scope": scope[:2], "coverage": {"lineage_a": 10}, "identities": identities}
+                self.assertEqual(acknowledgment_loss(trial, 10, inventory, inventory), ("contradictory", []))
+                self.assertEqual(consistent_canary_times([(original, 8, 5), (operation, position, 9)]), [])
 
     def test_alert_recovery_requires_fresh_rule_specific_evidence(self):
         signals = {
