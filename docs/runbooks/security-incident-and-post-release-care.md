@@ -20,8 +20,14 @@ even when the affected scope or evidence coverage remains uncertain.
    authorization. Reference the approved configuration and affected consumers
    by role. For invalid configuration record field names only and hold the
    requested action. If authority or a prerequisite is unavailable, continue
-   authorized containment and escalate the gap. Apply the accepted
-   [rotation procedure][rotation] for dependent service readiness.
+   authorized containment and escalate the gap. For routine rotation, verify
+   replacement access and dependent service readiness before retiring
+   superseded access, following the [rotation procedure][rotation]. For
+   suspected compromise, T9 and the responsible system owner may approve
+   urgent revocation and isolation before replacement access is ready. Keep
+   affected admission or writes fenced until replacement access and dependent
+   services are verified where required, the containment checks below pass,
+   and SRE approves recovery.
 3. Verify that superseded authority is rejected, including any affected open
    session, reconnect, and queued protected delivery on applicable surfaces.
    Exercise denial across the affected tenant boundary and confirm no new
@@ -81,6 +87,7 @@ gaps, owner and next review in the maintenance record.
 
 Run `python3 -m unittest discover -s tests/verification -p test_t11_security_incident_decisions.py -v`.
 The pure decision examples cover approved scoped revocation and isolation,
+urgent revocation before replacement readiness with recovery held,
 invalid configuration, unavailable authorization and audit, interrupted action
 and reconciliation, no unauthorized evidence transfer, safe private route
 selection, and held maintenance checks and follow-ups. The fixture values

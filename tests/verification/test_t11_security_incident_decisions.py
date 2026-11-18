@@ -10,6 +10,8 @@ class Containment:
     approval_matches_scope: bool = True
     required_audit_available: bool = True
     effects_reconciled: bool = True
+    urgent_revocation_approved: bool = False
+    replacement_ready: bool = True
     superseded_authority_denied: bool = True
     denial_side_effects_absent: bool = True
     isolation_verified: bool = True
@@ -23,6 +25,9 @@ def containment_decision(case):
         return "blocked", "hold"
     if not case.effects_reconciled:
         return "reconcile_before_retry", "hold"
+    if not case.replacement_ready:
+        action = "urgent_revocation_allowed" if case.urgent_revocation_approved else "hold_routine_rotation"
+        return action, "hold"
     if not (case.superseded_authority_denied and case.denial_side_effects_absent
             and case.isolation_verified):
         return "verification_failed", "hold"
@@ -103,6 +108,16 @@ class SecurityIncidentDecisionTest(unittest.TestCase):
             with self.subTest(field=field):
                 case = replace(Containment(), **{field: False})
                 self.assertEqual(containment_decision(case), (expected, "hold"))
+
+    def test_approved_urgent_revocation_can_precede_replacement_but_recovery_waits(self):
+        routine = Containment(replacement_ready=False)
+        self.assertEqual(containment_decision(routine), ("hold_routine_rotation", "hold"))
+        urgent = replace(routine, urgent_revocation_approved=True)
+        self.assertEqual(containment_decision(urgent), ("urgent_revocation_allowed", "hold"))
+        self.assertEqual(containment_decision(replace(urgent, approval_matches_scope=False)),
+                         ("blocked", "hold"))
+        self.assertEqual(containment_decision(replace(urgent, replacement_ready=True)),
+                         ("verified", "recover"))
 
     def test_interruption_holds_even_after_apparent_isolation_and_revocation(self):
         interrupted = Containment(effects_reconciled=False)
