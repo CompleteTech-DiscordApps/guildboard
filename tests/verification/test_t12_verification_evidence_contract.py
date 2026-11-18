@@ -577,14 +577,16 @@ def gate_coverage(gate, clients, selected=()):
             "tls-chain", "tls-renewal", "idle-below-threshold", "idle-above-threshold", "reconnect-restart",
             "firewall-isolation", "sql-asset-isolation", "large-message", "oversize-denial"}),
         ("production-smoke", "vps-network"): (457, {"https-wss", "monitoring", "rollback", "smoke"}),
-        ("production-recovery", "vps-recovery"): (457, {"isolated-restore", "rpo-rto", "continuity"}),
+        ("production-recovery", "vps-recovery"): (457, {"isolated-restore", "rpo-rto", "continuity", "backup-recovery-objectives"}),
         ("credentials-recovery", "vps-recovery"): (378, {"credential-restore", "retired-credential-denied"}),
         ("platform-network", "vps-network"): (414, {"platform-network", "https", "wss", "idle-below-threshold", "idle-above-threshold"}),
-        ("bounded-load", "vps-load"): (414, {"bounded-load", "resource-budget", "safety-stop"}),
-        ("deployed-build-smoke", "vps-network"): (417, {"verified-build", "smoke"}),
+        ("bounded-load", "vps-load"): (414, {"bounded-load", "resource-budget", "safety-stop",
+            "capacity-durable-ack-latency", "process-restart-under-load", "reconnect-latency"}),
+        ("deployed-build-smoke", "vps-network"): (417, {"verified-build", "smoke", "https-wss"}),
         **{("production-discord", row): (353, {"activity-startup", "mapped-proxy", "upgrade", "reconnect",
               "large-message", "oversize-denial", "resync-without-acceptance"}) for row in clients},
-        **{("deployed-client-smoke", row): (417, {"verified-build", "deployed-client-journey"}) for row in clients},
+        **{("deployed-client-smoke", row): (417, {"verified-build", "deployed-client-journey",
+              "activity-startup", "authenticated-guild", "mapped-proxy", "reconnect"}) for row in clients},
     }
     if gate == "GB-T13.G1":
         return mvp
@@ -595,15 +597,70 @@ def gate_coverage(gate, clients, selected=()):
         **mvp, **production,
         ("integrated", "hosted"): (455, MVP_BEHAVIORS | {"modes", "moderation", "import-export", "recovery"}),
         ("harness", "offline"): (393, {"owned-setup", "invalid-config", "interrupted-cleanup"}),
-        ("browser-e2e", browser): (396, {"controlled-launch", "auth", "navigation"}),
+        ("browser-e2e", browser): (396, {"controlled-launch", "ready", "auth", "cancel", "navigation",
+            "policy-feedback", "reconnect", "drafts", "accessible-controls"}),
         **{("sdk-launch", row): (396, {"actual-launch", "sdk-compatibility"}) for row in clients},
         ("isolation", "hosted"): (403, {"tenant-isolation", "content-scope"}),
         ("convergence", "hosted"): (407, {"idempotency", "concurrent-convergence"}),
         ("recovery", "vps-recovery"): (410, {"recovery-inventories", "deletion-fences"}),
         ("release-fence", "hosted"): (400, {"release-fence"}),
-        ("regression", "hosted"): (417, {"regression"}),
+        ("regression", "hosted"): (417, {"regression", "verified-build", "accessibility"}
+            | MVP_BEHAVIORS | {"modes", "moderation", "import-export", "recovery"}),
         **{("accessibility-" + row.removeprefix("discord-web-").removeprefix("discord-"), row):
            (414, {"manual-at", "keyboard", "screen-reader", "accessible-task-coverage"}) for row in clients},
+    }
+
+
+def literal_gate_expectations(gate, clients, browser="local"):
+    """Independent accepted-case oracle; never derive from either floor helper.
+
+    Pin T12 release/rerun handoff and the committed regression matrix, including
+    all MVP cases literally so shared implementation constants cannot erase them.
+    """
+    mvp = {"activity-startup", "authenticated-guild", "moderator-role", "whiteboard",
+           "simultaneous-moderators", "read-only-viewer", "backend-permissions", "live-sync",
+           "save-board", "board-lock", "reconnect", "security-negatives"}
+    stable = {"modes", "moderation", "import-export", "recovery"}
+    rows = {
+        ("integrated", "hosted"): (455, mvp),
+        **{("discord-startup", client): (455, {"activity-startup", "authenticated-guild"})
+           for client in clients},
+    }
+    if gate == "GB-T13.G1":
+        return rows
+    production = {
+        ("production-network", "vps-network"): (353, {"https", "wss", "heartbeat", "private-data-plane",
+            "tls-chain", "tls-renewal", "idle-below-threshold", "idle-above-threshold", "reconnect-restart",
+            "firewall-isolation", "sql-asset-isolation", "large-message", "oversize-denial"}),
+        ("production-smoke", "vps-network"): (457, {"https-wss", "monitoring", "rollback", "smoke"}),
+        ("production-recovery", "vps-recovery"): (457, {"isolated-restore", "rpo-rto", "continuity",
+            "backup-recovery-objectives"}),
+        ("credentials-recovery", "vps-recovery"): (378, {"credential-restore", "retired-credential-denied"}),
+        ("platform-network", "vps-network"): (414, {"platform-network", "https", "wss",
+            "idle-below-threshold", "idle-above-threshold"}),
+        ("bounded-load", "vps-load"): (414, {"bounded-load", "resource-budget", "safety-stop",
+            "capacity-durable-ack-latency", "process-restart-under-load", "reconnect-latency"}),
+        ("deployed-build-smoke", "vps-network"): (417, {"verified-build", "smoke", "https-wss"}),
+        **{("production-discord", client): (353, {"activity-startup", "mapped-proxy", "upgrade", "reconnect",
+            "large-message", "oversize-denial", "resync-without-acceptance"}) for client in clients},
+        **{("deployed-client-smoke", client): (417, {"verified-build", "deployed-client-journey",
+            "activity-startup", "authenticated-guild", "mapped-proxy", "reconnect"}) for client in clients},
+    }
+    if gate == "GB-T13.G2":
+        return production
+    return {**rows, **production,
+        ("integrated", "hosted"): (455, mvp | stable),
+        ("harness", "offline"): (393, {"owned-setup", "invalid-config", "interrupted-cleanup"}),
+        ("browser-e2e", browser): (396, {"controlled-launch", "ready", "auth", "cancel", "navigation",
+            "policy-feedback", "reconnect", "drafts", "accessible-controls"}),
+        **{("sdk-launch", client): (396, {"actual-launch", "sdk-compatibility"}) for client in clients},
+        ("isolation", "hosted"): (403, {"tenant-isolation", "content-scope"}),
+        ("convergence", "hosted"): (407, {"idempotency", "concurrent-convergence"}),
+        ("recovery", "vps-recovery"): (410, {"recovery-inventories", "deletion-fences"}),
+        ("release-fence", "hosted"): (400, {"release-fence"}),
+        ("regression", "hosted"): (417, {"regression", "verified-build", "accessibility"} | mvp | stable),
+        **{("accessibility-" + client.removeprefix("discord-web-").removeprefix("discord-"), client):
+            (414, {"manual-at", "keyboard", "screen-reader", "accessible-task-coverage"}) for client in clients},
     }
 
 
@@ -1204,6 +1261,90 @@ class VerificationEvidenceContractTests(unittest.TestCase):
                                                        "passing_cases": passed}}
                     self.assertEqual(outcome(keys, self.sources(keys, security_keys=security_keys,
                                                                **failed)), expected)
+
+    def literal_handoff(self, gate, clients, browser):
+        expected = literal_gate_expectations(gate, clients, browser)
+        keys = set(expected)
+        security = set() if gate == "GB-T13.G2" else SECURITY_KEYS
+        sources = self.sources(keys, security_keys=security, **{
+            key[0]: {"issue": issue, "scenarios": cases} for key, (issue, cases) in expected.items()})
+        projection = ([("discord-startup", clients[0])] if gate == "GB-T13.G1" else
+                      [("production-smoke", "vps-network"), ("production-recovery", "vps-recovery")])
+        matrix = {"authorityRef": "literal-matrix", "candidateSha": CANDIDATE, "scope": "release",
+                  "matrixKeys": sorted(keys), "projectionKeys": projection, "clientRows": clients,
+                  "clientScopeRef": "literal-clients", "prerequisiteRefs": sorted(native_gate_dependencies(gate))}
+        subject = [gate, digest(encode(matrix))]
+        self.grant(sources.authorities, "gate-matrix", "literal-matrix", subject)
+        self.grant(sources.authorities, "release-client-scope", "literal-clients",
+                   [gate, CANDIDATE, "release", sorted(clients)], "platform-support-owner")
+        for ref in matrix["prerequisiteRefs"]:
+            self.grant(sources.authorities, "gate-prerequisite", ref, [ref, *subject], f"owner-{ref}")
+        model = t13.ReleaseContractScenarios()
+        model.setUp()
+        self.grant(sources.authorities, "accepted-mvp", "t13-mvp", model.prior.designated_mvp)
+        patch = {"gate": gate, "revision": CANDIDATE}
+        if gate == "GB-T13.G3":
+            patch["version"] = "1.0.0"
+        original, _, approval = model.stage(scenario={"candidatePatch": patch})
+        issue_map = self.issue_map()
+        evidence = [t13_projection(key, CANDIDATE, "release", sources, issue_map) for key in projection]
+        manifest = {**json.loads(original.manifest), "evidence": evidence}
+        bundle = replace(original, manifest=encode(manifest))
+        _, identity = t13.verified_bundle(bundle)
+        approval = {**approval, "identity": identity}
+        decision = {"identity": identity, "gate": gate, "decision": "accepted", "authority": t13.NATIVE_AUTHORITY,
+                    "decisionRef": "native/literal.json", "evidenceRefs": [entry["ref"] for entry in evidence],
+                    "mvpPublication": manifest["mvpPublication"] if gate == "GB-T13.G3" else None}
+        ref = identity["manifestSha256"]
+        self.grant(sources.authorities, "release-approval", "t13-approval", [ref, digest(encode(approval))])
+        self.grant(sources.authorities, "native-decision", "t13-native",
+                   [ref, digest(encode(decision)), manifest["provenanceRef"]])
+
+        def assess(current):
+            inventory = self.finding_inventory(keys, current, security_keys=security)
+            minimum = gate_coverage(gate, clients, keys)
+            outcome = matrix_outcome(keys, current, CANDIDATE, "release", inventory, {}, minimum, security)
+            handoff = t13_handoff(bundle, current, {gate: matrix}, issue_map, inventory, {},
+                                  {ref: approval}, {ref: decision}, model.prior)
+            return outcome, handoff
+        return expected, sources, assess
+
+    def replace_synthetic_case_row(self, sources, key, issue, **cases):
+        current = copy.deepcopy(sources)
+        replacement = self.sources({key}, security_keys=set(), **{key[0]: {"issue": issue, **cases}})
+        for field in ("registry", "receipt_refs", "receipts", "artifacts", "observations", "inventories"):
+            getattr(current, field).update(getattr(replacement, field))
+        current.authorities.issuers.update(replacement.authorities.issuers)
+        current.authorities.grants.update(replacement.authorities.grants)
+        return current
+
+    def test_literal_mandatory_cases_block_omission_and_fail_independent_observations(self):
+        # Both browser boundaries and every registered client (including Firefox
+        # and previews) are approved only inside this synthetic support fixture.
+        for gate, clients, browser in (
+            ("GB-T13.G1", ["discord-win"], "local"),
+            ("GB-T13.G2", sorted(DISCORD_ROWS), "local"),
+            ("GB-T13.G3", sorted(DISCORD_ROWS), "local"),
+            ("GB-T13.G3", sorted(DISCORD_ROWS), "hosted"),
+        ):
+            expected, sources, assess = self.literal_handoff(gate, clients, browser)
+            self.assertEqual(gate_coverage(gate, clients, expected), expected)
+            self.assertEqual(assess(sources), ("pass", "verified"))
+            for key, (issue, cases) in expected.items():
+                for case in sorted(cases):
+                    with self.subTest(gate=gate, browser=browser, row=key, case=case):
+                        missing = self.replace_synthetic_case_row(sources, key, issue, scenarios=cases - {case})
+                        self.assertEqual(assess(missing), ("blocked", "pending"))
+                        failed = self.replace_synthetic_case_row(sources, key, issue,
+                            scenarios={case}, result="fail", passing_cases=())
+                        # Required failure remains visible while other cases are outstanding.
+                        self.assertEqual(assess(failed), ("fail", "pending"))
+                        unrelated = self.replace_synthetic_case_row(sources, key, issue,
+                            scenarios={"unrelated-case"}, result="fail", passing_cases=cases - {case})
+                        self.assertEqual(assess(unrelated), ("blocked", "pending"))
+                        substituted = self.replace_synthetic_case_row(sources, key, issue,
+                            scenarios=(cases - {case}) | {"unrelated-case"})
+                        self.assertEqual(assess(substituted), ("blocked", "pending"))
 
     def test_g2_handoff_qualifies_production_and_recovery_without_release_security_rows(self):
         gate = "GB-T13.G2"

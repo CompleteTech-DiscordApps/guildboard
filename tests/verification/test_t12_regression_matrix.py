@@ -199,6 +199,32 @@ class RegressionMatrixTest(unittest.TestCase):
             if gate != regression.G2:
                 self.assertLessEqual(contract.SECURITY_KEYS, gate_rows.keys())
 
+    def test_literal_case_oracle_matches_matrix_floors_and_handoff_for_each_boundary(self):
+        report = regression.audit(regression.ROOT, self.matrix)
+        rows = {(row["id"], row["environment"]): row for row in report["rows"]}
+        floors = regression.row_floors(regression.ROOT, contract.DISCORD_ROWS)
+        for clients in (["discord-win"], sorted(contract.DISCORD_ROWS)):
+            for gate in (regression.G1, regression.G2, regression.G3):
+                for browser in ("local", "hosted"):
+                    # This oracle is literal test data, independent of both
+                    # gate_coverage and row_floors. Equality catches case loss
+                    # in either helper even when the other is weakened too.
+                    expected = contract.literal_gate_expectations(gate, clients, browser)
+                    self.assertEqual(contract.gate_coverage(gate, clients, expected), expected)
+                    for key, (issue, cases) in expected.items():
+                        canonical = ("browser-e2e", "local") if key[0] == "browser-e2e" else key
+                        with self.subTest(gate=gate, clients=clients, browser=browser, row=key):
+                            row = rows[canonical]
+                            self.assertEqual(row["issue"], issue)
+                            self.assertEqual(set(row["casesByGate"][gate]), cases)
+                            accepted_issue, gates, _, floor_cases = floors[canonical]
+                            self.assertEqual(accepted_issue, issue)
+                            self.assertIn(gate, gates)
+                            # The integrated stable cases are the documented
+                            # G3 overlay; all other floor sets match exactly.
+                            if key != ("integrated", "hosted") or gate != regression.G3:
+                                self.assertEqual(floor_cases, cases)
+
     def test_rejects_missing_or_substituted_evidence(self):
         for attack, diagnostic in (
             (lambda m: m["mvp"].pop("activity-startup"), "mandatory MVP"),
