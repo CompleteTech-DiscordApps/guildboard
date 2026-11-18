@@ -138,8 +138,10 @@ Candidate comparisons use complete, aligned windows and declared minimum volumes
 Deduplicate by rule and affected deployment, preserve earliest trigger time,
 route with a bounded reason and runbook reference, and escalate unacknowledged
 pages by the approved rota. Clear each active rule only after observing its
-recovery signal for the same deployment, rule and approved workload profile. Evidence must come from the
-approved source and be newer than the last breach, within the configured
+recovery signal for the same deployment, rule and approved workload profile.
+Compare those identifiers on the observation with the active alert. Verify the
+observation source against the independently approved rule configuration.
+Evidence must be newer than the last breach, within the configured
 freshness bound, complete, and sufficient for the approved recovery window
 count, duration, and minimum samples. Stale, missing, partial or inapplicable
 evidence keeps the alert open. Suppressing duplicate notifications cannot exclude observations from
@@ -163,9 +165,14 @@ recoverable, and integrity verification is complete. Record job schedule,
 start/end, cut and first/last required replay position, manifest and integrity
 status, off-host availability, and key recovery check. Keep backup/restore roles
 separate from serving credentials. The copy must survive loss of the source
-VPS. Missing prerequisite is blocked; interruption leaves the attempted
-generation incomplete and recovery uses only prior verified generations until
-revalidation. Job completion and backup age are independent of restore verdict.
+VPS. Keep independently ordered attempt records with unique generation IDs,
+verification state, lineage and cut. Report the latest attempt's outcome and
+select the latest verified generation eligible for the affected lineage and
+pre-fault recovery range. An interruption leaves that attempt incomplete until
+revalidation. Recovery can select an earlier eligible verified generation and
+its cut. A missing prerequisite or absence of an eligible verified generation
+blocks the restore. Job completion and backup age are independent of restore
+verdict.
 
 Restore rehearsals use fresh isolated resources and synthetic canaries.
 Prove target identity, actual write/read isolation, distinct scoped recovery
@@ -199,13 +206,21 @@ canary commit. Choose the latest consistent restored synthetic canary whose
 original pre-fault durable commit and restored lineage/cut match trusted
 evidence. RPO is incident/fault time minus that original commit time. Exclude
 inconsistent, unverified, post-fault and unrestored canaries. Copy, replay and
-restore execution timestamps cannot serve as original commit evidence. Compare an
-independent pre-fault acknowledgment inventory to the verified recovered cut.
-Any acknowledged operation missing at or before that cut causes an integrity
-failure and immediate escalation, even when both timing objectives pass.
-Account for possible post-cut loss against the approved disaster boundary, and
-report the acknowledgments lost and the tested boundary. Unverified acknowledgment
-coverage leaves acceptance undetermined after other checks pass. Record
+restore execution timestamps cannot serve as original commit evidence. Compare
+an independent pre-fault acknowledgment inventory with recovered evidence by
+original lineage, durable position and operation identity. Verify coverage for
+both sources in the affected scope through the trial's pre-fault high-water
+mark. Record any gap that prevents establishing presence or absence.
+Any acknowledged operation known missing at or before the selected recovery
+cut causes an integrity failure and immediate escalation, even when both timing
+objectives pass. Approve the allowed post-cut loss boundary before the trial.
+For the offline scenarios, this boundary is a maximum positional distance from
+the selected cut in its lineage. Known post-cut loss outside the approved
+boundary fails the drill and escalates immediately, including when both timing
+objectives pass or unrelated evidence gaps remain. Record any known losses
+within the boundary and the tested boundary in the restricted evidence record.
+Missing boundary approval or incomplete coverage leaves acceptance undetermined
+when the other checks pass and no known loss requires failure. Record
 untrustworthy timing or absence of a verified canary as unknown.
 RTO is elapsed time from declaration through access/key recovery, restore and
 service verification over approved DNS/TLS and client paths, including operator

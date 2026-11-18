@@ -44,16 +44,38 @@ def objective(seconds, limit):
     return "breached" if seconds > limit else "within_candidate"
 
 
-def restore_verdict(selected_generation, preflight, verification, acknowledged_cut, objectives):
+def restore_verdict(selected, preflight, verification, loss, objectives):
     if preflight == "unsafe":
         return "denied"
-    if preflight == "unavailable" or selected_generation != "verified":
+    if preflight == "unavailable" or selected is None:
         return "blocked"
-    if verification != "complete" or acknowledged_cut == "loss":
+    if verification != "complete" or loss in {"at_or_before_cut", "outside_bound"}:
         return "failed"
     if "breached" in objectives:
         return "breached"
-    return "undetermined" if acknowledged_cut == "unknown" or "unknown" in objectives else "within_candidate"
+    return "undetermined" if loss == "unknown" or "unknown" in objectives else "within_candidate"
+
+
+def acknowledgment_loss(trial, cut, acknowledgments, recovered):
+    if cut is None:
+        return "unknown", []
+    lineage = trial["lineage"]
+    expected = {item for item in acknowledgments["identities"] if item[0] == lineage}
+    present = {item for item in recovered["identities"] if item[0] == lineage}
+    covered_through = recovered["coverage"].get(lineage, -1)
+    missing = sorted(item for item in expected - present if item[1] <= covered_through)
+    lost = [list(item) for item in missing]
+    if any(position <= cut for _, position, _ in missing):
+        return "at_or_before_cut", lost
+    if trial["loss_bound"] is not None and any(
+        position - cut > trial["loss_bound"] for _, position, _ in missing
+    ):
+        return "outside_bound", lost
+    if (trial["loss_bound"] is None
+            or acknowledgments["coverage"].get(lineage, -1) < trial["prefault_high_water"]
+            or covered_through < trial["prefault_high_water"]):
+        return "unknown", lost
+    return ("within_bound" if missing else "none"), lost
 
 
 class OperationsContractTest(unittest.TestCase):
@@ -195,14 +217,70 @@ class OperationsContractTest(unittest.TestCase):
                     case["expected"],
                 )
 
+    def synthetic_identity(self, value):
+        self.assertIs(type(value), str)
+        self.assertIsNotNone(re.fullmatch(r"[a-z][a-z0-9_]{0,47}", value))
+
+    def operation_evidence(self, evidence):
+        self.assertEqual(set(evidence), {"coverage", "identities"})
+        self.assertIs(type(evidence["coverage"]), dict)
+        self.assertLessEqual(len(evidence["coverage"]), 4)
+        for lineage, through in evidence["coverage"].items():
+            self.synthetic_identity(lineage)
+            self.bounded_integer(through, 100)
+        self.assertIs(type(evidence["identities"]), list)
+        self.assertLessEqual(len(evidence["identities"]), 16)
+        identities = set()
+        for item in evidence["identities"]:
+            self.assertIs(type(item), list)
+            self.assertEqual(len(item), 3)
+            lineage, position, operation = item
+            self.synthetic_identity(lineage)
+            self.bounded_integer(position, 100)
+            self.synthetic_identity(operation)
+            self.assertNotIn(tuple(item), identities)
+            identities.add(tuple(item))
+        return {"coverage": evidence["coverage"], "identities": identities}
+
     def test_backup_and_restore_have_independent_verdicts(self):
-        fields = {"backup", "selected_generation", "preflight", "verification", "acknowledged_cut",
-                  "fault_second", "canaries", "rto_seconds"}
+        fields = {"generations", "trial", "preflight", "verification", "acknowledgments",
+                  "recovered", "fault_second", "canaries", "rto_seconds"}
         for case in self.cases("recovery", fields):
             with self.subTest(case=case["case"]):
-                self.assertIn(case["backup"], {"verified", "interrupted"})
-                self.assertIn(case["selected_generation"], {"verified", "unavailable"})
-                self.assertIn(case["acknowledged_cut"], {"verified", "loss", "unknown"})
+                trial = case["trial"]
+                self.assertEqual(set(trial), {"lineage", "prefault_high_water", "loss_bound"})
+                self.synthetic_identity(trial["lineage"])
+                self.bounded_integer(trial["prefault_high_water"], 100)
+                self.bounded_integer(trial["loss_bound"], 100, nullable=True)
+                generations = case["generations"]
+                self.assertIs(type(generations), list)
+                self.assertTrue(1 <= len(generations) <= 8)
+                generation_ids = set()
+                selected = None
+                last_sequence = -1
+                for generation in generations:
+                    self.assertEqual(set(generation), {"id", "sequence", "lineage", "cut", "status"})
+                    self.synthetic_identity(generation["id"])
+                    self.assertNotIn(generation["id"], generation_ids)
+                    generation_ids.add(generation["id"])
+                    self.bounded_integer(generation["sequence"], 100)
+                    self.assertGreater(generation["sequence"], last_sequence)
+                    last_sequence = generation["sequence"]
+                    self.synthetic_identity(generation["lineage"])
+                    self.bounded_integer(generation["cut"], 100)
+                    self.assertIn(generation["status"], {"verified", "interrupted"})
+                    if (generation["status"] == "verified"
+                            and generation["lineage"] == trial["lineage"]
+                            and generation["cut"] <= trial["prefault_high_water"]):
+                        selected = generation
+                attempt = generations[-1]
+                cut = selected["cut"] if selected else None
+                acknowledgments = self.operation_evidence(case["acknowledgments"])
+                recovered = self.operation_evidence(case["recovered"])
+                for lineage, position, _ in acknowledgments["identities"] | recovered["identities"]:
+                    if lineage == trial["lineage"]:
+                        self.assertLessEqual(position, trial["prefault_high_water"])
+                loss, missing = acknowledgment_loss(trial, cut, acknowledgments, recovered)
                 self.assertIn(case["preflight"], {"isolated", "unsafe", "unavailable"})
                 self.assertIn(case["verification"], {
                     "complete", "unstarted", "interrupted", "integrity_failed", "marker_gap",
@@ -213,13 +291,17 @@ class OperationsContractTest(unittest.TestCase):
                 self.assertLessEqual(len(case["canaries"]), 8)
                 valid_commits = []
                 for canary in case["canaries"]:
-                    self.assertEqual(set(canary), {"commit_second", "restore_second", "evidence"})
+                    self.assertEqual(set(canary), {"commit_second", "restore_second", "evidence", "lineage", "position"})
                     self.bounded_integer(canary["commit_second"], 86400, nullable=True)
                     self.bounded_integer(canary["restore_second"], 86400, nullable=True)
                     self.assertIn(canary["evidence"], {
                         "verified_consistent", "inconsistent", "unverified", "unrestored",
                     })
-                    if (canary["evidence"] == "verified_consistent"
+                    self.synthetic_identity(canary["lineage"])
+                    self.bounded_integer(canary["position"], 100)
+                    if (cut is not None and canary["lineage"] == selected["lineage"]
+                            and canary["position"] <= cut
+                            and canary["evidence"] == "verified_consistent"
                             and canary["restore_second"] is not None
                             and canary["commit_second"] is not None
                             and case["fault_second"] is not None
@@ -228,10 +310,13 @@ class OperationsContractTest(unittest.TestCase):
                 rpo_seconds = case["fault_second"] - max(valid_commits) if valid_commits else None
                 outcomes = (objective(rpo_seconds, 900), objective(case["rto_seconds"], 14400))
                 self.assertEqual(
-                    {"backup": case["backup"], "rpo_seconds": rpo_seconds,
+                    {"backup": attempt["status"], "attempt": attempt["id"],
+                     "selected": selected["id"] if selected else None, "cut": cut,
+                     "loss": loss, "missing": missing,
+                     "escalate": loss in {"at_or_before_cut", "outside_bound"},
+                     "rpo_seconds": rpo_seconds,
                      "rto_seconds": case["rto_seconds"], "rpo": outcomes[0], "rto": outcomes[1],
-                     "drill": restore_verdict(case["selected_generation"], case["preflight"],
-                                              case["verification"], case["acknowledged_cut"], outcomes)},
+                     "drill": restore_verdict(selected, case["preflight"], case["verification"], loss, outcomes)},
                     case["expected"],
                 )
 
@@ -248,13 +333,21 @@ class OperationsContractTest(unittest.TestCase):
             "restart": "verified_restart",
             "disaster": "verified_disaster_rehearsal",
         }
-        fields = {"rule", "signal", "approved", "sufficient", "observed_second",
+        fields = {"active", "evidence", "approved_source", "signal", "approved", "sufficient", "observed_second",
                   "last_breach_second", "evaluated_second", "freshness_seconds"}
         rules = set()
         for case in self.cases("alert_recovery", fields):
             with self.subTest(case=case["case"]):
-                rule = case["rule"]
-                self.assertIn(rule, signals)
+                scope_fields = {"deployment", "rule", "profile"}
+                for scope in (case["active"], case["evidence"]):
+                    self.assertEqual(set(scope) - {"source"}, scope_fields)
+                    for value in scope.values():
+                        self.synthetic_identity(value)
+                    self.assertIn(scope["rule"], signals)
+                self.assertEqual(set(case["active"]), scope_fields)
+                self.assertEqual(set(case["evidence"]), scope_fields | {"source"})
+                self.synthetic_identity(case["approved_source"])
+                rule = case["active"]["rule"]
                 self.assertIn(case["signal"], set(signals.values()) | {None})
                 for field in ("approved", "sufficient"):
                     self.assertIs(type(case[field]), bool)
@@ -264,6 +357,8 @@ class OperationsContractTest(unittest.TestCase):
                 self.bounded_integer(observed, 86400, nullable=True)
                 clear = (
                     case["approved"] and case["sufficient"] and case["signal"] == signals[rule]
+                    and all(case["active"][key] == case["evidence"][key] for key in scope_fields)
+                    and case["evidence"]["source"] == case["approved_source"]
                     and observed is not None
                     and case["last_breach_second"] < observed <= case["evaluated_second"]
                     and case["evaluated_second"] - observed <= case["freshness_seconds"]
