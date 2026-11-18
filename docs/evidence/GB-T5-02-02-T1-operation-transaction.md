@@ -66,3 +66,53 @@ A lock wait timeout before mutation and a discarded local result leave uncertain
 COMMIT recovery, daemon or host crash durability, transport ACK, outbox release
 and honest client save status for integrated verification. The case remains
 local to the owned engines with synthetic data.
+
+## Policy-contention extension: engine execution pending (2026-11-18 UTC)
+
+The follow-up adds two cases to the original five without changing the historical
+source, engine receipts or observations above. It exercises the accepted §3.2
+board/policy ordering with a synthetic generation-7 to generation-8 transition.
+It supplies no identity, role invalidation or runtime authorization implementation.
+
+| Added schedule | Required assertions when a supported private engine is available |
+| --- | --- |
+| Generation first | The scoped transition holds the board row with generation 8 staged. The old-generation edit must be observed waiting at the exact `HEAD_LOCK` query, with an engine-reported wait edge to the transition's owned connection. The observer sees the baseline until transition commit; the edit then returns `POLICY_STALE`. Its transaction and the committed view contain only the intended generation change, with no acceptance records. |
+| Write first | A generation-7 edit stages its exact revision, state, receipt, event, outbox and audit. The transition must be observed waiting at the same scoped lock with a native wait edge to the edit's owned connection. After edit commit the observer sees the exact original acceptance; after transition commit only the board's generation changes to 8. A fresh, currently readable synthetic retry with write permission removed keeps the original identity, digest and generation-7 preconditions and returns the original receipt. Changed digest and read-denied controls still return conflict and concealment respectively, without another mutation. |
+
+Both cases compare complete `VIEW` results, including the same-guild other board
+and the other-guild board with the same board ID. The native barrier joins
+`information_schema.INNODB_TRX` to MySQL's
+`performance_schema.data_lock_waits` or MariaDB's
+`information_schema.INNODB_LOCK_WAITS`, and checks the exact processlist query,
+database and waiter/holder IDs. Missing catalog visibility or an unobserved wait
+fails the case. Poll pacing alone never establishes contention. The barrier has
+a five-second observation deadline, contenders have a ten-second native lock
+timeout, and result collection has a five-second deadline. Failure paths release
+the holder before executor shutdown; existing bounded session reads and client
+reaping remain in use. Every test retains its uniquely named database cleanup
+and the existing supported-version, private socket, owner, datadir and
+TCP-disabled preflight checks.
+
+This workspace has no Docker, Podman, MySQL or MariaDB executable on `PATH`, and
+no `GB_SCHEMA_CLIENT`, `GB_SCHEMA_SOCKET` or `GB_SCHEMA_USER` fixture inputs.
+Neither added schedule was executed against either supported engine. The new
+engine-specific catalog barrier queries also remain unexecuted on those engines.
+The historical five-case engine evidence does not cover this extension.
+
+| Exact local command | Exit and evidence |
+| --- | --- |
+| `python3 -B -m unittest discover -s tests/verification -p test_t5_operation_transaction.py -v` | 0; seven skipped, no SQL behavior established |
+| `python3 -B -O -m unittest discover -s tests/verification -p test_t5_operation_transaction.py -v` | 0; seven skipped, no SQL behavior established |
+| `python3 -B -m unittest discover -s tests/verification -p test_t5_initial_schema.py -v` | 0; one source check passed, seven engine cases skipped |
+| `python3 -B -m unittest discover -s tests/verification -p test_t5_persistence_recovery_contract.py -v` | 0; fourteen offline model checks passed; no engine or product evidence |
+| `python3 -B scripts/github-bootstrap/validate.py --report /workspace/scratch/02e4b80c15d7/campaign/resume-t5-planning-validation.json` | 0; 471 items, 457 native relationships, 600 dependencies, no errors; planning only |
+| `git diff --check` | 0; whitespace only |
+
+The PR validation receipt records the exact published source head/tree and the
+planning/whitespace check results. Data Engineering, security and consumer review
+and fresh execution on MySQL 8.4.11 and MariaDB 11.4.13-MariaDB-ubu2404 remain
+pending. Issues #178 and #179 remain open. Runtime identity/policy consumers
+#35, #67 and #261 remain unresolved. Current authority and clock freshness,
+read-release fencing, transaction-bound durable witnessing, uncertain COMMIT,
+transport/client save state, power loss and real GoDaddy verification remain
+outside this synthetic SQL fixture.
