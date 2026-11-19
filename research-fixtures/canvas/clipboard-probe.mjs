@@ -13,6 +13,15 @@ const boundText = 'Bound note';
 const snapshot = page => page.evaluate(() => window.clipboardSnapshot());
 const extras = observation => observation.elements.filter(element => !seedIds.includes(element.id));
 
+export function assertLocalBrowserEnvironment() {
+  // Playwright 1.56.1 consults the parent environment before local launch.
+  // Child-process env options cannot establish this precondition. Reject even
+  // empty configuration and ancillary settings without inspecting their values.
+  const names = ['SELENIUM_REMOTE_URL', 'SELENIUM_REMOTE_HEADERS', 'SELENIUM_REMOTE_CAPABILITIES']
+    .filter(name => Object.hasOwn(process.env, name));
+  if (names.length) throw Error(`Local browser launch requires unset environment names: ${names.join(', ')}`);
+}
+
 async function frame(page) {
   const handle = await page.waitForFunction(() => new Promise(resolve => {
     requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)));
@@ -73,13 +82,14 @@ function assertGroup(elements, forbiddenGroups) {
   return box.groupIds[0];
 }
 
-export async function probeClipboard(origin) {
+export async function probeClipboard(origin, {launch = options => chromium.launch(options)} = {}) {
+  assertLocalBrowserEnvironment();
   if (process.platform !== 'linux') return {result: 'unavailable', reason: 'isolated clipboard backend inspected only for Linux'};
   // The reviewed Ozone headless backend has no platform clipboard, selecting
   // ClipboardNonBacked. Do not use CHROMIUM_PATH or a user's connected browser.
   const env = {...process.env};
   for (const name of ['DISPLAY', 'WAYLAND_DISPLAY', 'XAUTHORITY']) delete env[name];
-  const browser = await chromium.launch({...browserLaunchOptions(), env, args: ['--ozone-platform=headless']});
+  const browser = await launch({...browserLaunchOptions(), env, args: ['--ozone-platform=headless']});
   const blockedRequests = [];
   const pageErrors = [];
   const trials = [];

@@ -700,3 +700,24 @@ No claim is made for host clipboard access, malicious formats, platforms,
 server authorization, authoritative undo or broader #98 acceptance. The later
 evidence-only documentation update leaves both fixture files byte-identical
 to this tested implementation head.
+
+### Local browser launch precondition follow-up, 2026-11-18
+
+Issue #602 adds an explicit parent-environment precondition before the initial
+and standalone network-control probes set up owned resources, and immediately
+before all three fixture browser launches, including the clipboard probe.
+Supported externally routed launch configuration is rejected by name, including
+empty or ancillary configuration; values are never included in the diagnostic
+and the caller environment is preserved. Child-process display isolation remains
+an additional clipboard control. Managed-version, effective headless/Ozone flags,
+sandbox, network, cleanup and all four existing clipboard trial assertions remain.
+
+The added offline tests inject controlled launchers and server/context stand-ins.
+They check rejection before launcher/network/clipboard effects, unchanged full
+parent environment, names-only errors, permitted local launch options, existing
+clipboard isolation gates, exact-origin routing and failure cleanup, including
+both network-control servers and their owned temporary directory. These are
+mocked control-flow checks, with no browser or clipboard runtime evidence. The
+earlier hosted observation remains evidence for its recorded implementation head;
+current-head hosted execution, independent review and post-merge acceptance are
+separate gates. #98 remains incomplete and #99/#133 remain blocked.
