@@ -103,7 +103,7 @@ conversion is exercised by the browser probe. The full matrix below remains open
 1. Remote hydration with NEVER: preserve IDs/tombstones; observe callback counts/origin; prove repeated accepted state does not emit proposed writes.
 2. Local edit A then remote edit B then undo/redo: preserve B, express only accepted A inverse, reject stale revisions and prevent forbidden resurrection. Current probe passes only a simpler remote baseline/local-history undo scenario; it does not test concurrent remote overwrites or server-fenced inverse intent.
 3. Reject optimistic local change and rollback; repeat after role revocation/epoch change, reconnect and restore. The bounded local rollback below filters the hydration echo and reproduces a native undo/redo failure. Accepted-intent history and session-change paths remain open.
-4. Viewer keyboard shortcuts, pointer drag, delete, paste, drop, text input, context menu and imperative hydration; navigation remains available, server denies every forged mutation. The earlier smoke supplies selected content through the API and retained history for Delete/undo controls, with a writable undo positive control. The 2026-11-18 fresh-page input matrix below observes pointer/keyboard selection, drag, Delete and existing-text trials in native fixture Chromium, with matching writable controls and separate navigation. The fresh creation experiment below adds bounded creation/draft-removal evidence; paste/drop/context-menu and every server denial remain unverified.
+4. Viewer keyboard shortcuts, pointer drag, delete, paste, drop, text input, context menu and imperative hydration; navigation remains available, server denies every forged mutation. The earlier smoke supplies selected content through the API and retained history for Delete/undo controls, with a writable undo positive control. The 2026-11-18 fresh-page input matrix below observes pointer/keyboard selection, drag, Delete and existing-text trials in native fixture Chromium, with matching writable controls and separate navigation. The dated fresh creation and clipboard experiments below add bounded creation/draft-removal and plain-text/bound-group paste evidence. Malformed/oversized clipboard payloads, arrow/frame paste, canonical paste intent, drop, broader context-menu paths and every server denial remain unverified; the ordinary context-menu continuation below records its own execution status.
 5. Asset add/roundtrip/export, missing files, excessive data, malformed imports, external URL requests, fonts/CSP and private-file denial.
 6. Keyboard-only/assistive technology, touch and real stylus; drag interruption, focus restoration and repeated controls.
 7. Compound groups/arrows/text/sticky-note representation; deterministic IDs/bindings, multi-element atomicity and concurrent changes.
@@ -721,3 +721,67 @@ mocked control-flow checks, with no browser or clipboard runtime evidence. The
 earlier hosted observation remains evidence for its recorded implementation head;
 current-head hosted execution, independent review and post-merge acceptance are
 separate gates. #98 remains incomplete and #99/#133 remain blocked.
+
+
+## Ordinary context-menu continuation, 2026-11-18
+
+This bounded #98 continuation adds `context-menu-probe.mjs` to the existing
+fixture without changing Excalidraw 0.18.1, Playwright 1.56.1, dependencies or
+workflow. It exercises three fresh writable/viewer pairs after synthetic API
+seeding: right-click a rectangle then click visible Delete; separately
+right-click the rectangle then click visible Duplicate; and right-click blank
+canvas, press Escape, then wheel-pan. No menu Copy/Cut/Paste, export, download,
+file picker or hidden action is invoked. The earlier isolated synthetic
+clipboard probe is retained unchanged.
+
+Pinned primary source inspected alongside the installed package:
+
+- [App context-menu handling and item lists](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/components/App.tsx)
+  hit-test ordinary right-click input and choose canvas/element actions by view
+  mode. These lists suggest the experiment; source is not execution evidence.
+- [ContextMenu](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/components/ContextMenu.tsx)
+  renders the visible button inventory and closes the menu before execution.
+- [Delete](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/actions/actionDeleteSelected.tsx)
+  and [Duplicate](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/actions/actionDuplicateSelection.tsx)
+  supply the two visible writable controls.
+
+Each writable control must succeed before its viewer pair is interpreted.
+Delete must tombstone only its target; Duplicate must produce a fresh offset
+rectangle with the original properties and preserve every original. The complete
+explicit seed tombstone is checked at every checkpoint and callback. Writable
+callbacks must be complete original or final scenes; viewers and the blank-menu
+trials must preserve the whole baseline throughout. Viewers must omit Delete
+and Duplicate. Escape dismissal and subsequent wheel navigation are required;
+actual active element, selection, tool, menu inventory and viewport are recorded
+without assuming favorable focus restoration. Pointer/keyboard events must be
+trusted. Callback and input captures cap at 200 and 40 respectively and fail on
+overflow; inventory and labels also have explicit bounds. Every fresh page keeps
+the existing exact-origin network filter, service-worker blocking and cleanup.
+No launcher, sandbox or parent-environment safeguard changes.
+
+Local checks on 2026-11-19 UTC (2026-11-18 Eastern), Debian 13.6 / Node 24.22.3 /
+npm 11.9.0, from `research-fixtures/canvas`:
+
+| Command | Result |
+| --- | --- |
+| `npm ci --ignore-scripts --offline --no-audit --no-fund` | Exit 0, locked installation |
+| `npm test` | Exit 0, 69 passed, zero skipped: all 49 prior tests plus 20 assertion controls |
+| `npm run build` | Exit 0 |
+| `node --check context-menu-probe.mjs`; `node --check context-menu-probe.test.mjs`; `node --check probe.mjs` | Each exit 0 |
+| `npm run probe`; `npm run probe:network` | Each exit 1 before opening any page: managed Chromium headless shell absent |
+| Root `python3 -B scripts/github-bootstrap/validate.py`; `git diff --check` | Each exit 0 |
+
+The new unit tests use fabricated observations to reject failed positive
+controls, transient scene/tombstone changes, missing completed callbacks,
+viewer edit affordances, untrusted/missing input, overflow, failed dismissal
+and failed navigation. They do not establish browser behavior. New context-menu
+runtime observations are pending the existing hosted Ubuntu 22.04/Node 24 job;
+no local browser result is claimed, and no sandbox bypass or browser installation
+was attempted.
+
+Continue the controlled adapter experiment. Full #98, #99 and #133 remain
+blocked. These finite synthetic menu cases cannot establish actual Discord,
+AT, physical touch/stylus, arbitrary drop/imports, canonical mutations,
+server authorization, concurrent editing, accepted-intent undo, durable
+persistence, private assets or GoDaddy behavior. Broader clipboard and
+arrow/frame/group menu cases remain separate gaps.
