@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import { after, test } from "node:test";
 import { pathToFileURL } from "node:url";
 
@@ -199,4 +200,130 @@ test("hung cleanup hooks have independent deadlines and receive cooperative canc
   assert.deepEqual(calls, ["reconnect", "reconnect canceled", "flush", "flush canceled"]);
   reconnect.reject(new Error("late reconnect failure"));
   telemetry.reject(new Error("late telemetry failure"));
+});
+
+test("drain settlement uses the monotonic cutoff before timer dispatch", async (t) => {
+  const originalNow = performance.now;
+  const originalSetTimeout = globalThis.setTimeout;
+  for (const offset of [-1, 0, 1]) {
+    for (const settlement of ["fulfilled", "rejected"]) {
+      await t.test(`${settlement} at deadline ${offset}`, async (t) => {
+        let now = 100;
+        t.mock.method(performance, "now", () => now);
+        // No tick: only promise settlement can finish the phase in these cases.
+        t.mock.timers.enable({ apis: ["setTimeout"] });
+        const operation = Promise.withResolvers();
+        const value = { syntheticResult: true };
+        const error = new Error("synthetic operation failure");
+        const calls = [];
+        const coordinator = createGracefulShutdownCoordinator(
+          fixture({
+            drainMs: 10,
+            closeSocketsWithReconnectGuidance(signal) {
+              assert.equal(signal.aborted, false);
+              calls.push("reconnect");
+            },
+            flushTelemetry(signal) {
+              assert.equal(signal.aborted, false);
+              calls.push("flush");
+            },
+          }),
+        );
+        const admitted = coordinator.admit(() => operation.promise);
+        assert.equal(admitted.admitted, true);
+        const completion =
+          settlement === "rejected"
+            ? assert.rejects(admitted.completion, (reason) => reason === error)
+            : admitted.completion.then((result) => assert.equal(result, value));
+        const shutdown = coordinator.shutdown();
+        assert.deepEqual(calls, []);
+        now = 110 + offset;
+        if (settlement === "rejected") operation.reject(error);
+        else operation.resolve(value);
+        await completion;
+        const result = await shutdown;
+        assert.deepEqual(result, {
+          drain: {
+            outcome: offset < 0 ? "settled" : "deadline-elapsed",
+            pendingOperations: offset < 0 ? 0 : 1,
+            failedOperations: offset < 0 && settlement === "rejected" ? 1 : 0,
+          },
+          reconnect: "completed",
+          telemetry: "completed",
+        });
+        assert.deepEqual(calls, ["reconnect", "flush"]);
+        assert.equal(coordinator.shutdown(), shutdown);
+        assert.equal((await coordinator.shutdown()).drain, result.drain);
+      });
+      assert.equal(performance.now, originalNow);
+      assert.equal(globalThis.setTimeout, originalSetTimeout);
+    }
+  }
+});
+
+test("cleanup settlement uses its own monotonic cutoff before timer dispatch", async (t) => {
+  const originalNow = performance.now;
+  const originalSetTimeout = globalThis.setTimeout;
+  for (const phase of ["reconnect", "telemetry"]) {
+    for (const offset of [-1, 0, 1]) {
+      for (const settlement of ["fulfilled", "rejected", "synchronous failure"]) {
+        await t.test(`${phase} ${settlement} at deadline ${offset}`, async (t) => {
+          let now = 100;
+          t.mock.method(performance, "now", () => now);
+          t.mock.timers.enable({ apis: ["setTimeout"] });
+          const cleanup = Promise.withResolvers();
+          const started = Promise.withResolvers();
+          const calls = [];
+          const signals = {};
+          const error = new Error("synthetic cleanup failure");
+          const run = (name, signal) => {
+            calls.push(name);
+            signals[name] = signal;
+            assert.equal(signal.aborted, false);
+            if (name !== phase) {
+              // Consume most of this phase's independent ten-millisecond budget.
+              now += 9;
+              return;
+            }
+            now += 10 + offset;
+            started.resolve();
+            if (settlement === "synchronous failure") throw error;
+            return cleanup.promise;
+          };
+          const coordinator = createGracefulShutdownCoordinator(
+            fixture({
+              drainMs: 10,
+              reconnectMs: 10,
+              flushMs: 10,
+              closeSocketsWithReconnectGuidance: (signal) => run("reconnect", signal),
+              flushTelemetry: (signal) => run("telemetry", signal),
+            }),
+          );
+          const shutdown = coordinator.shutdown();
+          await started.promise;
+          if (settlement !== "synchronous failure") {
+            assert.equal(signals[phase].aborted, false);
+            if (settlement === "rejected") cleanup.reject(error);
+            else cleanup.resolve();
+          }
+          const result = await shutdown;
+          const outcome =
+            offset >= 0 ? "deadline-elapsed" : settlement === "fulfilled" ? "completed" : "failed";
+          assert.deepEqual(result, {
+            drain: completedDrain,
+            reconnect: phase === "reconnect" ? outcome : "completed",
+            telemetry: phase === "telemetry" ? outcome : "completed",
+          });
+          assert.equal(signals[phase].aborted, offset >= 0);
+          assert.equal(signals[phase === "reconnect" ? "telemetry" : "reconnect"].aborted, false);
+          assert.deepEqual(calls, ["reconnect", "telemetry"]);
+          assert.equal(coordinator.shutdown(), shutdown);
+          assert.equal(await coordinator.shutdown(), result);
+          assert.deepEqual(calls, ["reconnect", "telemetry"]);
+        });
+        assert.equal(performance.now, originalNow);
+        assert.equal(globalThis.setTimeout, originalSetTimeout);
+      }
+    }
+  }
 });
