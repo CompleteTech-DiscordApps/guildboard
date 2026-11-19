@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { types } from "node:util";
 
 type ActorKind = "user" | "system" | "operator";
 type Outcome = "accepted" | "denied" | "failed";
@@ -69,7 +70,7 @@ const rootHash = "0".repeat(64);
 export const AUDIT_MAX_RECORDS = 4096;
 
 function fieldsOf(value: unknown): Record<string, unknown> | undefined {
-  if (typeof value !== "object" || value === null) return undefined;
+  if (typeof value !== "object" || value === null || types.isProxy(value)) return undefined;
   const prototype: unknown = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null) return undefined;
   const fields: Record<string, unknown> = Object.create(null) as Record<string, unknown>;

@@ -48,6 +48,37 @@ function event(n = 1) {
   };
 }
 
+function unsupportedObjects(target) {
+  let callbacks = 0;
+  const observed = new Proxy(target, {
+    getPrototypeOf(value) {
+      callbacks++;
+      return Reflect.getPrototypeOf(value);
+    },
+    ownKeys(value) {
+      callbacks++;
+      return Reflect.ownKeys(value);
+    },
+    getOwnPropertyDescriptor(value, key) {
+      callbacks++;
+      return Reflect.getOwnPropertyDescriptor(value, key);
+    },
+  });
+  const revoked = Proxy.revocable(target, {});
+  revoked.revoke();
+  const accessor = Object.defineProperty({ ...target }, Object.keys(target)[0], {
+    enumerable: true,
+    get() {
+      callbacks++;
+      return undefined;
+    },
+  });
+  return {
+    values: [observed, new Proxy(target, {}), revoked.proxy, accessor, [], new Date(0), new Map()],
+    callbackCount: () => callbacks,
+  };
+}
+
 function chain(...events) {
   let previous = root.hash;
   return events.map((value, index) => {
@@ -223,6 +254,64 @@ test("closed v1 codec constructs immutable canonical metadata with names-only di
     parseAuditEventV1({ ...missingGeneration, outcome: "denied", reason: "forbidden" }).ok,
     true,
   );
+});
+
+test("logical codec rejects unsupported objects without invoking caller callbacks", () => {
+  const records = unsupportedObjects(event());
+  for (const input of records.values) {
+    assert.deepEqual(parseAuditEventV1(input), { ok: false, fields: ["record"] });
+  }
+  assert.equal(records.callbackCount(), 0);
+
+  const scopes = unsupportedObjects({ ...scope });
+  for (const input of scopes.values) {
+    assert.deepEqual(parseAuditEventV1({ ...event(), scope: input }), {
+      ok: false,
+      fields: ["scope"],
+    });
+  }
+  assert.equal(scopes.callbackCount(), 0);
+});
+
+test("closed plain-data records retain canonical results for every scope kind", () => {
+  for (const auditScope of [
+    { kind: "system" },
+    { kind: "guild", guildRef: ref(1) },
+    { ...scope },
+  ]) {
+    const source = {
+      ...event(),
+      actorKind: "operator",
+      action: "evidence-access",
+      scope: auditScope,
+    };
+    delete source.policyGeneration;
+    const nullScope = Object.assign(Object.create(null), auditScope);
+    for (const input of [
+      source,
+      Object.freeze({ ...source, scope: Object.freeze({ ...auditScope }) }),
+      Object.assign(Object.create(null), source, { scope: nullScope }),
+    ]) {
+      const parsed = parseAuditEventV1(input);
+      assert.deepEqual(parsed, { ok: true, event: source });
+      assert.equal(JSON.stringify(parsed.event), JSON.stringify(source));
+      assert.ok(Object.isFrozen(parsed.event));
+      assert.ok(Object.isFrozen(parsed.event.scope));
+    }
+  }
+});
+
+test("unsupported service selectors return INVALID_MESSAGE before any port or caller callback", async () => {
+  const selectors = unsupportedObjects({ ...scope });
+  for (const selector of selectors.values) {
+    const state = fixture();
+    assert.deepEqual(await state.service.append("transition", selector, "grant", null), invalid);
+    assert.deepEqual(await state.service.verify("reviewer", selector), invalid);
+    assert.deepEqual(await state.service.preserve("custodian", selector), invalid);
+    noEffects(state, []);
+    assert.deepEqual(state.access, []);
+  }
+  assert.equal(selectors.callbackCount(), 0);
 });
 
 test("ordinary board writers and moderators cannot inspect, append or preserve audit history", async () => {
