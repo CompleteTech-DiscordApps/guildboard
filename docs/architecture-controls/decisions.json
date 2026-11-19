@@ -408,6 +408,24 @@
         "tests/engineering/t11-operational-logs.test.mjs",
         "tests/engineering/t11-graceful-shutdown.test.mjs"
       ]
+    },
+    {
+      "id": "DEC-0024",
+      "revision": 1,
+      "boundary": "apps/api/src/audit-evidence.ts",
+      "old_sha256": "75a16a0db70f262b613cbe1e044a135dd570c509ee61255fea561730c1741837",
+      "new_sha256": "96d1803dad191ac74c1787903e2be71687c77ea453f2b3bb6938b3189e60b9b2",
+      "rationale": "Reject unsupported logical proxy objects before reflection in the existing bounded audit codec, matching the neighboring server codecs. Existing names-only record and scope failures and INVALID_MESSAGE selector results remain unchanged; selector rejection reaches no authority, history, anchor, access-accounting or acceptance ports. This correction does not add a transport, runtime adapter, retention or custody policy, or independently anchored acceptance proof.",
+      "alternatives": [
+        "Catch reflection exceptions after inspection, which would still allow caller callbacks during inspection.",
+        "Defer consistent rejection until a future runtime adapter, leaving the accepted bounded logical consumer with inconsistent result behavior."
+      ],
+      "controls": [
+        "docs/specifications/GB-T9-S1-security-privacy-contract.md"
+      ],
+      "test_evidence": [
+        "tests/engineering/t9-audit-evidence.test.mjs"
+      ]
     }
   ]
 }
