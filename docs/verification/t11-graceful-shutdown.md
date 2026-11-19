@@ -45,6 +45,7 @@ Use Linux and Node 24 with the locked dependencies.
 
 ```sh
 node --test tests/engineering/t11-graceful-shutdown.test.mjs
+node --test tests/engineering/t11-operational-log-reporter.test.mjs
 npm run test:engineering
 npm run lint
 npm run typecheck
@@ -56,10 +57,39 @@ python3 -B scripts/github-bootstrap/validate.py
 git diff --check
 ```
 
-The six focused tests compile and execute the API module, exercising invalid
-budgets and missing callbacks, synchronous admission cutoff, ordered drain and
-cleanup, reentrant shutdown, operation and callback failures, and independent
-deadlines with late settlement. The callbacks are controlled fixtures.
+The eight top-level focused tests compile and execute the API module. The six
+original tests cover invalid budgets and missing callbacks, synchronous
+admission cutoff, ordered drain and cleanup, reentrant shutdown, operation and
+callback failures, and independent deadlines with late settlement.
+
+The two additional tests contain 24 deterministic subtests. They use a
+test-context mock of the shared `performance.now()` and frozen Node mock timers,
+with no timer dispatch, sleeps or real-clock timing assertions. Each subtest
+checks automatic restoration of the clock and timer functions before its
+sibling runs. Controlled operations fulfill or reject one millisecond before,
+exactly at, and one millisecond after the monotonic drain deadline. Original
+value/error identity is preserved. At and after the cutoff the snapshot reports
+one pending operation and excludes that settlement from pre-cutoff failure
+counts; before it, the operation settles normally and a failure is counted.
+
+Both cleanup phases are tested at the same three boundaries with fulfillment,
+rejection and synchronous failure. At and after the cutoff each returns
+`deadline-elapsed` and aborts its signal. The neighboring phase still runs once
+under its own budget, including telemetry after expired reconnect cleanup.
+Before the cutoff, successful and failing cleanup retain their normal outcomes.
+Repeated shutdown calls preserve the shared completion and cutoff snapshot.
+These cases cover existing settlement-time cutoff branches; they do not fix a
+demonstrated production defect or change the coordinator API or contracts.
+
+On 2026-11-19, Linux with Node 24.22.3, npm 11.9.0 and Python 3.12.14 passed
+the focused shutdown command (32 tests), the sibling log-reporter command
+(11 tests), `npm run test:engineering` (155 tests), `npm run lint`,
+`npm run format:check`, the SRE operations contract command (14 tests), the
+planning validator (471 items, 457 expected native relationships, 600 expected
+dependencies, zero errors), and `git diff --check`. All commands exited zero;
+the reported test runs had no failures or skips. These are local synthetic
+fixture and repository checks, with no real Discord, GoDaddy, durable database
+or supervised restart acceptance evidence.
 
 ## Staged restart acceptance
 
