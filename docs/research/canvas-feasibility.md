@@ -103,7 +103,7 @@ conversion is exercised by the browser probe. The full matrix below remains open
 1. Remote hydration with NEVER: preserve IDs/tombstones; observe callback counts/origin; prove repeated accepted state does not emit proposed writes.
 2. Local edit A then remote edit B then undo/redo: preserve B, express only accepted A inverse, reject stale revisions and prevent forbidden resurrection. Current probe passes only a simpler remote baseline/local-history undo scenario; it does not test concurrent remote overwrites or server-fenced inverse intent.
 3. Reject optimistic local change and rollback; repeat after role revocation/epoch change, reconnect and restore. The bounded local rollback below filters the hydration echo and reproduces a native undo/redo failure. Accepted-intent history and session-change paths remain open.
-4. Viewer keyboard shortcuts, pointer drag, delete, paste, drop, text input, context menu and imperative hydration; navigation remains available, server denies every forged mutation. The earlier smoke supplies selected content through the API and retained history for Delete/undo controls, with a writable undo positive control. The 2026-11-18 fresh-page input matrix below observes pointer/keyboard selection, drag, Delete and existing-text trials in native fixture Chromium, with matching writable controls and separate navigation. The fresh creation experiment below adds bounded creation/draft-removal evidence; paste/drop/context-menu and every server denial remain unverified.
+4. Viewer keyboard shortcuts, pointer drag, delete, paste, drop, text input, context menu and imperative hydration; navigation remains available, server denies every forged mutation. The earlier smoke supplies selected content through the API and retained history for Delete/undo controls, with a writable undo positive control. The 2026-11-18 fresh-page input matrix below observes pointer/keyboard selection, drag, Delete and existing-text trials in native fixture Chromium, with matching writable controls and separate navigation. The dated creation and clipboard experiments below add finite creation/draft-removal and plain-text/bound-group paste evidence. The preserved, unmerged context-menu diagnostic below observes writable controls and viewer Escape failures. Malformed/oversized clipboard input, arrow/frame paste, canonical intent, drop, broader menus and every server denial remain unverified.
 5. Asset add/roundtrip/export, missing files, excessive data, malformed imports, external URL requests, fonts/CSP and private-file denial.
 6. Keyboard-only/assistive technology, touch and real stylus; drag interruption, focus restoration and repeated controls.
 7. Compound groups/arrows/text/sticky-note representation; deterministic IDs/bindings, multi-element atomicity and concurrent changes.
@@ -721,3 +721,100 @@ mocked control-flow checks, with no browser or clipboard runtime evidence. The
 earlier hosted observation remains evidence for its recorded implementation head;
 current-head hosted execution, independent review and post-merge acceptance are
 separate gates. #98 remains incomplete and #99/#133 remain blocked.
+
+
+## Ordinary context-menu diagnostic findings, 2026-11-19 UTC
+
+**The proposed probes exist only on preserved, unmerged PR #607 at
+`779384fbfde4e5c46be6eb88f1f557bc862a5daa`; main retains its prior fixture.**
+The [probe](https://github.com/CompleteTech-DiscordApps/guildboard/blob/779384fbfde4e5c46be6eb88f1f557bc862a5daa/research-fixtures/canvas/context-menu-probe.mjs),
+[assertion tests](https://github.com/CompleteTech-DiscordApps/guildboard/blob/779384fbfde4e5c46be6eb88f1f557bc862a5daa/research-fixtures/canvas/context-menu-probe.test.mjs)
+and [runner](https://github.com/CompleteTech-DiscordApps/guildboard/blob/779384fbfde4e5c46be6eb88f1f557bc862a5daa/research-fixtures/canvas/probe.mjs)
+retain Excalidraw 0.18.1, Playwright 1.56.1 and the existing launch, sandbox,
+network and cleanup controls. This documentation does not integrate that source.
+**#607 is blocked from integration: required viewer Escape controls failed.**
+
+[Hosted run 44440812334 / job 135280892486](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/44440812334/job/135280892486)
+checked out synthetic merge `5a42e464913a052517e6c0fe7868ab8c1700e42a` for that
+head, on Ubuntu 22.04.5 / Node 24.22.2 / npm 11.19.1. Locked installation,
+84 unit tests (zero skipped), full audit and managed Chromium installation
+passed. The log records installed Chromium **141.0.7390.37**; the aggregate
+failure prevented the main summary's separate runtime `browser.version()`
+emission. The editor command exited **1** after all six trials. The separate
+network-control step was **skipped**, not passed.
+
+Each fresh pair seeds a synthetic rectangle, text and explicit tombstone, then
+uses ordinary trusted pointer/keyboard handlers. Only the visible Delete or
+Duplicate item is activated; no clipboard, export, download or file-picker
+action is invoked by these menu trials. The preexisting isolated clipboard experiment is unchanged.
+
+| Fresh trial | Actual control result | Callbacks |
+| --- | --- | ---: |
+| Element menu / writable Delete | Target becomes a tombstone; other complete originals preserved | 6 |
+| Element menu / viewer Delete pair | Delete/Duplicate omitted; Escape leaves menu open through 10-second wait | 10 |
+| Element menu / writable Duplicate | One fresh offset rectangle ID; every complete original preserved | 6 |
+| Element menu / viewer Duplicate pair | Delete/Duplicate omitted; Escape leaves menu open through 10-second wait | 10 |
+| Blank menu / writable | Escape closes menu; wheel pans scrollY from 0 to -120, zoom remains 1 | 6 |
+| Blank menu / viewer | Escape leaves menu open through 10-second wait; wheel still pans 0 to -120 at zoom 1 | 11 |
+
+Every viewer checkpoint and callback preserved the complete baseline, including
+the explicit tombstone. Writable callbacks contained only complete original or
+completed scenes. No callback/input overflow, page errors or unexpected requests
+were recorded. Viewer element menus listed Copy, Copy to clipboard as PNG and
+Copy to clipboard as SVG; the viewer blank menu listed PNG/SVG copy, grid, zen
+mode and statistics. These inventories establish no server authorization.
+
+Focus checkpoints reported a `DIV` inside the canvas, with null role, label and
+menu-action fields. These coarse descriptors do not establish a particular
+focus-restoration target or assistive-technology acceptance. The selection tool
+remained active. Separately recorded outside-click cleanup used exposed canvas
+outside current menu bounds and closed the three viewer menus. **That cleanup
+is not successful Escape.** The aggregate retained nine failures: finished-menu,
+settled-menu and 10-second-timeout conditions for each of the three viewer
+trials. Independent wheel success does not satisfy the failed dismissal control.
+
+The earlier [run 44438822789 / job 135274307461](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/44438822789/job/135274307461)
+at `85d728b8d8a820a6e7cfca69c18ec7aeb843155c` (synthetic merge
+`7b89e5a3aeb386e56e9f5e7a0b86cdf529db88ec`) passed 69 then-current unit tests,
+installation and audit, then stopped at the first viewer element Escape timeout
+after writable Delete succeeded. Duplicate, blank-menu, later clipboard and
+separate network controls were not reached. The successor deferred dismissal
+failure until all six unique scenario/mode pairs were observed; all original
+close requirements remained mandatory, and any failure still produces exit 1.
+All 49 preexisting unit tests were retained; 35 additional assertion controls
+check complete evidence, transient changes, failure retention and pair coverage.
+These unit controls use fabricated observations, not browser input.
+
+Pinned [action-manager source](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/actions/manager.tsx)
+filters keyboard actions in view mode unless explicitly enabled; the
+[finalize action](https://github.com/excalidraw/excalidraw/blob/a2ec2889babf7d2295469c6d90ebe77fae57df84/packages/excalidraw/actions/actionFinalize.tsx)
+lacks that opt-in. This suggests an explanation for the observed Escape gap;
+it is source inference, not additional runtime or platform verification.
+
+**Conditional diagnostic replay:** only in an owned disposable supported Node 24
+runner with a working sandbox and approved dependency/browser availability,
+select the preserved commit explicitly (choose an unused worktree path):
+
+```sh
+git fetch origin 779384fbfde4e5c46be6eb88f1f557bc862a5daa
+git worktree add --detach ../guildboard-menu-diagnostic 779384fbfde4e5c46be6eb88f1f557bc862a5daa
+cd ../guildboard-menu-diagnostic/research-fixtures/canvas
+npm ci --ignore-scripts
+npm test
+npx --no-install playwright install --with-deps chromium
+npm run probe
+```
+
+`npm run probe` **expects exit 1 for the recorded unmet Escape controls**; do
+not suppress that exit or call it acceptance. Running the main-branch fixture
+does not replay these new probes. Local Debian 13.6 / Node 24.22.3 / npm 11.9.0
+checks of the preserved candidate passed offline locked installation, 84 unit
+tests, build and syntax checks; both local browser commands exited 1 before
+pages because managed Chromium was absent. No local browser pass is claimed.
+
+Continue the controlled experiment without adopting the failing fixture. Full
+#98 remains incomplete; #99/#133 remain blocked and closed #132 is unchanged.
+Actual Discord/AT/physical touch or stylus, drop/imports, malformed or oversized
+clipboard, arrow/frame/group menus, canonical mutations, server authority,
+concurrency, accepted-intent undo, durability, private assets and GoDaddy remain
+open. A documentation or unit-test pass does not resolve those requirements.

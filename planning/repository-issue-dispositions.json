@@ -75,6 +75,11 @@
       "issue": 602,
       "kind": "resolved_incident",
       "reason": "Bounded local-browser precondition repair completed in merged PR #603 at all three synthetic canvas entry points. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/602#issuecomment-6995405932. Offline controls and exact-merge hosted synthetic editor/clipboard/network observations only; the earlier #599 review-gate failure remains recorded, and full #98/#99/#133 platform and runtime acceptance remain pending."
+    },
+    {
+      "issue": 605,
+      "kind": "resolved_incident",
+      "reason": "Bounded audit logical-input rejection correction completed in merged PR #606 at ef8745c89f7ac089c5f6c9f218ae8f218f49242c. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/605#issuecomment-6997539410. Patched local synthetic-codec checks, exact-merge hosted CI and fresh functional/defensive reviews only; full #313/#314 durable custody, retention, independent acceptance and runtime adapter requirements remain open."
     }
   ]
 }
