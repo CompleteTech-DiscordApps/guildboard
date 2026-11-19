@@ -10,6 +10,71 @@
       "issue": 524,
       "kind": "campaign_tracking",
       "reason": "Tracks the Guildboard repository-completion campaign across roadmap work items and may remain open during the campaign."
+    },
+    {
+      "issue": 539,
+      "kind": "resolved_incident",
+      "reason": "Bounded follow-up completed in merged PR(s) #540: Verify historical architecture bootstrap against the installed tree. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/539#issuecomment-6965487910. Offline architecture-control verification only; current product, platform and release acceptance are outside this disposition."
+    },
+    {
+      "issue": 570,
+      "kind": "resolved_incident",
+      "reason": "Bounded follow-up completed in merged PR(s) #571: Reject repeated JSON members in the bounded import envelope. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/570#issuecomment-6970787899. Local parser/fixture conformance only. Broader #303/#304 runtime, rendering, persistence and platform criteria remain open."
+    },
+    {
+      "issue": 574,
+      "kind": "resolved_incident",
+      "reason": "Bounded follow-up completed in merged PR #576: Reconcile accepted T0 and T4 evidence status. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/574#issuecomment-6980873438. Documentation/status reconciliation and offline checks only; this disposition does not waive any other roadmap item's independent acceptance criteria."
+    },
+    {
+      "issue": 575,
+      "kind": "resolved_incident",
+      "reason": "Bounded follow-up completed in merged PR(s) #577: Verify private asset publication across process interruption. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/575#issuecomment-6981217949. Local synthetic filesystem/process observations only; no physical-storage, SQL, platform or full #189/#190 acceptance."
+    },
+    {
+      "issue": 578,
+      "kind": "resolved_incident",
+      "reason": "Bounded follow-up completed in merged PR(s) #580: Preserve fixture worker ownership when interrupted during process startup. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/578#issuecomment-6987704471. Defined Linux/procfs local synthetic-child scope only; no universal asynchronous-schedule safety, supported SQL or broader #392/#393 runtime acceptance."
+    },
+    {
+      "issue": 583,
+      "kind": "resolved_incident",
+      "reason": "Bounded follow-up completed in merged PR(s) #584: Reconcile the withdrawn root advisory in the offline supply-chain checker. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/583#issuecomment-6987063871. Reviewed historical metadata and offline fixture/local Git integration only; authentic current assurance and #317/#318/#472 acceptance remain pending."
+    },
+    {
+      "issue": 585,
+      "kind": "resolved_incident",
+      "reason": "Bounded follow-up completed in merged PR(s) #586: Preserve owned fixture root descriptor cleanup across interruption. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/585#issuecomment-6989128666. Supported synchronous Linux/procfs synthetic fixture scope only; no exhaustive scheduling, repeated-signal, real SQL, platform or broader #392/#393 acceptance."
+    },
+    {
+      "issue": 587,
+      "kind": "resolved_incident",
+      "reason": "Bounded follow-up completed in merged PR(s) #590: Correct stale isolated verification commands in the T0 handoff. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/587#issuecomment-6991942864. Local tooling/documentation evidence only; skipped external/editor/SQL cases do not count as runtime or platform evidence."
+    },
+    {
+      "issue": 588,
+      "kind": "resolved_incident",
+      "reason": "Bounded follow-up completed in merged PR(s) #592, #595: Align synthetic release-handoff coverage with the mandatory regression matrix. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/588#issuecomment-6992985999. Offline synthetic evidence-model conformance only; all real monitoring, restore, deployed-client, platform and release gates remain pending, including #364/#416/#417."
+    },
+    {
+      "issue": 594,
+      "kind": "resolved_incident",
+      "reason": "Bounded follow-up completed in merged PR(s) #595: Require availability observation row in the synthetic G3 handoff. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/594#issuecomment-6992985127. Offline synthetic qualification only; actual monthly availability, platform, deployed smoke and #364/#416/#417 runtime acceptance remain pending."
+    },
+    {
+      "issue": 596,
+      "kind": "resolved_incident",
+      "reason": "Bounded follow-up completed in merged PR(s) #598: Align T11 restart acceptance with retained receipt retry semantics. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/596#issuecomment-6994205320. Offline planning/contract consistency only; #366/#367/#368 stay open with their full runtime/SRE acceptance and existing blockers."
+    },
+    {
+      "issue": 597,
+      "kind": "resolved_incident",
+      "reason": "Bounded architecture projection fixture correction completed in merged PR #601, with pristine and actual post-build acceptance. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/597#issuecomment-6994530599. Temporary fixture and local checker verification only; production projection and accepted baseline are unchanged, and skipped SQL/editor cases confer no runtime or platform acceptance."
+    },
+    {
+      "issue": 602,
+      "kind": "resolved_incident",
+      "reason": "Bounded local-browser precondition repair completed in merged PR #603 at all three synthetic canvas entry points. Acceptance: https://github.com/CompleteTech-DiscordApps/guildboard/issues/602#issuecomment-6995405932. Offline controls and exact-merge hosted synthetic editor/clipboard/network observations only; the earlier #599 review-gate failure remains recorded, and full #98/#99/#133 platform and runtime acceptance remain pending."
     }
   ]
 }
