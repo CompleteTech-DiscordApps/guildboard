@@ -818,3 +818,74 @@ Actual Discord/AT/physical touch or stylus, drop/imports, malformed or oversized
 clipboard, arrow/frame/group menus, canonical mutations, server authority,
 concurrency, accepted-intent undo, durability, private assets and GoDaddy remain
 open. A documentation or unit-test pass does not resolve those requirements.
+
+## Offline context-menu observation validator, 2026-11-19 UTC
+
+Related #98 / GB-T3.R1. `research-fixtures/canvas/context-menu-observations.mjs`
+extracts the complete strict trial and aggregate assertion layer from preserved
+#607 head `779384fbfde4e5c46be6eb88f1f557bc862a5daa`. It imports only Node
+builtins (`node:assert/strict` and `node:util`). Existing assertion predicates
+and acceptance constraints are retained; several assertions gain specific
+failure messages. No collector, browser import, network call, scene adapter,
+runner or default gate is introduced or changed. The preserved #607 branch and
+source remain unchanged and blocked from integration.
+
+The standalone validator retains complete scenes/tombstones and every
+checkpoint/callback invariant, visible enabled writable controls with trusted
+activation, trusted Escape/wheel evidence, pan without zoom, overflow rejection,
+and exactly six unique typed scenario/mode pairs. It recomputes failures from
+observations and rejects strict final dismissal even if a mutable ledger claims
+success or outside-click cleanup succeeds. A fabricated three-viewer failure
+fixture retains exactly nine conditions: finished menu, settled menu and Escape
+timeout for each viewer pair. This regression control does not resolve F607-1.
+
+`context-menu-observations.test.mjs` ports all 35 preserved assertion tests,
+without claiming to rewrite #607's tests. The imprecise open-menu negative now
+keeps escaped/finished/settled observations consistent and expects the dismissal
+assertion. Sixteen targeted negatives expect specific invariants for wrong
+cleanup method, open cleanup menu, changed cleanup scene, missing/untrusted
+Escape and wheel inputs, changed wheel zoom, wrong checkpoint/callback view
+mode, duplicate IDs, changed opened scene, unstable settled scene, missing
+duplicate offset, wrong selected copy and deletion without a version increase.
+Four further tests require all three viewer failures/nine conditions and reject
+missing, empty or fabricated ledgers.
+
+Disposable offline mutation checks removed one targeted assertion at a time in
+temporary copies and ran only its matching negative using
+`node --test --test-name-pattern='^rejects <case> at its specific invariant$' context-menu-observations.test.mjs`.
+All **16** original targeted tests passed individually and all **16** mutated
+runs exited 1, covering **13** distinct assertions. Twelve mutations produced a
+missing expected exception; four reached a later assertion with a different
+message and failed the specific-message expectation. Thus later fallback
+assertions cannot substitute for the intended branch's rejection. Only hashes,
+commands, exit codes and outcome metadata are retained in the campaign evidence;
+no mutant is committed.
+
+On Debian 13.6 / Node **24.22.3** / npm **11.9.0** / Python **3.12.14**, for this
+four-file candidate delta from base
+`38a5f6f5d750fbb41c475706a26c9b95670ccdd3`:
+
+| Command / working directory | Exit / observed result |
+| --- | --- |
+| `node --test context-menu-observations.test.mjs` / canvas fixture | 0; 55 tests passed, zero skipped |
+| Initial `npm test` / canvas fixture before locked install | 1; 69 passed, four failures from missing Playwright/lodash-es/KaTeX dependencies |
+| `npm ci --ignore-scripts --no-audit --no-fund` / canvas fixture | 0; 252 locked packages installed; no lockfile change |
+| `npm test` / canvas fixture after locked install | 0; 104 tests passed (49 existing plus 55 standalone controls), zero skipped |
+| `node --check research-fixtures/canvas/context-menu-observations.mjs` / repository root | 0 |
+| `node --check research-fixtures/canvas/context-menu-observations.test.mjs` / repository root | 0 |
+| `python3 -B scripts/github-bootstrap/validate.py` / repository root | 0; 471 items, no errors |
+| `git diff --check` / repository root | 0 |
+
+These are offline fabricated-observation and existing fixture unit checks. No
+new browser collector or browser trial ran; no build was needed for this
+builtins-only extraction. Native canvas CI continues to invoke main's unchanged
+browser entry; it does not execute the preserved menu collector. Preserved
+#607's all-three-viewer Escape failure, nine conditions, editor exit 1 and
+**skipped** network step remain the applicable diagnostic result. Advisory
+collection/emission points 3/6 remain unresolved; popup-routing point 7 is not
+addressed. Points 4/5 are addressed only for this new standalone validator.
+A future separately reviewed collector should consume one canonical validator
+to avoid duplicated assertion logic; no import/gate change is made here.
+Synthetic tests provide no browser, AT, physical-device, Discord,
+server-authority or production/runtime acceptance. Full #98 remains incomplete,
+#99/#133 remain blocked, closed #132 and every prior gate remain unchanged.
