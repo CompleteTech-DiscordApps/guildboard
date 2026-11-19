@@ -1,5 +1,10 @@
 name: Remote roadmap integrity
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'planning/repository-issue-dispositions.json'
+      - '.github/workflows/integrity.yml'
   workflow_dispatch:
   schedule:
     - cron: '23 9 * * *'
