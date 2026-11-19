@@ -127,10 +127,10 @@ export async function probeCanvas({launch = options => chromium.launch(options),
     const keyboardNavigation = await probeKeyboardUndo(browser, origin);
     const viewerInput = await probeViewerInput(browser, origin);
     const textCreation = await probeTextCreation(browser, origin);
-    const contextMenu = await probeContextMenu(browser, origin);
     const clipboard = await probeClipboard(origin);
     assert.deepEqual(blockedRequests, []);
     assert.deepEqual(errors, []);
+    const contextMenu = await probeContextMenu(browser, origin);
     console.log(JSON.stringify({
       result: 'local-fixture-passed', browser: browser.version(), remoteCallbacks, hydration, keyboardControl, keyboardNavigation, assets, compound, viewerInput, textCreation, contextMenu, clipboard,
       checks: ['remote ID preserved', 'NEVER remote baseline survives local undo',

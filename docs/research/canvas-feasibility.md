@@ -785,3 +785,36 @@ AT, physical touch/stylus, arbitrary drop/imports, canonical mutations,
 server authorization, concurrent editing, accepted-intent undo, durable
 persistence, private assets or GoDaddy behavior. Broader clipboard and
 arrow/frame/group menu cases remain separate gaps.
+
+
+### First hosted context-menu result and diagnostic continuation
+
+[Run 44438822789 / job 135274307461](https://github.com/CompleteTech-DiscordApps/guildboard/actions/runs/44438822789/job/135274307461)
+at head `85d728b8d8a820a6e7cfca69c18ec7aeb843155c` (synthetic merge
+`7b89e5a3aeb386e56e9f5e7a0b86cdf529db88ec`) passed locked installation,
+69 tests, full audit and managed Chromium installation on Ubuntu 22.04.5 / Node
+24.22.3 / npm 11.19.1. The editor command exited 1: after writable Delete had
+passed its assertions, viewer element-menu Escape delivered a trusted key event
+but left the menu visible throughout the 10-second close wait. Focus was a DIV
+inside the canvas; the menu contained Copy, Copy to clipboard as PNG and Copy
+to clipboard as SVG, none activated. The final complete scene and each captured
+callback retained the seeded elements and explicit tombstone. The run stopped
+before Duplicate and blank-menu trials; network controls were skipped. Those
+unreached cases have no result from this run.
+
+A diagnostic continuation retains every original Escape-close requirement,
+including the 10-second wait, and defers only its failure until all independent
+menu pairs have been observed. It records the actual post-Escape scene, focus,
+menu and failed-control ledger. Separate outside-click cleanup cannot satisfy
+Escape, rewrite its checkpoint or erase a timeout; aggregate acceptance
+recomputes failures from observations and exits 1 if any remain. Scene,
+tombstone, writable-control, input, overflow and network/error assertions stay
+immediate. The earlier clipboard probe executes before this diagnostic
+aggregate so an unmet menu control does not prevent that earlier experiment.
+Fifteen additional offline tests exercise the deferred failure/cleanup
+distinction and require exactly six unique, correctly typed scenario/mode pairs;
+all 84 tests pass locally. Cleanup chooses a currently exposed canvas point
+outside actual menu bounds. Diagnostic successor runtime results are pending.
+The draft must not be integrated while any required control fails. A successful wheel after failed Escape would establish navigation
+only, leaving the required dismissal control unmet. No upstream/runtime change
+or focus injection is proposed.

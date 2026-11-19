@@ -10,8 +10,8 @@ const snapshot = page => page.evaluate(() => window.menuSnapshot());
 const without = (element, keys) => Object.fromEntries(Object.entries(element).filter(([key]) => !keys.includes(key)));
 
 // Shared by the browser observations and independent negative assertion tests.
-export function assertContextMenuTrial(trial) {
-  const {scenario, readonly, before, opened, finished, settled, callbacks, overflow, inputs, inputOverflow} = trial;
+export function assertContextMenuTrial(trial, {deferMenuClosure = false} = {}) {
+  const {scenario, readonly, before, opened, escaped, finished, settled, cleanup, callbacks, overflow, inputs, inputOverflow} = trial;
   assert.ok(['delete', 'duplicate', 'dismiss-wheel'].includes(scenario));
   assert.equal(overflow, false, 'callback evidence must not be truncated');
   assert.equal(inputOverflow, false, 'input evidence must not be truncated');
@@ -22,12 +22,30 @@ export function assertContextMenuTrial(trial) {
   assert.ok(opened.menu?.length > 0, 'ordinary right click must open a visible menu');
   assert.ok(opened.menu.every(item => item.visible && item.label && item.action));
   assert.equal(inputs.filter(input => input.type === 'contextmenu' && input.trusted).length, 1);
-  assert.equal(finished.menu, null, 'ordinary activation or Escape must dismiss the menu');
-  assert.equal(settled.menu, null);
+  // Retain BOTH original close requirements. Deferral collects diagnostics; it
+  // never changes their required outcome or permits an aggregate success.
+  const failedControls = [];
+  for (const [checkpoint, entry] of [['finished', finished], ['settled', settled]]) {
+    if (entry.menu !== null) failedControls.push({scenario, readonly, checkpoint,
+      control: readonly || scenario === 'dismiss-wheel' ? 'Escape must dismiss menu' : 'activation must dismiss menu'});
+  }
   assert.deepEqual(opened.elements, before.elements, 'opening the menu must preserve every element');
   assert.deepEqual(settled.elements, finished.elements, 'the completed scene must remain stable');
   const editActions = opened.menu.filter(item => Object.values(actions).includes(item.action));
   if (readonly) assert.deepEqual(editActions, [], 'viewer menu must omit Delete and Duplicate');
+  if (readonly || scenario === 'dismiss-wheel') {
+    assert.ok(escaped, 'retain the actual post-Escape observation');
+    assert.deepEqual(escaped, finished, 'finished must precede any outside-click cleanup');
+    assert.equal(trial.escapeDismissed, escaped.menu === null);
+    assert.equal(typeof trial.escapeDismissalTimedOut, 'boolean');
+    if (trial.escapeDismissalTimedOut) failedControls.push({scenario, readonly,
+      checkpoint: 'escape-wait', control: 'Escape must dismiss menu within 10000ms'});
+  }
+  if (cleanup) {
+    assert.equal(cleanup.method, 'outside-click');
+    assert.equal(cleanup.after.menu, null, 'separate cleanup must close the menu');
+    assert.deepEqual(cleanup.after.elements, settled.elements);
+  }
   if (scenario === 'dismiss-wheel') {
     assert.deepEqual(opened.selectedIds, []);
     assert.notDeepEqual(settled.viewport, finished.viewport, 'wheel must navigate after Escape');
@@ -69,7 +87,7 @@ export function assertContextMenuTrial(trial) {
       assert.deepEqual(finished.selectedIds, [copy.id]);
     }
   }
-  for (const entry of [before, opened, finished, settled, ...callbacks]) {
+  for (const entry of [before, opened, escaped, finished, settled, cleanup?.after, ...callbacks].filter(Boolean)) {
     assert.equal(entry.viewMode, readonly);
     assert.equal(new Set(entry.elements.map(element => element.id)).size, entry.elements.length);
     assert.deepEqual(entry.elements.find(element => element.id === seedIds[2]), before.elements[2],
@@ -81,6 +99,25 @@ export function assertContextMenuTrial(trial) {
         'writable callbacks may contain only the complete original or completed scene');
     }
   }
+  if (!deferMenuClosure) assert.deepEqual(failedControls, [], 'required menu dismissal remains unmet');
+  return failedControls;
+}
+
+export function assertContextMenuAcceptance(trials) {
+  assert.ok(Array.isArray(trials), 'trial evidence must be an array');
+  assert.equal(trials.length, 6, 'exactly six independent trials are required');
+  const expected = ['delete', 'duplicate', 'dismiss-wheel'].flatMap(scenario =>
+    [false, true].map(readonly => `${scenario}:${readonly}`));
+  const identities = trials.map(trial => {
+    assert.ok(trial && typeof trial === 'object' && !Array.isArray(trial));
+    assert.equal(typeof trial.readonly, 'boolean', 'trial mode must be a boolean');
+    return `${trial.scenario}:${trial.readonly}`;
+  });
+  assert.equal(new Set(identities).size, 6, 'trial identities must be unique');
+  assert.deepEqual([...identities].sort(), [...expected].sort(), 'every scenario/mode pair must be present');
+  // Recompute from observations; a missing/edited ledger cannot manufacture success.
+  const failedControls = trials.flatMap(trial => assertContextMenuTrial(trial, {deferMenuClosure: true}));
+  assert.deepEqual(failedControls, [], 'required menu dismissal controls failed; cleanup is not Escape');
 }
 
 async function frame(page) {
@@ -172,22 +209,39 @@ export async function probeContextMenu(browser, origin) {
         await frame(page);
         const opened = await snapshot(page);
         await page.evaluate(() => { window.menuPhase = 'finishing'; });
+        let escaped = null;
+        let escapeDismissalTimedOut = null;
         if (!readonly && scenario !== 'dismiss-wheel') {
           // The allowlisted visible button is the only menu item activated.
           const control = page.locator(`.context-menu li[data-testid="${actions[scenario]}"] button`);
           await control.waitFor({state: 'visible'});
           assert.equal(await control.isEnabled(), true);
           await control.click();
+          await page.locator('.context-menu').waitFor({state: 'hidden'});
         } else {
           assert.equal(opened.menu.some(item => readonly && Object.values(actions).includes(item.action)), false);
           await page.keyboard.press('Escape');
+          escapeDismissalTimedOut = false;
+          try {
+            await page.locator('.context-menu').waitFor({state: 'hidden', timeout: 10000});
+          } catch (error) {
+            if (error.name !== 'TimeoutError') throw error;
+            escapeDismissalTimedOut = true;
+          }
+          await frame(page);
+          escaped = await snapshot(page);
         }
-        await page.locator('.context-menu').waitFor({state: 'hidden'});
         await frame(page);
-        const finished = await snapshot(page);
+        const finished = escaped ?? await snapshot(page);
         await page.evaluate(() => { window.menuPhase = 'settled'; });
         if (scenario === 'dismiss-wheel') {
-          await page.mouse.move(1000, 650);
+          // Select an ordinary canvas point outside the actual open menu, if any.
+          const bounds = escaped?.menu ? await page.locator('.context-menu').boundingBox() : null;
+          const point = [{x: 800, y: 650}, {x: 600, y: 500}].find(({x, y}) =>
+            !bounds || x < bounds.x || x > bounds.x + bounds.width || y < bounds.y || y > bounds.y + bounds.height);
+          assert.ok(point, 'wheel requires an exposed canvas point');
+          assert.equal(await page.evaluate(({x, y}) => document.elementFromPoint(x, y)?.tagName, point), 'CANVAS');
+          await page.mouse.move(point.x, point.y);
           await page.mouse.wheel(0, 120);
           await page.waitForFunction(previous => {
             const state = window.editor.getAppState();
@@ -196,10 +250,28 @@ export async function probeContextMenu(browser, origin) {
         }
         await frame(page);
         const settled = await snapshot(page);
+        let cleanup = null;
+        if (settled.menu) {
+          // Only a separate continuation/cleanup observation, never Escape success.
+          await page.evaluate(() => { window.menuPhase = 'outside-click-cleanup'; });
+          const bounds = await page.locator('.context-menu').boundingBox();
+          assert.ok(bounds, 'cleanup requires the actual visible menu bounds');
+          const point = await page.evaluate(bounds =>
+            [{x: 600, y: 650}, {x: 800, y: 500}, {x: 900, y: 400}].find(({x, y}) =>
+              (x < bounds.x || x > bounds.x + bounds.width || y < bounds.y || y > bounds.y + bounds.height) &&
+              document.elementFromPoint(x, y)?.tagName === 'CANVAS'), bounds);
+          assert.ok(point, 'cleanup requires an exposed canvas point outside the menu');
+          await page.mouse.click(point.x, point.y);
+          await page.locator('.context-menu').waitFor({state: 'hidden'});
+          await frame(page);
+          cleanup = {method: 'outside-click', point, menuBounds: bounds, after: await snapshot(page)};
+        }
         const evidence = await page.evaluate(() => ({callbacks: window.menuCallbacks, overflow: window.menuOverflow,
           inputs: window.menuInputs, inputOverflow: window.menuInputOverflow}));
-        const trial = {scenario, readonly, before, opened, finished, settled, ...evidence};
-        assertContextMenuTrial(trial);
+        const trial = {scenario, readonly, before, opened, escaped,
+          escapeDismissed: escaped ? escaped.menu === null : null, escapeDismissalTimedOut,
+          finished, settled, cleanup, ...evidence};
+        trial.failedControls = assertContextMenuTrial(trial, {deferMenuClosure: true});
         trials.push(trial);
       } catch (error) {
         const evidence = await page.evaluate(() => ({scene: window.menuSnapshot?.() ?? null,
@@ -214,5 +286,10 @@ export async function probeContextMenu(browser, origin) {
   }
   assert.deepEqual(blockedRequests, []);
   assert.deepEqual(pageErrors, []);
-  return {viewport, trials, blockedRequests, pageErrors};
+  const result = {viewport, trials, blockedRequests, pageErrors,
+    failedControls: trials.flatMap(trial => trial.failedControls)};
+  // Emit every independent observation before the original close requirements fail.
+  console.log(JSON.stringify({contextMenuObservations: result}, null, 2));
+  assertContextMenuAcceptance(trials);
+  return result;
 }
